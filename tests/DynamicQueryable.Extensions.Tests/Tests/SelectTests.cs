@@ -145,9 +145,10 @@ public class SelectTests : IDisposable
         var first = list.First();
         var type = first.GetType();
 
-        // Because Select is empty, ProjectionBuilder was called with just "Profile" from Includes.
-        // It projects a dynamic type with ONLY the "Profile" property!
-        type.GetProperty("Id").Should().BeNull();
+        // With Includes and no Select, the result includes root entity scalars + the included navigation
+        type.GetProperty("Id").Should().NotBeNull();
+        type.GetProperty("Name").Should().NotBeNull();
+        type.GetProperty("Age").Should().NotBeNull();
         
         var profileProp = type.GetProperty("Profile");
         profileProp.Should().NotBeNull();

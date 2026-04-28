@@ -64,7 +64,8 @@ public static class QueryBuilder
 
     /// <summary>
     /// Applies dynamic projection to the query.
-    /// If Select is null or empty, returns the original query cast to object.
+    /// If Select is null or empty and no Includes are present, returns the original query cast to object.
+    /// If Select or Includes have fields, builds a dynamic projection that includes only those fields.
     /// </summary>
     public static IQueryable<object> ApplySelect<T>(
         IQueryable<T> query, QueryOptions options)

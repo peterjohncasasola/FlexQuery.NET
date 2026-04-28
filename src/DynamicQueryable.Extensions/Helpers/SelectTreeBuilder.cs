@@ -34,6 +34,12 @@ internal static class SelectTreeBuilder
             {
                 MergePath(root, include, includeAllScalarsAtLeaf: true);
             }
+            
+            // If only includes are present (no Select), mark root to include all root scalars
+            if (options.Select == null && options.SelectTree == null)
+            {
+                root.MarkIncludeAllScalars();
+            }
         }
 
         return root;

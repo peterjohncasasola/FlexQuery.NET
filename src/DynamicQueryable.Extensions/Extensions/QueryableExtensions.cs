@@ -10,22 +10,6 @@ namespace DynamicQueryable.Extensions;
 public static class QueryableExtensions
 {
     /// <summary>
-    /// Parses a comma-separated select string and applies the merged dynamic projection.
-    /// </summary>
-    public static IQueryable<object> ApplyDynamicSelect<T>(
-        this IQueryable<T> query, string? select)
-    {
-        var options = new QueryOptions
-        {
-            Select = string.IsNullOrWhiteSpace(select)
-                ? null
-                : select.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).ToList()
-        };
-
-        return QueryBuilder.ApplySelect(query, options);
-    }
-
-    /// <summary>
     /// Applies all query options (filter, sort, paging) and returns the shaped queryable.
     /// </summary>
     /// <remarks>
@@ -59,14 +43,38 @@ public static class QueryableExtensions
         => QueryBuilder.ApplySelect(query, options);
 
     /// <summary>
+    /// Executes a query like <see cref="ToQueryResult{T}"/>, but returns projected rows.
+    /// Uses <paramref name="options"/>.Select (and includes/JSON select if present) to shape the result.
+    /// </summary>
+    public static QueryResult<object> ToProjectedQueryResult<T>(
+        this IQueryable<T> query,
+        QueryOptions options)
+    {
+        var filtered = ApplyFilterAndSort(query, options);
+
+        var total = filtered.Count();
+
+        var paged = QueryBuilder.ApplyPaging(filtered, options);
+
+        var data = QueryBuilder.ApplySelect(paged, options).ToList();
+
+        return new QueryResult<object>
+        {
+            TotalCount = total,
+            Page       = options.Paging.Page,
+            PageSize   = options.Paging.PageSize,
+            Data       = data
+        };
+    }
+
+    /// <summary>
     /// Convenience: executes the query and wraps it in a <see cref="QueryResult{T}"/>
     /// with total count, page metadata, and the paged data.
     /// </summary>
     public static QueryResult<T> ToQueryResult<T>(
         this IQueryable<T> query, QueryOptions options)
     {
-        var filtered = QueryBuilder.ApplyFilter(query, options);
-        filtered     = QueryBuilder.ApplySort(filtered, options);
+        var filtered = ApplyFilterAndSort(query, options);
 
         var total = filtered.Count();
         var data  = QueryBuilder.ApplyPaging(filtered, options).ToList();
@@ -79,4 +87,12 @@ public static class QueryableExtensions
             Data       = data
         };
     }
+
+    private static IQueryable<T> ApplyFilterAndSort<T>(IQueryable<T> query, QueryOptions options)
+    {
+        query = ApplyFilter(query, options);
+        query = ApplySort(query, options);
+        return query;
+    }
+
 }
