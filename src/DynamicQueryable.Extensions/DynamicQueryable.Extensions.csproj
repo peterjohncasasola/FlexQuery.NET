@@ -18,7 +18,7 @@
      <Description>Dynamic filtering, sorting, pagination for IQueryable in .NET</Description>
     <PackageTags>linq;iqueryable;dynamic;query;filter;sorting;pagination;odata;syncfusion;spatie;efcore</PackageTags>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
-    <RepositoryUrl>https://github.com/peterjohncasasola/DynamicQueryable</RepositoryUrl>
+    <RepositoryUrl>https://github.com/peterjohncasasola/DynamicQueryable.Extensions</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
     <PackageReadmeFile>README.md</PackageReadmeFile>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>

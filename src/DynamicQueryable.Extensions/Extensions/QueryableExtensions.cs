@@ -10,6 +10,22 @@ namespace DynamicQueryable.Extensions;
 public static class QueryableExtensions
 {
     /// <summary>
+    /// Parses a comma-separated select string and applies the merged dynamic projection.
+    /// </summary>
+    public static IQueryable<object> ApplyDynamicSelect<T>(
+        this IQueryable<T> query, string? select)
+    {
+        var options = new QueryOptions
+        {
+            Select = string.IsNullOrWhiteSpace(select)
+                ? null
+                : select.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).ToList()
+        };
+
+        return QueryBuilder.ApplySelect(query, options);
+    }
+
+    /// <summary>
     /// Applies all query options (filter, sort, paging) and returns the shaped queryable.
     /// </summary>
     /// <remarks>

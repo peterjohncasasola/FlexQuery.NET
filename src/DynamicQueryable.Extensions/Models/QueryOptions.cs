@@ -21,5 +21,5 @@ public sealed class QueryOptions
     public List<string>? Includes { get; set; }
 
     /// <summary>Internal tree structure for nested selection.</summary>
-    internal Dictionary<string, object>? SelectTree { get; set; }
+    internal SelectionNode? SelectTree { get; set; }
 }

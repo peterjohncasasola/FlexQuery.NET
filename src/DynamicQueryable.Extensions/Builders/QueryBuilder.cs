@@ -71,7 +71,7 @@ public static class QueryBuilder
     {
         var tree = Helpers.SelectTreeBuilder.Build(options);
         
-        if (tree.Count == 0)
+        if (!tree.HasChildren)
         {
             return query.Cast<object>();
         }

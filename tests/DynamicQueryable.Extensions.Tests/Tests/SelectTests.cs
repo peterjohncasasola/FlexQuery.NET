@@ -1,9 +1,11 @@
 using DynamicQueryable.Extensions;
+using DynamicQueryable.Helpers;
 using DynamicQueryable.Models;
 using DynamicQueryable.Tests.Fixtures;
 using DynamicQueryable.Tests.Models;
 using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
+using System.Text.RegularExpressions;
 using System.Text.Json;
 
 namespace DynamicQueryable.Tests.Tests;
@@ -12,6 +14,23 @@ public class SelectTests : IDisposable
 {
     private readonly TestDbContext _db = TestDbContext.CreateSeeded();
     public void Dispose() => _db.Dispose();
+
+    [Fact]
+    public void SelectTreeBuilder_MergesSiblingNavigationPaths_IntoSingleBranch()
+    {
+        var options = new QueryOptions
+        {
+            Select = ["Name", "Orders.Total", "Orders.Customer.Name"]
+        };
+
+        var tree = SelectTreeBuilder.Build(options);
+
+        tree.TryGetChild("Name", out _).Should().BeTrue();
+        tree.TryGetChild("Orders", out var ordersNode).Should().BeTrue();
+        ordersNode.TryGetChild("Total", out _).Should().BeTrue();
+        ordersNode.TryGetChild("Customer", out var customerNode).Should().BeTrue();
+        customerNode.TryGetChild("Name", out _).Should().BeTrue();
+    }
 
     [Fact]
     public async Task Select_Empty_ReturnsOriginalTypePropertiesAsDynamic()
@@ -184,5 +203,35 @@ public class SelectTests : IDisposable
         var profileProp = type.GetProperty("Profile");
         profileProp.Should().NotBeNull();
         profileProp!.GetValue(first)!.GetType().GetProperty("Fake").Should().BeNull();
+    }
+
+    [Fact]
+    public async Task Select_RelationalSql_UsesMergedNavigationAndOnlyRequestedColumns()
+    {
+        using var db = SqlProjectionDbContext.CreateSeeded();
+
+        var options = new QueryOptions
+        {
+            Select = ["Name", "Email", "Orders.Number", "Orders.Customer.Name"]
+        };
+
+        var baseQuery = db.Customers
+            .Where(x => x.Name.Contains("o") || x.Name.Contains("A"))
+            .OrderBy(x => x.Id)
+            .Skip(0)
+            .Take(10);
+
+        var projected = baseQuery.ApplySelect(options);
+        var sql = projected.ToQueryString();
+
+        Regex.Matches(sql, "\"Orders\"").Count.Should().BeLessOrEqualTo(2);
+        sql.Should().Contain("\"Number\"");
+        sql.Should().Contain("\"Name\"");
+        sql.Should().Contain("\"Email\"");
+        sql.Should().NotContain("\"Total\"");
+        sql.Should().NotContain("\"CreatedAtUtc\"");
+
+        var rows = await projected.ToListAsync();
+        rows.Should().HaveCount(2);
     }
 }
