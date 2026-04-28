@@ -4,19 +4,18 @@ using DynamicQueryable.Models;
 namespace DynamicQueryable.Helpers;
 
 /// <summary>
-/// Combines different Select formats (flat dot-notation, nested JSON, includes) 
-/// into a unified tree structure for the ProjectionBuilder.
+/// Combines different select formats into a merged navigation tree.
 /// </summary>
-public static class SelectTreeBuilder
+internal static class SelectTreeBuilder
 {
-    public static Dictionary<string, object> Build(QueryOptions options)
+    public static SelectionNode Build(QueryOptions options)
     {
-        var tree = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase);
+        var root = new SelectionNode();
 
         // 1. JSON Select Tree
         if (options.SelectTree != null)
         {
-            MergeTree(tree, options.SelectTree);
+            MergeTree(root, options.SelectTree);
         }
 
         // 2. Flat dot-notation paths (e.g. "Id", "Profile.Name")
@@ -24,7 +23,7 @@ public static class SelectTreeBuilder
         {
             foreach (var path in options.Select)
             {
-                MergePath(tree, path);
+                MergePath(root, path, includeAllScalarsAtLeaf: false);
             }
         }
 
@@ -33,79 +32,58 @@ public static class SelectTreeBuilder
         {
             foreach (var include in options.Includes)
             {
-                MergePath(tree, include);
+                MergePath(root, include, includeAllScalarsAtLeaf: true);
             }
         }
 
-        return tree;
+        return root;
     }
 
-    private static void MergePath(Dictionary<string, object> current, string path)
+    private static void MergePath(SelectionNode current, string path, bool includeAllScalarsAtLeaf)
     {
         if (string.IsNullOrWhiteSpace(path)) return;
         var parts = path.Split('.', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
-        
+
         var node = current;
-        for (int i = 0; i < parts.Length; i++)
+        foreach (var part in parts)
         {
-            var part = parts[i];
-            if (i == parts.Length - 1)
-            {
-                // Leaf node
-                if (!node.ContainsKey(part))
-                {
-                    node[part] = null!;
-                }
-            }
-            else
-            {
-                if (!node.TryGetValue(part, out var child) || child == null)
-                {
-                    child = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase);
-                    node[part] = child;
-                }
-                node = (Dictionary<string, object>)child;
-            }
+            node = node.GetOrAddChild(part);
+        }
+
+        if (includeAllScalarsAtLeaf)
+        {
+            node.MarkIncludeAllScalars();
         }
     }
 
-    private static void MergeTree(Dictionary<string, object> target, Dictionary<string, object> source)
+    private static void MergeTree(SelectionNode target, SelectionNode source)
     {
-        foreach (var kvp in source)
+        if (source.IncludeAllScalars)
         {
-            if (kvp.Value is Dictionary<string, object> sourceChild)
-            {
-                if (!target.TryGetValue(kvp.Key, out var targetChild) || targetChild == null)
-                {
-                    targetChild = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase);
-                    target[kvp.Key] = targetChild;
-                }
-                MergeTree((Dictionary<string, object>)targetChild, sourceChild);
-            }
-            else
-            {
-                if (!target.ContainsKey(kvp.Key))
-                {
-                    target[kvp.Key] = null!;
-                }
-            }
+            target.MarkIncludeAllScalars();
+        }
+
+        foreach (var kvp in source.EnumerateChildren())
+        {
+            var targetChild = target.GetOrAddChild(kvp.Key);
+            MergeTree(targetChild, kvp.Value);
         }
     }
 
-    public static Dictionary<string, object> ParseJsonSelect(JsonElement element)
+    public static SelectionNode ParseJsonSelect(JsonElement element)
     {
-        var dict = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase);
+        var node = new SelectionNode();
         if (element.ValueKind == JsonValueKind.Object)
         {
             foreach (var prop in element.EnumerateObject())
             {
                 if (prop.Value.ValueKind == JsonValueKind.Object)
                 {
-                    dict[prop.Name] = ParseJsonSelect(prop.Value);
+                    MergeTree(node.GetOrAddChild(prop.Name), ParseJsonSelect(prop.Value));
                 }
                 else if (prop.Value.ValueKind == JsonValueKind.True || prop.Value.ValueKind == JsonValueKind.String)
                 {
-                    dict[prop.Name] = null!;
+                    node.GetOrAddChild(prop.Name);
                 }
             }
         }
@@ -114,9 +92,10 @@ public static class SelectTreeBuilder
             foreach (var item in element.EnumerateArray())
             {
                 if (item.ValueKind == JsonValueKind.String)
-                    dict[item.GetString()!] = null!;
+                    node.GetOrAddChild(item.GetString()!);
             }
         }
-        return dict;
+
+        return node;
     }
 }

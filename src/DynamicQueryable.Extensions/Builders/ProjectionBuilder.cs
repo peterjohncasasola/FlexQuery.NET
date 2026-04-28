@@ -2,6 +2,7 @@ using System.Linq.Expressions;
 using System.Reflection;
 using System.Collections.Concurrent;
 using DynamicQueryable.Helpers;
+using DynamicQueryable.Models;
 
 namespace DynamicQueryable.Builders;
 
@@ -9,11 +10,11 @@ namespace DynamicQueryable.Builders;
 /// Recursively constructs MemberInitExpressions for dynamic projection 
 /// mapped to strongly-typed runtime classes, allowing full EF Core server-side translation.
 /// </summary>
-public static class ProjectionBuilder
+internal static class ProjectionBuilder
 {
     private static readonly ConcurrentDictionary<string, Expression> _cache = new();
 
-    public static Expression<Func<T, object>> Build<T>(Dictionary<string, object> selectTree)
+    public static Expression<Func<T, object>> Build<T>(SelectionNode selectTree)
     {
         var cacheKey = typeof(T).FullName + ":" + GenerateCacheKey(selectTree);
 
@@ -26,58 +27,51 @@ public static class ProjectionBuilder
         });
     }
 
-    private static Expression BuildMemberInit(Expression source, Type sourceType, Dictionary<string, object> selectTree)
+    private static Expression BuildMemberInit(Expression source, Type sourceType, SelectionNode selectTree)
     {
-        if (selectTree == null || selectTree.Count == 0)
-        {
-            selectTree = GetPrimitiveProperties(sourceType);
-        }
+        var effectiveNode = NormalizeSelection(sourceType, selectTree);
 
         var propertiesToSelect = new Dictionary<string, (Type TargetType, Expression Assignment)>();
 
-        foreach (var kvp in selectTree)
+        foreach (var kvp in effectiveNode.EnumerateChildren())
         {
             var propInfo = sourceType.GetProperty(kvp.Key, BindingFlags.Public | BindingFlags.Instance | BindingFlags.IgnoreCase);
             if (propInfo == null) continue; // Ignore invalid properties safely
 
             var propAccess = Expression.Property(source, propInfo);
-            var childTree = kvp.Value as Dictionary<string, object>;
+            var childNode = kvp.Value;
 
-            if (childTree != null && childTree.Count > 0)
+            if (ShouldBuildNestedProjection(propInfo.PropertyType, childNode))
             {
                 if (IsIEnumerable(propInfo.PropertyType, out var itemType))
                 {
-                    // Collection handling: source.Select(i => new DynamicType { ... }).ToList()
+                    // Collection handling: source.AsQueryable().Select(i => new DynamicType { ... }).ToList()
                     var itemParam = Expression.Parameter(itemType, "i");
-                    var itemInit = BuildMemberInit(itemParam, itemType, childTree);
+                    var itemInit = BuildMemberInit(itemParam, itemType, childNode);
                     var selectLambda = Expression.Lambda(itemInit, itemParam);
 
-                    var selectMethod = typeof(Enumerable).GetMethods()
+                    var asQueryableMethod = typeof(Queryable).GetMethods()
+                        .First(m => m.Name == "AsQueryable" && m.IsGenericMethodDefinition && m.GetParameters().Length == 1)
+                        .MakeGenericMethod(itemType);
+
+                    var selectMethod = typeof(Queryable).GetMethods()
                         .First(m => m.Name == "Select" && m.GetParameters().Length == 2)
                         .MakeGenericMethod(itemType, itemInit.Type);
                     
                     var toListMethod = typeof(Enumerable).GetMethod("ToList")!
                         .MakeGenericMethod(itemInit.Type);
 
-                    var selectCall = Expression.Call(null, selectMethod, propAccess, selectLambda);
+                    var asQueryableCall = Expression.Call(null, asQueryableMethod, propAccess);
+                    var selectCall = Expression.Call(null, selectMethod, asQueryableCall, selectLambda);
                     var toListCall = Expression.Call(null, toListMethod, selectCall);
 
                     var targetListType = typeof(List<>).MakeGenericType(itemInit.Type);
-
-                    // EF Core handles conditional null checks naturally, but we specify it for safety
-                    var nullCheck = Expression.Equal(propAccess, Expression.Constant(null, propInfo.PropertyType));
-                    var condition = Expression.Condition(
-                        nullCheck, 
-                        Expression.Constant(null, targetListType), 
-                        toListCall, 
-                        targetListType);
-
-                    propertiesToSelect[propInfo.Name] = (targetListType, condition);
+                    propertiesToSelect[propInfo.Name] = (targetListType, toListCall);
                 }
                 else
                 {
                     // Nested Object handling
-                    var nestedInit = BuildMemberInit(propAccess, propInfo.PropertyType, childTree);
+                    var nestedInit = BuildMemberInit(propAccess, propInfo.PropertyType, childNode);
                     var isNullable = !propInfo.PropertyType.IsValueType || Nullable.GetUnderlyingType(propInfo.PropertyType) != null;
                     
                     if (isNullable)
@@ -145,26 +139,94 @@ public static class ProjectionBuilder
         return false;
     }
 
-    private static Dictionary<string, object> GetPrimitiveProperties(Type type)
+    private static SelectionNode NormalizeSelection(Type sourceType, SelectionNode selectTree)
     {
-        var dict = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase);
-        foreach (var prop in type.GetProperties(BindingFlags.Public | BindingFlags.Instance))
+        var effective = new SelectionNode();
+
+        if (selectTree.IncludeAllScalars)
         {
-            var pt = Nullable.GetUnderlyingType(prop.PropertyType) ?? prop.PropertyType;
-            if (pt.IsPrimitive || pt.IsEnum || pt == typeof(string) || pt == typeof(decimal) || pt == typeof(DateTime) || pt == typeof(DateTimeOffset) || pt == typeof(Guid) || pt == typeof(TimeSpan))
+            foreach (var prop in sourceType.GetProperties(BindingFlags.Public | BindingFlags.Instance))
             {
-                dict[prop.Name] = null!;
+                if (IsScalarType(prop.PropertyType))
+                {
+                    effective.GetOrAddChild(prop.Name);
+                }
             }
         }
-        return dict;
+
+        foreach (var child in selectTree.EnumerateChildren())
+        {
+            var effectiveChild = effective.GetOrAddChild(child.Key);
+            MergeNodes(effectiveChild, child.Value);
+        }
+
+        if (!effective.HasChildren && !selectTree.HasChildren)
+        {
+            foreach (var prop in sourceType.GetProperties(BindingFlags.Public | BindingFlags.Instance))
+            {
+                if (IsScalarType(prop.PropertyType))
+                {
+                    effective.GetOrAddChild(prop.Name);
+                }
+            }
+        }
+
+        return effective;
     }
 
-    private static string GenerateCacheKey(Dictionary<string, object> tree)
+    private static bool ShouldBuildNestedProjection(Type propertyType, SelectionNode node)
     {
-        if (tree == null || tree.Count == 0) return "*";
-        var keys = tree.OrderBy(k => k.Key).Select(k => 
-            k.Key + (k.Value is Dictionary<string, object> child ? $"({GenerateCacheKey(child)})" : "")
-        );
-        return string.Join(",", keys);
+        if (IsIEnumerable(propertyType, out _))
+        {
+            return node.IncludeAllScalars || node.HasChildren;
+        }
+
+        return !IsScalarType(propertyType) && (node.IncludeAllScalars || node.HasChildren);
+    }
+
+    private static void MergeNodes(SelectionNode target, SelectionNode source)
+    {
+        if (source.IncludeAllScalars)
+        {
+            target.MarkIncludeAllScalars();
+        }
+
+        foreach (var child in source.EnumerateChildren())
+        {
+            MergeNodes(target.GetOrAddChild(child.Key), child.Value);
+        }
+    }
+
+    private static bool IsScalarType(Type type)
+    {
+        var unwrapped = Nullable.GetUnderlyingType(type) ?? type;
+        return unwrapped.IsPrimitive
+            || unwrapped.IsEnum
+            || unwrapped == typeof(string)
+            || unwrapped == typeof(decimal)
+            || unwrapped == typeof(DateTime)
+            || unwrapped == typeof(DateTimeOffset)
+            || unwrapped == typeof(Guid)
+            || unwrapped == typeof(TimeSpan)
+            || unwrapped == typeof(DateOnly)
+            || unwrapped == typeof(TimeOnly);
+    }
+
+    private static string GenerateCacheKey(SelectionNode tree)
+    {
+        if (!tree.HasChildren && !tree.IncludeAllScalars) return "*";
+
+        var keys = tree.EnumerateChildren()
+            .OrderBy(k => k.Key)
+            .Select(k => $"{k.Key}:{GenerateCacheKey(k.Value)}");
+
+        var scalarMarker = tree.IncludeAllScalars ? "!" : string.Empty;
+        var payload = string.Join(",", keys);
+        if (string.IsNullOrEmpty(payload))
+        {
+            return scalarMarker;
+        }
+
+        return scalarMarker + "(" + payload + ")";
     }
 }
