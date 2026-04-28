@@ -1,0 +1,88 @@
+name: Build, Test & Publish NuGet
+
+on:
+  push:
+    branches: [ "main" ]
+    tags:     [ "v*.*.*" ]
+  pull_request:
+    branches: [ "main" ]
+
+env:
+  DOTNET_VERSION: '8.0.x'
+  PROJECT_PATH:   'src/DynamicQueryable.Extensions/DynamicQueryable.Extensions.csproj'
+  TEST_PATH:      'tests/DynamicQueryable.Extensions.Tests/DynamicQueryable.Extensions.Tests.csproj'
+
+jobs:
+  build-and-test:
+    name: Build & Test
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Restore
+        run: dotnet restore
+
+      - name: Build
+        run: dotnet build --no-restore --configuration Release --verbosity minimal
+
+      - name: Test with Coverage
+        run: |
+          dotnet test ${{ env.TEST_PATH }} \
+            --no-build \
+            --configuration Release \
+            --collect:"XPlat Code Coverage" \
+            --results-directory ./coverage \
+            -- DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Format=cobertura
+
+      - name: Upload Coverage Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage
+          path: ./coverage
+
+  publish:
+    name: Pack & Publish to NuGet
+    runs-on: ubuntu-latest
+    needs: build-and-test
+    if: startsWith(github.ref, 'refs/tags/v')
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Restore
+        run: dotnet restore
+
+      - name: Build
+        run: dotnet build --no-restore --configuration Release --verbosity minimal
+
+      - name: Extract version from tag
+        id: version
+        run: echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
+
+      - name: Pack
+        run: |
+          dotnet pack ${{ env.PROJECT_PATH }} \
+            --no-build \
+            --configuration Release \
+            --output ./nupkgs \
+            /p:Version=${{ steps.version.outputs.VERSION }}
+
+      - name: Publish to NuGet
+        run: |
+          dotnet nuget push ./nupkgs/*.nupkg \
+            --api-key ${{ secrets.NUGET_API_KEY }} \
+            --source https://api.nuget.org/v3/index.json \
+            --skip-duplicate
