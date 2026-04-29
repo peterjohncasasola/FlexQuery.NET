@@ -213,6 +213,8 @@ public async Task<IActionResult> Get()
 
 ### 🔹 Syncfusion
 
+#### Basic Usage
+
 ```http
 ?where[0][field]=Name
 &where[0][operator]=contains
@@ -223,9 +225,39 @@ public async Task<IActionResult> Get()
 &take=10
 ```
 
+#### Multiple Conditions with Logic
+
+You can combine multiple conditions using the `condition` parameter (`and` or `or`):
+
+```http
+?where[0][field]=City
+&where[0][operator]=equal
+&where[0][value]=London
+&where[1][field]=Age
+&where[1][operator]=greaterthanorequal
+&where[1][value]=25
+&condition=and
+```
+
+#### Nested Property Paths
+
+Supports nested properties in filter conditions:
+
+```http
+?where[0][field]=Profile.Bio
+&where[0][operator]=contains
+&where[0][value]=developer
+&where[1][field]=Status
+&where[1][operator]=equal
+&where[1][value]=Active
+&condition=and
+```
+
 ---
 
 ### 🔹 Laravel Spatie
+
+#### Basic Usage
 
 ```http
 ?filter[name]=john
@@ -233,6 +265,26 @@ public async Task<IActionResult> Get()
 &sort=-created_at
 &include=roles,permissions
 &fields[users]=name,email
+```
+
+#### Multiple Conditions (Implicit AND)
+
+Multiple filters are always combined with **AND** logic. Laravel Spatie format does not support explicit OR logic at the top level (unlike Syncfusion's `condition` parameter):
+
+```http
+?filter[name]=Alice Johnson
+&filter[status]=Active
+&filter[profile.role]=Developer
+```
+
+#### Nested Property Paths
+
+Supports dot notation for nested properties:
+
+```http
+?filter[profile.bio]=Developer
+&filter[profile.status]=Active
+&sort=-created_at
 ```
 
 ---
