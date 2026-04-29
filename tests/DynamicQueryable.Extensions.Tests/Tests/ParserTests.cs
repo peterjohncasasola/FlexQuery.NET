@@ -708,4 +708,64 @@ public class ParserTests
 
         opts.Filter.Should().BeNull();
     }
+
+    [Fact]
+    public void Dsl_Value_AllowsEmail()
+    {
+        var opts = Parse(new()
+        {
+            ["filter"] = "email:eq:ops@acmeretail.com"
+        });
+
+        opts.Filter.Should().NotBeNull();
+        opts.Filter!.Filters.Should().ContainSingle(f => f.Field == "email" && f.Value == "ops@acmeretail.com");
+    }
+
+    [Fact]
+    public void Dsl_Value_AllowsSpaces()
+    {
+        var opts = Parse(new()
+        {
+            ["filter"] = "name:contains:john doe"
+        });
+
+        opts.Filter.Should().NotBeNull();
+        opts.Filter!.Filters.Should().ContainSingle(f => f.Field == "name" && f.Value == "john doe");
+    }
+
+    [Fact]
+    public void Dsl_Value_AllowsUrls()
+    {
+        var opts = Parse(new()
+        {
+            ["filter"] = "url:eq:https://example.com/page"
+        });
+
+        opts.Filter.Should().NotBeNull();
+        opts.Filter!.Filters.Should().ContainSingle(f => f.Field == "url" && f.Value == "https://example.com/page");
+    }
+
+    [Fact]
+    public void Dsl_Value_AllowsAdditionalColons()
+    {
+        var opts = Parse(new()
+        {
+            ["filter"] = "note:eq:value:with:colon"
+        });
+
+        opts.Filter.Should().NotBeNull();
+        opts.Filter!.Filters.Should().ContainSingle(f => f.Field == "note" && f.Value == "value:with:colon");
+    }
+
+    [Fact]
+    public void Dsl_Value_SupportsQuotedValues()
+    {
+        var opts = Parse(new()
+        {
+            ["filter"] = "email:eq:\"ops@acmeretail.com\""
+        });
+
+        opts.Filter.Should().NotBeNull();
+        opts.Filter!.Filters.Should().ContainSingle(f => f.Field == "email" && f.Value == "ops@acmeretail.com");
+    }
 }

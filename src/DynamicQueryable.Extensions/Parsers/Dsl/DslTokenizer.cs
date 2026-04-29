@@ -5,6 +5,8 @@ public sealed class DslTokenizer
 {
     private readonly string _source;
     private int _position;
+    private int _colonCount;
+    private bool _valueMode;
 
     /// <summary>Creates a tokenizer for the supplied DSL string.</summary>
     public DslTokenizer(string source)
@@ -19,6 +21,14 @@ public sealed class DslTokenizer
 
         while (_position < _source.Length)
         {
+            if (_valueMode)
+            {
+                tokens.Add(ReadValue());
+                _valueMode = false;
+                _colonCount = 0;
+                continue;
+            }
+
             var current = _source[_position];
             if (char.IsWhiteSpace(current))
             {
@@ -32,22 +42,31 @@ public sealed class DslTokenizer
                 case ':':
                     tokens.Add(new DslToken(DslTokenKind.Colon, ":", start));
                     _position++;
+                    _colonCount++;
+                    if (_colonCount == 2)
+                    {
+                        _valueMode = true;
+                    }
                     break;
                 case '&':
                     tokens.Add(new DslToken(DslTokenKind.And, "&", start));
                     _position++;
+                    _colonCount = 0;
                     break;
                 case '|':
                     tokens.Add(new DslToken(DslTokenKind.Or, "|", start));
                     _position++;
+                    _colonCount = 0;
                     break;
                 case '(':
                     tokens.Add(new DslToken(DslTokenKind.OpenParen, "(", start));
                     _position++;
+                    _colonCount = 0;
                     break;
                 case ')':
                     tokens.Add(new DslToken(DslTokenKind.CloseParen, ")", start));
                     _position++;
+                    _colonCount = 0;
                     break;
                 case '"':
                 case '\'':
@@ -61,6 +80,56 @@ public sealed class DslTokenizer
 
         tokens.Add(new DslToken(DslTokenKind.End, string.Empty, _position));
         return tokens;
+    }
+
+    private DslToken ReadValue()
+    {
+        var start = _position;
+        var value = new List<char>();
+
+        while (_position < _source.Length && char.IsWhiteSpace(_source[_position]))
+        {
+            _position++;
+        }
+
+        if (_position >= _source.Length)
+        {
+            throw new DslParseException($"Missing DSL value at position {start}.");
+        }
+
+        var current = _source[_position];
+        if (current is '"' or '\'')
+        {
+            return ReadQuoted(current);
+        }
+
+        while (_position < _source.Length)
+        {
+            current = _source[_position];
+            if (current is '&' or '|' or ')' or '(')
+            {
+                break;
+            }
+
+            if (current == '\\' && _position + 1 < _source.Length)
+            {
+                _position++;
+                value.Add(_source[_position]);
+                _position++;
+                continue;
+            }
+
+            value.Add(current);
+            _position++;
+        }
+
+        var s = new string(value.ToArray()).Trim();
+        if (s.Length == 0)
+        {
+            throw new DslParseException($"Missing DSL value at position {start}.");
+        }
+
+        return new DslToken(DslTokenKind.Identifier, s, start);
     }
 
     private DslToken ReadIdentifier()
