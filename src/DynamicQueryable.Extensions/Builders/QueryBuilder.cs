@@ -77,7 +77,7 @@ public static class QueryBuilder
             return query.Cast<object>();
         }
 
-        var projection = ProjectionBuilder.Build<T>(tree);
+        var projection = ProjectionBuilder.Build<T>(tree, options.Filter);
         return query.Select(projection);
     }
 

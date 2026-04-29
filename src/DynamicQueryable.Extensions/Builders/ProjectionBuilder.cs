@@ -14,20 +14,41 @@ internal static class ProjectionBuilder
 {
     private static readonly ConcurrentDictionary<string, Expression> _cache = new();
 
-    public static Expression<Func<T, object>> Build<T>(SelectionNode selectTree)
+    private static readonly MethodInfo _queryableAsQueryable1 =
+        typeof(Queryable).GetMethods()
+            .First(m => m.Name == nameof(Queryable.AsQueryable)
+                        && m.IsGenericMethodDefinition
+                        && m.GetParameters().Length == 1);
+
+    private static readonly MethodInfo _queryableSelect2 =
+        typeof(Queryable).GetMethods()
+            .First(m => m.Name == nameof(Queryable.Select)
+                        && m.GetParameters().Length == 2);
+
+    private static readonly MethodInfo _enumerableToList1 =
+        typeof(Enumerable).GetMethods()
+            .First(m => m.Name == nameof(Enumerable.ToList)
+                        && m.IsGenericMethodDefinition
+                        && m.GetParameters().Length == 1);
+
+    public static Expression<Func<T, object>> Build<T>(SelectionNode selectTree, FilterGroup? filter = null)
     {
-        var cacheKey = typeof(T).FullName + ":" + GenerateCacheKey(selectTree);
+        var cacheKey = typeof(T).FullName + ":" + GenerateCacheKey(selectTree) + "|F:" + FilterAnalyzer.CacheKey(filter);
 
         return (Expression<Func<T, object>>)_cache.GetOrAdd(cacheKey, _ =>
         {
             var param = Expression.Parameter(typeof(T), "x");
-            var memberInit = BuildMemberInit(param, typeof(T), selectTree);
+            var memberInit = BuildMemberInit(param, typeof(T), selectTree, filter);
             var boxed = Expression.Convert(memberInit, typeof(object));
             return Expression.Lambda<Func<T, object>>(boxed, param);
         });
     }
 
-    private static Expression BuildMemberInit(Expression source, Type sourceType, SelectionNode selectTree)
+    private static Expression BuildMemberInit(
+        Expression source,
+        Type sourceType,
+        SelectionNode selectTree,
+        FilterGroup? filterContext)
     {
         var effectiveNode = NormalizeSelection(sourceType, selectTree);
 
@@ -43,26 +64,29 @@ internal static class ProjectionBuilder
 
             if (ShouldBuildNestedProjection(propInfo.PropertyType, childNode))
             {
+                var childFilterContext = filterContext is null
+                    ? null
+                    : FilterAnalyzer.ExtractForNavigation(filterContext, propInfo.Name);
+
                 if (IsIEnumerable(propInfo.PropertyType, out var itemType))
                 {
-                    // Collection handling: source.AsQueryable().Select(i => new DynamicType { ... }).ToList()
+                    // Collection handling: source.AsQueryable().Where(...).Select(i => new DynamicType { ... }).ToList()
                     var itemParam = Expression.Parameter(itemType, "i");
-                    var itemInit = BuildMemberInit(itemParam, itemType, childNode);
+                    var itemInit = BuildMemberInit(itemParam, itemType, childNode, childFilterContext);
                     var selectLambda = Expression.Lambda(itemInit, itemParam);
 
-                    var asQueryableMethod = typeof(Queryable).GetMethods()
-                        .First(m => m.Name == "AsQueryable" && m.IsGenericMethodDefinition && m.GetParameters().Length == 1)
-                        .MakeGenericMethod(itemType);
-
-                    var selectMethod = typeof(Queryable).GetMethods()
-                        .First(m => m.Name == "Select" && m.GetParameters().Length == 2)
-                        .MakeGenericMethod(itemType, itemInit.Type);
+                    var asQueryableMethod = _queryableAsQueryable1.MakeGenericMethod(itemType);
+                    var selectMethod = _queryableSelect2.MakeGenericMethod(itemType, itemInit.Type);
                     
-                    var toListMethod = typeof(Enumerable).GetMethod("ToList")!
-                        .MakeGenericMethod(itemInit.Type);
+                    var toListMethod = _enumerableToList1.MakeGenericMethod(itemInit.Type);
 
                     var asQueryableCall = Expression.Call(null, asQueryableMethod, propAccess);
-                    var selectCall = Expression.Call(null, selectMethod, asQueryableCall, selectLambda);
+                    var maybeWhereCall = ProjectionEnhancer.ApplyCollectionWhereIfNeeded(
+                        asQueryableCall,
+                        itemType,
+                        childFilterContext);
+
+                    var selectCall = Expression.Call(null, selectMethod, maybeWhereCall, selectLambda);
                     var toListCall = Expression.Call(null, toListMethod, selectCall);
 
                     var targetListType = typeof(List<>).MakeGenericType(itemInit.Type);
@@ -71,7 +95,7 @@ internal static class ProjectionBuilder
                 else
                 {
                     // Nested Object handling
-                    var nestedInit = BuildMemberInit(propAccess, propInfo.PropertyType, childNode);
+                    var nestedInit = BuildMemberInit(propAccess, propInfo.PropertyType, childNode, childFilterContext);
                     var isNullable = !propInfo.PropertyType.IsValueType || Nullable.GetUnderlyingType(propInfo.PropertyType) != null;
                     
                     if (isNullable)

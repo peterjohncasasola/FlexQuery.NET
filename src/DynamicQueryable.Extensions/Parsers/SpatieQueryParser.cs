@@ -54,9 +54,19 @@ internal static class SpatieQueryParser
 
     private sealed class SpatieFilterNode
     {
-        public Dictionary<string, string> Fields { get; } = new(StringComparer.OrdinalIgnoreCase);
+        public Dictionary<string, SpatieFieldPredicate> Fields { get; } = new(StringComparer.OrdinalIgnoreCase);
         public SortedDictionary<int, SpatieFilterNode> AndChildren { get; } = new();
         public SortedDictionary<int, SpatieFilterNode> OrChildren { get; } = new();
+    }
+
+    private sealed class SpatieFieldPredicate
+    {
+        // Back-compat: filter[field]=value
+        public string? LegacyValue { get; set; }
+
+        // New: filter[field][operator]=contains&filter[field][value]=john
+        public string? Operator { get; set; }
+        public string? Value { get; set; }
     }
 
     private static FilterGroup? ParseSpatieFilterGroup(Dictionary<string, string> d)
@@ -81,9 +91,39 @@ internal static class SpatieQueryParser
             if (!string.Equals(field, "and", StringComparison.OrdinalIgnoreCase)
                 && !string.Equals(field, "or", StringComparison.OrdinalIgnoreCase))
             {
-                node.Fields[field] = value;
+                if (!node.Fields.TryGetValue(field, out var pred))
+                    node.Fields[field] = pred = new SpatieFieldPredicate();
+
+                pred.LegacyValue = value;
             }
             return;
+        }
+
+        // New explicit operator form: filter[field][operator]=contains, filter[field][value]=john
+        // Also works within nested groups like filter[or][0][field][operator]=...
+        if (tokens.Count == 2)
+        {
+            var field = tokens[0];
+            var key = tokens[1];
+
+            if (!string.Equals(field, "and", StringComparison.OrdinalIgnoreCase)
+                && !string.Equals(field, "or", StringComparison.OrdinalIgnoreCase))
+            {
+                if (!node.Fields.TryGetValue(field, out var pred))
+                    node.Fields[field] = pred = new SpatieFieldPredicate();
+
+                if (key.Equals("operator", StringComparison.OrdinalIgnoreCase))
+                {
+                    pred.Operator = value;
+                    return;
+                }
+
+                if (key.Equals("value", StringComparison.OrdinalIgnoreCase))
+                {
+                    pred.Value = value;
+                    return;
+                }
+            }
         }
 
         if (!TryParseLogicToken(tokens[0], out var logic) || !int.TryParse(tokens[1], out var index))
@@ -155,26 +195,33 @@ internal static class SpatieQueryParser
         }
 
         var field = node.Fields.Keys.Single();
-        filter = new FilterCondition
-        {
-            Field = field,
-            Operator = FilterOperators.Equal,
-            Value = node.Fields[field]
-        };
+        filter = BuildFilterCondition(field, node.Fields[field]);
         return true;
     }
 
-    private static void AddFieldFilters(FilterGroup group, Dictionary<string, string> fields)
+    private static void AddFieldFilters(FilterGroup group, Dictionary<string, SpatieFieldPredicate> fields)
     {
         foreach (var field in fields)
         {
-            group.Filters.Add(new FilterCondition
-            {
-                Field = field.Key,
-                Operator = FilterOperators.Equal,
-                Value = field.Value
-            });
+            group.Filters.Add(BuildFilterCondition(field.Key, field.Value));
         }
+    }
+
+    private static FilterCondition BuildFilterCondition(string field, SpatieFieldPredicate pred)
+    {
+        // Prefer explicit (operator,value) if present, otherwise fall back to legacy value with eq.
+        var op = !string.IsNullOrWhiteSpace(pred.Operator)
+            ? FilterOperators.Normalize(pred.Operator)
+            : FilterOperators.Equal;
+
+        var val = pred.Value ?? pred.LegacyValue;
+
+        return new FilterCondition
+        {
+            Field = field,
+            Operator = op,
+            Value = val
+        };
     }
 
     private static void AddIndexedChildrenAsGroups(

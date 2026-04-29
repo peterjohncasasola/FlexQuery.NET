@@ -80,6 +80,108 @@ public async Task<IActionResult> Get()
 
 ---
 
+## 🧠 Filter logic & grouping (per format)
+
+DynamicQueryable normalizes all filter inputs into the same model:
+
+- `FilterGroup` (AND/OR)
+- `FilterCondition` (`Field`, `Operator`, `Value`)
+- Nested groups for complex trees
+
+That means the **same operator behavior** applies regardless of whether you send Generic, JSON, DSL, Syncfusion, or Spatie style parameters.
+
+### 🔹 Generic (indexed) filters
+
+- **Multiple filter rows**: combined with top-level `logic` (`and` default, or `or`)
+- **Nested groups**: not supported directly in query-string form (use JSON or DSL for nested trees)
+
+**AND (default)**
+
+```http
+?filter[0].field=City&filter[0].operator=eq&filter[0].value=London
+&filter[1].field=Age&filter[1].operator=gte&filter[1].value=25
+```
+
+**OR**
+
+```http
+?logic=or
+&filter[0].field=City&filter[0].operator=eq&filter[0].value=Berlin
+&filter[1].field=City&filter[1].operator=eq&filter[1].value=Paris
+```
+
+### 🔹 JSON filter groups (supports nested AND/OR trees)
+
+- `logic`: `"and"` or `"or"`
+- `filters`: list of leaf conditions and/or nested groups
+
+**(City = London OR City = Berlin) AND Age between 25..40**
+
+```http
+?filter={
+  "logic":"and",
+  "filters":[
+    {
+      "logic":"or",
+      "filters":[
+        {"field":"City","operator":"eq","value":"London"},
+        {"field":"City","operator":"eq","value":"Berlin"}
+      ]
+    },
+    {"field":"Age","operator":"between","value":"25,40"}
+  ]
+}
+```
+
+### 🔹 DSL (supports nested AND/OR with parentheses)
+
+DSL uses:
+
+- `&` for AND (URL-encode as `%26`)
+- `|` for OR
+- parentheses `( ... )` for grouping
+- leaf format: `field:operator:value`
+
+**(City = London OR City = Berlin) AND (Age between 25..40 OR Status = Pending)**
+
+```http
+?filter=((city:eq:London|city:eq:Berlin)%26(age:between:25,40|status:eq:Pending))
+```
+
+### 🔹 Syncfusion
+
+- Filters are expressed as indexed `where[i][field/operator/value]`
+- Top-level logic is controlled via `condition=and|or`
+
+**OR**
+
+```http
+?where[0][field]=City&where[0][operator]=equal&where[0][value]=Berlin
+&where[1][field]=City&where[1][operator]=equal&where[1][value]=Paris
+&condition=or
+```
+
+### 🔹 Laravel Spatie
+
+- Flat `filter[field]=value` is **implicit AND**
+- Nested grouping is supported via `filter[and]...` / `filter[or]...` (see examples below)
+
+**Implicit AND**
+
+```http
+?filter[name]=Alice Johnson
+&filter[status]=Active
+```
+
+**OR group**
+
+```http
+?filter[or][0][city]=london
+&filter[or][1][city]=paris
+```
+
+---
+
 ### ✅ Sorting
 
 ```http
@@ -151,6 +253,28 @@ With `Includes` and no `Select`, returns root entity scalars + included navigati
 
 ### 🔍 Operator Examples
 
+Below are operator examples with **multi-condition logic**. For the same operator, you can express multiple conditions using:
+
+- Generic: multiple `filter[i]...` rows + optional `logic=or`
+- JSON: nested groups with `logic`
+- DSL: `&` / `|` with parentheses
+
+#### `eq` / `neq`
+
+**Generic OR (City = Berlin OR City = Paris)**
+
+```http
+?logic=or
+&filter[0].field=City&filter[0].operator=eq&filter[0].value=Berlin
+&filter[1].field=City&filter[1].operator=eq&filter[1].value=Paris
+```
+
+**DSL OR**
+
+```http
+?filter=(city:eq:Berlin|city:eq:Paris)
+```
+
 #### Basic
 
 ```http
@@ -178,6 +302,18 @@ With `Includes` and no `Select`, returns root entity scalars + included navigati
 &filter[1].value=60
 ```
 
+**JSON equivalent (Age between 18..60)**
+
+```http
+?filter={
+  "logic":"and",
+  "filters":[
+    {"field":"Age","operator":"gte","value":"18"},
+    {"field":"Age","operator":"lte","value":"60"}
+  ]
+}
+```
+
 #### IN
 
 ```http
@@ -195,6 +331,43 @@ With `Includes` and no `Select`, returns root entity scalars + included navigati
 ```
 
 ---
+
+## 🧭 Nested paths & collection filters
+
+### Nested property paths
+
+You can filter and project nested properties using dot notation:
+
+```http
+?filter[0].field=Profile.Bio&filter[0].operator=contains&filter[0].value=dev
+&select=Id,Profile.Bio
+```
+
+### Collection paths (parent filtering uses EXISTS / Any)
+
+Filtering on a collection navigation like `Orders.Number` is translated as:
+
+- Parent predicate: `x.Orders.Any(o => o.Number == "SO-001")`
+
+Example:
+
+```http
+?filter[0].field=Orders.Number&filter[0].operator=eq&filter[0].value=SO-001
+```
+
+### Filtered child collection projection (when selected)
+
+When you **filter on a collection path** and you **also select that collection**, the projected child collection is filtered in the returned payload (projection-based, EF-translatable):
+
+```http
+?filter[0].field=Orders.Number&filter[0].operator=eq&filter[0].value=SO-001
+&select=Id,Orders.Number
+```
+
+This yields (conceptually):
+
+- Parent rows filtered by `Any(...)` (EXISTS semantics)
+- `Orders` projected as `Orders.Where(o => o.Number == "SO-001").Select(...).ToList()`
 
 ## 🔄 Supported Query Formats
 
@@ -325,7 +498,7 @@ Multiple filters are always combined with **AND** logic:
 &filter[profile.role]=Developer
 ```
 
-#### Nested Grouping (New!)
+#### Nested Grouping
 
 Supports complex nested AND/OR filter groups:
 

@@ -9,6 +9,7 @@ public sealed class SqlProjectionDbContext : DbContext, IDisposable
 
     public DbSet<SqlCustomer> Customers => Set<SqlCustomer>();
     public DbSet<SqlOrder> Orders => Set<SqlOrder>();
+    public DbSet<SqlOrderItem> OrderItems => Set<SqlOrderItem>();
 
     private SqlProjectionDbContext(DbContextOptions<SqlProjectionDbContext> options, SqliteConnection connection)
         : base(options)
@@ -32,6 +33,15 @@ public sealed class SqlProjectionDbContext : DbContext, IDisposable
         {
             entity.HasKey(x => x.Id);
             entity.Property(x => x.Number).IsRequired();
+            entity.HasMany(x => x.Items)
+                .WithOne(x => x.Order)
+                .HasForeignKey(x => x.OrderId);
+        });
+
+        modelBuilder.Entity<SqlOrderItem>(entity =>
+        {
+            entity.HasKey(x => x.Id);
+            entity.Property(x => x.Sku).IsRequired();
         });
     }
 
@@ -69,8 +79,29 @@ public sealed class SqlProjectionDbContext : DbContext, IDisposable
                 Email = "alice@example.com",
                 Orders =
                 [
-                    new SqlOrder { Id = 10, Number = "SO-001", Total = 125.50m, CreatedAtUtc = new DateTime(2025, 1, 1, 8, 0, 0, DateTimeKind.Utc) },
-                    new SqlOrder { Id = 11, Number = "SO-002", Total = 45.00m, CreatedAtUtc = new DateTime(2025, 1, 2, 8, 0, 0, DateTimeKind.Utc) }
+                    new SqlOrder
+                    {
+                        Id = 10,
+                        Number = "SO-001",
+                        Total = 125.50m,
+                        CreatedAtUtc = new DateTime(2025, 1, 1, 8, 0, 0, DateTimeKind.Utc),
+                        Items =
+                        [
+                            new SqlOrderItem { Id = 1000, Sku = "SKU-AAA" },
+                            new SqlOrderItem { Id = 1001, Sku = "SKU-BBB" }
+                        ]
+                    },
+                    new SqlOrder
+                    {
+                        Id = 11,
+                        Number = "SO-002",
+                        Total = 45.00m,
+                        CreatedAtUtc = new DateTime(2025, 1, 2, 8, 0, 0, DateTimeKind.Utc),
+                        Items =
+                        [
+                            new SqlOrderItem { Id = 1002, Sku = "SKU-CCC" }
+                        ]
+                    }
                 ]
             };
 
@@ -105,4 +136,13 @@ public sealed class SqlOrder
     public DateTime CreatedAtUtc { get; set; }
     public int CustomerId { get; set; }
     public SqlCustomer Customer { get; set; } = null!;
+    public List<SqlOrderItem> Items { get; set; } = [];
+}
+
+public sealed class SqlOrderItem
+{
+    public int Id { get; set; }
+    public string Sku { get; set; } = string.Empty;
+    public int OrderId { get; set; }
+    public SqlOrder Order { get; set; } = null!;
 }

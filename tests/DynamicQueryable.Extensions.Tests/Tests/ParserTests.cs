@@ -482,6 +482,48 @@ public class ParserTests
     }
 
     [Fact]
+    public void Spatie_Filter_WithExplicitOperator_ParsedCorrectly()
+    {
+        var opts = Parse(new()
+        {
+            ["filter[name][operator]"] = "contains",
+            ["filter[name][value]"] = "john"
+        });
+
+        opts.Filter.Should().NotBeNull();
+        opts.Filter!.Logic.Should().Be(LogicOperator.And);
+        opts.Filter.Filters.Should().ContainSingle();
+        opts.Filter.Filters[0].Field.Should().Be("name");
+        opts.Filter.Filters[0].Operator.Should().Be(FilterOperators.Contains);
+        opts.Filter.Filters[0].Value.Should().Be("john");
+    }
+
+    [Fact]
+    public void Spatie_NestedGroup_WithExplicitOperator_ParsedRecursively()
+    {
+        var opts = Parse(new()
+        {
+            ["filter[or][0][name][operator]"] = "startswith",
+            ["filter[or][0][name][value]"] = "jo",
+            ["filter[or][1][name]"] = "doe"
+        });
+
+        opts.Filter.Should().NotBeNull();
+        opts.Filter!.Logic.Should().Be(LogicOperator.Or);
+        opts.Filter.Filters.Should().HaveCount(2);
+
+        opts.Filter.Filters.Should().Contain(f =>
+            f.Field == "name"
+            && f.Operator == FilterOperators.StartsWith
+            && f.Value == "jo");
+
+        opts.Filter.Filters.Should().Contain(f =>
+            f.Field == "name"
+            && f.Operator == FilterOperators.Equal
+            && f.Value == "doe");
+    }
+
+    [Fact]
     public void Spatie_MultipleNestedConditions_ParsedAsAndGroup()
     {
         var opts = Parse(new()
