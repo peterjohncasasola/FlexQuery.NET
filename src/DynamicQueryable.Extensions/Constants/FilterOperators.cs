@@ -6,17 +6,29 @@ namespace DynamicQueryable.Constants;
 /// </summary>
 public static class FilterOperators
 {
+    /// <summary>Equality operator.</summary>
     public const string Equal            = "eq";
+    /// <summary>Inequality operator.</summary>
     public const string NotEqual         = "neq";
+    /// <summary>Greater than operator.</summary>
     public const string GreaterThan      = "gt";
+    /// <summary>Greater than or equal operator.</summary>
     public const string GreaterThanOrEq  = "gte";
+    /// <summary>Less than operator.</summary>
     public const string LessThan         = "lt";
+    /// <summary>Less than or equal operator.</summary>
     public const string LessThanOrEq     = "lte";
+    /// <summary>Substring search operator.</summary>
     public const string Contains         = "contains";
+    /// <summary>Prefix search operator.</summary>
     public const string StartsWith       = "startswith";
+    /// <summary>Suffix search operator.</summary>
     public const string EndsWith         = "endswith";
+    /// <summary>Null check operator.</summary>
     public const string IsNull           = "isnull";
+    /// <summary>Not null check operator.</summary>
     public const string IsNotNull        = "isnotnull";
+    /// <summary>Collection containment operator.</summary>
     public const string In               = "in";
 
     /// <summary>Normalizes common variants to canonical operator strings.</summary>
