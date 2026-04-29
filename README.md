@@ -56,7 +56,7 @@ public async Task<IActionResult> Get()
 - **Sorting**: multi-field ordering
 - **Paging**: `page` / `pageSize` or `skip` / `take` (format-dependent)
 - **Projection**: `select` with nested properties, plus `include`-style expansion
-- **Query formats**: Generic, JSON, DSL, Syncfusion, Laravel Spatie
+- **Query formats**: Generic, JSON, DSL, JQL-lite, Syncfusion, Laravel Spatie
 - **EF Core friendly**: expression-tree based, provider-translatable
 
 ## Filtering & Query Formats
@@ -108,6 +108,28 @@ Use `&` for AND (URL-encode as `%26`), `|` for OR, parentheses for grouping:
 ```http
 ?filter=((city:eq:London|city:eq:Berlin)%26(age:between:25,40|status:eq:Pending))
 ```
+
+### JQL-lite (`query`)
+
+Use SQL-like operators with `AND` / `OR` and parentheses for grouping:
+
+```http
+?query=(name = "john" OR name = "doe") AND age >= 20
+```
+
+Supports nested property paths and quoted values:
+
+```http
+?query=email = "ops@acmeretail.com" AND orders.number = "ORD-2026-0002" AND orders.items.quantity > 2
+```
+
+Supported JQL operators:
+
+- `=` `!=` `>` `>=` `<` `<=`
+- `CONTAINS`
+- `IN (...)` and `NOT IN (...)`
+
+Unlike DSL/JSON malformed-input handling, invalid JQL syntax is surfaced as a parse exception to callers.
 
 ### Syncfusion
 

@@ -40,19 +40,19 @@ public static class FilterOperators
     {
         return (raw ?? string.Empty).Trim().ToLowerInvariant() switch
         {
-            "eq"           or "equal"    or "equals"           or "=="  => Equal,
+            "eq"           or "equal"    or "equals"           or "=="  or "="   => Equal,
             "neq"          or "ne"       or "notequal"         or "!="  => NotEqual,
-            "gt"           or "greaterthan"                             => GreaterThan,
-            "gte"          or "ge"       or "greaterthanorequal"        => GreaterThanOrEq,
-            "lt"           or "lessthan"                                => LessThan,
-            "lte"          or "le"       or "lessthanorequal"           => LessThanOrEq,
+            "gt"           or "greaterthan"                   or ">"     => GreaterThan,
+            "gte"          or "ge"       or "greaterthanorequal" or ">=" => GreaterThanOrEq,
+            "lt"           or "lessthan"                      or "<"     => LessThan,
+            "lte"          or "le"       or "lessthanorequal" or "<="    => LessThanOrEq,
             "contains"     or "like"     or "cn"                        => Contains,
             "startswith"   or "starts"   or "sw"                        => StartsWith,
             "endswith"     or "ends"     or "ew"                        => EndsWith,
             "isnull"       or "null"                                    => IsNull,
             "isnotnull"    or "notnull"  or "isnotempty"                => IsNotNull,
             "in"                                                        => In,
-            "notin"                                                     => NotIn,
+            "notin"        or "not in"                                  => NotIn,
             "between"                                                   => Between,
             _                                                           => Equal
         };

@@ -1,6 +1,7 @@
 using DynamicQueryable.Constants;
 using DynamicQueryable.Models;
 using DynamicQueryable.Parsers;
+using DynamicQueryable.Parsers.Jql;
 using FluentAssertions;
 using Microsoft.Extensions.Primitives;
 
@@ -809,5 +810,128 @@ public class ParserTests
 
         opts.Filter.Should().NotBeNull();
         opts.Filter!.Filters.Should().ContainSingle(f => f.Field == "email" && f.Value == "ops@acmeretail.com");
+    }
+
+    // ════════════════════════════════════════════════════════════════════
+    // 5. JQL-lite Format (?query=...)
+    // ════════════════════════════════════════════════════════════════════
+
+    [Fact]
+    public void Jql_SimpleCondition_ParsedCorrectly()
+    {
+        var opts = Parse(new()
+        {
+            ["query"] = "name = \"john\""
+        });
+
+        opts.Filter.Should().NotBeNull();
+        opts.Filter!.Logic.Should().Be(LogicOperator.And);
+        opts.Filter.Filters.Should().ContainSingle();
+        opts.Filter.Filters[0].Field.Should().Be("name");
+        opts.Filter.Filters[0].Operator.Should().Be(FilterOperators.Equal);
+        opts.Filter.Filters[0].Value.Should().Be("john");
+    }
+
+    [Fact]
+    public void Jql_AndCondition_ParsedCorrectly()
+    {
+        var opts = Parse(new()
+        {
+            ["query"] = "name = \"john\" AND age >= 20"
+        });
+
+        opts.Filter.Should().NotBeNull();
+        opts.Filter!.Logic.Should().Be(LogicOperator.And);
+        opts.Filter.Filters.Should().HaveCount(2);
+        opts.Filter.Filters.Should().Contain(f => f.Field == "name" && f.Operator == FilterOperators.Equal && f.Value == "john");
+        opts.Filter.Filters.Should().Contain(f => f.Field == "age" && f.Operator == FilterOperators.GreaterThanOrEq && f.Value == "20");
+    }
+
+    [Fact]
+    public void Jql_OrCondition_ParsedCorrectly()
+    {
+        var opts = Parse(new()
+        {
+            ["query"] = "name = \"john\" OR name = \"doe\""
+        });
+
+        opts.Filter.Should().NotBeNull();
+        opts.Filter!.Logic.Should().Be(LogicOperator.Or);
+        opts.Filter.Filters.Should().HaveCount(2);
+        opts.Filter.Filters.Should().Contain(f => f.Field == "name" && f.Value == "john");
+        opts.Filter.Filters.Should().Contain(f => f.Field == "name" && f.Value == "doe");
+    }
+
+    [Fact]
+    public void Jql_NestedParentheses_ParsedCorrectly()
+    {
+        var opts = Parse(new()
+        {
+            ["query"] = "(name = \"john\" OR name = \"doe\") AND age > 18"
+        });
+
+        opts.Filter.Should().NotBeNull();
+        opts.Filter!.Logic.Should().Be(LogicOperator.And);
+        opts.Filter.Filters.Should().ContainSingle(f => f.Field == "age" && f.Operator == FilterOperators.GreaterThan && f.Value == "18");
+        opts.Filter.Groups.Should().ContainSingle();
+        opts.Filter.Groups[0].Logic.Should().Be(LogicOperator.Or);
+        opts.Filter.Groups[0].Filters.Should().HaveCount(2);
+    }
+
+    [Fact]
+    public void Jql_InOperator_ParsedCorrectly()
+    {
+        var opts = Parse(new()
+        {
+            ["query"] = "status IN (\"active\",\"pending\")"
+        });
+
+        opts.Filter.Should().NotBeNull();
+        opts.Filter!.Filters.Should().ContainSingle();
+        opts.Filter.Filters[0].Field.Should().Be("status");
+        opts.Filter.Filters[0].Operator.Should().Be(FilterOperators.In);
+        opts.Filter.Filters[0].Value.Should().Be("active,pending");
+    }
+
+    [Fact]
+    public void Jql_NestedPropertyPath_ParsedCorrectly()
+    {
+        var opts = Parse(new()
+        {
+            ["query"] = "orders.customer.name CONTAINS \"john\""
+        });
+
+        opts.Filter.Should().NotBeNull();
+        opts.Filter!.Filters.Should().ContainSingle();
+        opts.Filter.Filters[0].Field.Should().Be("orders.customer.name");
+        opts.Filter.Filters[0].Operator.Should().Be(FilterOperators.Contains);
+        opts.Filter.Filters[0].Value.Should().Be("john");
+    }
+
+    [Fact]
+    public void Jql_EmailAndNestedNumericCondition_ParsedCorrectly()
+    {
+        var opts = Parse(new()
+        {
+            ["query"] = "email = \"ops@acmeretail.com\" AND orders.number = \"ORD-2026-0002\" AND orders.items.quantity > 2"
+        });
+
+        opts.Filter.Should().NotBeNull();
+        opts.Filter!.Logic.Should().Be(LogicOperator.And);
+        opts.Filter.Filters.Should().HaveCount(3);
+        opts.Filter.Filters.Should().Contain(f => f.Field == "email" && f.Operator == FilterOperators.Equal && f.Value == "ops@acmeretail.com");
+        opts.Filter.Filters.Should().Contain(f => f.Field == "orders.number" && f.Operator == FilterOperators.Equal && f.Value == "ORD-2026-0002");
+        opts.Filter.Filters.Should().Contain(f => f.Field == "orders.items.quantity" && f.Operator == FilterOperators.GreaterThan && f.Value == "2");
+    }
+
+    [Fact]
+    public void Jql_InvalidSyntax_Throws()
+    {
+        Action act = () => Parse(new()
+        {
+            ["query"] = "name = "
+        });
+
+        act.Should().Throw<JqlParseException>();
     }
 }

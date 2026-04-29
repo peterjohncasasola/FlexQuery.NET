@@ -1,16 +1,30 @@
 using System.Reflection;
+using System.Text.RegularExpressions;
 
 namespace DynamicQueryable.Security;
 
 internal static class SafePropertyResolver
 {
-    public static bool TryResolveChain(Type rootType, string fieldPath, out IReadOnlyList<PropertyInfo> chain)
+    private static readonly Regex SegmentPattern = new(
+        @"^[A-Za-z_][A-Za-z0-9_]*$",
+        RegexOptions.Compiled | RegexOptions.IgnoreCase);
+
+    public static bool IsValidPathSyntax(string? fieldPath)
     {
-        chain = [];
         if (string.IsNullOrWhiteSpace(fieldPath)) return false;
 
         var segments = fieldPath.Split('.', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
         if (segments.Length == 0) return false;
+
+        return segments.All(s => SegmentPattern.IsMatch(s));
+    }
+
+    public static bool TryResolveChain(Type rootType, string fieldPath, out IReadOnlyList<PropertyInfo> chain)
+    {
+        chain = [];
+        if (!IsValidPathSyntax(fieldPath)) return false;
+
+        var segments = fieldPath.Split('.', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
 
         var currentType = rootType;
         var props = new List<PropertyInfo>(segments.Length);

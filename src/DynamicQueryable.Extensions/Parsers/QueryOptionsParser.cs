@@ -3,6 +3,7 @@ using System.Text.RegularExpressions;
 using DynamicQueryable.Constants;
 using DynamicQueryable.Models;
 using DynamicQueryable.Parsers.Dsl;
+using DynamicQueryable.Parsers.Jql;
 using Microsoft.Extensions.Primitives;
 
 namespace DynamicQueryable.Parsers;
@@ -39,6 +40,9 @@ public static class QueryOptionsParser
         if (dict.Count == 0) return new QueryOptions();
 
         // Detect format by key signatures
+        if (dict.TryGetValue("query", out var jql) && !string.IsNullOrWhiteSpace(jql))
+            return ParseJql(dict, jql);
+
         if (IsDslFilterFormat(dict))   return ParseDslFilter(dict);
         if (IsJsonFilterFormat(dict))  return ParseJsonFilter(dict);
         if (IsSyncfusionFormat(dict))  return ParseSyncfusion(dict);
@@ -245,6 +249,20 @@ public static class QueryOptionsParser
         {
             options.Filter = null;
         }
+
+        return options;
+    }
+
+    // ── JQL-lite Filter Format ───────────────────────────────────────────
+    //  ?query=(name = "john" OR name = "doe") AND age >= 20
+    //
+    // JQL parsing errors are NOT swallowed: invalid syntax should be surfaced to callers.
+    private static QueryOptions ParseJql(Dictionary<string, string> d, string query)
+    {
+        var options = ParseGeneric(d);
+
+        var ast = JqlParser.Parse(query);
+        options.Filter = JqlFilterConverter.ToFilterGroup(ast);
 
         return options;
     }
