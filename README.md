@@ -1,76 +1,71 @@
-# 🚀 DynamicQueryable
+# DynamicQueryable
 
-**DynamicQueryable** is a lightweight, extensible .NET 8 library that enables **dynamic filtering, sorting, pagination, and projection** for `IQueryable`.
+DynamicQueryable is a lightweight .NET library for applying **dynamic filtering, sorting, paging, and projection** to `IQueryable` (EF Core or any LINQ provider). It supports multiple query-string formats and produces **EF Core-translatable** expression trees.
 
-It supports multiple query formats (Generic, JSON, DSL, Syncfusion, Laravel Spatie) and is designed to integrate seamlessly with **Entity Framework Core** or any LINQ provider.
-
----
-
-* ✅ Dynamic filtering (OData-lite style)
-* ✅ Sorting (multi-field)
-* ✅ Pagination (skip/take)
-* ✅ Projection (`select` with nested properties)
-* ✅ Include support (nested property projection)
-* ✅ Query parameter parser
-  * Generic format
-  * JSON format
-  * DSL format
-  * Syncfusion
-  * Laravel Spatie
-* ✅ Fully testable and extensible
-
----
-
-## 📦 Installation
+## Installation
 
 ```bash
 dotnet add package DynamicQueryable.Extensions
 ```
 
----
+Optional (async helpers for EF Core):
 
-## ⚡ Quick Start
+```bash
+dotnet add package DynamicQueryable.Extensions.EFCore
+```
 
-### 1. Parse Query Options
+## Quick Start
 
-Use the `QueryOptionsParser` to convert your query string parameters into a `QueryOptions` object.
+### Parse request query into `QueryOptions`
 
 ```csharp
 using DynamicQueryable.Parsers;
 
-// In a controller or minimal API:
 var options = QueryOptionsParser.Parse(Request.Query);
 ```
 
-### 2. Apply to IQueryable
-
-Use the extension methods provided in `DynamicQueryable.Extensions`.
+### Apply to `IQueryable`
 
 ```csharp
 using DynamicQueryable.Extensions;
+using Microsoft.EntityFrameworkCore;
 
 [HttpGet]
 public async Task<IActionResult> Get()
 {
     var options = QueryOptionsParser.Parse(Request.Query);
-    
-    // Simple usage (returns paged data)
+
+    // Filter + sort + paging
     var users = await _context.Users
         .ApplyQueryOptions(options)
         .ToListAsync();
 
-    // Or use ToQueryResult for metadata (TotalCount, Page, etc.)
-    var result = _context.Users.ToQueryResult(options);
-    
-    return Ok(result);
+    // Projection (optional)
+    var projected = await _context.Users
+        .ApplyQueryOptions(options)
+        .ApplySelect(options)
+        .ToListAsync();
+
+    return Ok(new { users, projected });
 }
 ```
 
----
+## Features
 
-## 🔍 Query Examples
+- **Filtering**: nested AND/OR groups, nested property paths, collection paths (EXISTS/`Any`)
+- **Sorting**: multi-field ordering
+- **Paging**: `page` / `pageSize` or `skip` / `take` (format-dependent)
+- **Projection**: `select` with nested properties, plus `include`-style expansion
+- **Query formats**: Generic, JSON, DSL, Syncfusion, Laravel Spatie
+- **EF Core friendly**: expression-tree based, provider-translatable
 
-### ✅ Filtering
+## Filtering & Query Formats
+
+DynamicQueryable parses incoming query parameters into a unified model (`QueryOptions`, `FilterGroup`, `FilterCondition`). Operator behavior is consistent across formats.
+
+### Generic (indexed)
+
+**Simple filter**
 
 ```http
 ?filter[0].field=Name
@@ -78,31 +73,7 @@ public async Task<IActionResult> Get()
 &filter[0].value=john
 ```
 
----
-
-## 🧠 Filter logic & grouping (per format)
-
-DynamicQueryable normalizes all filter inputs into the same model:
-
-- `FilterGroup` (AND/OR)
-- `FilterCondition` (`Field`, `Operator`, `Value`)
-- Nested groups for complex trees
-
-That means the **same operator behavior** applies regardless of whether you send Generic, JSON, DSL, Syncfusion, or Spatie style parameters.
-
-### 🔹 Generic (indexed) filters
-
-- **Multiple filter rows**: combined with top-level `logic` (`and` default, or `or`)
-- **Nested groups**: not supported directly in query-string form (use JSON or DSL for nested trees)
-
-**AND (default)**
-
-```http
-?filter[0].field=City&filter[0].operator=eq&filter[0].value=London
-&filter[1].field=Age&filter[1].operator=gte&filter[1].value=25
-```
-
-**OR**
+**Top-level logic (AND/OR)**
 
 ```http
 ?logic=or
@@ -110,12 +81,9 @@ That means the **same operator behavior** applies regardless of whether you send
 &filter[1].field=City&filter[1].operator=eq&filter[1].value=Paris
 ```
 
-### 🔹 JSON filter groups (supports nested AND/OR trees)
+### JSON (nested groups)
 
-- `logic`: `"and"` or `"or"`
-- `filters`: list of leaf conditions and/or nested groups
-
-**(City = London OR City = Berlin) AND Age between 25..40**
+**Advanced nested logic**
 
 ```http
 ?filter={
@@ -133,308 +101,15 @@ That means the **same operator behavior** applies regardless of whether you send
 }
 ```
 
-### 🔹 DSL (supports nested AND/OR with parentheses)
+### DSL (compact filter string)
 
-DSL uses:
-
-- `&` for AND (URL-encode as `%26`)
-- `|` for OR
-- parentheses `( ... )` for grouping
-- leaf format: `field:operator:value`
-
-**(City = London OR City = Berlin) AND (Age between 25..40 OR Status = Pending)**
+Use `&` for AND (URL-encode as `%26`), `|` for OR, parentheses for grouping:
 
 ```http
 ?filter=((city:eq:London|city:eq:Berlin)%26(age:between:25,40|status:eq:Pending))
 ```
 
-### 🔹 Syncfusion
-
-- Filters are expressed as indexed `where[i][field/operator/value]`
-- Top-level logic is controlled via `condition=and|or`
-
-**OR**
-
-```http
-?where[0][field]=City&where[0][operator]=equal&where[0][value]=Berlin
-&where[1][field]=City&where[1][operator]=equal&where[1][value]=Paris
-&condition=or
-```
-
-### 🔹 Laravel Spatie
-
-- Flat `filter[field]=value` is **implicit AND**
-- Nested grouping is supported via `filter[and]...` / `filter[or]...` (see examples below)
-
-**Implicit AND**
-
-```http
-?filter[name]=Alice Johnson
-&filter[status]=Active
-```
-
-**OR group**
-
-```http
-?filter[or][0][city]=london
-&filter[or][1][city]=paris
-```
-
----
-
-### ✅ Sorting
-
-```http
-?sort[0].field=Age
-&sort[0].desc=true
-```
-
----
-
-### ✅ Pagination
-
-```http
-?page=1&pageSize=10
-```
-
----
-
-### ✅ Projection
-
-```http
-?select=Id,Name,Email
-```
-
-With `Includes` and no `Select`, returns root entity scalars + included navigations:
-
-```http
-?include=Profile,Orders
-```
-
----
-
-### ✅ Nested Projection
-
-```http
-?select=Id,Name,Profile.Name,Orders.Total
-```
-
----
-
-### ✅ Include + Select
-
-```http
-?include=Profile,Orders
-&select=Id,Name,Profile.Name,Orders.Total
-```
-
----
-
-## 🔧 Supported Operators
-
-| Operator     | Description            | Example                          |
-| ------------ | ---------------------- | -------------------------------- |
-| `eq`         | Equal                  | `Name eq 'John'`                 |
-| `neq`        | Not equal              | `Age neq 30`                     |
-| `gt`         | Greater than           | `Age gt 18`                      |
-| `gte`        | Greater than or equal  | `Age gte 18`                     |
-| `lt`         | Less than              | `Age lt 60`                      |
-| `lte`        | Less than or equal     | `Age lte 60`                     |
-| `contains`   | String contains        | `Name contains 'jo'`             |
-| `startswith` | String starts with     | `Name startswith 'Jo'`           |
-| `endswith`   | String ends with       | `Name endswith 'hn'`             |
-| `in`         | Value exists in a list | `Status in ['Active','Pending']` |
-| `notin`      | Value does not exist in a list | `Status notin ['Inactive']` |
-| `between`    | Inclusive range        | `Age between 18,60`              |
-| `isnull`     | Check if value is null | `DeletedAt isnull true`          |
-| `notnull`    | Check if value is not null | `DeletedAt notnull`           |
-
----
-
-### 🔍 Operator Examples
-
-Below are operator examples with **multi-condition logic**. For the same operator, you can express multiple conditions using:
-
-- Generic: multiple `filter[i]...` rows + optional `logic=or`
-- JSON: nested groups with `logic`
-- DSL: `&` / `|` with parentheses
-
-#### `eq` / `neq`
-
-**Generic OR (City = Berlin OR City = Paris)**
-
-```http
-?logic=or
-&filter[0].field=City&filter[0].operator=eq&filter[0].value=Berlin
-&filter[1].field=City&filter[1].operator=eq&filter[1].value=Paris
-```
-
-**DSL OR**
-
-```http
-?filter=(city:eq:Berlin|city:eq:Paris)
-```
-
-#### Basic
-
-```http
-?filter[0].field=Name
-&filter[0].operator=eq
-&filter[0].value=John
-```
-
-#### Contains
-
-```http
-?filter[0].field=Name
-&filter[0].operator=contains
-&filter[0].value=jo
-```
-
-#### Range
-
-```http
-?filter[0].field=Age
-&filter[0].operator=gte
-&filter[0].value=18
-&filter[1].field=Age
-&filter[1].operator=lte
-&filter[1].value=60
-```
-
-**JSON equivalent (Age between 18..60)**
-
-```http
-?filter={
-  "logic":"and",
-  "filters":[
-    {"field":"Age","operator":"gte","value":"18"},
-    {"field":"Age","operator":"lte","value":"60"}
-  ]
-}
-```
-
-#### IN
-
-```http
-?filter[0].field=Status
-&filter[0].operator=in
-&filter[0].value=Active,Pending
-```
-
-#### NULL
-
-```http
-?filter[0].field=DeletedAt
-&filter[0].operator=isnull
-&filter[0].value=true
-```
-
----
-
-## 🧭 Nested paths & collection filters
-
-### Nested property paths
-
-You can filter and project nested properties using dot notation:
-
-```http
-?filter[0].field=Profile.Bio&filter[0].operator=contains&filter[0].value=dev
-&select=Id,Profile.Bio
-```
-
-### Collection paths (parent filtering uses EXISTS / Any)
-
-Filtering on a collection navigation like `Orders.Number` is translated as:
-
-- Parent predicate: `x.Orders.Any(o => o.Number == "SO-001")`
-
-Example:
-
-```http
-?filter[0].field=Orders.Number&filter[0].operator=eq&filter[0].value=SO-001
-```
-
-### Filtered child collection projection (when selected)
-
-When you **filter on a collection path** and you **also select that collection**, the projected child collection is filtered in the returned payload (projection-based, EF-translatable):
-
-```http
-?filter[0].field=Orders.Number&filter[0].operator=eq&filter[0].value=SO-001
-&select=Id,Orders.Number
-```
-
-This yields (conceptually):
-
-- Parent rows filtered by `Any(...)` (EXISTS semantics)
-- `Orders` projected as `Orders.Where(o => o.Number == "SO-001").Select(...).ToList()`
-
-## 🔄 Supported Query Formats
-
-### 🔹 Generic
-
-```http
-?filter[0].field=Name
-&filter[0].operator=contains
-&filter[0].value=john
-```
-
----
-
-### 🔹 JSON
-
-```http
-?filter={
-  "logic":"and",
-  "filters":[
-    {"field":"Name","operator":"contains","value":"john"}
-  ]
-}
-```
-
----
-
-### DSL
- 
- DSL filters are parsed through a tokenizer and AST, then converted into the same `FilterGroup` model used by all other formats. In a real URL, encode `&` as `%26` because `&` is also the query-string separator.
- 
- The DSL filter string supports:
- - Comparisons: `field:operator:value`
- - Logical OR: `|`
- - Logical AND: `&` (URL-encoded as `%26` in query strings)
- - Grouping: parentheses `( ... )`
- 
- For sorting, pagination, and projection, use the standard generic parameters alongside the DSL filter (e.g., `sort[0].field`, `page`, `pageSize`, `select`).
- 
- ```http
- ?filter=(name:eq:john|name:eq:doe)%26age:gt:20&sort[0].field=Age&sort[0].desc=true
- ```
- 
- Supported operators:
- 
- ```text
- eq, neq, gt, gte, lt, lte, contains, startswith, endswith, in, notin, between, isnull, notnull
- ```
- 
- Nested property paths are supported:
- 
- ```http
- ?filter=orders.customer.name:contains:john
- ```
- 
- Additional examples:
- 
- ```http
- ?filter=status:notin:Inactive,Deleted
- ?filter=age:between:18,60
- ?filter=deletedAt:notnull
- ```
-
----
-
-### 🔹 Syncfusion
-
-#### Basic Usage
+### Syncfusion
 
 ```http
 ?where[0][field]=Name
@@ -446,260 +121,156 @@ This yields (conceptually):
 &take=10
 ```
 
-#### Multiple Conditions with Logic
+Use `condition=and|or` for top-level logic.
 
-You can combine multiple conditions using the `condition` parameter (`and` or `or`):
+### Laravel Spatie
 
-```http
-?where[0][field]=City
-&where[0][operator]=equal
-&where[0][value]=London
-&where[1][field]=Age
-&where[1][operator]=greaterthanorequal
-&where[1][value]=25
-&condition=and
-```
-
-#### Nested Property Paths
-
-Supports nested properties in filter conditions:
-
-```http
-?where[0][field]=Profile.Bio
-&where[0][operator]=contains
-&where[0][value]=developer
-&where[1][field]=Status
-&where[1][operator]=equal
-&where[1][value]=Active
-&condition=and
-```
-
----
-
-### 🔹 Laravel Spatie
-
-#### Basic Usage
-
-```http
-?filter[name]=john
-&filter[age]=25
-&sort=-created_at
-&include=roles,permissions
-&fields[users]=name,email
-```
-
-#### Multiple Conditions (Implicit AND)
-
-Multiple filters are always combined with **AND** logic:
+**Implicit AND (default Spatie behavior)**
 
 ```http
 ?filter[name]=Alice Johnson
 &filter[status]=Active
-&filter[profile.role]=Developer
 ```
 
-#### Nested Grouping
-
-Supports complex nested AND/OR filter groups:
+**Nested grouping**
 
 ```http
 ?filter[or][0][name]=john
 &filter[or][1][name]=doe
 ```
 
-```http
-?filter[and][0][name]=john
-&filter[and][1][or][0][age]=20
-&filter[and][1][or][1][age]=30
-```
+**Explicit operator support (extension)**
 
 ```http
-?filter[or][0][and][0][name]=john
-&filter[or][0][and][1][or][0][city]=london
-&filter[or][0][and][1][or][1][city]=paris
-&filter[or][1][status]=active
+?filter[name][operator]=contains
+&filter[name][value]=john
 ```
 
-#### Nested Property Paths
+(Works inside nested `and/or` groups as well.)
 
-Supports dot notation for nested properties:
+## Operators
+
+| Operator     | Description                  | Example                          |
+| ------------ | ---------------------------- | -------------------------------- |
+| `eq`         | Equal                        | `Name eq 'John'`                 |
+| `neq`        | Not equal                    | `Age neq 30`                     |
+| `gt`         | Greater than                 | `Age gt 18`                      |
+| `gte`        | Greater than or equal        | `Age gte 18`                     |
+| `lt`         | Less than                    | `Age lt 60`                      |
+| `lte`        | Less than or equal           | `Age lte 60`                     |
+| `contains`   | String contains              | `Name contains 'jo'`             |
+| `startswith` | String starts with           | `Name startswith 'Jo'`           |
+| `endswith`   | String ends with             | `Name endswith 'hn'`             |
+| `in`         | Value exists in a list       | `Status in ['Active','Pending']` |
+| `notin`      | Value does not exist in list | `Status notin ['Inactive']`      |
+| `between`    | Inclusive range              | `Age between 18,60`              |
+| `isnull`     | Is null                      | `DeletedAt isnull`               |
+| `notnull`    | Is not null                  | `DeletedAt notnull`              |
+
+## Nested & Collections
+
+### Nested property paths
+
+Dot-notation works across filtering and projection:
 
 ```http
-?filter[profile.bio]=Developer
-&filter[profile.status]=Active
-&sort=-created_at
+?filter[0].field=Profile.Bio&filter[0].operator=contains&filter[0].value=dev
+&select=Id,Profile.Bio
 ```
 
----
+### Collection paths (parent filtering)
 
-## 📦 API Methods
+Filtering on a collection navigation (e.g. `Orders.Number`) uses `Any(...)` / EXISTS semantics for the parent:
 
-### `ToQueryResult<T>(options)`
+```http
+?filter[0].field=Orders.Number
+&filter[0].operator=eq
+&filter[0].value=SO-001
+```
 
-Executes a query and returns `QueryResult<T>` with metadata:
+Conceptually:
+
+```csharp
+x => x.Orders.Any(o => o.Number == "SO-001")
+```
+
+### Filtered child collections (when selected)
+
+When a request **filters on a collection path** and that collection is **also projected**, the returned child collection is filtered to match the same criteria (projection-based, EF Core translatable):
+
+```http
+?filter[0].field=Orders.Number&filter[0].operator=eq&filter[0].value=SO-001
+&select=Id,Orders.Number
+```
+
+Conceptually:
+
+```csharp
+x => new {
+  x.Id,
+  Orders = x.Orders
+    .Where(o => o.Number == "SO-001")
+    .Select(o => new { o.Number })
+    .ToList()
+}
+```
+
+## API Methods
+
+### Apply filter/sort/paging
+
+```csharp
+using DynamicQueryable.Extensions;
+
+var options = QueryOptionsParser.Parse(Request.Query);
+
+var query = _context.Users.AsQueryable()
+    .ApplyQueryOptions(options); // filter + sort + paging
+
+var data = await query.ToListAsync();
+```
+
+### Apply projection (`select` / `include` / JSON select tree)
+
+```csharp
+var projected = await _context.Users
+    .ApplyQueryOptions(options)
+    .ApplySelect(options)
+    .ToListAsync(); // IQueryable<object>
+```
+
+### Return results with metadata
 
 ```csharp
 var result = _context.Users.ToQueryResult(options);
-// result.Data - List<T>
-// result.TotalCount - total matching records
-// result.Page, result.PageSize - pagination info
+// result.Data, result.TotalCount, result.Page, result.PageSize
 ```
 
-### `ToProjectedQueryResult<T>(options)`
-
-Executes a query and returns `QueryResult<object>` with dynamic projection:
+### Return projected results with metadata
 
 ```csharp
 var result = _context.Users.ToProjectedQueryResult(options);
-// result.Data - List<object> (only selected fields)
-// result.TotalCount - total matching records
+// result.Data is List<object> shaped by Select/Includes/JSON select tree
 ```
 
-Useful for API endpoints that return shaped/dynamic responses.
-
-### EF Core Async Versions
-
-From `DynamicQueryable.Extensions.EFCore`:
+### EF Core async helpers (package: `DynamicQueryable.Extensions.EFCore`)
 
 ```csharp
-var result = await _context.Users
-    .ToQueryResultAsync(options, cancellationToken);
-
-var projected = await _context.Users
-    .ToProjectedQueryResultAsync(options, cancellationToken);
+var result = await _context.Users.ToQueryResultAsync(options, cancellationToken);
+var projected = await _context.Users.ToProjectedQueryResultAsync(options, cancellationToken);
 ```
 
----
+## ASP.NET Integration (optional)
 
-## 🔌 Integration with BaseRepository
-
-```csharp
-public async Task<QueryResult<T>> GetPagedAsync(QueryOptions options)
-{
-    return _dbSet.AsQueryable().ToQueryResult(options);
-}
-
-public async Task<QueryResult<object>> GetProjectedAsync(QueryOptions options)
-{
-    return _dbSet.AsQueryable().ToProjectedQueryResult(options);
-}
-```
-
-#### Multiple Conditions (Implicit AND)
-
-Multiple filters are always combined with **AND** logic. Laravel Spatie format does not support explicit OR logic at the top level (unlike Syncfusion's `condition` parameter):
-
-```http
-?filter[name]=Alice Johnson
-&filter[status]=Active
-&filter[profile.role]=Developer
-```
-
-#### Nested Property Paths
-
-Supports dot notation for nested properties:
-
-```http
-?filter[profile.bio]=Developer
-&filter[profile.status]=Active
-&sort=-created_at
-```
-
----
-
-
-
-### Manual Construction
-
-You can also build `QueryOptions` manually in code:
-
-```csharp
-var options = new QueryOptions
-{
-    Filter = new FilterGroup
-    {
-        Filters = [new FilterCondition { Field = "Age", Operator = "gt", Value = "18" }]
-    },
-    Sort = [new SortOption { Field = "Name", Descending = false }],
-    Paging = new PagingOptions { Page = 1, PageSize = 10 }
-};
-
-var query = _context.Users.ApplyQueryOptions(options);
-```
-
----
-
-## 🔌 ASP.NET Core Integration
-
-Since the parser is static, you can easily wrap it in a custom `ModelBinder` or just call it directly in your base controller.
+You can parse directly in controllers/minimal APIs:
 
 ```csharp
 public abstract class BaseController : ControllerBase
 {
-    protected QueryOptions QueryOptions => QueryOptionsParser.Parse(Request.Query);
+    protected QueryOptions Options => QueryOptionsParser.Parse(Request.Query);
 }
 ```
 
----
-
-## 🧪 Testing
-
-Run tests:
-
-```bash
-dotnet test
-```
-
-Includes:
-
-* Filtering
-* Sorting
-* Paging
-* Projection
-* Parser
-
----
-
-## 🧱 Architecture
-
-```
-DynamicQueryable.Extensions
-│
-├── Models      (FilterCondition, SortOption, etc.)
-├── Builders    (ExpressionBuilder, ProjectionBuilder)
-├── Extensions  (QueryableExtensions)
-├── Helpers     (SelectTreeBuilder)
-└── Parsers     (QueryOptionsParser, SpatieQueryParser)
-```
-
----
-
-## 🔗 Integration with BaseRepository
-
-```csharp
-public async Task<QueryResult<T>> GetPagedAsync(QueryOptions options)
-{
-    return _dbSet.AsQueryable().ToQueryResult(options);
-}
-```
-
----
-
-## 🚀 Roadmap
-
-* [ ] Redis caching implementation
-* [ ] Expression caching (performance)
-* [ ] Field-level authorization
-* [ ] GraphQL-style query support
-
----
-
-## 🤝 Contributing
-
-Contributions, issues, and feature requests are welcome.
-
----
-
-## 📄 License
+## License
 
 MIT License
