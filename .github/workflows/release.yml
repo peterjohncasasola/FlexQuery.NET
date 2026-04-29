@@ -5,32 +5,44 @@ on:
     tags:
       - 'v*'
 
+permissions:
+  contents: write
+
 jobs:
   release:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v3
+    - name: Checkout
+      uses: actions/checkout@v3
       with:
         fetch-depth: 0
 
-    - name: Generate Release Notes
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v3
+      with:
+        dotnet-version: '8.0.x'
+
+    - name: Restore
+      run: dotnet restore
+
+    - name: Build
+      run: dotnet build --configuration Release --no-restore
+
+    - name: Pack
+      run: dotnet pack --configuration Release --no-build -o ./nupkg
+
+    - name: Create Release Notes
       run: |
         echo "## 🚀 Release ${{ github.ref_name }}" > notes.md
+        git log -10 --pretty=format:"- %s" >> notes.md
 
-        echo "### ✨ Features" >> notes.md
-        git log $(git describe --tags --abbrev=0 HEAD^)..HEAD --pretty=format:"%s" | grep "^feat" | sed 's/^feat:/-/' >> notes.md || true
-
-        echo -e "\n### ⚡ Improvements" >> notes.md
-        git log ... | grep -E "refactor|perf" | sed 's/^/- /' >> notes.md || true
-
-        echo -e "\n### 🐛 Fixes" >> notes.md
-        git log ... | grep "^fix" | sed 's/^fix:/-/' >> notes.md || true
-
-    - name: Create Release
+    - name: Create GitHub Release
       uses: softprops/action-gh-release@v1
       with:
         body_path: notes.md
 
-    - name: Publish NuGet
-      run: dotnet nuget push "./nupkg/*.nupkg" --api-key ${{ secrets.NUGET_API_KEY }} --source https://api.nuget.org/v3/index.json
+    - name: Publish to NuGet
+      run: dotnet nuget push "./nupkg/*.nupkg" \
+            --api-key ${{ secrets.NUGET_API_KEY }} \
+            --source https://api.nuget.org/v3/index.json
