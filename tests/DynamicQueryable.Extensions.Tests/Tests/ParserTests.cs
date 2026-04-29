@@ -127,6 +127,27 @@ public class ParserTests
     }
 
     [Fact]
+    public void Generic_SortString_Aggregate_ParsedCorrectly()
+    {
+        var opts = Parse(new()
+        {
+            ["sort"] = "orders.sum(total):desc,orders.count():asc"
+        });
+
+        opts.Sort.Should().HaveCount(2);
+
+        opts.Sort[0].Field.Should().Be("orders");
+        opts.Sort[0].Aggregate.Should().Be("sum");
+        opts.Sort[0].AggregateField.Should().Be("total");
+        opts.Sort[0].Descending.Should().BeTrue();
+
+        opts.Sort[1].Field.Should().Be("orders");
+        opts.Sort[1].Aggregate.Should().Be("count");
+        opts.Sort[1].AggregateField.Should().BeNull();
+        opts.Sort[1].Descending.Should().BeFalse();
+    }
+
+    [Fact]
     public void Generic_Select_ParsedCorrectly()
     {
         var opts = Parse(new()

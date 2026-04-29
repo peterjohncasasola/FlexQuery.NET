@@ -22,6 +22,10 @@ namespace DynamicQueryable.Parsers;
 /// </summary>
 public static class QueryOptionsParser
 {
+    private static readonly Regex AggregateSortPattern = new(
+        @"^(?<collection>[A-Za-z_][A-Za-z0-9_\.]*)\.(?<fn>sum|count|max|min|avg)\((?<field>[A-Za-z_][A-Za-z0-9_\.]*)?\)$",
+        RegexOptions.Compiled | RegexOptions.IgnoreCase);
+
     // ── Public entry point ───────────────────────────────────────────────
 
     /// <summary>
@@ -472,6 +476,25 @@ public static class QueryOptionsParser
 
             var direction = parts.Length > 1 ? parts[1] : "asc";
             var isDesc = direction.Equals("desc", StringComparison.OrdinalIgnoreCase);
+
+            var aggregateMatch = AggregateSortPattern.Match(field);
+            if (aggregateMatch.Success)
+            {
+                var aggregate = aggregateMatch.Groups["fn"].Value.ToLowerInvariant();
+                var collection = aggregateMatch.Groups["collection"].Value;
+                var aggregateField = aggregateMatch.Groups["field"].Success
+                    ? aggregateMatch.Groups["field"].Value
+                    : null;
+
+                result.Add(new SortOption
+                {
+                    Field = collection,
+                    Descending = isDesc,
+                    Aggregate = aggregate,
+                    AggregateField = string.IsNullOrWhiteSpace(aggregateField) ? null : aggregateField
+                });
+                continue;
+            }
 
             result.Add(new SortOption
             {

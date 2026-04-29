@@ -59,6 +59,19 @@ public async Task<IActionResult> Get()
 - **Query formats**: Generic, JSON, DSL, JQL-lite, Syncfusion, Laravel Spatie
 - **EF Core friendly**: expression-tree based, provider-translatable
 
+### 🔽 Sorting
+- **Basic**: `?sort=createdAt:desc`
+- **Multi-field**: `?sort=createdAt:desc,total:asc`
+- **Nested**: `?sort=customer.name:asc`
+- **Aggregate**: `?sort=orders.sum(total):desc,orders.count():asc`
+
+> [!NOTE]
+> - Default direction is `asc`.
+> - Dot notation is supported for nested properties.
+> - **Aggregate Functions**: Supports `sum()`, `count()`, `max()`, `min()`, and `avg()` on collection paths.
+> - **Direct Collection Sorting**: Sorting directly on a collection property (e.g., `orders.total`) is **NOT** supported; use an aggregate instead.
+
+
 ## Filtering & Query Formats
 
 DynamicQueryable parses incoming query parameters into a unified model (`QueryOptions`, `FilterGroup`, `FilterCondition`). Operator behavior is consistent across formats.

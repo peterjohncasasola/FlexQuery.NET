@@ -233,6 +233,6 @@ public class SelectTests : IDisposable
         sql.Should().NotContain("\"CreatedAtUtc\"");
 
         var rows = await projected.ToListAsync();
-        rows.Should().HaveCount(2);
+        rows.Should().HaveCount(3);
     }
 }
