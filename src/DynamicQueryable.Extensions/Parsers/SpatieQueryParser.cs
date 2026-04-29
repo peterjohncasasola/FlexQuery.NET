@@ -17,15 +17,7 @@ internal static class SpatieQueryParser
 
         if (d.TryGetValue("sort", out var sortRaw))
         {
-            foreach (var part in sortRaw.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
-            {
-                var desc = part.StartsWith('-');
-                var field = desc ? part[1..] : part;
-                if (!string.IsNullOrWhiteSpace(field))
-                {
-                    options.Sort.Add(new SortOption { Field = field, Descending = desc });
-                }
-            }
+            options.Sort.AddRange(QueryOptionsParser.ParseSort(sortRaw));
         }
 
         var fieldsRegex = new Regex(@"^fields\[([^\]]+)\]$", RegexOptions.IgnoreCase);

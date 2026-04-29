@@ -1,7 +1,7 @@
 using System.Linq.Expressions;
 using System.Reflection;
-using DynamicQueryable.Exceptions;
 using DynamicQueryable.Models;
+using DynamicQueryable.Security;
 
 namespace DynamicQueryable.Builders;
 
@@ -11,6 +11,11 @@ namespace DynamicQueryable.Builders;
 /// </summary>
 public static class QueryBuilder
 {
+    private static readonly MethodInfo OrderByMethod = GetQueryableMethod(nameof(Queryable.OrderBy));
+    private static readonly MethodInfo OrderByDescendingMethod = GetQueryableMethod(nameof(Queryable.OrderByDescending));
+    private static readonly MethodInfo ThenByMethod = GetQueryableMethod(nameof(Queryable.ThenBy));
+    private static readonly MethodInfo ThenByDescendingMethod = GetQueryableMethod(nameof(Queryable.ThenByDescending));
+
     // ── Filter ───────────────────────────────────────────────────────────
 
     /// <summary>Applies the filter group from <paramref name="options"/> to the query.</summary>
@@ -36,16 +41,12 @@ public static class QueryBuilder
         {
             if (string.IsNullOrWhiteSpace(sort.Field)) continue;
 
-            var keySelector = BuildKeySelector<T>(sort.Field)
-                ?? throw new InvalidSortFieldException(sort.Field, typeof(T));
+            if (!TryBuildKeySelectorLambda<T>(sort.Field, out var keySelector, out var keyType))
+                continue;
 
             ordered = ordered is null
-                ? (sort.Descending
-                    ? query.OrderByDescending(keySelector)
-                    : query.OrderBy(keySelector))
-                : (sort.Descending
-                    ? ordered.ThenByDescending(keySelector)
-                    : ordered.ThenBy(keySelector));
+                ? ApplyInitialOrder(query, keySelector, keyType, sort.Descending)
+                : ApplyThenOrder(ordered, keySelector, keyType, sort.Descending);
         }
 
         return ordered ?? query;
@@ -97,18 +98,64 @@ public static class QueryBuilder
 
     // ── Private helpers ──────────────────────────────────────────────────
 
-    private static Expression<Func<T, object>>? BuildKeySelector<T>(string field)
+    private static bool TryBuildKeySelectorLambda<T>(string field, out LambdaExpression keySelector, out Type keyType)
     {
-        var type = typeof(T);
-        var prop = type.GetProperty(field,
-            BindingFlags.Public | BindingFlags.Instance | BindingFlags.IgnoreCase);
-        if (prop is null) return null;
+        keySelector = null!;
+        keyType = null!;
 
-        var param      = Expression.Parameter(type, "x");
-        var propAccess = Expression.Property(param, prop);
-        var boxed      = Expression.Convert(propAccess, typeof(object));
-        return Expression.Lambda<Func<T, object>>(boxed, param);
+        if (!SafePropertyResolver.TryResolveChain(typeof(T), field, out var chain))
+            return false;
+        if (chain.Count == 0)
+            return false;
+
+        // Sorting on collection navigations is not supported.
+        if (chain.Any(p => SafePropertyResolver.TryGetCollectionElementType(p.PropertyType, out _)))
+            return false;
+
+        var parameter = Expression.Parameter(typeof(T), "x");
+        Expression access = parameter;
+        foreach (var prop in chain)
+        {
+            access = Expression.Property(access, prop);
+        }
+
+        keyType = access.Type;
+        keySelector = Expression.Lambda(access, parameter);
+        return true;
     }
+
+    private static IOrderedQueryable<T> ApplyInitialOrder<T>(
+        IQueryable<T> query,
+        LambdaExpression keySelector,
+        Type keyType,
+        bool descending)
+    {
+        var method = (descending ? OrderByDescendingMethod : OrderByMethod)
+            .MakeGenericMethod(typeof(T), keyType);
+
+        var orderedQuery = method.Invoke(null, [query, keySelector]);
+        return (IOrderedQueryable<T>)orderedQuery!;
+    }
+
+    private static IOrderedQueryable<T> ApplyThenOrder<T>(
+        IOrderedQueryable<T> query,
+        LambdaExpression keySelector,
+        Type keyType,
+        bool descending)
+    {
+        var method = (descending ? ThenByDescendingMethod : ThenByMethod)
+            .MakeGenericMethod(typeof(T), keyType);
+
+        var orderedQuery = method.Invoke(null, [query, keySelector]);
+        return (IOrderedQueryable<T>)orderedQuery!;
+    }
+
+    private static MethodInfo GetQueryableMethod(string name)
+        => typeof(Queryable).GetMethods(BindingFlags.Public | BindingFlags.Static)
+            .Single(m =>
+                m.Name == name
+                && m.IsGenericMethodDefinition
+                && m.GetParameters().Length == 2);
 
     private static bool HasAnyCondition(FilterGroup group)
         => group.Filters.Count > 0 || group.Groups.Any(g => HasAnyCondition(g));

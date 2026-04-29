@@ -9,5 +9,12 @@ public sealed class SortOption
     public string Field { get; set; } = string.Empty;
 
     /// <summary>If true, sorts descending; otherwise ascending.</summary>
+    public bool Desc
+    {
+        get => Descending;
+        set => Descending = value;
+    }
+
+    /// <summary>If true, sorts descending; otherwise ascending.</summary>
     public bool Descending { get; set; }
 }

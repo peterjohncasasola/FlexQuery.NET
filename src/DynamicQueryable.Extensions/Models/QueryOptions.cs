@@ -11,6 +11,13 @@ public sealed class QueryOptions
     /// <summary>Ordered list of sort instructions.</summary>
     public List<SortOption> Sort { get; set; } = [];
 
+    /// <summary>Alias for <see cref="Sort"/> to support Sorts naming.</summary>
+    public List<SortOption> Sorts
+    {
+        get => Sort;
+        set => Sort = value ?? [];
+    }
+
     /// <summary>Pagination settings.</summary>
     public PagingOptions Paging { get; set; } = new();
 

@@ -118,6 +118,22 @@ public class SortingTests : IDisposable
             group.Select(e => e.Name).Should().BeInAscendingOrder();
     }
 
+    [Fact]
+    public void Sort_NestedProperty_ProfileBio_OrdersCorrectly()
+    {
+        var opts = new QueryOptions
+        {
+            Sort = [new SortOption { Field = "Profile.Bio", Descending = false }],
+            Paging = { Disabled = true }
+        };
+
+        var result = _db.Entities.AsQueryable().ApplyQueryOptions(opts).ToList();
+
+        result.Where(e => e.Profile is not null)
+            .Select(e => e.Profile!.Bio)
+            .Should().BeInAscendingOrder();
+    }
+
     // ── Edge cases ───────────────────────────────────────────────────────
 
     [Fact]
@@ -143,5 +159,41 @@ public class SortingTests : IDisposable
         // Should not throw — empty field is skipped
         var act = () => _db.Entities.AsQueryable().ApplyQueryOptions(opts).ToList();
         act.Should().NotThrow();
+    }
+
+    [Fact]
+    public void Sort_InvalidProperty_IsIgnoredGracefully()
+    {
+        var opts = new QueryOptions
+        {
+            Sort =
+            [
+                new SortOption { Field = "NoSuchField", Descending = true },
+                new SortOption { Field = "Age", Descending = false }
+            ],
+            Paging = { Disabled = true }
+        };
+
+        var result = _db.Entities.AsQueryable().ApplyQueryOptions(opts).ToList();
+
+        result.Should().BeInAscendingOrder(e => e.Age);
+    }
+
+    [Fact]
+    public void Sort_CollectionNavigation_IsIgnoredGracefully()
+    {
+        var opts = new QueryOptions
+        {
+            Sort =
+            [
+                new SortOption { Field = "Orders.Total", Descending = true },
+                new SortOption { Field = "Id", Descending = false }
+            ],
+            Paging = { Disabled = true }
+        };
+
+        var result = _db.Entities.AsQueryable().ApplyQueryOptions(opts).ToList();
+
+        result.Select(e => e.Id).Should().BeInAscendingOrder();
     }
 }

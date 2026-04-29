@@ -84,6 +84,49 @@ public class ParserTests
     }
 
     [Fact]
+    public void Generic_SortString_MultiField_ParsedCorrectly()
+    {
+        var opts = Parse(new()
+        {
+            ["sort"] = "createdAt:desc,total:asc"
+        });
+
+        opts.Sort.Should().HaveCount(2);
+        opts.Sort[0].Field.Should().Be("createdAt");
+        opts.Sort[0].Descending.Should().BeTrue();
+        opts.Sort[1].Field.Should().Be("total");
+        opts.Sort[1].Descending.Should().BeFalse();
+    }
+
+    [Fact]
+    public void Generic_SortString_NestedFields_ParsedCorrectly()
+    {
+        var opts = Parse(new()
+        {
+            ["sort"] = "profile.bio:asc,name:desc"
+        });
+
+        opts.Sort.Should().HaveCount(2);
+        opts.Sort[0].Field.Should().Be("profile.bio");
+        opts.Sort[0].Descending.Should().BeFalse();
+        opts.Sort[1].Field.Should().Be("name");
+        opts.Sort[1].Descending.Should().BeTrue();
+    }
+
+    [Fact]
+    public void Generic_SortString_InvalidDirection_DefaultsToAsc()
+    {
+        var opts = Parse(new()
+        {
+            ["sort"] = "name:sideways"
+        });
+
+        opts.Sort.Should().ContainSingle();
+        opts.Sort[0].Field.Should().Be("name");
+        opts.Sort[0].Descending.Should().BeFalse();
+    }
+
+    [Fact]
     public void Generic_Select_ParsedCorrectly()
     {
         var opts = Parse(new()

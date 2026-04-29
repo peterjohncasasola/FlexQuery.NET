@@ -140,6 +140,9 @@ public static class QueryOptionsParser
                 Descending = ParseBool(fields.GetValueOrDefault("desc"))
             });
         }
+        
+        if (d.TryGetValue("sort", out var sortRaw))
+            options.Sort.AddRange(ParseSort(sortRaw));
 
         return options;
     }
@@ -156,18 +159,8 @@ public static class QueryOptionsParser
         options.Paging.PageSize = ParseInt(d, "pageSize", 20);
         if (d.TryGetValue("select", out var sel)) options.Select = SplitCsv(sel);
 
-        // Sort (generic format reused)
-        var sortMap = CollectIndexed(d, "sort");
-        foreach (var (_, fields) in sortMap.OrderBy(x => x.Key))
-        {
-            var field = fields.GetValueOrDefault("field");
-            if (!string.IsNullOrWhiteSpace(field))
-                options.Sort.Add(new SortOption
-                {
-                    Field      = field,
-                    Descending = ParseBool(fields.GetValueOrDefault("desc"))
-                });
-        }
+        // Sort (generic format + sort string)
+        options.Sort.AddRange(ParseGenericSorts(d));
 
         if (!d.TryGetValue("filter", out var json)) return options;
 
@@ -330,6 +323,9 @@ public static class QueryOptionsParser
                 Descending = dir.Contains("desc", StringComparison.OrdinalIgnoreCase)
             });
         }
+        
+        if (d.TryGetValue("sort", out var sortRaw))
+            options.Sort.AddRange(ParseSort(sortRaw));
 
         return options;
     }
@@ -429,4 +425,61 @@ public static class QueryOptionsParser
             ? []
             : raw.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
                  .ToList();
+
+    private static List<SortOption> ParseGenericSorts(Dictionary<string, string> d)
+    {
+        var result = new List<SortOption>();
+
+        var sortMap = CollectIndexed(d, "sort");
+        foreach (var (_, fields) in sortMap.OrderBy(x => x.Key))
+        {
+            var field = fields.GetValueOrDefault("field");
+            if (string.IsNullOrWhiteSpace(field)) continue;
+            result.Add(new SortOption
+            {
+                Field = field,
+                Descending = ParseBool(fields.GetValueOrDefault("desc"))
+            });
+        }
+
+        if (d.TryGetValue("sort", out var sortRaw))
+            result.AddRange(ParseSort(sortRaw));
+
+        return result;
+    }
+
+    internal static List<SortOption> ParseSort(string? sortRaw)
+    {
+        var result = new List<SortOption>();
+        if (string.IsNullOrWhiteSpace(sortRaw)) return result;
+
+        foreach (var item in sortRaw.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+        {
+            if (string.IsNullOrWhiteSpace(item)) continue;
+
+            // Spatie style: -field
+            if (item[0] == '-')
+            {
+                var spatieField = item[1..].Trim();
+                if (!string.IsNullOrWhiteSpace(spatieField))
+                    result.Add(new SortOption { Field = spatieField, Descending = true });
+                continue;
+            }
+
+            var parts = item.Split(':', 2, StringSplitOptions.TrimEntries);
+            var field = parts[0];
+            if (string.IsNullOrWhiteSpace(field)) continue;
+
+            var direction = parts.Length > 1 ? parts[1] : "asc";
+            var isDesc = direction.Equals("desc", StringComparison.OrdinalIgnoreCase);
+
+            result.Add(new SortOption
+            {
+                Field = field,
+                Descending = isDesc
+            });
+        }
+
+        return result;
+    }
 }
