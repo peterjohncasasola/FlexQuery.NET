@@ -53,7 +53,7 @@ public static class QueryOptionsParser
 
     private static bool IsSpatieFormat(Dictionary<string, string> d)
         => d.Keys.Any(k =>
-            Regex.IsMatch(k, @"^filter\[[^\]]+\]$", RegexOptions.IgnoreCase)
+            k.StartsWith("filter[", StringComparison.OrdinalIgnoreCase)
             || Regex.IsMatch(k, @"^fields\[", RegexOptions.IgnoreCase))
         && !d.Keys.Any(k => Regex.IsMatch(k, @"^filter\[\d+\]", RegexOptions.IgnoreCase));
 
@@ -300,74 +300,7 @@ public static class QueryOptionsParser
     //  &include=roles,permissions&fields[users]=name,email
 
     private static QueryOptions ParseSpatie(Dictionary<string, string> d)
-    {
-        var options = new QueryOptions();
-
-        // Paging
-        options.Paging.Page     = ParseInt(d, "page", 1);
-        options.Paging.PageSize = ParseInt(d, "per_page", ParseInt(d, "pageSize", 20));
-
-        // filter[field]=value → eq condition
-        var spatieFilterRegex = new Regex(@"^filter\[([^\]]+)\]$", RegexOptions.IgnoreCase);
-        var filters = new List<FilterCondition>();
-
-        foreach (var kv in d)
-        {
-            var match = spatieFilterRegex.Match(kv.Key);
-            if (!match.Success) continue;
-
-            var field = match.Groups[1].Value;
-            filters.Add(new FilterCondition
-            {
-                Field    = field,
-                Operator = FilterOperators.Equal,
-                Value    = kv.Value
-            });
-        }
-
-        if (filters.Count > 0)
-            options.Filter = new FilterGroup
-            {
-                Logic   = LogicOperator.And,
-                Filters = filters
-            };
-
-        // sort=-created_at,name  (prefix '-' = desc)
-        if (d.TryGetValue("sort", out var sortRaw))
-        {
-            foreach (var part in sortRaw.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
-            {
-                var desc  = part.StartsWith('-');
-                var field = desc ? part[1..] : part;
-                if (!string.IsNullOrWhiteSpace(field))
-                    options.Sort.Add(new SortOption { Field = field, Descending = desc });
-            }
-        }
-
-        // fields[users]=name,email  (first model wins as projection)
-        var fieldsRegex = new Regex(@"^fields\[([^\]]+)\]$", RegexOptions.IgnoreCase);
-        foreach (var kv in d)
-        {
-            var match = fieldsRegex.Match(kv.Key);
-            if (match.Success)
-            {
-                if (options.Select == null) options.Select = new();
-                var model = match.Groups[1].Value;
-                var fields = SplitCsv(kv.Value);
-                foreach (var f in fields)
-                {
-                    options.Select.Add(f); // Assume it might be the root
-                    options.Select.Add($"{model}.{f}"); // Add as nested property
-                }
-            }
-        }
-
-        // include=roles,permissions
-        if (d.TryGetValue("include", out var includes))
-            options.Includes = SplitCsv(includes);
-
-        return options;
-    }
+        => SpatieQueryParser.Parse(d);
 
     // ── Shared helpers ────────────────────────────────────────────────────
 

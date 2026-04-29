@@ -486,4 +486,79 @@ public class ParserTests
 
         opts.Filter!.Filters.Should().HaveCount(1);
     }
+
+    [Fact]
+    public void Spatie_SimpleAndFilter_RemainsBackwardCompatible()
+    {
+        var opts = Parse(new()
+        {
+            ["filter[name]"] = "john",
+            ["filter[age]"] = "25"
+        });
+
+        opts.Filter.Should().NotBeNull();
+        opts.Filter!.Logic.Should().Be(LogicOperator.And);
+        opts.Filter.Filters.Should().HaveCount(2);
+        opts.Filter.Groups.Should().BeEmpty();
+    }
+
+    [Fact]
+    public void Spatie_OrGroup_ParsesAsTopLevelOr()
+    {
+        var opts = Parse(new()
+        {
+            ["filter[or][0][name]"] = "john",
+            ["filter[or][1][name]"] = "doe"
+        });
+
+        opts.Filter.Should().NotBeNull();
+        opts.Filter!.Logic.Should().Be(LogicOperator.Or);
+        opts.Filter.Filters.Should().HaveCount(2);
+        opts.Filter.Filters.Should().Contain(f => f.Field == "name" && f.Value == "john");
+        opts.Filter.Filters.Should().Contain(f => f.Field == "name" && f.Value == "doe");
+    }
+
+    [Fact]
+    public void Spatie_NestedGroup_ParsesAndWithNestedOr()
+    {
+        var opts = Parse(new()
+        {
+            ["filter[and][0][name]"] = "john",
+            ["filter[and][1][or][0][age]"] = "20",
+            ["filter[and][1][or][1][age]"] = "30"
+        });
+
+        opts.Filter.Should().NotBeNull();
+        opts.Filter!.Logic.Should().Be(LogicOperator.And);
+        opts.Filter.Filters.Should().ContainSingle(f => f.Field == "name" && f.Value == "john");
+        opts.Filter.Groups.Should().HaveCount(1);
+        opts.Filter.Groups[0].Logic.Should().Be(LogicOperator.Or);
+        opts.Filter.Groups[0].Filters.Should().HaveCount(2);
+        opts.Filter.Groups[0].Filters.Should().Contain(f => f.Field == "age" && f.Value == "20");
+        opts.Filter.Groups[0].Filters.Should().Contain(f => f.Field == "age" && f.Value == "30");
+    }
+
+    [Fact]
+    public void Spatie_DeepNestedGrouping_ParsesRecursively()
+    {
+        var opts = Parse(new()
+        {
+            ["filter[or][0][and][0][name]"] = "john",
+            ["filter[or][0][and][1][or][0][city]"] = "london",
+            ["filter[or][0][and][1][or][1][city]"] = "paris",
+            ["filter[or][1][status]"] = "active"
+        });
+
+        opts.Filter.Should().NotBeNull();
+        opts.Filter!.Logic.Should().Be(LogicOperator.Or);
+        opts.Filter.Filters.Should().ContainSingle(f => f.Field == "status" && f.Value == "active");
+        opts.Filter.Groups.Should().HaveCount(1);
+
+        var andGroup = opts.Filter.Groups[0];
+        andGroup.Logic.Should().Be(LogicOperator.And);
+        andGroup.Filters.Should().ContainSingle(f => f.Field == "name" && f.Value == "john");
+        andGroup.Groups.Should().ContainSingle();
+        andGroup.Groups[0].Logic.Should().Be(LogicOperator.Or);
+        andGroup.Groups[0].Filters.Should().HaveCount(2);
+    }
 }
