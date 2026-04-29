@@ -289,6 +289,72 @@ public class ParserTests
     // ════════════════════════════════════════════════════════════════════
 
     [Fact]
+    public void Syncfusion_MultipleNestedConditions_ParsedWithTopLevelLogic()
+    {
+        var opts = Parse(new()
+        {
+            ["where[0][field]"]    = "City",
+            ["where[0][operator]"] = "equal",
+            ["where[0][value]"]    = "London",
+            ["where[1][field]"]    = "Age",
+            ["where[1][operator]"] = "greaterthanorequal",
+            ["where[1][value]"]    = "25",
+            ["where[2][field]"]    = "Profile.Bio",
+            ["where[2][operator]"] = "contains",
+            ["where[2][value]"]    = "dev",
+            ["condition"]          = "or",
+            ["skip"]               = "0",
+            ["take"]               = "10"
+        });
+
+        opts.Filter.Should().NotBeNull();
+        opts.Filter!.Logic.Should().Be(LogicOperator.Or);
+        opts.Filter.Groups.Should().BeEmpty();
+        opts.Filter.Filters.Should().HaveCount(3);
+        opts.Filter.Filters[0].Should().BeEquivalentTo(new FilterCondition
+        {
+            Field = "City",
+            Operator = FilterOperators.Equal,
+            Value = "London"
+        });
+        opts.Filter.Filters[1].Should().BeEquivalentTo(new FilterCondition
+        {
+            Field = "Age",
+            Operator = FilterOperators.GreaterThanOrEq,
+            Value = "25"
+        });
+        opts.Filter.Filters[2].Should().BeEquivalentTo(new FilterCondition
+        {
+            Field = "Profile.Bio",
+            Operator = FilterOperators.Contains,
+            Value = "dev"
+        });
+    }
+
+    [Fact]
+    public void Syncfusion_MultipleConditions_ParsedWithAndLogic()
+    {
+        var opts = Parse(new()
+        {
+            ["where[0][field]"]    = "City",
+            ["where[0][operator]"] = "equal",
+            ["where[0][value]"]    = "London",
+            ["where[1][field]"]    = "Age",
+            ["where[1][operator]"] = "greaterthanorequal",
+            ["where[1][value]"]    = "25",
+            ["condition"]          = "and",
+            ["skip"]               = "0",
+            ["take"]               = "10"
+        });
+
+        opts.Filter.Should().NotBeNull();
+        opts.Filter!.Logic.Should().Be(LogicOperator.And);
+        opts.Filter.Filters.Should().HaveCount(2);
+        opts.Filter.Filters[0].Operator.Should().Be(FilterOperators.Equal);
+        opts.Filter.Filters[1].Operator.Should().Be(FilterOperators.GreaterThanOrEq);
+    }
+
+    [Fact]
     public void Spatie_Filter_MappedAsEqCondition()
     {
         var opts = Parse(new()
@@ -303,6 +369,42 @@ public class ParserTests
 
         var nameFilter = opts.Filter.Filters.First(f => f.Field == "name");
         nameFilter.Value.Should().Be("john");
+    }
+
+    [Fact]
+    public void Spatie_MultipleNestedConditions_ParsedAsAndGroup()
+    {
+        var opts = Parse(new()
+        {
+            ["filter[name]"]        = "Alice Johnson",
+            ["filter[profile.bio]"] = "Developer",
+            ["filter[status]"]      = "Active"
+        });
+
+        opts.Filter.Should().NotBeNull();
+        opts.Filter!.Logic.Should().Be(LogicOperator.And);
+        opts.Filter.Groups.Should().BeEmpty();
+        opts.Filter.Filters.Should().HaveCount(3);
+        opts.Filter.Filters.Should().AllSatisfy(f => f.Operator.Should().Be(FilterOperators.Equal));
+        opts.Filter.Filters.Should().Contain(f => f.Field == "name" && f.Value == "Alice Johnson");
+        opts.Filter.Filters.Should().Contain(f => f.Field == "profile.bio" && f.Value == "Developer");
+        opts.Filter.Filters.Should().Contain(f => f.Field == "status" && f.Value == "Active");
+    }
+
+    [Fact]
+    public void Spatie_MultipleConditions_AlwaysUseAndLogic()
+    {
+        var opts = Parse(new()
+        {
+            ["filter[name]"]   = "Alice Johnson",
+            ["filter[status]"] = "Active",
+            ["condition"]      = "or"
+        });
+
+        opts.Filter.Should().NotBeNull();
+        opts.Filter!.Logic.Should().Be(LogicOperator.And);
+        opts.Filter.Filters.Should().HaveCount(2);
+        opts.Filter.Filters.Should().AllSatisfy(f => f.Operator.Should().Be(FilterOperators.Equal));
     }
 
     [Fact]
