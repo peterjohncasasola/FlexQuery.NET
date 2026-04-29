@@ -1,0 +1,36 @@
+name: Auto Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v3
+      with:
+        fetch-depth: 0
+
+    - name: Generate Release Notes
+      run: |
+        echo "## 🚀 Release ${{ github.ref_name }}" > notes.md
+
+        echo "### ✨ Features" >> notes.md
+        git log $(git describe --tags --abbrev=0 HEAD^)..HEAD --pretty=format:"%s" | grep "^feat" | sed 's/^feat:/-/' >> notes.md || true
+
+        echo -e "\n### ⚡ Improvements" >> notes.md
+        git log ... | grep -E "refactor|perf" | sed 's/^/- /' >> notes.md || true
+
+        echo -e "\n### 🐛 Fixes" >> notes.md
+        git log ... | grep "^fix" | sed 's/^fix:/-/' >> notes.md || true
+
+    - name: Create Release
+      uses: softprops/action-gh-release@v1
+      with:
+        body_path: notes.md
+
+    - name: Publish NuGet
+      run: dotnet nuget push "./nupkg/*.nupkg" --api-key ${{ secrets.NUGET_API_KEY }} --source https://api.nuget.org/v3/index.json
