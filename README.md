@@ -2,7 +2,7 @@
 
 **DynamicQueryable** is a lightweight, extensible .NET 8 library that enables **dynamic filtering, sorting, pagination, and projection** for `IQueryable`.
 
-It supports multiple query formats (Generic, JSON, Syncfusion, Laravel Spatie) and is designed to integrate seamlessly with **Entity Framework Core** or any LINQ provider.
+It supports multiple query formats (Generic, JSON, DSL, Syncfusion, Laravel Spatie) and is designed to integrate seamlessly with **Entity Framework Core** or any LINQ provider.
 
 ---
 
@@ -14,6 +14,7 @@ It supports multiple query formats (Generic, JSON, Syncfusion, Laravel Spatie) a
 * ✅ Query parameter parser
   * Generic format
   * JSON format
+  * DSL format
   * Syncfusion
   * Laravel Spatie
 * ✅ Fully testable and extensible
@@ -141,7 +142,10 @@ With `Includes` and no `Select`, returns root entity scalars + included navigati
 | `startswith` | String starts with     | `Name startswith 'Jo'`           |
 | `endswith`   | String ends with       | `Name endswith 'hn'`             |
 | `in`         | Value exists in a list | `Status in ['Active','Pending']` |
+| `notin`      | Value does not exist in a list | `Status notin ['Inactive']` |
+| `between`    | Inclusive range        | `Age between 18,60`              |
 | `isnull`     | Check if value is null | `DeletedAt isnull true`          |
+| `notnull`    | Check if value is not null | `DeletedAt notnull`           |
 
 ---
 
@@ -214,6 +218,44 @@ With `Includes` and no `Select`, returns root entity scalars + included navigati
   ]
 }
 ```
+
+---
+
+### DSL
+ 
+ DSL filters are parsed through a tokenizer and AST, then converted into the same `FilterGroup` model used by all other formats. In a real URL, encode `&` as `%26` because `&` is also the query-string separator.
+ 
+ The DSL filter string supports:
+ - Comparisons: `field:operator:value`
+ - Logical OR: `|`
+ - Logical AND: `&` (URL-encoded as `%26` in query strings)
+ - Grouping: parentheses `( ... )`
+ 
+ For sorting, pagination, and projection, use the standard generic parameters alongside the DSL filter (e.g., `sort[0].field`, `page`, `pageSize`, `select`).
+ 
+ ```http
+ ?filter=(name:eq:john|name:eq:doe)%26age:gt:20&sort[0].field=Age&sort[0].desc=true
+ ```
+ 
+ Supported operators:
+ 
+ ```text
+ eq, neq, gt, gte, lt, lte, contains, startswith, endswith, in, notin, between, isnull, notnull
+ ```
+ 
+ Nested property paths are supported:
+ 
+ ```http
+ ?filter=orders.customer.name:contains:john
+ ```
+ 
+ Additional examples:
+ 
+ ```http
+ ?filter=status:notin:Inactive,Deleted
+ ?filter=age:between:18,60
+ ?filter=deletedAt:notnull
+ ```
 
 ---
 

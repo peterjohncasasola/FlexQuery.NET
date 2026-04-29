@@ -202,6 +202,116 @@ public class ParserTests
     // ════════════════════════════════════════════════════════════════════
 
     [Fact]
+    public void DslFilter_GroupedOrAndCondition_ParsedToNestedFilterGroup()
+    {
+        var opts = Parse(new()
+        {
+            ["filter"] = "(name:eq:john|name:eq:doe)&age:gt:20"
+        });
+
+        opts.Filter.Should().NotBeNull();
+        opts.Filter!.Logic.Should().Be(LogicOperator.And);
+        opts.Filter.Filters.Should().ContainSingle(f =>
+            f.Field == "age" && f.Operator == FilterOperators.GreaterThan && f.Value == "20");
+        opts.Filter.Groups.Should().HaveCount(1);
+        opts.Filter.Groups[0].Logic.Should().Be(LogicOperator.Or);
+        opts.Filter.Groups[0].Filters.Should().HaveCount(2);
+        opts.Filter.Groups[0].Filters.Should().AllSatisfy(f => f.Operator.Should().Be(FilterOperators.Equal));
+    }
+
+    [Fact]
+    public void DslFilter_NestedPathAndInOperator_ParsedCorrectly()
+    {
+        var opts = Parse(new()
+        {
+            ["filter"] = "orders.customer.name:contains:'john doe'&status:in:Active,Pending",
+            ["page"] = "2",
+            ["pageSize"] = "15"
+        });
+
+        opts.Filter!.Logic.Should().Be(LogicOperator.And);
+        opts.Filter.Filters.Should().HaveCount(2);
+        opts.Filter.Filters[0].Field.Should().Be("orders.customer.name");
+        opts.Filter.Filters[0].Operator.Should().Be(FilterOperators.Contains);
+        opts.Filter.Filters[0].Value.Should().Be("john doe");
+        opts.Filter.Filters[1].Operator.Should().Be(FilterOperators.In);
+        opts.Filter.Filters[1].Value.Should().Be("Active,Pending");
+        opts.Paging.Page.Should().Be(2);
+        opts.Paging.PageSize.Should().Be(15);
+    }
+
+    [Fact]
+    public void DslFilter_IsNull_DoesNotRequireValue()
+    {
+        var opts = Parse(new()
+        {
+            ["filter"] = "deletedAt:isnull"
+        });
+
+        opts.Filter!.Filters.Should().ContainSingle();
+        opts.Filter.Filters[0].Field.Should().Be("deletedAt");
+        opts.Filter.Filters[0].Operator.Should().Be(FilterOperators.IsNull);
+        opts.Filter.Filters[0].Value.Should().BeNull();
+    }
+
+    [Fact]
+    public void DslFilter_MalformedDsl_IsIgnoredGracefully()
+    {
+        var opts = Parse(new()
+        {
+            ["filter"] = "name:eq:"
+        });
+
+        opts.Filter.Should().BeNull();
+    }
+
+    [Fact]
+    public void DslFilter_PhaseTwoAndThreeOperators_AreParsedCorrectly()
+    {
+        var opts = Parse(new()
+        {
+            ["filter"] = "(name:startswith:jo|name:endswith:hn)&status:notin:Inactive,Deleted&age:between:18,60&deletedAt:notnull"
+        });
+
+        opts.Filter!.Logic.Should().Be(LogicOperator.And);
+        opts.Filter.Groups.Should().ContainSingle();
+        opts.Filter.Groups[0].Logic.Should().Be(LogicOperator.Or);
+        opts.Filter.Groups[0].Filters.Select(f => f.Operator)
+            .Should().BeEquivalentTo([FilterOperators.StartsWith, FilterOperators.EndsWith]);
+        opts.Filter.Filters.Select(f => f.Operator).Should().Contain([
+            FilterOperators.NotIn,
+            FilterOperators.Between,
+            FilterOperators.IsNotNull
+        ]);
+    }
+
+    [Fact]
+    public void DslFilter_NestedDynamicConditions_ParsedToRecursiveGroups()
+    {
+        var opts = Parse(new()
+        {
+            ["filter"] = "((city:eq:London|city:eq:Berlin)&(age:between:25,40|status:eq:Pending))"
+        });
+
+        opts.Filter.Should().NotBeNull();
+        opts.Filter!.Logic.Should().Be(LogicOperator.And);
+        opts.Filter.Filters.Should().BeEmpty();
+        opts.Filter.Groups.Should().HaveCount(2);
+
+        opts.Filter.Groups[0].Logic.Should().Be(LogicOperator.Or);
+        opts.Filter.Groups[0].Filters.Should().HaveCount(2);
+        opts.Filter.Groups[0].Filters.Select(f => f.Field).Should().BeEquivalentTo(["city", "city"]);
+        opts.Filter.Groups[0].Filters.Select(f => f.Operator).Should().AllSatisfy(op => op.Should().Be(FilterOperators.Equal));
+
+        opts.Filter.Groups[1].Logic.Should().Be(LogicOperator.Or);
+        opts.Filter.Groups[1].Filters.Should().HaveCount(2);
+        opts.Filter.Groups[1].Filters.Should().Contain(f =>
+            f.Field == "age" && f.Operator == FilterOperators.Between && f.Value == "25,40");
+        opts.Filter.Groups[1].Filters.Should().Contain(f =>
+            f.Field == "status" && f.Operator == FilterOperators.Equal && f.Value == "Pending");
+    }
+
+    [Fact]
     public void Syncfusion_Filter_ParsedCorrectly()
     {
         var opts = Parse(new()
@@ -560,5 +670,42 @@ public class ParserTests
         andGroup.Groups.Should().ContainSingle();
         andGroup.Groups[0].Logic.Should().Be(LogicOperator.Or);
         andGroup.Groups[0].Filters.Should().HaveCount(2);
+    }
+
+    [Fact]
+    public void Dsl_ValidSimple_ParsesIntoFilterGroup()
+    {
+        var opts = Parse(new()
+        {
+            ["filter"] = "(name:eq:john|name:eq:doe)&age:gt:20"
+        });
+
+        opts.Filter.Should().NotBeNull();
+        opts.Filter!.Logic.Should().Be(LogicOperator.And);
+        opts.Filter.Filters.Should().ContainSingle(f => f.Field == "age" && f.Operator == FilterOperators.GreaterThan);
+        opts.Filter.Groups.Should().ContainSingle();
+        opts.Filter.Groups[0].Logic.Should().Be(LogicOperator.Or);
+    }
+
+    [Fact]
+    public void Dsl_InvalidOperator_IsRejected()
+    {
+        var opts = Parse(new()
+        {
+            ["filter"] = "age:unknown:20"
+        });
+
+        opts.Filter.Should().BeNull();
+    }
+
+    [Fact]
+    public void Dsl_MalformedExpression_IsRejected()
+    {
+        var opts = Parse(new()
+        {
+            ["filter"] = "(name:eq:john|age:gt:20"
+        });
+
+        opts.Filter.Should().BeNull();
     }
 }

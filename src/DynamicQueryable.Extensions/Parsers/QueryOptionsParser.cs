@@ -1,7 +1,8 @@
-using System.Text.Json;
+﻿using System.Text.Json;
 using System.Text.RegularExpressions;
 using DynamicQueryable.Constants;
 using DynamicQueryable.Models;
+using DynamicQueryable.Parsers.Dsl;
 using Microsoft.Extensions.Primitives;
 
 namespace DynamicQueryable.Parsers;
@@ -38,9 +39,10 @@ public static class QueryOptionsParser
         if (dict.Count == 0) return new QueryOptions();
 
         // Detect format by key signatures
+        if (IsDslFilterFormat(dict))   return ParseDslFilter(dict);
+        if (IsJsonFilterFormat(dict))  return ParseJsonFilter(dict);
         if (IsSyncfusionFormat(dict))  return ParseSyncfusion(dict);
         if (IsSpatieFormat(dict))      return ParseSpatie(dict);
-        if (IsJsonFilterFormat(dict))  return ParseJsonFilter(dict);
         return ParseGeneric(dict);
     }
 
@@ -59,6 +61,22 @@ public static class QueryOptionsParser
 
     private static bool IsJsonFilterFormat(Dictionary<string, string> d)
         => d.TryGetValue("filter", out var v) && v.TrimStart().StartsWith('{');
+
+    private static bool IsDslFilterFormat(Dictionary<string, string> d)
+        => d.TryGetValue("filter", out var v) && HasDslSyntax(v);
+
+    private static bool HasDslSyntax(string? raw)
+    {
+        if (string.IsNullOrWhiteSpace(raw)) return false;
+
+        var value = raw.TrimStart();
+        if (value.StartsWith('{')) return false;
+
+        return Regex.IsMatch(
+            value,
+            @"(^|[(&|])\s*[A-Za-z_][A-Za-z0-9_.]*\s*:\s*(eq|neq|gt|gte|lt|lte|contains|startswith|endswith|in|notin|between|isnull|notnull)(\s*:|\s*($|[)&|]))",
+            RegexOptions.IgnoreCase);
+    }
 
     // ── Generic Format ───────────────────────────────────────────────────
     //  ?filter[0].field=Name&filter[0].operator=contains&filter[0].value=john
@@ -208,6 +226,27 @@ public static class QueryOptionsParser
         }
 
         return group;
+    }
+
+    // DSL Filter Format
+    //  ?filter=(name:eq:john|name:eq:doe)&age:gt:20
+
+    private static QueryOptions ParseDslFilter(Dictionary<string, string> d)
+    {
+        var options = ParseGeneric(d);
+        if (!d.TryGetValue("filter", out var filter)) return options;
+
+        try
+        {
+            var ast = DslParser.Parse(filter);
+            options.Filter = DslFilterConverter.ToFilterGroup(ast);
+        }
+        catch (DslParseException)
+        {
+            options.Filter = null;
+        }
+
+        return options;
     }
 
     // ── Syncfusion Format ────────────────────────────────────────────────

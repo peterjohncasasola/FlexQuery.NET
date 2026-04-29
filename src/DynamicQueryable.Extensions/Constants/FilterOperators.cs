@@ -30,6 +30,10 @@ public static class FilterOperators
     public const string IsNotNull        = "isnotnull";
     /// <summary>Collection containment operator.</summary>
     public const string In               = "in";
+    /// <summary>Collection exclusion operator.</summary>
+    public const string NotIn            = "notin";
+    /// <summary>Inclusive range operator.</summary>
+    public const string Between          = "between";
 
     /// <summary>Normalizes common variants to canonical operator strings.</summary>
     public static string Normalize(string? raw)
@@ -48,6 +52,8 @@ public static class FilterOperators
             "isnull"       or "null"                                    => IsNull,
             "isnotnull"    or "notnull"  or "isnotempty"                => IsNotNull,
             "in"                                                        => In,
+            "notin"                                                     => NotIn,
+            "between"                                                   => Between,
             _                                                           => Equal
         };
     }

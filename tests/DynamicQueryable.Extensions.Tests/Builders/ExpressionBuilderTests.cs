@@ -1,6 +1,7 @@
 using DynamicQueryable.Builders;
 using DynamicQueryable.Constants;
 using DynamicQueryable.Models;
+using DynamicQueryable.Security;
 using DynamicQueryable.Tests.Fixtures;
 using DynamicQueryable.Tests.Models;
 using FluentAssertions;
@@ -162,6 +163,18 @@ public class ExpressionBuilderTests : IDisposable
     }
 
     [Fact]
+    public void BuildPredicate_InvalidValueType_ReturnsNull()
+    {
+        var group = new FilterGroup
+        {
+            Filters = [new FilterCondition { Field = "Age", Operator = FilterOperators.Equal, Value = "not-an-int" }]
+        };
+
+        var predicate = ExpressionBuilder.BuildPredicate<TestEntity>(group);
+        predicate.Should().BeNull();
+    }
+
+    [Fact]
     public void BuildPredicate_In_MatchesAnyValue()
     {
         var group = new FilterGroup
@@ -231,6 +244,45 @@ public class ExpressionBuilderTests : IDisposable
             e.Age.Should().BeLessThan(40);
         });
     }
+
+    [Fact]
+    public void BuildPredicate_CollectionNestedPath_UsesAnyTraversal()
+    {
+        var group = new FilterGroup
+        {
+            Filters = [new FilterCondition { Field = "Orders.Customer.Name", Operator = FilterOperators.Equal, Value = "Alice" }]
+        };
+
+        var compiled = ExpressionBuilder.BuildPredicate<CollectionRoot>(group)!.Compile();
+        compiled(new CollectionRoot
+        {
+            Orders = [new CollectionOrder { Customer = new CollectionCustomer { Name = "Alice" } }]
+        }).Should().BeTrue();
+        compiled(new CollectionRoot
+        {
+            Orders = [new CollectionOrder { Customer = new CollectionCustomer { Name = "Bob" } }]
+        }).Should().BeFalse();
+    }
+
+    [Fact]
+    public void BuildPredicate_FieldWhitelist_RejectsUnknownField()
+    {
+        FieldRegistry.Register<TestEntity>(["Name", "Age"]);
+        try
+        {
+            var group = new FilterGroup
+            {
+                Filters = [new FilterCondition { Field = "City", Operator = FilterOperators.Equal, Value = "London" }]
+            };
+
+            var predicate = ExpressionBuilder.BuildPredicate<TestEntity>(group);
+            predicate.Should().BeNull();
+        }
+        finally
+        {
+            FieldRegistry.Clear<TestEntity>();
+        }
+    }
 }
 
 public class OuterEntity
@@ -242,4 +294,19 @@ public class OuterEntity
 public class InnerEntity
 {
     public int Value { get; set; }
+}
+
+public class CollectionRoot
+{
+    public List<CollectionOrder> Orders { get; set; } = [];
+}
+
+public class CollectionOrder
+{
+    public CollectionCustomer Customer { get; set; } = new();
+}
+
+public class CollectionCustomer
+{
+    public string Name { get; set; } = string.Empty;
 }
