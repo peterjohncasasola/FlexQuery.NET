@@ -102,6 +102,12 @@ public async Task<IActionResult> Get()
 ?select=Id,Name,Email
 ```
 
+With `Includes` and no `Select`, returns root entity scalars + included navigations:
+
+```http
+?include=Profile,Orders
+```
+
 ---
 
 ### ✅ Nested Projection
@@ -269,6 +275,103 @@ Supports nested properties in filter conditions:
 
 #### Multiple Conditions (Implicit AND)
 
+Multiple filters are always combined with **AND** logic:
+
+```http
+?filter[name]=Alice Johnson
+&filter[status]=Active
+&filter[profile.role]=Developer
+```
+
+#### Nested Grouping (New!)
+
+Supports complex nested AND/OR filter groups:
+
+```http
+?filter[or][0][name]=john
+&filter[or][1][name]=doe
+```
+
+```http
+?filter[and][0][name]=john
+&filter[and][1][or][0][age]=20
+&filter[and][1][or][1][age]=30
+```
+
+```http
+?filter[or][0][and][0][name]=john
+&filter[or][0][and][1][or][0][city]=london
+&filter[or][0][and][1][or][1][city]=paris
+&filter[or][1][status]=active
+```
+
+#### Nested Property Paths
+
+Supports dot notation for nested properties:
+
+```http
+?filter[profile.bio]=Developer
+&filter[profile.status]=Active
+&sort=-created_at
+```
+
+---
+
+## 📦 API Methods
+
+### `ToQueryResult<T>(options)`
+
+Executes a query and returns `QueryResult<T>` with metadata:
+
+```csharp
+var result = _context.Users.ToQueryResult(options);
+// result.Data - List<T>
+// result.TotalCount - total matching records
+// result.Page, result.PageSize - pagination info
+```
+
+### `ToProjectedQueryResult<T>(options)`
+
+Executes a query and returns `QueryResult<object>` with dynamic projection:
+
+```csharp
+var result = _context.Users.ToProjectedQueryResult(options);
+// result.Data - List<object> (only selected fields)
+// result.TotalCount - total matching records
+```
+
+Useful for API endpoints that return shaped/dynamic responses.
+
+### EF Core Async Versions
+
+From `DynamicQueryable.Extensions.EFCore`:
+
+```csharp
+var result = await _context.Users
+    .ToQueryResultAsync(options, cancellationToken);
+
+var projected = await _context.Users
+    .ToProjectedQueryResultAsync(options, cancellationToken);
+```
+
+---
+
+## 🔌 Integration with BaseRepository
+
+```csharp
+public async Task<QueryResult<T>> GetPagedAsync(QueryOptions options)
+{
+    return _dbSet.AsQueryable().ToQueryResult(options);
+}
+
+public async Task<QueryResult<object>> GetProjectedAsync(QueryOptions options)
+{
+    return _dbSet.AsQueryable().ToProjectedQueryResult(options);
+}
+```
+
+#### Multiple Conditions (Implicit AND)
+
 Multiple filters are always combined with **AND** logic. Laravel Spatie format does not support explicit OR logic at the top level (unlike Syncfusion's `condition` parameter):
 
 ```http
@@ -289,23 +392,7 @@ Supports dot notation for nested properties:
 
 ---
 
-## 🧩 Projection System
 
-Supports:
-
-* Root fields
-* Nested objects
-* Collections
-
-Example:
-
-```http
-?select=Id,Name,Profile.Name,Orders.Total
-```
-
----
-
-## ⚙️ Usage Details
 
 ### Manual Construction
 
@@ -367,7 +454,7 @@ DynamicQueryable.Extensions
 ├── Builders    (ExpressionBuilder, ProjectionBuilder)
 ├── Extensions  (QueryableExtensions)
 ├── Helpers     (SelectTreeBuilder)
-└── Parsers     (QueryOptionsParser)
+└── Parsers     (QueryOptionsParser, SpatieQueryParser)
 ```
 
 ---
