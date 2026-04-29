@@ -41,8 +41,3 @@ jobs:
       uses: softprops/action-gh-release@v1
       with:
         body_path: notes.md
-
-    - name: Publish to NuGet
-      run: dotnet nuget push "./nupkg/*.nupkg" \
-            --api-key ${{ secrets.NUGET_API_KEY }} \
-            --source https://api.nuget.org/v3/index.json
