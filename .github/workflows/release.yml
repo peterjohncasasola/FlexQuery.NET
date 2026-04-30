@@ -13,31 +13,43 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout
+    - name: 📥 Checkout
       uses: actions/checkout@v3
       with:
         fetch-depth: 0
 
-    - name: Setup .NET
+    - name: 🛠 Setup .NET
       uses: actions/setup-dotnet@v3
       with:
         dotnet-version: '8.0.x'
 
-    - name: Restore
+    - name: 📦 Restore
       run: dotnet restore
 
-    - name: Build
+    - name: 🔨 Build
       run: dotnet build --configuration Release --no-restore
 
-    - name: Pack
+    - name: 📦 Pack NuGet
       run: dotnet pack --configuration Release --no-build -o ./nupkg
 
-    - name: Create Release Notes
+    - name: 📝 Extract Tag Release Notes
       run: |
         echo "## 🚀 Release ${{ github.ref_name }}" > notes.md
-        git log -10 --pretty=format:"- %s" >> notes.md
+        echo "" >> notes.md
 
-    - name: Create GitHub Release
+        # Extract annotated tag message
+        TAG_MESSAGE=$(git for-each-ref refs/tags/${{ github.ref_name }} --format='%(contents)')
+
+        if [ -z "$TAG_MESSAGE" ]; then
+          echo "_No release notes provided in tag._" >> notes.md
+        else
+          echo "$TAG_MESSAGE" >> notes.md
+        fi
+
+    - name: 🚀 Create GitHub Release
       uses: softprops/action-gh-release@v1
       with:
         body_path: notes.md
+        files: ./nupkg/*.nupkg
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
