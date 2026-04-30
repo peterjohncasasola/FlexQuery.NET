@@ -159,6 +159,27 @@ public class ParserTests
     }
 
     [Fact]
+    public void Generic_GroupAndAggregateSelect_ParsedCorrectly()
+    {
+        var opts = Parse(new()
+        {
+            ["group"] = "category,status",
+            ["select"] = "category,sum(total),count(id)",
+            ["having"] = "sum(total):gt:10000"
+        });
+
+        opts.GroupBy.Should().BeEquivalentTo(["category", "status"]);
+        opts.Select.Should().BeEquivalentTo(["category"]);
+        opts.Aggregates.Should().HaveCount(2);
+        opts.Aggregates.Should().Contain(a => a.Function == "sum" && a.Field == "total");
+        opts.Aggregates.Should().Contain(a => a.Function == "count" && a.Field == "id");
+        opts.Having.Should().NotBeNull();
+        opts.Having!.Function.Should().Be("sum");
+        opts.Having.Operator.Should().Be(FilterOperators.GreaterThan);
+        opts.Having.Value.Should().Be("10000");
+    }
+
+    [Fact]
     public void Generic_OrLogic_SetCorrectly()
     {
         var opts = Parse(new()

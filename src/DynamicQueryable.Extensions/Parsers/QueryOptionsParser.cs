@@ -22,6 +22,14 @@ namespace DynamicQueryable.Parsers;
 /// </summary>
 public static class QueryOptionsParser
 {
+    private static readonly Regex SelectAggregatePattern = new(
+        @"^(?<fn>sum|count|avg)\((?<field>[A-Za-z_][A-Za-z0-9_\.]*)?\)$",
+        RegexOptions.Compiled | RegexOptions.IgnoreCase);
+
+    private static readonly Regex HavingPattern = new(
+        @"^(?<fn>sum|count|avg)\((?<field>[A-Za-z_][A-Za-z0-9_\.]*)?\):(?<op>[A-Za-z_][A-Za-z0-9_]*):(?<value>.+)$",
+        RegexOptions.Compiled | RegexOptions.IgnoreCase);
+
     private static readonly Regex AggregateSortPattern = new(
         @"^(?<collection>[A-Za-z_][A-Za-z0-9_\.]*)\.(?<fn>sum|count|max|min|avg)\((?<field>[A-Za-z_][A-Za-z0-9_\.]*)?\)$",
         RegexOptions.Compiled | RegexOptions.IgnoreCase);
@@ -102,8 +110,14 @@ public static class QueryOptionsParser
         // Select
         if (d.TryGetValue("select", out var sel))
         {
-            options.Select = SplitCsv(sel);
+            ParseSelectWithAggregates(options, sel);
         }
+
+        if (d.TryGetValue("group", out var groupRaw))
+            options.GroupBy = SplitCsv(groupRaw);
+
+        if (d.TryGetValue("having", out var havingRaw))
+            options.Having = ParseHaving(havingRaw);
 
         // Includes
         if (d.TryGetValue("include", out var inc))
@@ -149,6 +163,69 @@ public static class QueryOptionsParser
             options.Sort.AddRange(ParseSort(sortRaw));
 
         return options;
+    }
+
+    private static void ParseSelectWithAggregates(QueryOptions options, string? rawSelect)
+    {
+        var fields = SplitCsv(rawSelect);
+        if (fields.Count == 0)
+        {
+            options.Select = [];
+            return;
+        }
+
+        var scalars = new List<string>();
+
+        foreach (var field in fields)
+        {
+            var match = SelectAggregatePattern.Match(field);
+            if (!match.Success)
+            {
+                scalars.Add(field);
+                continue;
+            }
+
+            var fn = match.Groups["fn"].Value.ToLowerInvariant();
+            var aggregateField = match.Groups["field"].Success
+                ? match.Groups["field"].Value
+                : null;
+
+            options.Aggregates.Add(new AggregateModel
+            {
+                Function = fn,
+                Field = string.IsNullOrWhiteSpace(aggregateField) ? null : aggregateField,
+                Alias = BuildAggregateAlias(fn, aggregateField)
+            });
+        }
+
+        options.Select = scalars;
+    }
+
+    private static HavingCondition? ParseHaving(string? rawHaving)
+    {
+        if (string.IsNullOrWhiteSpace(rawHaving)) return null;
+        var match = HavingPattern.Match(rawHaving.Trim());
+        if (!match.Success) return null;
+
+        var fn = match.Groups["fn"].Value.ToLowerInvariant();
+        var field = match.Groups["field"].Success ? match.Groups["field"].Value : null;
+
+        return new HavingCondition
+        {
+            Function = fn,
+            Field = string.IsNullOrWhiteSpace(field) ? null : field,
+            Operator = FilterOperators.Normalize(match.Groups["op"].Value),
+            Value = match.Groups["value"].Value
+        };
+    }
+
+    internal static string BuildAggregateAlias(string function, string? field)
+    {
+        var normalized = string.IsNullOrWhiteSpace(field)
+            ? "All"
+            : field.Replace('.', '_');
+
+        return $"{function.ToUpperInvariant()}_{normalized}";
     }
 
     // ── JSON Filter Format ───────────────────────────────────────────────

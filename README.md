@@ -133,6 +133,22 @@ DSL advanced operators:
 ?filter=orders:count:gt:5
 ```
 
+### Grouping, aggregates, and having
+
+Use `group`, aggregate functions in `select`, and `having` for post-aggregation filtering:
+
+```http
+?group=category,status
+&select=category,sum(total),count(id)
+&having=sum(total):gt:10000
+```
+
+Supported aggregate functions in `select`/`having`:
+
+- `sum(field)`
+- `count(field)`
+- `avg(field)`
+
 ### JQL-lite (`query`)
 
 Use SQL-like operators with `AND` / `OR` and parentheses for grouping:

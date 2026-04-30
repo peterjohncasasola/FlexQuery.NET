@@ -24,6 +24,15 @@ public sealed class QueryOptions
     /// <summary>Fields to project (SELECT). Null or empty means all primitive fields.</summary>
     public List<string>? Select { get; set; }
 
+    /// <summary>Fields used for GROUP BY.</summary>
+    public List<string>? GroupBy { get; set; }
+
+    /// <summary>Aggregate projections parsed from select=... expressions (sum/count/avg).</summary>
+    public List<AggregateModel> Aggregates { get; set; } = [];
+
+    /// <summary>Optional HAVING condition applied after grouping.</summary>
+    public HavingCondition? Having { get; set; }
+
     /// <summary>Navigation properties to include (Spatie "include").</summary>
     public List<string>? Includes { get; set; }
 
