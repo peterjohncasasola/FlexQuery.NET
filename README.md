@@ -1,6 +1,6 @@
 # DynamicQueryable
 
-DynamicQueryable is a lightweight .NET library for applying **dynamic filtering, sorting, paging, and projection** to `IQueryable` (EF Core or any LINQ provider). It supports multiple query-string formats and produces **EF Core-translatable** expression trees.
+DynamicQueryable is a lightweight .NET library for applying **dynamic filtering, sorting, paging, and projection** to `IQueryable` (EF Core or any LINQ provider). It supports a focused set of query formats and produces **EF Core-translatable** expression trees.
 
 ## Installation
 
@@ -56,7 +56,7 @@ public async Task<IActionResult> Get()
 - **Sorting**: multi-field ordering
 - **Paging**: `page` / `pageSize` or `skip` / `take` (format-dependent)
 - **Projection**: `select` with nested properties, plus `include`-style expansion
-- **Query formats**: Generic, JSON, DSL, JQL-lite, Syncfusion, Laravel Spatie
+- **Query formats**: DSL (primary), JSON (advanced), Indexed (compatibility), JQL fallback
 - **EF Core friendly**: expression-tree based, provider-translatable
 - **Pluggable operators**: core ships framework-agnostic handlers, optional packages can override by operator
 
@@ -149,7 +149,7 @@ Supported aggregate functions in `select`/`having`:
 - `count(field)`
 - `avg(field)`
 
-### JQL-lite (`query`)
+### JQL-lite fallback (`query`)
 
 Use SQL-like operators with `AND` / `OR` and parentheses for grouping:
 
@@ -171,44 +171,12 @@ Supported JQL operators:
 
 Unlike DSL/JSON malformed-input handling, invalid JQL syntax is surfaced as a parse exception to callers.
 
-### Syncfusion
+## Migration Notes (v2.0.0)
 
-```http
-?where[0][field]=Name
-&where[0][operator]=contains
-&where[0][value]=john
-&sorted[0][name]=Age
-&sorted[0][direction]=descending
-&skip=0
-&take=10
-```
-
-Use `condition=and|or` for top-level logic.
-
-### Laravel Spatie
-
-**Implicit AND (default Spatie behavior)**
-
-```http
-?filter[name]=Alice Johnson
-&filter[status]=Active
-```
-
-**Nested grouping**
-
-```http
-?filter[or][0][name]=john
-&filter[or][1][name]=doe
-```
-
-**Explicit operator support (extension)**
-
-```http
-?filter[name][operator]=contains
-&filter[name][value]=john
-```
-
-(Works inside nested `and/or` groups as well.)
+- Removed legacy format adapters: **Spatie** and **Syncfusion**
+- Removed Syncfusion-style sorting support
+- Supported formats are now **DSL**, **JSON**, **Indexed**, and **JQL fallback**
+- If you were using Spatie/Syncfusion query strings, migrate requests to DSL or Indexed format
 
 ## Operators
 
