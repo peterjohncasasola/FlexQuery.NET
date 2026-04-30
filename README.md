@@ -168,6 +168,10 @@ Supported JQL operators:
 - `=` `!=` `>` `>=` `<` `<=`
 - `CONTAINS`
 - `IN (...)` and `NOT IN (...)`
+- `IS NULL` and `IS NOT NULL`
+- `BETWEEN ... AND ...`
+- `LIKE`, `STARTSWITH`, `ENDSWITH`
+- Collection predicates: `ANY`, `ALL`, `COUNT`
 
 Unlike DSL/JSON malformed-input handling, invalid JQL syntax is surfaced as a parse exception to callers.
 

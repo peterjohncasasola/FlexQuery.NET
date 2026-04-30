@@ -70,6 +70,7 @@ public static class ExpressionBuilder
         Expression? expression = op switch
         {
             FilterOperators.Any => BuildAnyExpression(param, chain, condition.Value),
+            FilterOperators.All => BuildAllExpression(param, chain, condition.Value),
             FilterOperators.Count => BuildCountExpression(param, chain, condition.Value),
             _ => BuildPathExpression(param, chain, 0, op, condition.Value)
         };
@@ -142,6 +143,37 @@ public static class ExpressionBuilder
             .MakeGenericMethod(elementType);
 
         return Expression.Call(anyMethod, collectionAccess, Expression.Lambda(predicate, itemParam));
+    }
+
+    private static Expression? BuildAllExpression(
+        Expression param,
+        IReadOnlyList<PropertyInfo> chain,
+        string? rawValue)
+    {
+        if (string.IsNullOrWhiteSpace(rawValue)) return null;
+
+        var segments = rawValue.Split(':', 3, StringSplitOptions.TrimEntries);
+        if (segments.Length != 3) return null;
+
+        var nestedField = segments[0];
+        var nestedOperator = FilterOperators.Normalize(segments[1]);
+        var nestedValue = segments[2];
+
+        var collectionAccess = ResolvePath(param, chain, out var collectionType);
+        if (collectionAccess is null || collectionType is null) return null;
+        if (!SafePropertyResolver.TryGetCollectionElementType(collectionType, out var elementType)) return null;
+
+        if (!SafePropertyResolver.TryResolveChain(elementType, nestedField, out var nestedChain)) return null;
+
+        var itemParam = Expression.Parameter(elementType, "c");
+        var predicate = BuildPathExpression(itemParam, nestedChain, 0, nestedOperator, nestedValue);
+        if (predicate is null) return null;
+
+        var allMethod = typeof(Enumerable).GetMethods()
+            .First(m => m.Name == nameof(Enumerable.All) && m.GetParameters().Length == 2)
+            .MakeGenericMethod(elementType);
+
+        return Expression.Call(allMethod, collectionAccess, Expression.Lambda(predicate, itemParam));
     }
 
     private static Expression? BuildCountExpression(

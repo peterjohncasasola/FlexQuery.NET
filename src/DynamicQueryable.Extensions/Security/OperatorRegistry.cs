@@ -23,6 +23,7 @@ internal static class OperatorRegistry
         FilterOperators.IsNull,
         FilterOperators.IsNotNull,
         FilterOperators.Any,
+        FilterOperators.All,
         FilterOperators.Count
     };
 

@@ -7,6 +7,7 @@ namespace DynamicQueryable.Parsers.Jql;
 /// <summary>Converts JQL-lite AST nodes into the package's unified filter model.</summary>
 public static class JqlFilterConverter
 {
+    /// <summary>Converts the provided AST node into a FilterGroup.</summary>
     public static FilterGroup ToFilterGroup(JqlAstNode node)
     {
         if (node is JqlLogicalNode logical)
@@ -47,7 +48,7 @@ public static class JqlFilterConverter
         if (!OperatorRegistry.IsAllowed(op))
             throw new JqlParseException($"Unsupported JQL operator '{node.Operator}'.");
 
-        var value = op is FilterOperators.In or FilterOperators.NotIn
+        var value = op is FilterOperators.In or FilterOperators.NotIn or FilterOperators.Between
             ? string.Join(",", node.Values)
             : node.Values.FirstOrDefault();
 

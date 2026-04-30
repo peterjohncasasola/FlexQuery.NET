@@ -8,11 +8,13 @@ public sealed class JqlParser
     private readonly IReadOnlyList<JqlToken> _tokens;
     private int _position;
 
+    /// <summary>Creates a new parser with the provided tokens.</summary>
     public JqlParser(IReadOnlyList<JqlToken> tokens)
     {
         _tokens = tokens;
     }
 
+    /// <summary>Parses the tokens into an AST.</summary>
     public JqlAstNode Parse()
     {
         var node = ParseOr();
@@ -71,6 +73,40 @@ public sealed class JqlParser
         JqlSafetyValidator.ValidateField(fieldToken.Value, fieldToken.Position);
 
         var op = ParseOperator();
+
+        if (op is "isnull" or "isnotnull")
+        {
+            return new JqlConditionNode(fieldToken.Value, op, Array.Empty<string>());
+        }
+
+        if (op is "any" or "all")
+        {
+            var nestedField = Expect(JqlTokenKind.Identifier).Value;
+            var nestedOp = ParseOperator();
+            var nestedValues = ParseValue(nestedOp);
+
+            var valueStr = $"{nestedField}:{nestedOp}:{string.Join(",", nestedValues)}";
+            return new JqlConditionNode(fieldToken.Value, op, new[] { valueStr });
+        }
+
+        if (op == "count")
+        {
+            var nestedOp = ParseOperator();
+            var nestedVal = ParseSingleValue();
+
+            var valueStr = $"{nestedOp}:{nestedVal}";
+            return new JqlConditionNode(fieldToken.Value, op, new[] { valueStr });
+        }
+
+        if (op == "between")
+        {
+            var val1 = ParseSingleValue();
+            Expect(JqlTokenKind.And);
+            var val2 = ParseSingleValue();
+
+            return new JqlConditionNode(fieldToken.Value, op, new[] { val1, val2 });
+        }
+
         var values = ParseValue(op);
 
         return new JqlConditionNode(fieldToken.Value, op, values);
@@ -78,20 +114,40 @@ public sealed class JqlParser
 
     private string ParseOperator()
     {
-        if (Match(JqlTokenKind.Eq))  return "=";
-        if (Match(JqlTokenKind.Neq)) return "!=";
-        if (Match(JqlTokenKind.Gte)) return ">=";
-        if (Match(JqlTokenKind.Gt))  return ">";
-        if (Match(JqlTokenKind.Lte)) return "<=";
-        if (Match(JqlTokenKind.Lt))  return "<";
-        if (Match(JqlTokenKind.Contains)) return "CONTAINS";
+        if (Match(JqlTokenKind.Eq))  return "eq";
+        if (Match(JqlTokenKind.Neq)) return "neq";
+        if (Match(JqlTokenKind.Gte)) return "gte";
+        if (Match(JqlTokenKind.Gt))  return "gt";
+        if (Match(JqlTokenKind.Lte)) return "lte";
+        if (Match(JqlTokenKind.Lt))  return "lt";
+        if (Match(JqlTokenKind.Contains)) return "contains";
+        if (Match(JqlTokenKind.Like)) return "like";
+        if (Match(JqlTokenKind.StartsWith)) return "startswith";
+        if (Match(JqlTokenKind.EndsWith)) return "endswith";
 
-        if (Match(JqlTokenKind.In)) return "IN";
+        if (Match(JqlTokenKind.Is))
+        {
+            if (Match(JqlTokenKind.Not))
+            {
+                Expect(JqlTokenKind.Null);
+                return "isnotnull";
+            }
+            Expect(JqlTokenKind.Null);
+            return "isnull";
+        }
+
+        if (Match(JqlTokenKind.Between)) return "between";
+
+        if (Match(JqlTokenKind.Any)) return "any";
+        if (Match(JqlTokenKind.All)) return "all";
+        if (Match(JqlTokenKind.Count)) return "count";
+
+        if (Match(JqlTokenKind.In)) return "in";
 
         if (Match(JqlTokenKind.Not))
         {
             Expect(JqlTokenKind.In);
-            return "NOT IN";
+            return "notin";
         }
 
         throw new JqlParseException($"Expected operator at position {Current.Position}, but found {Current.Kind}.");
@@ -99,7 +155,7 @@ public sealed class JqlParser
 
     private IReadOnlyList<string> ParseValue(string op)
     {
-        if (op is "IN" or "NOT IN")
+        if (op is "in" or "notin")
         {
             Expect(JqlTokenKind.OpenParen);
 

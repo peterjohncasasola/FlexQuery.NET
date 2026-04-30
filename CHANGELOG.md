@@ -4,6 +4,30 @@ All notable changes to this project will be documented in this file.
 
 ---
 
+## [2.0.1] - 2026-06-30
+
+### ✨ Enhancements
+- Extended JQL parser with full SQL-like syntax support
+- Improved tokenizer to seamlessly handle case-insensitivity and quoted values
+
+### 🔍 New Features
+- Added support for operators:
+  - `IS NULL`
+  - `IS NOT NULL`
+  - `BETWEEN`
+  - `LIKE`
+  - `STARTSWITH`
+  - `ENDSWITH`
+
+- Added support for collection operators:
+  - `ANY`
+  - `ALL`
+  - `COUNT`
+
+- Added `ALL` operator to the core expression builder
+
+---
+
 ## [2.0.0] - 2026-06-30
 
 ### 💥 Breaking Changes
@@ -12,8 +36,6 @@ All notable changes to this project will be documented in this file.
 - removed Syncfusion query adapter and parsing
 - removed Syncfusion-style sorting support
 - removed format detection for legacy query formats
-
----
 
 ### ✨ Improvements
 

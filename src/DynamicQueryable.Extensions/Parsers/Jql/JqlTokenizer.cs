@@ -6,11 +6,13 @@ public sealed class JqlTokenizer
     private readonly string _source;
     private int _position;
 
+    /// <summary>Creates a new JqlTokenizer.</summary>
     public JqlTokenizer(string source)
     {
         _source = source ?? string.Empty;
     }
 
+    /// <summary>Tokenizes the input string.</summary>
     public IReadOnlyList<JqlToken> Tokenize()
     {
         var tokens = new List<JqlToken>();
@@ -164,6 +166,24 @@ public sealed class JqlTokenizer
             return new JqlToken(JqlTokenKind.Not, raw, start);
         if (raw.Equals("CONTAINS", StringComparison.OrdinalIgnoreCase))
             return new JqlToken(JqlTokenKind.Contains, raw, start);
+        if (raw.Equals("IS", StringComparison.OrdinalIgnoreCase))
+            return new JqlToken(JqlTokenKind.Is, raw, start);
+        if (raw.Equals("NULL", StringComparison.OrdinalIgnoreCase))
+            return new JqlToken(JqlTokenKind.Null, raw, start);
+        if (raw.Equals("BETWEEN", StringComparison.OrdinalIgnoreCase))
+            return new JqlToken(JqlTokenKind.Between, raw, start);
+        if (raw.Equals("LIKE", StringComparison.OrdinalIgnoreCase))
+            return new JqlToken(JqlTokenKind.Like, raw, start);
+        if (raw.Equals("STARTSWITH", StringComparison.OrdinalIgnoreCase))
+            return new JqlToken(JqlTokenKind.StartsWith, raw, start);
+        if (raw.Equals("ENDSWITH", StringComparison.OrdinalIgnoreCase))
+            return new JqlToken(JqlTokenKind.EndsWith, raw, start);
+        if (raw.Equals("ANY", StringComparison.OrdinalIgnoreCase))
+            return new JqlToken(JqlTokenKind.Any, raw, start);
+        if (raw.Equals("ALL", StringComparison.OrdinalIgnoreCase))
+            return new JqlToken(JqlTokenKind.All, raw, start);
+        if (raw.Equals("COUNT", StringComparison.OrdinalIgnoreCase))
+            return new JqlToken(JqlTokenKind.Count, raw, start);
 
         return new JqlToken(JqlTokenKind.Identifier, raw, start);
     }

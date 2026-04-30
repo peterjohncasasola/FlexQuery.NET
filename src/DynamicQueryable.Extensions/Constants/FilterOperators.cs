@@ -38,6 +38,8 @@ public static class FilterOperators
     public const string Like             = "like";
     /// <summary>Collection any operator.</summary>
     public const string Any              = "any";
+    /// <summary>Collection all operator.</summary>
+    public const string All              = "all";
     /// <summary>Collection count operator.</summary>
     public const string Count            = "count";
 
@@ -62,6 +64,7 @@ public static class FilterOperators
             "notin"        or "not in"                                  => NotIn,
             "between"                                                   => Between,
             "any"                                                       => Any,
+            "all"                                                       => All,
             "count"                                                     => Count,
             _                                                           => (raw ?? string.Empty).Trim().ToLowerInvariant()
         };

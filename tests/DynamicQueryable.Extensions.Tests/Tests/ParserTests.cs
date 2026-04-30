@@ -671,13 +671,107 @@ public class ParserTests
     }
 
     [Fact]
-    public void Jql_InvalidSyntax_Throws()
+    public void Jql_BetweenOperator_ParsedCorrectly()
     {
-        Action act = () => Parse(new()
+        var opts = Parse(new()
         {
-            ["query"] = "name = "
+            ["query"] = "age BETWEEN 18 AND 60"
         });
 
-        act.Should().Throw<JqlParseException>();
+        opts.Filter.Should().NotBeNull();
+        opts.Filter!.Filters.Should().ContainSingle();
+        opts.Filter.Filters[0].Field.Should().Be("age");
+        opts.Filter.Filters[0].Operator.Should().Be(FilterOperators.Between);
+        opts.Filter.Filters[0].Value.Should().Be("18,60");
+    }
+
+    [Fact]
+    public void Jql_IsNullOperator_ParsedCorrectly()
+    {
+        var opts = Parse(new()
+        {
+            ["query"] = "deletedAt IS NULL"
+        });
+
+        opts.Filter.Should().NotBeNull();
+        opts.Filter!.Filters.Should().ContainSingle();
+        opts.Filter.Filters[0].Field.Should().Be("deletedAt");
+        opts.Filter.Filters[0].Operator.Should().Be(FilterOperators.IsNull);
+        opts.Filter.Filters[0].Value.Should().BeNull();
+    }
+
+    [Fact]
+    public void Jql_IsNotNullOperator_ParsedCorrectly()
+    {
+        var opts = Parse(new()
+        {
+            ["query"] = "deletedAt IS NOT NULL"
+        });
+
+        opts.Filter.Should().NotBeNull();
+        opts.Filter!.Filters.Should().ContainSingle();
+        opts.Filter.Filters[0].Field.Should().Be("deletedAt");
+        opts.Filter.Filters[0].Operator.Should().Be(FilterOperators.IsNotNull);
+        opts.Filter.Filters[0].Value.Should().BeNull();
+    }
+
+    [Fact]
+    public void Jql_LikeOperator_ParsedCorrectly()
+    {
+        var opts = Parse(new()
+        {
+            ["query"] = "name LIKE \"%john%\""
+        });
+
+        opts.Filter.Should().NotBeNull();
+        opts.Filter!.Filters.Should().ContainSingle();
+        opts.Filter.Filters[0].Field.Should().Be("name");
+        opts.Filter.Filters[0].Operator.Should().Be(FilterOperators.Like);
+        opts.Filter.Filters[0].Value.Should().Be("%john%");
+    }
+
+    [Fact]
+    public void Jql_AnyOperator_ParsedCorrectly()
+    {
+        var opts = Parse(new()
+        {
+            ["query"] = "orders ANY total > 1000"
+        });
+
+        opts.Filter.Should().NotBeNull();
+        opts.Filter!.Filters.Should().ContainSingle();
+        opts.Filter.Filters[0].Field.Should().Be("orders");
+        opts.Filter.Filters[0].Operator.Should().Be(FilterOperators.Any);
+        opts.Filter.Filters[0].Value.Should().Be("total:gt:1000");
+    }
+
+    [Fact]
+    public void Jql_AllOperator_ParsedCorrectly()
+    {
+        var opts = Parse(new()
+        {
+            ["query"] = "orders ALL status = \"completed\""
+        });
+
+        opts.Filter.Should().NotBeNull();
+        opts.Filter!.Filters.Should().ContainSingle();
+        opts.Filter.Filters[0].Field.Should().Be("orders");
+        opts.Filter.Filters[0].Operator.Should().Be(FilterOperators.All);
+        opts.Filter.Filters[0].Value.Should().Be("status:eq:completed");
+    }
+
+    [Fact]
+    public void Jql_CountOperator_ParsedCorrectly()
+    {
+        var opts = Parse(new()
+        {
+            ["query"] = "orders COUNT > 5"
+        });
+
+        opts.Filter.Should().NotBeNull();
+        opts.Filter!.Filters.Should().ContainSingle();
+        opts.Filter.Filters[0].Field.Should().Be("orders");
+        opts.Filter.Filters[0].Operator.Should().Be(FilterOperators.Count);
+        opts.Filter.Filters[0].Value.Should().Be("gt:5");
     }
 }

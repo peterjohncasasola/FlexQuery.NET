@@ -6,7 +6,7 @@ namespace DynamicQueryable.Parsers.Jql;
 internal static class JqlSafetyValidator
 {
     private static readonly Regex AllowedChars = new(
-        @"^[A-Za-z0-9_\.\(\)\,\=\!\>\<\-\s'" + "\"" + @"@:/\\]+$",
+        @"^[A-Za-z0-9_\.\(\)\,\=\!\>\<\-\s'" + "\"" + @"@:/\\%]+$",
         RegexOptions.Compiled);
 
     public static void ValidateSyntax(string source)
