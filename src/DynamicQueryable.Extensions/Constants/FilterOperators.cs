@@ -63,7 +63,7 @@ public static class FilterOperators
             "between"                                                   => Between,
             "any"                                                       => Any,
             "count"                                                     => Count,
-            _                                                           => Equal
+            _                                                           => (raw ?? string.Empty).Trim().ToLowerInvariant()
         };
     }
 }

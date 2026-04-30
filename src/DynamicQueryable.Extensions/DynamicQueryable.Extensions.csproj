@@ -16,7 +16,7 @@
     <Company>Peter John Casasola</Company>
     <Product>DynamicQueryable.Extensions</Product>
      <Description>Dynamic filtering, sorting, pagination for IQueryable in .NET</Description>
-    <PackageTags>linq;iqueryable;dynamic;query;filter;sorting;pagination;odata;syncfusion;spatie</PackageTags>
+    <PackageTags>linq;iqueryable;dynamic;query;filter;sorting;pagination;odata-lite</PackageTags>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <RepositoryUrl>https://github.com/peterjohncasasola/DynamicQueryable.Extensions</RepositoryUrl>
     <RepositoryType>git</RepositoryType>

@@ -33,7 +33,7 @@ public sealed class QueryOptions
     /// <summary>Optional HAVING condition applied after grouping.</summary>
     public HavingCondition? Having { get; set; }
 
-    /// <summary>Navigation properties to include (Spatie "include").</summary>
+    /// <summary>Navigation properties to include.</summary>
     public List<string>? Includes { get; set; }
 
     /// <summary>Internal tree structure for nested selection.</summary>

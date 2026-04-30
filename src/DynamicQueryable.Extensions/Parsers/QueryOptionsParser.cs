@@ -1,4 +1,4 @@
-﻿using System.Text.Json;
+using System.Text.Json;
 using System.Text.RegularExpressions;
 using DynamicQueryable.Constants;
 using DynamicQueryable.Models;
@@ -16,8 +16,8 @@ namespace DynamicQueryable.Parsers;
 /// <list type="bullet">
 ///   <item>Generic  — filter[0].field / sort[0].field / page / pageSize / select</item>
 ///   <item>JSON     — filter={...json...}</item>
-///   <item>Syncfusion — where[0][field] / sorted[0][name] / skip / take</item>
-///   <item>Laravel Spatie — filter[field]=value / sort=-field / fields[model]=a,b</item>
+///   <item>DSL      — filter=name:eq:john</item>
+///   <item>JQL      — query=name = "john"</item>
 /// </list>
 /// </summary>
 public static class QueryOptionsParser
@@ -51,47 +51,21 @@ public static class QueryOptionsParser
 
         if (dict.Count == 0) return new QueryOptions();
 
-        // Detect format by key signatures
         if (dict.TryGetValue("query", out var jql) && !string.IsNullOrWhiteSpace(jql))
             return ParseJql(dict, jql);
 
-        if (IsDslFilterFormat(dict))   return ParseDslFilter(dict);
-        if (IsJsonFilterFormat(dict))  return ParseJsonFilter(dict);
-        if (IsSyncfusionFormat(dict))  return ParseSyncfusion(dict);
-        if (IsSpatieFormat(dict))      return ParseSpatie(dict);
+        if (dict.Keys.Any(k => k.StartsWith("filter[0]", StringComparison.OrdinalIgnoreCase)))
+            return ParseGeneric(dict);
+
+        if (dict.TryGetValue("filter", out var filterVal) && !string.IsNullOrWhiteSpace(filterVal))
+        {
+            if (filterVal.TrimStart().StartsWith('{'))
+                return ParseJsonFilter(dict);
+            
+            return ParseDslFilter(dict);
+        }
+
         return ParseGeneric(dict);
-    }
-
-    // ── Format detection ─────────────────────────────────────────────────
-
-    private static bool IsSyncfusionFormat(Dictionary<string, string> d)
-        => d.Keys.Any(k => k.StartsWith("where[", StringComparison.OrdinalIgnoreCase)
-                        || k.StartsWith("sorted[", StringComparison.OrdinalIgnoreCase)
-                        || d.ContainsKey("skip") || d.ContainsKey("take"));
-
-    private static bool IsSpatieFormat(Dictionary<string, string> d)
-        => d.Keys.Any(k =>
-            k.StartsWith("filter[", StringComparison.OrdinalIgnoreCase)
-            || Regex.IsMatch(k, @"^fields\[", RegexOptions.IgnoreCase))
-        && !d.Keys.Any(k => Regex.IsMatch(k, @"^filter\[\d+\]", RegexOptions.IgnoreCase));
-
-    private static bool IsJsonFilterFormat(Dictionary<string, string> d)
-        => d.TryGetValue("filter", out var v) && v.TrimStart().StartsWith('{');
-
-    private static bool IsDslFilterFormat(Dictionary<string, string> d)
-        => d.TryGetValue("filter", out var v) && HasDslSyntax(v);
-
-    private static bool HasDslSyntax(string? raw)
-    {
-        if (string.IsNullOrWhiteSpace(raw)) return false;
-
-        var value = raw.TrimStart();
-        if (value.StartsWith('{')) return false;
-
-        return Regex.IsMatch(
-            value,
-            @"(^|[(&|])\s*(?:!|not\s*\()?\s*[A-Za-z_][A-Za-z0-9_.]*\s*:\s*(eq|neq|gt|gte|lt|lte|contains|startswith|endswith|in|notin|between|isnull|notnull|like|any|count)(\s*:|\s*($|[)&|]))",
-            RegexOptions.IgnoreCase);
     }
 
     // ── Generic Format ───────────────────────────────────────────────────
@@ -341,100 +315,7 @@ public static class QueryOptionsParser
         return options;
     }
 
-    // ── Syncfusion Format ────────────────────────────────────────────────
-    //  ?where[0][field]=Name&where[0][operator]=contains&where[0][value]=john
-    //  &sorted[0][name]=Age&sorted[0][direction]=descending
-    //  &skip=0&take=10
 
-    private static QueryOptions ParseSyncfusion(Dictionary<string, string> d)
-    {
-        var options = new QueryOptions();
-
-        // Paging via skip/take
-        var skip     = ParseInt(d, "skip", 0);
-        var take     = ParseInt(d, "take", 20);
-        var pageSize = take < 1 ? 20 : take;
-        options.Paging.PageSize = pageSize;
-        options.Paging.Page     = pageSize > 0 ? (skip / pageSize) + 1 : 1;
-
-        // Select
-        if (d.TryGetValue("select", out var sel)) options.Select = SplitCsv(sel);
-
-        // Filters: where[0][field], where[0][operator], where[0][value]
-        //          also supports where[0][condition] for AND/OR within index
-        var whereMap = CollectBracketIndexed(d, "where");
-        var filters  = new List<FilterCondition>();
-
-        foreach (var (_, fields) in whereMap.OrderBy(x => x.Key))
-        {
-            var field = fields.GetValueOrDefault("field");
-            if (string.IsNullOrWhiteSpace(field)) continue;
-
-            // Syncfusion may embed predicateType inside the item for nested OR
-            var op    = fields.GetValueOrDefault("operator") ?? "equal";
-            var value = fields.GetValueOrDefault("value");
-
-            filters.Add(new FilterCondition
-            {
-                Field    = field,
-                Operator = NormalizeSyncfusionOperator(op),
-                Value    = value
-            });
-        }
-
-        // Syncfusion also uses a "isComplex" / "condition" at top level
-        var topCondition = d.GetValueOrDefault("condition", "and");
-        if (filters.Count > 0)
-            options.Filter = new FilterGroup
-            {
-                Logic   = ParseLogic(topCondition),
-                Filters = filters
-            };
-
-        // Sorts: sorted[0][name], sorted[0][direction]
-        var sortedMap = CollectBracketIndexed(d, "sorted");
-        foreach (var (_, fields) in sortedMap.OrderBy(x => x.Key))
-        {
-            var name = fields.GetValueOrDefault("name");
-            if (string.IsNullOrWhiteSpace(name)) continue;
-            var dir = fields.GetValueOrDefault("direction", "ascending");
-            options.Sort.Add(new SortOption
-            {
-                Field      = name,
-                Descending = dir.Contains("desc", StringComparison.OrdinalIgnoreCase)
-            });
-        }
-        
-        if (d.TryGetValue("sort", out var sortRaw))
-            options.Sort.AddRange(ParseSort(sortRaw));
-
-        return options;
-    }
-
-    /// <summary>Maps Syncfusion operator names to canonical operators.</summary>
-    private static string NormalizeSyncfusionOperator(string op) =>
-        op.ToLowerInvariant() switch
-        {
-            "equal"              => FilterOperators.Equal,
-            "notequal"           => FilterOperators.NotEqual,
-            "greaterthan"        => FilterOperators.GreaterThan,
-            "greaterthanorequal" => FilterOperators.GreaterThanOrEq,
-            "lessthan"           => FilterOperators.LessThan,
-            "lessthanorequal"    => FilterOperators.LessThanOrEq,
-            "contains"           => FilterOperators.Contains,
-            "startswith"         => FilterOperators.StartsWith,
-            "endswith"           => FilterOperators.EndsWith,
-            "isnull"             => FilterOperators.IsNull,
-            "isnotnull"          => FilterOperators.IsNotNull,
-            _                    => FilterOperators.Normalize(op)
-        };
-
-    // ── Laravel Spatie Format ────────────────────────────────────────────
-    //  ?filter[name]=john&filter[age]=25&sort=-created_at
-    //  &include=roles,permissions&fields[users]=name,email
-
-    private static QueryOptions ParseSpatie(Dictionary<string, string> d)
-        => SpatieQueryParser.Parse(d);
 
     // ── Shared helpers ────────────────────────────────────────────────────
 
@@ -465,30 +346,7 @@ public static class QueryOptionsParser
         return result;
     }
 
-    /// <summary>
-    /// Collects keys like <c>prefix[0][subkey]</c> (Syncfusion style double-bracket).
-    /// </summary>
-    private static SortedDictionary<int, Dictionary<string, string>> CollectBracketIndexed(
-        Dictionary<string, string> d, string prefix)
-    {
-        var result = new SortedDictionary<int, Dictionary<string, string>>();
-        var regex = new Regex(
-            $@"^{Regex.Escape(prefix)}\[(\d+)\]\[([^\]]+)\]$",
-            RegexOptions.IgnoreCase);
 
-        foreach (var kv in d)
-        {
-            var m = regex.Match(kv.Key);
-            if (!m.Success) continue;
-            var idx    = int.Parse(m.Groups[1].Value);
-            var subkey = m.Groups[2].Value.ToLowerInvariant();
-            if (!result.TryGetValue(idx, out var inner))
-                result[idx] = inner = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-            inner[subkey] = kv.Value;
-        }
-
-        return result;
-    }
 
     private static int ParseInt(Dictionary<string, string> d, string key, int defaultValue)
         => d.TryGetValue(key, out var raw) && int.TryParse(raw, out var val) ? val : defaultValue;
@@ -538,14 +396,7 @@ public static class QueryOptionsParser
         {
             if (string.IsNullOrWhiteSpace(item)) continue;
 
-            // Spatie style: -field
-            if (item[0] == '-')
-            {
-                var spatieField = item[1..].Trim();
-                if (!string.IsNullOrWhiteSpace(spatieField))
-                    result.Add(new SortOption { Field = spatieField, Descending = true });
-                continue;
-            }
+
 
             var parts = item.Split(':', 2, StringSplitOptions.TrimEntries);
             var field = parts[0];
