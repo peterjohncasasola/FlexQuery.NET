@@ -1,6 +1,7 @@
 using System.Linq.Expressions;
 using DynamicQueryable.Constants;
 using DynamicQueryable.Helpers;
+using DynamicQueryable.Operators;
 
 namespace DynamicQueryable.Security;
 
@@ -13,6 +14,8 @@ internal static class SafeConditionBuilder
         if (op == FilterOperators.Contains) return BuildString(member, rawValue, nameof(string.Contains));
         if (op == FilterOperators.StartsWith) return BuildString(member, rawValue, nameof(string.StartsWith));
         if (op == FilterOperators.EndsWith) return BuildString(member, rawValue, nameof(string.EndsWith));
+        if (OperatorHandlerRegistry.TryGet(op, out var handler))
+            return handler?.Build(member, rawValue);
         if (op == FilterOperators.In) return BuildIn(member, rawValue);
         if (op == FilterOperators.NotIn)
         {

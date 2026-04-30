@@ -7,7 +7,7 @@ namespace DynamicQueryable.Parsers.Dsl;
 internal static class DslSafetyValidator
 {
     private static readonly Regex AllowedChars = new(
-        @"^[A-Za-z0-9_\.\:\&\|\(\)\,\-'" + "\"" + @"\\\s@\/\?\=\%\+\#\~]+$",
+        @"^[A-Za-z0-9_\.\:\&\|\(\)\,\-'" + "\"" + @"\\\s@\/\?\=\%\+\#\~!]+$",
         RegexOptions.Compiled);
 
     private static readonly Regex FieldPattern = new(

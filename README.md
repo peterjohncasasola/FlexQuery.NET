@@ -58,6 +58,7 @@ public async Task<IActionResult> Get()
 - **Projection**: `select` with nested properties, plus `include`-style expansion
 - **Query formats**: Generic, JSON, DSL, JQL-lite, Syncfusion, Laravel Spatie
 - **EF Core friendly**: expression-tree based, provider-translatable
+- **Pluggable operators**: core ships framework-agnostic handlers, optional packages can override by operator
 
 ### 🔽 Sorting
 - **Basic**: `?sort=createdAt:desc`
@@ -120,6 +121,16 @@ Use `&` for AND (URL-encode as `%26`), `|` for OR, parentheses for grouping:
 
 ```http
 ?filter=((city:eq:London|city:eq:Berlin)%26(age:between:25,40|status:eq:Pending))
+```
+
+DSL advanced operators:
+
+```http
+?filter=!name:eq:john
+?filter=not(name:eq:john)
+?filter=name:like:%john%
+?filter=orders:any:total:gt:100
+?filter=orders:count:gt:5
 ```
 
 ### JQL-lite (`query`)
@@ -201,6 +212,10 @@ Use `condition=and|or` for top-level logic.
 | `between`    | Inclusive range              | `Age between 18,60`              |
 | `isnull`     | Is null                      | `DeletedAt isnull`               |
 | `notnull`    | Is not null                  | `DeletedAt notnull`              |
+| `like`       | SQL LIKE pattern             | `Name like %john%`               |
+| `any`        | Collection element predicate | `Orders any Total gt 100`        |
+| `count`      | Collection count compare     | `Orders count gt 5`              |
+| `!` / `not()`| Negates condition/group      | `!Name eq John`                  |
 
 ## Nested & Collections
 
@@ -293,6 +308,27 @@ var result = _context.Users.ToProjectedQueryResult(options);
 ```csharp
 var result = await _context.Users.ToQueryResultAsync(options, cancellationToken);
 var projected = await _context.Users.ToProjectedQueryResultAsync(options, cancellationToken);
+```
+
+### EF Core operator overrides (optional)
+
+Core does not depend on EF Core. By default, `like` is handled with a framework-agnostic fallback:
+
+- `%value%` -> `Contains`
+- `%value` -> `EndsWith`
+- `value%` -> `StartsWith`
+
+When using the EF Core package, opt in to EF-specific operator handlers:
+
+```csharp
+using DynamicQueryable.Extensions.EFCore;
+
+var options = QueryOptionsParser.Parse(Request.Query)
+    .UseEfCoreOperators(); // registers EF.Functions.Like handler
+
+var data = await _context.Users
+    .ApplyQueryOptions(options)
+    .ToListAsync();
 ```
 
 ## ASP.NET Integration (optional)

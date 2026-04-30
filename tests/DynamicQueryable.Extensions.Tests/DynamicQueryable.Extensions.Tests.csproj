@@ -26,6 +26,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\DynamicQueryable.Extensions\DynamicQueryable.Extensions.csproj" />
+    <ProjectReference Include="..\..\src\DynamicQueryable.Extensions.EFCore\DynamicQueryable.Extensions.EFCore.csproj" />
   </ItemGroup>
 
 </Project>

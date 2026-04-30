@@ -11,6 +11,8 @@ public enum DslTokenKind
     And,
     /// <summary>The '|' logical OR operator.</summary>
     Or,
+    /// <summary>The unary '!' NOT operator.</summary>
+    Not,
     /// <summary>The '(' group opener.</summary>
     OpenParen,
     /// <summary>The ')' group closer.</summary>

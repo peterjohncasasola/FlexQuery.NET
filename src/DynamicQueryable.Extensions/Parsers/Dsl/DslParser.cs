@@ -57,6 +57,25 @@ public sealed class DslParser
 
     private DslAstNode ParsePrimary()
     {
+        if (Match(DslTokenKind.Not))
+        {
+            return new NotNode(ParsePrimary());
+        }
+
+        if (Current.Kind == DslTokenKind.Identifier
+            && Current.Value.Equals("not", StringComparison.OrdinalIgnoreCase))
+        {
+            _position++;
+            if (!Match(DslTokenKind.OpenParen))
+            {
+                throw new DslParseException($"Expected OpenParen at position {Current.Position}, but found {Current.Kind}.");
+            }
+
+            var inner = ParseOr();
+            Expect(DslTokenKind.CloseParen);
+            return new NotNode(inner);
+        }
+
         if (Match(DslTokenKind.OpenParen))
         {
             var node = ParseOr();

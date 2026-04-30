@@ -13,4 +13,7 @@ public sealed class FilterCondition
 
     /// <summary>The value to compare against (as a raw string; coerced at build time).</summary>
     public string? Value { get; set; }
+
+    /// <summary>Whether this condition should be negated.</summary>
+    public bool IsNegated { get; set; }
 }

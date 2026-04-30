@@ -58,6 +58,11 @@ public sealed class DslTokenizer
                     _position++;
                     _colonCount = 0;
                     break;
+                case '!':
+                    tokens.Add(new DslToken(DslTokenKind.Not, "!", start));
+                    _position++;
+                    _colonCount = 0;
+                    break;
                 case '(':
                     tokens.Add(new DslToken(DslTokenKind.OpenParen, "(", start));
                     _position++;

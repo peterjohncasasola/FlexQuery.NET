@@ -9,6 +9,13 @@ public static class DslFilterConverter
     /// <summary>Converts a DSL AST into a <see cref="FilterGroup"/>.</summary>
     public static FilterGroup ToFilterGroup(DslAstNode node)
     {
+        if (node is NotNode not)
+        {
+            var negatedGroup = ToFilterGroup(not.Child);
+            negatedGroup.IsNegated = !negatedGroup.IsNegated;
+            return negatedGroup;
+        }
+
         if (node is LogicalNode logical)
             return ConvertLogical(logical);
 

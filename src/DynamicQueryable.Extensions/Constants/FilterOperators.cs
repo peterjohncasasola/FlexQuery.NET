@@ -34,6 +34,12 @@ public static class FilterOperators
     public const string NotIn            = "notin";
     /// <summary>Inclusive range operator.</summary>
     public const string Between          = "between";
+    /// <summary>SQL LIKE pattern operator.</summary>
+    public const string Like             = "like";
+    /// <summary>Collection any operator.</summary>
+    public const string Any              = "any";
+    /// <summary>Collection count operator.</summary>
+    public const string Count            = "count";
 
     /// <summary>Normalizes common variants to canonical operator strings.</summary>
     public static string Normalize(string? raw)
@@ -46,7 +52,8 @@ public static class FilterOperators
             "gte"          or "ge"       or "greaterthanorequal" or ">=" => GreaterThanOrEq,
             "lt"           or "lessthan"                      or "<"     => LessThan,
             "lte"          or "le"       or "lessthanorequal" or "<="    => LessThanOrEq,
-            "contains"     or "like"     or "cn"                        => Contains,
+            "contains"     or "cn"                                      => Contains,
+            "like"                                                       => Like,
             "startswith"   or "starts"   or "sw"                        => StartsWith,
             "endswith"     or "ends"     or "ew"                        => EndsWith,
             "isnull"       or "null"                                    => IsNull,
@@ -54,6 +61,8 @@ public static class FilterOperators
             "in"                                                        => In,
             "notin"        or "not in"                                  => NotIn,
             "between"                                                   => Between,
+            "any"                                                       => Any,
+            "count"                                                     => Count,
             _                                                           => Equal
         };
     }

@@ -876,6 +876,68 @@ public class ParserTests
         opts.Filter!.Filters.Should().ContainSingle(f => f.Field == "email" && f.Value == "ops@acmeretail.com");
     }
 
+    [Fact]
+    public void Dsl_NotPrefix_ParsesAsNegatedConditionGroup()
+    {
+        var opts = Parse(new()
+        {
+            ["filter"] = "!name:eq:john"
+        });
+
+        opts.Filter.Should().NotBeNull();
+        opts.Filter!.IsNegated.Should().BeTrue();
+        opts.Filter.Filters.Should().ContainSingle(f =>
+            f.Field == "name"
+            && f.Operator == FilterOperators.Equal
+            && f.Value == "john");
+    }
+
+    [Fact]
+    public void Dsl_NotFunction_ParsesAsNegatedConditionGroup()
+    {
+        var opts = Parse(new()
+        {
+            ["filter"] = "not(name:eq:john)"
+        });
+
+        opts.Filter.Should().NotBeNull();
+        opts.Filter!.IsNegated.Should().BeTrue();
+        opts.Filter.Filters.Should().ContainSingle(f =>
+            f.Field == "name"
+            && f.Operator == FilterOperators.Equal
+            && f.Value == "john");
+    }
+
+    [Fact]
+    public void Dsl_AnyOperator_ParsesWithRawInnerExpression()
+    {
+        var opts = Parse(new()
+        {
+            ["filter"] = "orders:any:total:gt:100"
+        });
+
+        opts.Filter.Should().NotBeNull();
+        opts.Filter!.Filters.Should().ContainSingle(f =>
+            f.Field == "orders"
+            && f.Operator == FilterOperators.Any
+            && f.Value == "total:gt:100");
+    }
+
+    [Fact]
+    public void Dsl_CountOperator_ParsesWithRawComparisonExpression()
+    {
+        var opts = Parse(new()
+        {
+            ["filter"] = "orders:count:gt:5"
+        });
+
+        opts.Filter.Should().NotBeNull();
+        opts.Filter!.Filters.Should().ContainSingle(f =>
+            f.Field == "orders"
+            && f.Operator == FilterOperators.Count
+            && f.Value == "gt:5");
+    }
+
     // ════════════════════════════════════════════════════════════════════
     // 5. JQL-lite Format (?query=...)
     // ════════════════════════════════════════════════════════════════════

@@ -16,11 +16,14 @@ internal static class OperatorRegistry
         FilterOperators.Contains,
         FilterOperators.StartsWith,
         FilterOperators.EndsWith,
+        FilterOperators.Like,
         FilterOperators.In,
         FilterOperators.NotIn,
         FilterOperators.Between,
         FilterOperators.IsNull,
-        FilterOperators.IsNotNull
+        FilterOperators.IsNotNull,
+        FilterOperators.Any,
+        FilterOperators.Count
     };
 
     public static readonly IReadOnlyDictionary<string, Func<Expression, Expression, Expression>> BinaryFactories =

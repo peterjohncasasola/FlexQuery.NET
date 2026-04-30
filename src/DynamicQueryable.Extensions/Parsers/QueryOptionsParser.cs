@@ -82,7 +82,7 @@ public static class QueryOptionsParser
 
         return Regex.IsMatch(
             value,
-            @"(^|[(&|])\s*[A-Za-z_][A-Za-z0-9_.]*\s*:\s*(eq|neq|gt|gte|lt|lte|contains|startswith|endswith|in|notin|between|isnull|notnull)(\s*:|\s*($|[)&|]))",
+            @"(^|[(&|])\s*(?:!|not\s*\()?\s*[A-Za-z_][A-Za-z0-9_.]*\s*:\s*(eq|neq|gt|gte|lt|lte|contains|startswith|endswith|in|notin|between|isnull|notnull|like|any|count)(\s*:|\s*($|[)&|]))",
             RegexOptions.IgnoreCase);
     }
 

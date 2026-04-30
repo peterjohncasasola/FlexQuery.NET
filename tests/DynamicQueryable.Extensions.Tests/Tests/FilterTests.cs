@@ -361,6 +361,66 @@ public class FilterTests : IDisposable
     }
 
     [Fact]
+    public void Filter_DslNotPrefix_NegatesCondition()
+    {
+        var opts = Parse(new()
+        {
+            ["filter"] = "!name:eq:Alice Johnson"
+        });
+        opts.Paging.Disabled = true;
+
+        var result = _db.Entities.AsQueryable().ApplyQueryOptions(opts).ToList();
+
+        result.Should().HaveCount(9);
+        result.Should().NotContain(e => e.Name == "Alice Johnson");
+    }
+
+    [Fact]
+    public void Filter_DslLike_UsesSqlPatternSemantics()
+    {
+        var opts = Parse(new()
+        {
+            ["filter"] = "name:like:%son%"
+        });
+        opts.Paging.Disabled = true;
+
+        var result = _db.Entities.AsQueryable().ApplyQueryOptions(opts).ToList();
+
+        result.Should().HaveCount(3);
+        result.Select(e => e.Name).Should().BeEquivalentTo(["Alice Johnson", "Grace Wilson", "Jack Anderson"]);
+    }
+
+    [Fact]
+    public void Filter_DslAny_FiltersByCollectionElementPredicate()
+    {
+        var opts = Parse(new()
+        {
+            ["filter"] = "orders:any:total:gt:100"
+        });
+        opts.Paging.Disabled = true;
+
+        var result = _db.Entities.AsQueryable().ApplyQueryOptions(opts).ToList();
+
+        result.Should().ContainSingle();
+        result[0].Name.Should().Be("David Brown");
+    }
+
+    [Fact]
+    public void Filter_DslCount_FiltersByCollectionCount()
+    {
+        var opts = Parse(new()
+        {
+            ["filter"] = "orders:count:gt:1"
+        });
+        opts.Paging.Disabled = true;
+
+        var result = _db.Entities.AsQueryable().ApplyQueryOptions(opts).ToList();
+
+        result.Should().ContainSingle();
+        result[0].Name.Should().Be("Alice Johnson");
+    }
+
+    [Fact]
     public void Filter_IsNull_OnNonNullableField_ReturnsNothing()
     {
         var opts = new QueryOptions

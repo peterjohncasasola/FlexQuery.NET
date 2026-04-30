@@ -17,6 +17,8 @@ public static class QueryableEfCoreExtensions
         QueryOptions options,
         CancellationToken cancellationToken = default)
     {
+        QueryOptionsEfCoreExtensions.EnsureEfCoreOperatorsRegistered();
+
         var filtered = QueryBuilder.ApplyFilter(query, options);
         filtered = QueryBuilder.ApplySort(filtered, options);
 
@@ -42,6 +44,8 @@ public static class QueryableEfCoreExtensions
         QueryOptions options,
         CancellationToken cancellationToken = default)
     {
+        QueryOptionsEfCoreExtensions.EnsureEfCoreOperatorsRegistered();
+
         var filtered = QueryBuilder.ApplyFilter(query, options);
         filtered = QueryBuilder.ApplySort(filtered, options);
 

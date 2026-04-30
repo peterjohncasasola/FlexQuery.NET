@@ -23,4 +23,7 @@ public sealed class FilterGroup
 
     /// <summary>Nested sub-groups (recursive).</summary>
     public List<FilterGroup> Groups { get; set; } = [];
+
+    /// <summary>Whether this group should be negated after evaluating its children.</summary>
+    public bool IsNegated { get; set; }
 }
