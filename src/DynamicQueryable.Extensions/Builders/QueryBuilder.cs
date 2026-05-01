@@ -75,6 +75,23 @@ public static class QueryBuilder
     public static IQueryable<T> ApplyPaging<T>(IQueryable<T> query, QueryOptions options)
     {
         if (options?.Paging == null || options.Paging.Disabled) return query;
+
+        // Add a default OrderBy to prevent EF Core errors when calling Skip() on unordered queries.
+        if (options.Paging.Skip > 0 && query is not IOrderedQueryable<T>)
+        {
+            var defaultSortProp = typeof(T).GetProperties(BindingFlags.Public | BindingFlags.Instance)
+                .FirstOrDefault(p => p.Name.Equals("Id", StringComparison.OrdinalIgnoreCase) || p.Name.Equals("Key", StringComparison.OrdinalIgnoreCase)) 
+                ?? typeof(T).GetProperties(BindingFlags.Public | BindingFlags.Instance).FirstOrDefault();
+
+            if (defaultSortProp != null && !IsCollectionType(defaultSortProp.PropertyType))
+            {
+                var parameter = Expression.Parameter(typeof(T), "x");
+                var property = Expression.Property(parameter, defaultSortProp);
+                var keySelector = Expression.Lambda(property, parameter);
+                query = ApplyInitialOrder(query, keySelector, defaultSortProp.PropertyType, false);
+            }
+        }
+
         return query.Skip(options.Paging.Skip).Take(options.Paging.PageSize);
     }
 

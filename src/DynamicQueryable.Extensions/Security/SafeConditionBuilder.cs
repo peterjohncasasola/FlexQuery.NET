@@ -34,7 +34,7 @@ internal static class SafeConditionBuilder
         var converted = TypeHelper.ConvertValue(rawValue, member.Type);
         if (converted is null && rawValue is not null) return null;
 
-        var constant = Expression.Constant(converted, member.Type);
+        var constant = Parameterize(converted, member.Type);
         if (IsComparisonOperator(op) && !IsComparable(member.Type)) return null;
         return factory(member, constant);
     }
@@ -45,7 +45,7 @@ internal static class SafeConditionBuilder
         var canBeNull = !type.IsValueType || Nullable.GetUnderlyingType(type) is not null;
         if (!canBeNull) return Expression.Constant(!isNull);
 
-        var nullConstant = Expression.Constant(null, type);
+        var nullConstant = Parameterize(null, type);
         return isNull ? Expression.Equal(member, nullConstant) : Expression.NotEqual(member, nullConstant);
     }
 
@@ -59,7 +59,7 @@ internal static class SafeConditionBuilder
         if (method is null || toLower is null) return null;
 
         var memberLower = Expression.Call(member, toLower);
-        var valueLower = Expression.Constant((value ?? string.Empty).ToLowerInvariant());
+        var valueLower = Parameterize((value ?? string.Empty).ToLowerInvariant(), typeof(string));
         return Expression.Call(memberLower, method, valueLower);
     }
 
@@ -69,7 +69,7 @@ internal static class SafeConditionBuilder
         if (toLower is null) return null;
 
         var memberLower = Expression.Call(member, toLower);
-        var valueLower = Expression.Constant((value ?? string.Empty).ToLowerInvariant());
+        var valueLower = Parameterize((value ?? string.Empty).ToLowerInvariant(), typeof(string));
         
         return isEqual 
             ? Expression.Equal(memberLower, valueLower) 
@@ -84,7 +84,7 @@ internal static class SafeConditionBuilder
         var parts = values
             .Select(v => TypeHelper.ConvertValue(v, member.Type))
             .Where(v => v is not null)
-            .Select(v => Expression.Equal(member, Expression.Constant(v, member.Type)))
+            .Select(v => Expression.Equal(member, Parameterize(v, member.Type)))
             .Cast<Expression>()
             .ToList();
 
@@ -102,8 +102,8 @@ internal static class SafeConditionBuilder
         var upper = TypeHelper.ConvertValue(bounds[1], member.Type);
         if (lower is null || upper is null) return null;
 
-        var lowerExpr = Expression.GreaterThanOrEqual(member, Expression.Constant(lower, member.Type));
-        var upperExpr = Expression.LessThanOrEqual(member, Expression.Constant(upper, member.Type));
+        var lowerExpr = Expression.GreaterThanOrEqual(member, Parameterize(lower, member.Type));
+        var upperExpr = Expression.LessThanOrEqual(member, Parameterize(upper, member.Type));
         return Expression.AndAlso(lowerExpr, upperExpr);
     }
 
@@ -121,5 +121,25 @@ internal static class SafeConditionBuilder
             || t == typeof(DateTimeOffset)
             || t == typeof(DateOnly)
             || t == typeof(TimeOnly);
+    }
+
+    /// <summary>
+    /// Forces EF Core to parameterize the value by wrapping it in a closure-like class,
+    /// rather than embedding it as an inline literal in the SQL query.
+    /// </summary>
+    private static Expression Parameterize(object? value, Type type)
+    {
+        if (value is null) return Expression.Constant(null, type);
+
+        var wrapperType = typeof(ParameterWrapper<>).MakeGenericType(type);
+        var wrapper = Activator.CreateInstance(wrapperType);
+        wrapperType.GetProperty("Value")!.SetValue(wrapper, value);
+
+        return Expression.Property(Expression.Constant(wrapper), "Value");
+    }
+
+    private class ParameterWrapper<T>
+    {
+        public T Value { get; set; } = default!;
     }
 }

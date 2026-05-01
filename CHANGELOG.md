@@ -4,6 +4,24 @@ All notable changes to this project will be documented in this file.
 
 ---
 
+## [2.6.0] - 2026-05-01
+
+### ✨ Features
+- **Include-Level Projection**: Added support for field selection (projection) per navigation property using the syntax `include=nav(select=field1,field2)`.
+- **EF Core Interceptor**: Added `QueryPerformanceInterceptor` to track slow dynamic queries and log potentially suspicious SQL execution.
+
+### 🔒 Security Hardening
+- **Strict Parameterization**: Enforced strict SQL parameterization by wrapping all primitive values into `Expression.Constant` or closures, effectively preventing literal-based SQL injection.
+- **Fail-Fast Validation**: Configured parsers to throw exceptions immediately upon encountering dangerous SQL tokens (e.g. `;`, `DROP`, `UNION`), blocking execution before EF Core translation.
+- **Alias Validation**: Added strict alphanumeric regex validation for dynamic projection aliases to prevent injection mapping vulnerabilities.
+
+### ⚡ Performance & Reliability
+- **Default OrderBy for Pagination**: Automatically injects a default sort property (e.g., `Id`) when pagination (`skip`/`take`) is requested without an explicit sort, preventing EF Core relational provider errors.
+- **Exception Swallowing Fix**: Resolved a bug in `FilteredIncludeParser` where invalid JQL filters were silently ignored instead of failing the request.
+- **Stress Tested**: Verified concurrent deep query parsing and execution under high load against large simulated datasets.
+
+---
+
 ## [2.5.0] - 2026-05-01
 
 ### ✨ Features

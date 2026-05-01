@@ -129,15 +129,8 @@ public static class FilteredIncludeParser
             catch { /* fallback to JQL */ }
         }
 
-        try
-        {
-            var jqlAst = JqlParser.Parse(raw);
-            return JqlFilterConverter.ToFilterGroup(jqlAst);
-        }
-        catch
-        {
-            return null;
-        }
+        var jqlAst = JqlParser.Parse(raw);
+        return JqlFilterConverter.ToFilterGroup(jqlAst);
     }
 
     // ── Utility: split on delimiter ignoring depth ────────────────────────

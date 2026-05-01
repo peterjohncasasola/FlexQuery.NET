@@ -565,6 +565,82 @@ public abstract class BaseController : ControllerBase
 }
 ```
 
+## Production Readiness: Security & Performance
+
+`DynamicQueryable.Extensions` is designed with enterprise-grade security and performance in mind, ensuring it can be safely exposed to public APIs.
+
+### Security Hardening & SQL Injection Protection
+
+The library implements multiple layers of security to prevent malicious queries:
+
+1. **Strict Parameterization:**
+   All user-provided inputs (strings, numbers, dates) are automatically handled as safe parameterized constants. EF Core translates these securely into parameterized SQL (e.g., `@p0`). No raw SQL interpolation is used.
+2. **Fail-Fast Validation (JQL / DSL):**
+   The query parsers strictly enforce syntax validation. Any dangerous tokens (like `;`, `--`, `DROP`, or `UNION`) result in an immediate `JqlParseException`, stopping execution before it ever reaches EF Core.
+3. **Whitelist-Based Execution:**
+   - **Operators:** Only whitelisted operators (e.g., `eq`, `contains`, `any`) are supported via the internal `OperatorRegistry`.
+   - **Fields:** Properties and paths are strictly validated against your actual EF Core models. Non-existent or protected fields are rejected.
+4. **Alias Validation:**
+   Dynamic projections map user-provided aliases via strict regex (`^[a-zA-Z0-9_]+$`), neutralizing projection-based injection mapping attempts.
+
+### Performance & Query Optimization
+
+When exposing queries over large datasets, performance is critical:
+
+- **Optimized Paging:** When paging (`skip`/`take`) is requested without an explicit sort, the library automatically injects a default `OrderBy` (using `Id` or the primary key) to prevent EF Core errors on relational databases and ensure deterministic results.
+- **Efficient EXISTS Translation:** Deeply nested filters like `orders.any(orderItems.any(quantity > 5))` are efficiently translated by EF Core into nested SQL `EXISTS` clauses without fetching intermediate records into memory.
+- **Memory Optimization:** Filtering is strictly applied *before* any dynamic projection, reducing the memory footprint of materialized objects.
+
+### Monitoring & Logging
+
+We recommend leveraging EF Core's built-in Interceptors alongside ASP.NET Core Middleware to trace dynamic queries.
+
+#### 1. SQL Query Logging (EF Core Interceptor)
+You can create an EF Core Interceptor to track slow dynamic queries and log execution metrics:
+
+```csharp
+using Microsoft.EntityFrameworkCore.Diagnostics;
+using System.Data.Common;
+
+public class QueryPerformanceInterceptor : DbCommandInterceptor
+{
+    private readonly ILogger _logger;
+    public QueryPerformanceInterceptor(ILogger logger) => _logger = logger;
+
+    public override ValueTask<DbDataReader> ReaderExecutedAsync(
+        DbCommand command, CommandExecutedEventData eventData, DbDataReader result, CancellationToken cancellationToken = default)
+    {
+        if (eventData.Duration.TotalMilliseconds > 500)
+        {
+            _logger.LogWarning("Slow Dynamic Query Executed ({Duration}ms):\n{CommandText}", eventData.Duration.TotalMilliseconds, command.CommandText);
+        }
+        return base.ReaderExecutedAsync(command, eventData, result, cancellationToken);
+    }
+}
+
+// Program.cs
+services.AddDbContext<AppDbContext>(options =>
+{
+    options.UseSqlServer(connectionString);
+    options.AddInterceptors(new QueryPerformanceInterceptor(logger));
+});
+```
+
+#### 2. Raw Request Logging (ASP.NET Core Middleware)
+To track incoming dynamic requests, you can add a simple request logging middleware:
+
+```csharp
+app.Use(async (context, next) =>
+{
+    if (context.Request.Query.ContainsKey("query"))
+    {
+        var logger = context.RequestServices.GetRequiredService<ILogger<Program>>();
+        logger.LogInformation("Dynamic Query Request: {QueryString}", context.Request.QueryString.Value);
+    }
+    await next(context);
+});
+```
+
 ## ⚖️ License
 
 This project is licensed under the **MIT License** - see the [LICENSE](LICENSE) file for details.

@@ -62,6 +62,10 @@ internal static class SelectTreeBuilder
         var aliasParts = System.Text.RegularExpressions.Regex.Split(path, @"\s+as\s+", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
         var actualPath = aliasParts[0].Trim();
         var alias = aliasParts.Length > 1 ? aliasParts[1].Trim() : null;
+        if (alias != null && !System.Text.RegularExpressions.Regex.IsMatch(alias, @"^[a-zA-Z0-9_]+$"))
+        {
+            throw new ArgumentException($"Invalid alias format: '{alias}'. Only alphanumeric characters and underscores are allowed.");
+        }
 
         var parts = actualPath.Split('.', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
 
