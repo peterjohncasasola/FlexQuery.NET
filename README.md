@@ -1,23 +1,23 @@
-# 🚀 DynamicQueryable.Extensions
+# 🚀 FlexQuery.NET
 
-[![NuGet Version](https://img.shields.io/nuget/v/DynamicQueryable.Extensions.svg)](https://www.nuget.org/packages/DynamicQueryable.Extensions)
-[![NuGet Downloads](https://img.shields.io/nuget/dt/DynamicQueryable.Extensions.svg)](https://www.nuget.org/packages/DynamicQueryable.Extensions)
+[![NuGet Version](https://img.shields.io/nuget/v/FlexQuery.NET.svg)](https://www.nuget.org/packages/FlexQuery.NET)
+[![NuGet Downloads](https://img.shields.io/nuget/dt/FlexQuery.NET.svg)](https://www.nuget.org/packages/FlexQuery.NET)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-**DynamicQueryable.Extensions** is a lightweight and powerful .NET library that enables **dynamic filtering, sorting, paging, and projection** over `IQueryable` (EF Core or any LINQ provider).
+**FlexQuery.NET** is a lightweight and powerful .NET library that enables **dynamic filtering, sorting, paging, and projection** over `IQueryable` (EF Core or any LINQ provider).
 
 It converts query parameters into **EF Core-translatable expression trees**, making it ideal for building flexible APIs without hardcoding queries.
 
 ## Installation
 
 ```bash
-dotnet add package DynamicQueryable.Extensions
+dotnet add package FlexQuery.NET
 ```
 
 Optional (async helpers for EF Core):
 
 ```bash
-dotnet add package DynamicQueryable.Extensions.EFCore
+dotnet add package FlexQuery.NET.EFCore
 ```
 
 ## Quick Start
@@ -25,7 +25,7 @@ dotnet add package DynamicQueryable.Extensions.EFCore
 ### Parse request query into `QueryOptions`
 
 ```csharp
-using DynamicQueryable.Parsers;
+using FlexQuery.NET.Parsers;
 
 var options = QueryOptionsParser.Parse(Request.Query);
 ```
@@ -33,7 +33,7 @@ var options = QueryOptionsParser.Parse(Request.Query);
 ### Apply to `IQueryable`
 
 ```csharp
-using DynamicQueryable.Extensions;
+using FlexQuery.NET;
 using Microsoft.EntityFrameworkCore;
 
 [HttpGet]
@@ -67,6 +67,20 @@ public async Task<IActionResult> Get()
 - **Pluggable operators**: core ships framework-agnostic handlers, optional packages can override by operator
 - **Dual-Pipeline**: Decouples data filtering (WHERE) from data shaping (Filtered Includes)
 
+
+## 🔄 Migration from DynamicQueryable.Extensions
+
+FlexQuery.NET is the successor of DynamicQueryable.Extensions.
+
+### Key Improvements
+- Rewritten architecture for better performance and extensibility
+- Cleaner and more consistent API surface
+- Enhanced EF Core integration
+- Support for multiple query formats (DSL, JSON, Indexed, JQL)
+
+> ⚠️ Old versions and changelog history are not carried over to maintain a clean versioning strategy.
+
+
 ### 🔽 Sorting
 - **Basic**: `?sort=createdAt:desc`
 - **Multi-field**: `?sort=createdAt:desc,total:asc`
@@ -82,7 +96,7 @@ public async Task<IActionResult> Get()
 
 ## Filtering & Query Formats
 
-DynamicQueryable parses incoming query parameters into a unified model (`QueryOptions`, `FilterGroup`, `FilterCondition`). Operator behavior is consistent across formats.
+FlexQuery.NET parses incoming query parameters into a unified model (`QueryOptions`, `FilterGroup`, `FilterCondition`). Operator behavior is consistent across formats.
 
 ### Generic (indexed)
 
@@ -316,7 +330,7 @@ x => new {
 
 ## Dual-Pipeline Query System (EF Core)
 
-DynamicQueryable implements a **dual-pipeline** architecture to solve the "over-filtering" problem. It allows you to filter which root entities are returned (WHERE) independently from how their related collections are shaped (Filtered Includes).
+FlexQuery.NET implements a **dual-pipeline** architecture to solve the "over-filtering" problem. It allows you to filter which root entities are returned (WHERE) independently from how their related collections are shaped (Filtered Includes).
 
 > [!TIP]
 > **Unified Projection Mode**: When using `ApplySelect` or `ToProjectedQueryResultAsync`, the library automatically merges **Filtered Includes** and **Select** into a single optimized `Select()` expression. This ensures only requested columns are fetched and related data is filtered at the database level.
@@ -350,8 +364,8 @@ If you provide a specific `select` path for a navigation, the library will **onl
 To use both, chain `ApplyQueryOptions` (for the WHERE/Sort/Paging pipeline) and `ApplyFilteredIncludes` (for the Include pipeline).
 
 ```csharp
-using DynamicQueryable.Extensions;
-using DynamicQueryable.Extensions.EFCore;
+using FlexQuery.NET;
+using FlexQuery.NET.EFCore;
 
 var options = QueryOptionsParser.Parse(Request.Query);
 
@@ -370,7 +384,7 @@ var results = await _context.Customers
 ### Apply filter/sort/paging
 
 ```csharp
-using DynamicQueryable.Extensions;
+using FlexQuery.NET;
 
 var options = QueryOptionsParser.Parse(Request.Query);
 
@@ -526,7 +540,7 @@ var result = _context.Users.ToProjectedQueryResult(options);
 // result.Data is List<object> shaped by Select/Includes/JSON select tree
 ```
 
-### EF Core async helpers (package: `DynamicQueryable.Extensions.EFCore`)
+### EF Core async helpers (package: `FlexQuery.NET.EFCore`)
 
 ```csharp
 var result = await _context.Users.ToQueryResultAsync(options, cancellationToken);
@@ -544,7 +558,7 @@ Core does not depend on EF Core. By default, `like` is handled with a framework-
 When using the EF Core package, opt in to EF-specific operator handlers:
 
 ```csharp
-using DynamicQueryable.Extensions.EFCore;
+using FlexQuery.NET.EFCore;
 
 var options = QueryOptionsParser.Parse(Request.Query)
     .UseEfCoreOperators(); // registers EF.Functions.Like handler
@@ -567,7 +581,7 @@ public abstract class BaseController : ControllerBase
 
 ## Production Readiness: Security & Performance
 
-`DynamicQueryable.Extensions` is designed with enterprise-grade security and performance in mind, ensuring it can be safely exposed to public APIs.
+`FlexQuery.NET` is designed with enterprise-grade security and performance in mind, ensuring it can be safely exposed to public APIs.
 
 ### Security Hardening & SQL Injection Protection
 

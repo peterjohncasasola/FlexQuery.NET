@@ -10,8 +10,8 @@ on:
 
 env:
   DOTNET_VERSION: '8.0.x'
-  PROJECT_PATH:   'src/DynamicQueryable.Extensions/DynamicQueryable.Extensions.csproj'
-  TEST_PATH:      'tests/DynamicQueryable.Extensions.Tests/DynamicQueryable.Extensions.Tests.csproj'
+  PROJECT_PATH:   'src/FlexQuery.NET/FlexQuery.NET.csproj'
+  TEST_PATH:      'tests/FlexQuery.NET.Tests/FlexQuery.NET.Tests.csproj'
 
 jobs:
   build-and-test:

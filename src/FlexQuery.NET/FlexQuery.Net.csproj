@@ -1,0 +1,52 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFrameworks>net6.0;net7.0;net8.0</TargetFrameworks>
+
+    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+    
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <LangVersion>latest</LangVersion>
+
+     <!-- NuGet Metadata -->
+     <PackageId>FlexQuery.NET</PackageId>
+     <Version>1.0.0</Version>
+     <Authors>Peter John Casasola</Authors>
+     <Company>Peter John Casasola</Company>
+     <Product>FlexQuery.NET</Product>
+      <Description>Dynamic filtering, sorting, pagination for IQueryable in .NET</Description>
+     <PackageTags>linq;iqueryable;dynamic;query;filter;sorting;pagination;odata-lite</PackageTags>
+     <PackageLicenseExpression>MIT</PackageLicenseExpression>
+     <RepositoryUrl>https://github.com/peterjohncasasola/FlexQuery.NET</RepositoryUrl>
+     <RepositoryType>git</RepositoryType>
+     <PackageReadmeFile>README.md</PackageReadmeFile>
+     <GenerateDocumentationFile>true</GenerateDocumentationFile>
+     <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
+     <Optimize>true</Optimize>
+   </PropertyGroup>
+
+   <ItemGroup Condition="'$(TargetFramework)' == 'net6.0'">
+     <PackageReference Include="Microsoft.EntityFrameworkCore" Version="[6.0.0]" />
+   </ItemGroup>
+
+   <ItemGroup Condition="'$(TargetFramework)' == 'net7.0'">
+     <PackageReference Include="Microsoft.EntityFrameworkCore" Version="[7.0.0]" />
+   </ItemGroup>
+
+   <ItemGroup Condition="'$(TargetFramework)' == 'net8.0'">
+     <PackageReference Include="Microsoft.EntityFrameworkCore" Version="[8.0.0]" />
+   </ItemGroup>
+
+   <ItemGroup>
+     <InternalsVisibleTo Include="FlexQuery.NET.Tests" />
+   </ItemGroup>
+
+  <ItemGroup>
+     <InternalsVisibleTo Include="FlexQuery.NET.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="..\..\README.md" Pack="true" PackagePath="" />
+  </ItemGroup>
+</Project>
