@@ -4,6 +4,14 @@ All notable changes to this project will be documented in this file.
 
 ---
 
+## [2.4.1] - 2026-05-01
+
+### 🏗 Internal
+- **Legal**: Added MIT License file and updated project documentation to reflect open-source status.
+- **Documentation**: Refreshed README header with NuGet status badges and clear feature highlights.
+
+---
+
 ## [2.4.0] - 2026-05-01
 
 ### ✨ Features

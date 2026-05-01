@@ -1,6 +1,12 @@
-# DynamicQueryable
+# 🚀 DynamicQueryable.Extensions
 
-DynamicQueryable is a lightweight .NET library for applying **dynamic filtering, sorting, paging, and projection** to `IQueryable` (EF Core or any LINQ provider). It supports a focused set of query formats and produces **EF Core-translatable** expression trees.
+[![NuGet Version](https://img.shields.io/nuget/v/DynamicQueryable.Extensions.svg)](https://www.nuget.org/packages/DynamicQueryable.Extensions)
+[![NuGet Downloads](https://img.shields.io/nuget/dt/DynamicQueryable.Extensions.svg)](https://www.nuget.org/packages/DynamicQueryable.Extensions)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+
+**DynamicQueryable.Extensions** is a lightweight and powerful .NET library that enables **dynamic filtering, sorting, paging, and projection** over `IQueryable` (EF Core or any LINQ provider).
+
+It converts query parameters into **EF Core-translatable expression trees**, making it ideal for building flexible APIs without hardcoding queries.
 
 ## Installation
 
@@ -424,6 +430,6 @@ public abstract class BaseController : ControllerBase
 }
 ```
 
-## License
+## ⚖️ License
 
-MIT License
+This project is licensed under the **MIT License** - see the [LICENSE](LICENSE) file for details.
