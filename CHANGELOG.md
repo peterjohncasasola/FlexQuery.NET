@@ -4,7 +4,32 @@ All notable changes to this project will be documented in this file.
 
 ---
 
-## [2.0.1] - 2026-06-30
+## [2.2.0] - 2026-05-01
+
+### ✨ Features
+- Added **Scoped Collection Filtering** to JQL to ensure multiple conditions apply to the same element.
+- New syntax support:
+  - `collection.any(...)` and `collection.all(...)`
+  - `collection[...]` bracket shorthand for `.any()`
+- Recursive support for nested scoped collections (e.g., `orders.any(orderItems.any(...))`).
+
+### 🧠 Improvements
+- Rewrote JQL parser with look-ahead to handle dot-notation and scoped blocks.
+- Enhanced `ExpressionBuilder` to generate true scoped LINQ predicates.
+- Maintained full backward compatibility with flat collection expressions.
+
+### 🏗 Internal
+- Introduced `JqlCollectionNode` to the JQL AST.
+- Extended `FilterCondition` model with `ScopedFilter` support.
+- Updated `JqlFilterConverter` to handle recursive scoped group conversion.
+
+### 🧪 Tests
+- Added comprehensive coverage for all scoped filtering permutations.
+- Verified all 157 tests passing.
+
+---
+
+## [2.1.0] - 2026-06-30
 
 ### ✨ Enhancements
 - Extended JQL parser with full SQL-like syntax support

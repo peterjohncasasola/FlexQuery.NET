@@ -6,7 +6,7 @@ namespace DynamicQueryable.Parsers.Jql;
 internal static class JqlSafetyValidator
 {
     private static readonly Regex AllowedChars = new(
-        @"^[A-Za-z0-9_\.\(\)\,\=\!\>\<\-\s'" + "\"" + @"@:/\\%]+$",
+        @"^[A-Za-z0-9_\.\(\)\[\]\,\=\!\.\>\<\-\s'" + "\"" + @"@:/\\%]+$",
         RegexOptions.Compiled);
 
     public static void ValidateSyntax(string source)
@@ -18,16 +18,23 @@ internal static class JqlSafetyValidator
             throw new JqlParseException("JQL query contains invalid characters.");
 
         var depth = 0;
+        var bracketDepth = 0;
         foreach (var ch in source)
         {
             if (ch == '(') depth++;
             if (ch == ')') depth--;
+            if (ch == '[') bracketDepth++;
+            if (ch == ']') bracketDepth--;
             if (depth < 0)
                 throw new JqlParseException("JQL query has unbalanced parentheses.");
+            if (bracketDepth < 0)
+                throw new JqlParseException("JQL query has unbalanced square brackets.");
         }
 
         if (depth != 0)
             throw new JqlParseException("JQL query has unbalanced parentheses.");
+        if (bracketDepth != 0)
+            throw new JqlParseException("JQL query has unbalanced square brackets.");
     }
 
     public static void ValidateField(string field, int position)

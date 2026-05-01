@@ -40,3 +40,34 @@ public sealed class JqlConditionNode : JqlAstNode
     public IReadOnlyList<string> Values { get; }
 }
 
+/// <summary>
+/// A scoped collection filter node produced by the <c>orders.any(...)</c> or
+/// <c>orders[...]</c> syntaxes. All conditions inside the parentheses / brackets
+/// apply to the <strong>same</strong> element of the collection, rather than
+/// being independent EXISTS checks.
+/// </summary>
+public sealed class JqlCollectionNode : JqlAstNode
+{
+    /// <summary>Creates a new JQL collection node.</summary>
+    public JqlCollectionNode(string collectionPath, string quantifier, JqlAstNode filter)
+    {
+        CollectionPath = collectionPath;
+        Quantifier     = quantifier;
+        Filter         = filter;
+    }
+
+    /// <summary>
+    /// Dot-separated path to the collection property (e.g. <c>orders</c> or
+    /// <c>customer.orders</c>).
+    /// </summary>
+    public string CollectionPath { get; }
+
+    /// <summary>The quantifier: <c>any</c> or <c>all</c>.</summary>
+    public string Quantifier { get; }
+
+    /// <summary>
+    /// The filter expression that every element in the collection is tested
+    /// against. This is a fully parsed sub-tree of the same AST types.
+    /// </summary>
+    public JqlAstNode Filter { get; }
+}

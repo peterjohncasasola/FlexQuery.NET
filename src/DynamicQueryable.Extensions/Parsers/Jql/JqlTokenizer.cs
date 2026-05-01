@@ -37,8 +37,20 @@ public sealed class JqlTokenizer
                     tokens.Add(new JqlToken(JqlTokenKind.CloseParen, ")", start));
                     _position++;
                     break;
+                case '[':
+                    tokens.Add(new JqlToken(JqlTokenKind.OpenBracket, "[", start));
+                    _position++;
+                    break;
+                case ']':
+                    tokens.Add(new JqlToken(JqlTokenKind.CloseBracket, "]", start));
+                    _position++;
+                    break;
                 case ',':
                     tokens.Add(new JqlToken(JqlTokenKind.Comma, ",", start));
+                    _position++;
+                    break;
+                case '.':
+                    tokens.Add(new JqlToken(JqlTokenKind.Dot, ".", start));
                     _position++;
                     break;
                 case '"':
@@ -145,7 +157,7 @@ public sealed class JqlTokenizer
         while (_position < _source.Length)
         {
             var ch = _source[_position];
-            if (char.IsWhiteSpace(ch) || ch is '(' or ')' or ',' or '=' or '!' or '<' or '>')
+            if (char.IsWhiteSpace(ch) || ch is '(' or ')' or '[' or ']' or ',' or '.' or '=' or '!' or '<' or '>')
                 break;
             _position++;
         }

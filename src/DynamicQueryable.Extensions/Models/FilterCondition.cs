@@ -16,4 +16,17 @@ public sealed class FilterCondition
 
     /// <summary>Whether this condition should be negated.</summary>
     public bool IsNegated { get; set; }
+
+    /// <summary>
+    /// When non-null, this condition represents a scoped collection filter
+    /// (<c>orders.any(...)</c> / <c>orders[...]</c> syntax). The filter group
+    /// is applied to each element of the collection and all conditions within
+    /// it apply to the <strong>same</strong> element.
+    /// <para>
+    /// <see cref="Operator"/> is set to <c>any</c> or <c>all</c> and
+    /// <see cref="Value"/> is left <see langword="null"/> when this property
+    /// is populated.
+    /// </para>
+    /// </summary>
+    public FilterGroup? ScopedFilter { get; set; }
 }

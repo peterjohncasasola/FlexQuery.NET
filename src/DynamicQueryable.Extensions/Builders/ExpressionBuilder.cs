@@ -67,6 +67,14 @@ public static class ExpressionBuilder
         if (!FieldRegistry.IsAllowed(entityType, condition.Field)) return null;
         if (!SafePropertyResolver.TryResolveChain(entityType, condition.Field, out var chain)) return null;
 
+        // ── Scoped collection filter (orders.any(...) / orders[...]) ──────────
+        // When ScopedFilter is set, the inner FilterGroup is applied to each
+        // element as a single compound predicate (true "scoped" semantics).
+        if (condition.ScopedFilter is not null)
+        {
+            return BuildScopedCollectionExpression(param, chain, op, condition.ScopedFilter);
+        }
+
         Expression? expression = op switch
         {
             FilterOperators.Any => BuildAnyExpression(param, chain, condition.Value),
@@ -77,6 +85,44 @@ public static class ExpressionBuilder
 
         if (expression is null) return null;
         return condition.IsNegated ? Expression.Not(expression) : expression;
+    }
+
+    /// <summary>
+    /// Builds a scoped <c>Any</c> or <c>All</c> LINQ call where the inner
+    /// <see cref="FilterGroup"/> is translated recursively and applied as a
+    /// single lambda to each collection element — guaranteeing that every
+    /// condition inside the group refers to the <strong>same</strong> element.
+    /// </summary>
+    private static Expression? BuildScopedCollectionExpression(
+        Expression param,
+        IReadOnlyList<PropertyInfo> chain,
+        string quantifier,
+        FilterGroup scopedFilter)
+    {
+        var collectionAccess = ResolvePath(param, chain, out var collectionType);
+        if (collectionAccess is null || collectionType is null) return null;
+        if (!SafePropertyResolver.TryGetCollectionElementType(collectionType, out var elementType)) return null;
+
+        var itemParam = Expression.Parameter(elementType, "sc");
+        var predicate = BuildGroupExpression(itemParam, scopedFilter, elementType);
+        if (predicate is null) return null;
+
+        if (quantifier == FilterOperators.All)
+        {
+            var allMethod = typeof(Enumerable).GetMethods()
+                .First(m => m.Name == nameof(Enumerable.All) && m.GetParameters().Length == 2)
+                .MakeGenericMethod(elementType);
+
+            return Expression.Call(allMethod, collectionAccess, Expression.Lambda(predicate, itemParam));
+        }
+        else // "any" is the default
+        {
+            var anyMethod = typeof(Enumerable).GetMethods()
+                .First(m => m.Name == nameof(Enumerable.Any) && m.GetParameters().Length == 2)
+                .MakeGenericMethod(elementType);
+
+            return Expression.Call(anyMethod, collectionAccess, Expression.Lambda(predicate, itemParam));
+        }
     }
 
     private static Expression? BuildPathExpression(

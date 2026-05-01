@@ -38,8 +38,14 @@ public enum JqlTokenKind
     OpenParen,
     /// <summary>Close parenthesis.</summary>
     CloseParen,
+    /// <summary>Open square bracket (scoped collection filter).</summary>
+    OpenBracket,
+    /// <summary>Close square bracket (scoped collection filter).</summary>
+    CloseBracket,
     /// <summary>Comma.</summary>
     Comma,
+    /// <summary>Dot separator (collection.any / collection.all).</summary>
+    Dot,
     /// <summary>End of input.</summary>
     End,
 

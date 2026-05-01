@@ -24,6 +24,17 @@ public class Order
 {
     public int Id { get; set; }
     public decimal Total { get; set; }
+    /// <summary>Order status used for scoped collection filter tests.</summary>
+    public string Status { get; set; } = string.Empty;
+    /// <summary>Nested collection for multi-level scoped filter tests.</summary>
+    public List<OrderItem> OrderItems { get; set; } = [];
+}
+
+public class OrderItem
+{
+    public int Id { get; set; }
+    public int Quantity { get; set; }
+    public decimal Price { get; set; }
 }
 
 public enum Status

@@ -52,7 +52,7 @@ public async Task<IActionResult> Get()
 
 ## Features
 
-- **Filtering**: nested AND/OR groups, nested property paths, collection paths (EXISTS/`Any`)
+- **Filtering**: nested AND/OR groups, nested property paths, scoped collection filtering (`.any()`, `.all()`, `[...]`)
 - **Sorting**: multi-field ordering
 - **Paging**: `page` / `pageSize` or `skip` / `take` (format-dependent)
 - **Projection**: `select` with nested properties, plus `include`-style expansion
@@ -163,6 +163,13 @@ Supports nested property paths and quoted values:
 ?query=email = "ops@acmeretail.com" AND orders.number = "ORD-2026-0002" AND orders.items.quantity > 2
 ```
 
+**Scoped collection filtering** (conditions apply to the same element):
+
+```http
+?query=orders.any(status = Cancelled AND total > 500)
+?query=orders[status = Cancelled AND orderItems.any(id = 101)]
+```
+
 Supported JQL operators:
 
 - `=` `!=` `>` `>=` `<` `<=`
@@ -231,6 +238,37 @@ Conceptually:
 ```csharp
 x => x.Orders.Any(o => o.Number == "SO-001")
 ```
+
+### Scoped Collection Filtering (JQL)
+
+By default, independent conditions on a collection are interpreted as separate `Any()` checks. Scoped filtering ensures multiple conditions apply to the **same element**.
+
+| Syntax | Description |
+|---|---|
+| `orders.any(...)` | Conditions apply to the same order |
+| `orders.all(...)` | All orders must satisfy the inner filter |
+| `orders[...]` | Shorthand for `orders.any(...)` |
+
+**Conceptually:**
+
+```http
+?query=orders.any(status = Cancelled AND total > 500)
+```
+
+Translates to:
+
+```csharp
+x => x.Orders.Any(o => o.Status == "Cancelled" && o.Total > 500)
+```
+
+**Nested Scoped Filtering:**
+
+```http
+?query=orders.any(status = Cancelled AND orderItems.any(id = 101))
+```
+
+This ensures the `orderItems` condition is checked against items belonging to a `Cancelled` order. Scoped filters can be nested recursively to any depth.
+
 
 ### Filtered child collections (when selected)
 
