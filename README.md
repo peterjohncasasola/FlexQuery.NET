@@ -655,6 +655,37 @@ app.Use(async (context, next) =>
 });
 ```
 
+## 🔍 Query Debug Mode
+
+FlexQuery.NET provides a powerful debug mode to inspect the transformation from string-based queries to LINQ Expression Trees. This is essential for troubleshooting complex nested queries or verifying EF Core translation.
+
+### Usage
+
+```csharp
+using FlexQuery.NET;
+
+var options = QueryOptionsParser.Parse(Request.Query);
+var debug = _context.Customers.ToFlexQueryDebug(options);
+
+// Inspect the results
+Console.WriteLine(debug.LinqLambda);      // The C#-like LINQ syntax
+Console.WriteLine(debug.ExpressionTree);  // The structural node tree
+Console.WriteLine(debug.Ast);             // The raw parsed AST (JQL/DSL)
+```
+
+### Example Output
+For a query like `?query=orders.any(status = Cancelled AND orderItems.id = 101)`:
+
+**LINQ Lambda:**
+```csharp
+query.Where(x => x.Orders.Any(sc => (sc.Status == "Cancelled") && sc.OrderItems.Any(i => i.Id == 101)))
+```
+
+**AST (ToString):**
+```text
+orders.any(AND(status eq [Cancelled], orderItems.any(id eq [101])))
+```
+
 ## ⚖️ License
 
 This project is licensed under the **MIT License** - see the [LICENSE](LICENSE) file for details.

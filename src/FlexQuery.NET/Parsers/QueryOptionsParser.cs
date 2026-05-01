@@ -305,6 +305,7 @@ public static class QueryOptionsParser
         {
             var ast = DslParser.Parse(filter);
             options.Filter = DslFilterConverter.ToFilterGroup(ast);
+            options.Ast = ast;
         }
         catch (DslParseException)
         {
@@ -324,6 +325,7 @@ public static class QueryOptionsParser
 
         var ast = JqlParser.Parse(query);
         options.Filter = JqlFilterConverter.ToFilterGroup(ast);
+        options.Ast = ast;
 
         return options;
     }

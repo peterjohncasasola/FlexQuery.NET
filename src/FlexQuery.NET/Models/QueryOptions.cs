@@ -52,4 +52,10 @@ public sealed class QueryOptions
 
     /// <summary>Internal tree structure for nested selection.</summary>
     internal SelectionNode? SelectTree { get; set; }
+
+    /// <summary>
+    /// The raw AST produced by the parser (JQL, DSL, etc.). 
+    /// This is used for debugging purposes.
+    /// </summary>
+    public object? Ast { get; set; }
 }

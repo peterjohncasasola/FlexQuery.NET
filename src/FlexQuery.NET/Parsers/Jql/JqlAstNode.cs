@@ -19,6 +19,9 @@ public sealed class JqlLogicalNode : JqlAstNode
     public string Logic { get; }
     /// <summary>The child nodes to combine.</summary>
     public IReadOnlyList<JqlAstNode> Children { get; }
+
+    /// <inheritdoc />
+    public override string ToString() => $"{Logic.ToUpperInvariant()}({string.Join(", ", Children)})";
 }
 
 /// <summary>A single field/operator/value condition.</summary>
@@ -38,6 +41,9 @@ public sealed class JqlConditionNode : JqlAstNode
     public string Operator { get; }
     /// <summary>The comparison values.</summary>
     public IReadOnlyList<string> Values { get; }
+
+    /// <inheritdoc />
+    public override string ToString() => $"{Field} {Operator} [{string.Join(", ", Values)}]";
 }
 
 /// <summary>
@@ -70,4 +76,7 @@ public sealed class JqlCollectionNode : JqlAstNode
     /// against. This is a fully parsed sub-tree of the same AST types.
     /// </summary>
     public JqlAstNode Filter { get; }
+
+    /// <inheritdoc />
+    public override string ToString() => $"{CollectionPath}.{Quantifier}({Filter})";
 }
