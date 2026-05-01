@@ -26,6 +26,11 @@ internal sealed class SelectionNode
     /// </summary>
     public FilterGroup? Filter { get; set; }
 
+    /// <summary>
+    /// Optional alias name used for the projected property (e.g. "productName as name").
+    /// </summary>
+    public string? Alias { get; set; }
+
     public SelectionNode GetOrAddChild(string name)
     {
         if (!_children.TryGetValue(name, out var child))

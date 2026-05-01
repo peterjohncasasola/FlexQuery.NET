@@ -228,8 +228,20 @@ Dot-notation works across filtering and projection:
 
 ```http
 ?filter[0].field=Profile.Bio&filter[0].operator=contains&filter[0].value=dev
-&select=Id,Profile.Bio
+&select=Id as customerId,Profile.Bio as biography
 ```
+
+### Aliases (`as`)
+You can rename properties in the output dynamic object using the `as` keyword. This works at any level of nesting:
+
+```http
+?select=id as customerId, name, orders.status as orderStatus, orders.orderItems.productName as product
+```
+
+In the resulting object:
+- `Id` becomes `customerId`
+- `Orders.Status` becomes `orderStatus` inside each order
+- `Orders.OrderItems.ProductName` becomes `product` inside each order item
 
 ### Collection paths (parent filtering)
 
@@ -376,6 +388,129 @@ var projected = await _context.Users
     .ApplySelect(options)
     .ToListAsync(); // IQueryable<object>
 ```
+
+## Flattened Projections
+
+By default, the library preserves the original object hierarchy during projection. However, you can optionally flatten deep nested collections into a table-like rowset using `SelectMany` expression chains.
+
+### Default Nested Output (Before)
+Without a flattening mode, the output reflects the entity structure:
+
+```json
+[
+  {
+    "id": 1,
+    "name": "Alice",
+    "orders": [
+      {
+        "status": "Shipped",
+        "orderItems": [
+          { "product": "Laptop", "qty": 1 },
+          { "product": "Mouse", "qty": 2 }
+        ]
+      }
+    ]
+  }
+]
+```
+
+### 1. Flat Mode (`mode=flat`)
+Linearizes a single navigation path into a flat list of leaf objects. This is ideal for reporting on deeply nested items where parent context is not required.
+
+**Query:**
+`?select=orders.orderItems.productName as product,orders.orderItems.quantity as qty&mode=flat`
+
+**Output:**
+```json
+[
+  { "product": "Laptop", "qty": 1 },
+  { "product": "Mouse", "qty": 2 }
+]
+```
+
+**Generated LINQ:**
+The library builds a sequential `SelectMany` chain:
+```csharp
+query.SelectMany(c => c.Orders)
+     .SelectMany(o => o.OrderItems)
+     .Select(oi => new { product = oi.ProductName, qty = oi.Quantity })
+```
+
+> [!NOTE]
+> **Constraint**: `mode=flat` requires a single linear navigation path. Branching into multiple collections or mixing root fields with deep collections will trigger a validation error.
+
+### 2. Flat-Mixed Mode (`mode=flat-mixed`)
+Flattens root entity fields alongside deeply nested collection fields into a single rowset. This mode preserves parent context by using correlated `SelectMany` projections.
+
+**Query:**
+`?select=id as customerId,name,orders.status as orderStatus,orders.orderItems.productName as product&mode=flat-mixed`
+
+**Output:**
+```json
+[
+  { "customerId": 1, "name": "Alice", "orderStatus": "Shipped", "product": "Laptop" },
+  { "customerId": 1, "name": "Alice", "orderStatus": "Shipped", "product": "Mouse" }
+]
+```
+
+**Generated LINQ:**
+The library carries context through the chain using a progressive anonymous type:
+```csharp
+query.SelectMany(c => c.Orders, (c, o) => new { c, o })
+     .SelectMany(x => x.o.OrderItems, (x, oi) => new {
+         customerId = x.c.Id,
+         name = x.c.Name,
+         orderStatus = x.o.Status,
+         product = oi.ProductName
+     })
+```
+This mode allows you to "join" all levels of a hierarchy into a flat result set while maintaining full EF Core server-side translation.
+
+## Example Request and Response
+
+Here is how a real-world request looks when combining JQL filtering, selective projection, and filtered includes.
+
+### Request
+```http
+GET /api/customers?query=(name contains "Connelly")&pageSize=2&select=id,email,name,orders.id,orders.orderDate,orders.status,orders.orderItems&include=orders(status = "cancelled").orderItems(productName = "Tasty Metal Pants")
+```
+
+### Response
+```json
+{
+  "totalCount": 1,
+  "page": 1,
+  "pageSize": 2,
+  "totalPages": 1,
+  "data": [
+    {
+      "id": 42,
+      "name": "John Connelly",
+      "email": "j.connelly@example.com",
+      "orders": [
+        {
+          "id": 1001,
+          "orderDate": "2026-04-15T10:30:00Z",
+          "status": "cancelled",
+          "orderItems": [
+            {
+              "id": 5001,
+              "productId": 101,
+              "productName": "Tasty Metal Pants",
+              "unitPrice": 49.99
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
+```
+
+In this example:
+- The **root filter** (`query`) limits results to customers whose name contains "Connelly".
+- The **projection** (`select`) ensures we only fetch specific fields for the customer and their orders.
+- The **filtered include** (`include`) ensures that only "cancelled" orders are returned, and within those orders, only the items matching "Tasty Metal Pants" are included in the collection.
 
 ### Return results with metadata
 

@@ -21,6 +21,9 @@ public sealed class QueryOptions
     /// <summary>Pagination settings.</summary>
     public PagingOptions Paging { get; set; } = new();
 
+    /// <summary>Mode for projection (Nested or Flat).</summary>
+    public ProjectionMode ProjectionMode { get; set; } = ProjectionMode.Nested;
+
     /// <summary>Fields to project (SELECT). Null or empty means all primitive fields.</summary>
     public List<string>? Select { get; set; }
 

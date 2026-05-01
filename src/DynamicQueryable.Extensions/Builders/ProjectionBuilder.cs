@@ -9,6 +9,7 @@ namespace DynamicQueryable.Builders;
 /// <summary>
 /// Recursively constructs MemberInitExpressions for dynamic projection 
 /// mapped to strongly-typed runtime classes, allowing full EF Core server-side translation.
+/// Alias support: leaf nodes with an Alias emit that alias as the output property name.
 /// </summary>
 internal static class ProjectionBuilder
 {
@@ -52,15 +53,19 @@ internal static class ProjectionBuilder
     {
         var effectiveNode = NormalizeSelection(sourceType, selectTree);
 
+        // Key = output name (alias or prop name), Value = (clrType, expression)
         var propertiesToSelect = new Dictionary<string, (Type TargetType, Expression Assignment)>();
 
         foreach (var kvp in effectiveNode.EnumerateChildren())
         {
             var propInfo = sourceType.GetProperty(kvp.Key, BindingFlags.Public | BindingFlags.Instance | BindingFlags.IgnoreCase);
-            if (propInfo == null) continue; // Ignore invalid properties safely
+            if (propInfo == null) continue;
+
+            var childNode = kvp.Value;
+            // Output name: use alias if set, otherwise the CLR property name
+            var outputName = !string.IsNullOrWhiteSpace(childNode.Alias) ? childNode.Alias : propInfo.Name;
 
             var propAccess = Expression.Property(source, propInfo);
-            var childNode = kvp.Value;
 
             if (ShouldBuildNestedProjection(propInfo.PropertyType, childNode))
             {
@@ -70,14 +75,13 @@ internal static class ProjectionBuilder
 
                 if (IsIEnumerable(propInfo.PropertyType, out var itemType))
                 {
-                    // Collection handling: source.AsQueryable().Where(...).Select(i => new DynamicType { ... }).ToList()
+                    // Collection: source.AsQueryable().Where(...).Select(i => new DynamicType { ... }).ToList()
                     var itemParam = Expression.Parameter(itemType, "i");
                     var itemInit = BuildMemberInit(itemParam, itemType, childNode, childFilterContext);
                     var selectLambda = Expression.Lambda(itemInit, itemParam);
 
                     var asQueryableMethod = _queryableAsQueryable1.MakeGenericMethod(itemType);
                     var selectMethod = _queryableSelect2.MakeGenericMethod(itemType, itemInit.Type);
-                    
                     var toListMethod = _enumerableToList1.MakeGenericMethod(itemInit.Type);
 
                     var asQueryableCall = Expression.Call(null, asQueryableMethod, propAccess);
@@ -90,50 +94,49 @@ internal static class ProjectionBuilder
                     var toListCall = Expression.Call(null, toListMethod, selectCall);
 
                     var targetListType = typeof(List<>).MakeGenericType(itemInit.Type);
-                    propertiesToSelect[propInfo.Name] = (targetListType, toListCall);
+                    // Collections always use the nav property name (alias not meaningful on the collection wrapper itself)
+                    propertiesToSelect[outputName] = (targetListType, toListCall);
                 }
                 else
                 {
-                    // Nested Object handling
+                    // Nested Object
                     var nestedInit = BuildMemberInit(propAccess, propInfo.PropertyType, childNode, childFilterContext);
                     var isNullable = !propInfo.PropertyType.IsValueType || Nullable.GetUnderlyingType(propInfo.PropertyType) != null;
-                    
+
                     if (isNullable)
                     {
                         var nullCheck = Expression.Equal(propAccess, Expression.Constant(null, propInfo.PropertyType));
                         var condition = Expression.Condition(
-                            nullCheck, 
-                            Expression.Constant(null, nestedInit.Type), 
-                            nestedInit, 
+                            nullCheck,
+                            Expression.Constant(null, nestedInit.Type),
+                            nestedInit,
                             nestedInit.Type);
-                        
-                        propertiesToSelect[propInfo.Name] = (nestedInit.Type, condition);
+
+                        propertiesToSelect[outputName] = (nestedInit.Type, condition);
                     }
                     else
                     {
-                        propertiesToSelect[propInfo.Name] = (nestedInit.Type, nestedInit);
+                        propertiesToSelect[outputName] = (nestedInit.Type, nestedInit);
                     }
                 }
             }
             else
             {
-                // Leaf assignment
-                propertiesToSelect[propInfo.Name] = (propInfo.PropertyType, propAccess);
+                // Leaf scalar: apply alias as output name
+                propertiesToSelect[outputName] = (propInfo.PropertyType, propAccess);
             }
         }
 
-        // If all fields were invalid, emit an empty dynamic type
         if (propertiesToSelect.Count == 0)
         {
             var emptyType = DynamicTypeBuilder.GetDynamicType(new Dictionary<string, Type>());
             return Expression.New(emptyType);
         }
 
-        // Build runtime type matching selected properties
         var dynamicType = DynamicTypeBuilder.GetDynamicType(propertiesToSelect.ToDictionary(p => p.Key, p => p.Value.TargetType));
         var newExpr = Expression.New(dynamicType);
-        
-        var bindings = propertiesToSelect.Select(p => 
+
+        var bindings = propertiesToSelect.Select(p =>
         {
             var targetProp = dynamicType.GetProperty(p.Key)!;
             return Expression.Bind(targetProp, p.Value.Assignment);
@@ -178,6 +181,9 @@ internal static class ProjectionBuilder
         {
             var effectiveChild = effective.GetOrAddChild(child.Key);
             effectiveChild.Filter = child.Value.Filter;
+            // Preserve alias from the original node
+            if (!string.IsNullOrWhiteSpace(child.Value.Alias))
+                effectiveChild.Alias = child.Value.Alias;
             MergeNodes(effectiveChild, child.Value);
         }
 
@@ -217,9 +223,16 @@ internal static class ProjectionBuilder
             target.Filter = source.Filter;
         }
 
+        // Preserve alias
+        if (!string.IsNullOrWhiteSpace(source.Alias))
+        {
+            target.Alias = source.Alias;
+        }
+
         foreach (var child in source.EnumerateChildren())
         {
-            MergeNodes(target.GetOrAddChild(child.Key), child.Value);
+            var targetChild = target.GetOrAddChild(child.Key);
+            MergeNodes(targetChild, child.Value);
         }
     }
 
@@ -244,7 +257,7 @@ internal static class ProjectionBuilder
 
         var keys = tree.EnumerateChildren()
             .OrderBy(k => k.Key)
-            .Select(k => $"{k.Key}:{GenerateCacheKey(k.Value)}|F:{FilterAnalyzer.CacheKey(k.Value.Filter)}");
+            .Select(k => $"{k.Key}@{k.Value.Alias ?? ""}:{GenerateCacheKey(k.Value)}|F:{FilterAnalyzer.CacheKey(k.Value.Filter)}");
 
         var scalarMarker = tree.IncludeAllScalars ? "!" : string.Empty;
         var payload = string.Join(",", keys);

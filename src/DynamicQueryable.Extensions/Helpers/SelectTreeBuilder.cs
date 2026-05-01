@@ -57,12 +57,23 @@ internal static class SelectTreeBuilder
     private static void MergePath(SelectionNode current, string path, bool includeAllScalarsAtLeaf)
     {
         if (string.IsNullOrWhiteSpace(path)) return;
-        var parts = path.Split('.', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        
+        // Handle alias: e.g., "orders.orderItems.productName as name"
+        var aliasParts = System.Text.RegularExpressions.Regex.Split(path, @"\s+as\s+", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+        var actualPath = aliasParts[0].Trim();
+        var alias = aliasParts.Length > 1 ? aliasParts[1].Trim() : null;
+
+        var parts = actualPath.Split('.', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
 
         var node = current;
-        foreach (var part in parts)
+        for (int i = 0; i < parts.Length; i++)
         {
+            var part = parts[i];
             node = node.GetOrAddChild(part);
+            if (i == parts.Length - 1 && alias != null)
+            {
+                node.Alias = alias;
+            }
         }
 
         if (includeAllScalarsAtLeaf)

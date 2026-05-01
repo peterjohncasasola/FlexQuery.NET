@@ -52,7 +52,12 @@ public class TestDbContext : DbContext
         {
             new() { Id = 1, Name = "Alice Johnson", Age = 30, City = "New York",  CreatedAt = new DateTime(2023, 1, 1), Status = Models.Status.Active,
                     Profile = new Profile { Id = 1, Bio = "Developer" }, 
-                    Orders = [new Order { Id = 101, Total = 50.0m }, new Order { Id = 102, Total = 25.0m }] },
+                    Orders = [
+                        new Order { Id = 101, Total = 50.0m, Status = "Shipped",
+                            OrderItems = [new OrderItem { Id = 1, Quantity = 2, Price = 25.0m }, new OrderItem { Id = 2, Quantity = 1, Price = 10.0m }] },
+                        new Order { Id = 102, Total = 25.0m, Status = "Pending",
+                            OrderItems = [new OrderItem { Id = 3, Quantity = 3, Price = 5.0m }] }
+                    ] },
             new() { Id = 2, Name = "Bob Smith",     Age = 25, City = "London",    CreatedAt = new DateTime(2023, 2, 1), Status = Models.Status.Inactive,
                     Profile = new Profile { Id = 2, Bio = "Designer" },
                     Orders = [new Order { Id = 103, Total = 100.0m }] },

@@ -81,6 +81,17 @@ public static class QueryOptionsParser
         options.Paging.Page     = ParseInt(d, "page", 1);
         options.Paging.PageSize = ParseInt(d, "pageSize", 20);
 
+        // Mode
+        if (d.TryGetValue("mode", out var modeStr))
+        {
+            options.ProjectionMode = modeStr.Trim().ToLowerInvariant() switch
+            {
+                "flat"       => ProjectionMode.Flat,
+                "flat-mixed" => ProjectionMode.FlatMixed,
+                _            => ProjectionMode.Nested
+            };
+        }
+
         // Select
         if (d.TryGetValue("select", out var sel))
         {

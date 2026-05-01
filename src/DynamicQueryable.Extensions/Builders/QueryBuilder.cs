@@ -100,6 +100,16 @@ public static class QueryBuilder
             return query.Cast<object>();
         }
 
+        if (options.ProjectionMode == ProjectionMode.Flat)
+        {
+            return FlatProjectionBuilder.BuildAndApply(query, tree);
+        }
+
+        if (options.ProjectionMode == ProjectionMode.FlatMixed)
+        {
+            return FlatProjectionBuilder.BuildAndApplyMixed(query, tree);
+        }
+
         var projection = ProjectionBuilder.Build<T>(tree, options.Filter);
         return query.Select(projection);
     }

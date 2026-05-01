@@ -4,6 +4,20 @@ All notable changes to this project will be documented in this file.
 
 ---
 
+## [2.5.0] - 2026-05-01
+
+### ✨ Features
+- **Flat-Mixed Projection Mode**: Added `mode=flat-mixed` to support flattening root entity fields alongside deeply nested collection fields in a single output row (correlated `SelectMany` chain).
+- **Flat Projection Mode**: Added optional `mode=flat` query parameter to automatically flatten deeply nested collections into a single rowset of leaf objects using dynamic `SelectMany` chains.
+- **Recursive Select Alias Support**: Full support for the `as` keyword in the `select` parameter across all levels of navigation (e.g., `select=id as customerId, orders.status as orderStatus, orders.orderItems.productName as product`). Aliases are correctly applied to the final dynamic projection object.
+
+### 🧠 Improvements
+- **Level-Based Context Tracking**: Redesigned `FlatProjectionBuilder` with a hierarchical level tracking system to allow multi-level correlated projections in `flat-mixed` mode.
+- **Cartesian Explosion Prevention**: Added robust validation in Flat Mode to prevent branching into multiple navigation paths or mixing root scalars with deep collections (unless using `flat-mixed`).
+- **Alias Consistency**: Ensured aliases are preserved through the internal tree normalization and merging processes.
+
+---
+
 ## [2.4.1] - 2026-05-01
 
 ### 🏗 Internal
