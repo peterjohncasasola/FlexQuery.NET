@@ -4,6 +4,15 @@ All notable changes to this project will be documented in this file.
 
 ---
 
+## [2.2.1] - 2026-05-01
+
+### 🧠 Improvements
+- **Expression Engine**: Added native support for translating scoped collection nodes into proper nested LINQ `Any()` and `All()` expressions.
+- **Null Safety**: Implemented automatic null-safe evaluation for collection access in LINQ-to-Objects (prevents `NullReferenceException` when evaluating against in-memory collections).
+- **Deep Nesting**: Enabled recursive expression building for multi-level navigation within scoped filters (e.g., `Orders -> OrderItems -> Properties`).
+
+---
+
 ## [2.2.0] - 2026-05-01
 
 ### ✨ Features
@@ -12,10 +21,10 @@ All notable changes to this project will be documented in this file.
   - `collection.any(...)` and `collection.all(...)`
   - `collection[...]` bracket shorthand for `.any()`
 - Recursive support for nested scoped collections (e.g., `orders.any(orderItems.any(...))`).
+- Supports deep multi-level navigation (e.g., `Orders` -> `OrderItems` -> `Properties`).
 
 ### 🧠 Improvements
 - Rewrote JQL parser with look-ahead to handle dot-notation and scoped blocks.
-- Enhanced `ExpressionBuilder` to generate true scoped LINQ predicates.
 - Maintained full backward compatibility with flat collection expressions.
 
 ### 🏗 Internal

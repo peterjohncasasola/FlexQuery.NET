@@ -269,6 +269,9 @@ x => x.Orders.Any(o => o.Status == "Cancelled" && o.Total > 500)
 
 This ensures the `orderItems` condition is checked against items belonging to a `Cancelled` order. Scoped filters can be nested recursively to any depth.
 
+> [!TIP]
+> **Null Safety**: Collection access in scoped filters is automatically null-safe (e.g., `orders != null && orders.Any(...)`), preventing `NullReferenceException` when evaluating against in-memory collections or LINQ-to-Objects providers.
+
 
 ### Filtered child collections (when selected)
 
