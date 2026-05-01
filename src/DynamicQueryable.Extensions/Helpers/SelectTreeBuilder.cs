@@ -67,7 +67,11 @@ internal static class SelectTreeBuilder
 
         if (includeAllScalarsAtLeaf)
         {
-            node.MarkIncludeAllScalars();
+            // Only include all scalars if the user hasn't already specified a subset of fields
+            if (!node.HasChildren)
+            {
+                node.MarkIncludeAllScalars();
+            }
         }
     }
 
@@ -88,7 +92,13 @@ internal static class SelectTreeBuilder
     private static void MergeIncludeNode(SelectionNode target, IncludeNode source)
     {
         var node = target.GetOrAddChild(source.Path);
-        node.MarkIncludeAllScalars();
+        
+        // If the user hasn't provided a select for this node, default to including all scalars.
+        // If they HAVE provided a select, respect their explicit field list.
+        if (!node.HasChildren)
+        {
+            node.MarkIncludeAllScalars();
+        }
         
         if (source.Filter != null)
         {

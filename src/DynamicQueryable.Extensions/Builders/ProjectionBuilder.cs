@@ -64,9 +64,9 @@ internal static class ProjectionBuilder
 
             if (ShouldBuildNestedProjection(propInfo.PropertyType, childNode))
             {
-                var childFilterContext = filterContext is null
-                    ? childNode.Filter
-                    : MergeFilters(FilterAnalyzer.ExtractForNavigation(filterContext, propInfo.Name), childNode.Filter);
+                var childFilterContext = MergeFilters(
+                    filterContext != null ? FilterAnalyzer.ExtractForNavigation(filterContext, propInfo.Name) : null,
+                    childNode.Filter);
 
                 if (IsIEnumerable(propInfo.PropertyType, out var itemType))
                 {
@@ -156,23 +156,7 @@ internal static class ProjectionBuilder
 
     private static bool IsIEnumerable(Type type, out Type itemType)
     {
-        itemType = null!;
-        if (type == typeof(string)) return false;
-
-        if (type.IsGenericType && type.GetGenericTypeDefinition() == typeof(IEnumerable<>))
-        {
-            itemType = type.GetGenericArguments()[0];
-            return true;
-        }
-
-        var ienum = type.GetInterfaces().FirstOrDefault(i => i.IsGenericType && i.GetGenericTypeDefinition() == typeof(IEnumerable<>));
-        if (ienum != null)
-        {
-            itemType = ienum.GetGenericArguments()[0];
-            return true;
-        }
-
-        return false;
+        return Security.SafePropertyResolver.TryGetCollectionElementType(type, out itemType);
     }
 
     private static SelectionNode NormalizeSelection(Type sourceType, SelectionNode selectTree)

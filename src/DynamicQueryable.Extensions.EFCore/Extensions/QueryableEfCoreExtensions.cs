@@ -16,6 +16,7 @@ public static class QueryableEfCoreExtensions
         this IQueryable<T> query,
         QueryOptions options,
         CancellationToken cancellationToken = default)
+        where T : class
     {
         QueryOptionsEfCoreExtensions.EnsureEfCoreOperatorsRegistered();
 
@@ -25,7 +26,7 @@ public static class QueryableEfCoreExtensions
         var total = await filtered.CountAsync(cancellationToken);
 
         var paged = QueryBuilder.ApplyPaging(filtered, options);
-        var data = await paged.ToListAsync(cancellationToken);
+        var data = await paged.ApplyFilteredIncludes(options).ToListAsync(cancellationToken);
 
         return new QueryResult<T>
         {
@@ -43,6 +44,7 @@ public static class QueryableEfCoreExtensions
         this IQueryable<T> query,
         QueryOptions options,
         CancellationToken cancellationToken = default)
+        where T : class
     {
         QueryOptionsEfCoreExtensions.EnsureEfCoreOperatorsRegistered();
 
@@ -52,7 +54,10 @@ public static class QueryableEfCoreExtensions
         var total = await filtered.CountAsync(cancellationToken);
 
         var paged = QueryBuilder.ApplyPaging(filtered, options);
-        var data = await QueryBuilder.ApplySelect(paged, options).ToListAsync(cancellationToken);
+        // Note: ApplySelect already incorporates FilteredIncludes filters into the projection tree,
+        // so calling ApplyFilteredIncludes here is technically redundant but ensures consistency
+        // if the projection engine behavior changes.
+        var data = await paged.ApplyFilteredIncludes(options).ApplySelect(options).ToListAsync(cancellationToken);
 
         return new QueryResult<object>
         {

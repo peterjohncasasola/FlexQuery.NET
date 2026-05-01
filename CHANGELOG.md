@@ -4,6 +4,24 @@ All notable changes to this project will be documented in this file.
 
 ---
 
+## [2.4.0] - 2026-05-01
+
+### ✨ Features
+- **Unified Projection Pipeline**: Merged **Filtered Includes** and **Select** into a single optimized EF Core `Select()` expression tree. This ensures only explicitly requested columns are projected and filtered at the database level.
+- **Mixed-Format Support**: Robust support for mixed JQL and DSL segments within a single include chain (e.g., `Orders(Total:gt:100).Items(Sku = 'AAA')`).
+- **Exclusive Selection Priority**: Explicitly selected fields in `select` now override the default "include all scalars" behavior of `include`, preventing over-projection.
+- **Enhanced Parser Resiliency**: Optimized `FilteredIncludeParser` to handle whitespace and complex nested parentheses in multi-level chains.
+
+### 🧠 Improvements
+- **Recursive Merging**: Improved `ProjectionBuilder` recursive merging to propagate navigation filters deeper into the hierarchical projection tree.
+- **Case-Insensitive Matching**: Enhanced segment matching for navigation properties in mixed-format chains.
+
+### 🧪 Tests
+- Added `FilteredInclude_ComplexChain_MixedFormats` integration test covering chained, mixed-format filtered projections.
+- Verified all 166 tests passing.
+
+---
+
 ## [2.3.0] - 2026-05-01
 
 ### ✨ Features

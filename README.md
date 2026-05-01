@@ -212,6 +212,7 @@ Unlike DSL/JSON malformed-input handling, invalid JQL syntax is surfaced as a pa
 | `any`        | Collection element predicate | `Orders any Total gt 100`        |
 | `count`      | Collection count compare     | `Orders count gt 5`              |
 | `!` / `not()`| Negates condition/group      | `!Name eq John`                  |
+| `:`          | DSL operator separator       | `Status:eq:Cancelled` (inside include) |
 
 ## Nested & Collections
 
@@ -299,6 +300,9 @@ x => new {
 
 DynamicQueryable implements a **dual-pipeline** architecture to solve the "over-filtering" problem. It allows you to filter which root entities are returned (WHERE) independently from how their related collections are shaped (Filtered Includes).
 
+> [!TIP]
+> **Unified Projection Mode**: When using `ApplySelect` or `ToProjectedQueryResultAsync`, the library automatically merges **Filtered Includes** and **Select** into a single optimized `Select()` expression. This ensures only requested columns are fetched and related data is filtered at the database level.
+
 ### Pipeline 1: Root Filtering (WHERE)
 Filters which root entities appear in the results.
 ```http
@@ -310,6 +314,19 @@ Filters the content of the included child collections without affecting the root
 ```http
 ?include=orders(total > 100).items(sku = 'SKU-BBB')
 ```
+
+**Mixed Formats & Chains**:
+Includes support chained segments and both DSL/JQL formats:
+```http
+?include=orders(status:eq:cancelled).items(sku = 'SKU-AAA')
+```
+
+**Exclusive Selection**:
+If you provide a specific `select` path for a navigation, the library will **only** project those fields, overriding the default "include all scalars" behavior:
+```http
+?include=orders(total > 100)&select=id,orders.number
+```
+*(Result: Orders will have only ID and Number, filtered by total > 100)*
 
 ### Applying Both Pipelines
 To use both, chain `ApplyQueryOptions` (for the WHERE/Sort/Paging pipeline) and `ApplyFilteredIncludes` (for the Include pipeline).

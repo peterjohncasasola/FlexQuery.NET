@@ -14,6 +14,9 @@ internal static class SafeConditionBuilder
         if (op == FilterOperators.Contains) return BuildString(member, rawValue, nameof(string.Contains));
         if (op == FilterOperators.StartsWith) return BuildString(member, rawValue, nameof(string.StartsWith));
         if (op == FilterOperators.EndsWith) return BuildString(member, rawValue, nameof(string.EndsWith));
+        if (member.Type == typeof(string) && (op == FilterOperators.Equal || op == FilterOperators.NotEqual))
+            return BuildStringEqual(member, rawValue, op == FilterOperators.Equal);
+        
         if (OperatorHandlerRegistry.TryGet(op, out var handler))
             return handler?.Build(member, rawValue);
         if (op == FilterOperators.In) return BuildIn(member, rawValue);
@@ -58,6 +61,19 @@ internal static class SafeConditionBuilder
         var memberLower = Expression.Call(member, toLower);
         var valueLower = Expression.Constant((value ?? string.Empty).ToLowerInvariant());
         return Expression.Call(memberLower, method, valueLower);
+    }
+
+    private static Expression? BuildStringEqual(Expression member, string? value, bool isEqual)
+    {
+        var toLower = typeof(string).GetMethod(nameof(string.ToLower), Type.EmptyTypes);
+        if (toLower is null) return null;
+
+        var memberLower = Expression.Call(member, toLower);
+        var valueLower = Expression.Constant((value ?? string.Empty).ToLowerInvariant());
+        
+        return isEqual 
+            ? Expression.Equal(memberLower, valueLower) 
+            : Expression.NotEqual(memberLower, valueLower);
     }
 
     private static Expression? BuildIn(Expression member, string? raw)

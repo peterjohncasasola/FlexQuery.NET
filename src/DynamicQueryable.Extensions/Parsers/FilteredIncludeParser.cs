@@ -1,5 +1,6 @@
 using System.Text.RegularExpressions;
 using DynamicQueryable.Models;
+using DynamicQueryable.Parsers.Dsl;
 using DynamicQueryable.Parsers.Jql;
 
 namespace DynamicQueryable.Parsers;
@@ -116,10 +117,22 @@ public static class FilteredIncludeParser
     private static FilterGroup? TryParseFilter(string raw)
     {
         if (string.IsNullOrWhiteSpace(raw)) return null;
+
+        // Auto-detect format: if it contains a colon, try DSL first.
+        if (raw.Contains(':'))
+        {
+            try
+            {
+                var dslAst = DslParser.Parse(raw);
+                return DslFilterConverter.ToFilterGroup(dslAst);
+            }
+            catch { /* fallback to JQL */ }
+        }
+
         try
         {
-            var ast = JqlParser.Parse(raw);
-            return JqlFilterConverter.ToFilterGroup(ast);
+            var jqlAst = JqlParser.Parse(raw);
+            return JqlFilterConverter.ToFilterGroup(jqlAst);
         }
         catch
         {
