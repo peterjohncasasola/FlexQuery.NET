@@ -65,8 +65,8 @@ internal static class ProjectionBuilder
             if (ShouldBuildNestedProjection(propInfo.PropertyType, childNode))
             {
                 var childFilterContext = filterContext is null
-                    ? null
-                    : FilterAnalyzer.ExtractForNavigation(filterContext, propInfo.Name);
+                    ? childNode.Filter
+                    : MergeFilters(FilterAnalyzer.ExtractForNavigation(filterContext, propInfo.Name), childNode.Filter);
 
                 if (IsIEnumerable(propInfo.PropertyType, out var itemType))
                 {
@@ -142,6 +142,18 @@ internal static class ProjectionBuilder
         return Expression.MemberInit(newExpr, bindings);
     }
 
+    private static FilterGroup? MergeFilters(FilterGroup? a, FilterGroup? b)
+    {
+        if (a == null) return b;
+        if (b == null) return a;
+
+        return new FilterGroup
+        {
+            Logic   = LogicOperator.And,
+            Groups  = [a, b]
+        };
+    }
+
     private static bool IsIEnumerable(Type type, out Type itemType)
     {
         itemType = null!;
@@ -181,6 +193,7 @@ internal static class ProjectionBuilder
         foreach (var child in selectTree.EnumerateChildren())
         {
             var effectiveChild = effective.GetOrAddChild(child.Key);
+            effectiveChild.Filter = child.Value.Filter;
             MergeNodes(effectiveChild, child.Value);
         }
 
@@ -215,6 +228,11 @@ internal static class ProjectionBuilder
             target.MarkIncludeAllScalars();
         }
 
+        if (source.Filter != null)
+        {
+            target.Filter = source.Filter;
+        }
+
         foreach (var child in source.EnumerateChildren())
         {
             MergeNodes(target.GetOrAddChild(child.Key), child.Value);
@@ -242,7 +260,7 @@ internal static class ProjectionBuilder
 
         var keys = tree.EnumerateChildren()
             .OrderBy(k => k.Key)
-            .Select(k => $"{k.Key}:{GenerateCacheKey(k.Value)}");
+            .Select(k => $"{k.Key}:{GenerateCacheKey(k.Value)}|F:{FilterAnalyzer.CacheKey(k.Value.Filter)}");
 
         var scalarMarker = tree.IncludeAllScalars ? "!" : string.Empty;
         var payload = string.Join(",", keys);

@@ -36,14 +36,7 @@ internal static class ProjectionEnhancer
 
     private static LambdaExpression? BuildPredicateLambda(Type elementType, FilterGroup filter)
     {
-        // Use the existing ExpressionBuilder without altering the parent filter logic.
-        var method = typeof(ExpressionBuilder).GetMethod(nameof(ExpressionBuilder.BuildPredicate), BindingFlags.Public | BindingFlags.Static);
-        if (method is null) return null;
-
-        var generic = method.MakeGenericMethod(elementType);
-        var result = generic.Invoke(null, [filter]);
-
-        return result as LambdaExpression;
+        return ExpressionBuilder.BuildPredicate(elementType, filter);
     }
 }
 

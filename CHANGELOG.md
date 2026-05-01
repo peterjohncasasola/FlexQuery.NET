@@ -4,6 +4,25 @@ All notable changes to this project will be documented in this file.
 
 ---
 
+## [2.3.0] - 2026-05-01
+
+### ✨ Features
+- **Dual-Pipeline Architecture**: Decoupled data filtering (WHERE) from data shaping (Filtered Includes). This ensures that filters applied to child collections do not inadvertently filter out root entities from the result set.
+- **Filtered Includes (EF Core)**: Added support for inline JQL filters within the `include` parameter.
+  - Syntax: `?include=orders(status = 'Pending').items(quantity > 5)`
+- **Unified Projection Integration**: Automatically merges include-level filters into the `ApplySelect` projection pipeline, generating optimized EF Core `Select()` expression trees.
+- **Recursive Shaping**: Full support for multi-level nested filtered includes with independent criteria at each level.
+
+### 🧠 Improvements
+- **Collection Type Resolution**: Robust detection for properties typed as `List<T>`, `ICollection<T>`, or `IEnumerable<T>` for filtered projections.
+- **Null-Safety**: Propagated null-safety checks down the projection tree for complex hierarchical data.
+
+### 🧪 Tests
+- Added `FilteredIncludeTests` covering complex nesting, dual-pipeline execution, and projection merging.
+- Verified all 166 tests passing.
+
+---
+
 ## [2.2.1] - 2026-05-01
 
 ### 🧠 Improvements

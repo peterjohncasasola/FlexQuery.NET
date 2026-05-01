@@ -20,6 +20,11 @@ internal sealed class SelectionNode
     public int Count => _children.Count;
 
     public bool HasChildren => _children.Count > 0;
+    
+    /// <summary>
+    /// Optional filter to apply when projecting this collection navigation.
+    /// </summary>
+    public FilterGroup? Filter { get; set; }
 
     public SelectionNode GetOrAddChild(string name)
     {

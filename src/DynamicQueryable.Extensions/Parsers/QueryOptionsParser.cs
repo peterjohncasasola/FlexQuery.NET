@@ -93,10 +93,12 @@ public static class QueryOptionsParser
         if (d.TryGetValue("having", out var havingRaw))
             options.Having = ParseHaving(havingRaw);
 
-        // Includes
+        // Includes — parse both as plain strings (backward-compat) and as
+        // structured IncludeNode trees that support inline JQL filters.
         if (d.TryGetValue("include", out var inc))
         {
-            options.Includes = SplitCsv(inc);
+            options.Includes         = SplitCsv(inc.Split('(')[0]); // plain names only
+            options.FilteredIncludes = FilteredIncludeParser.Parse(inc);
         }
 
         // Top-level logic

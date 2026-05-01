@@ -33,8 +33,19 @@ public sealed class QueryOptions
     /// <summary>Optional HAVING condition applied after grouping.</summary>
     public HavingCondition? Having { get; set; }
 
-    /// <summary>Navigation properties to include.</summary>
+    /// <summary>Navigation properties to include (plain paths, no filters).</summary>
     public List<string>? Includes { get; set; }
+
+    /// <summary>
+    /// Structured include trees parsed from the
+    /// <c>include=orders(status = Cancelled).orderItems(id = 101)</c> syntax.
+    /// Each entry is the root of a depth-first navigation path where every
+    /// level can carry its own optional <see cref="IncludeNode.Filter"/>.
+    /// This is populated automatically by <see cref="DynamicQueryable.Parsers.QueryOptionsParser"/>
+    /// and is consumed by the <c>ApplyFilteredIncludes</c> extension when
+    /// using <c>DynamicQueryable.Extensions.EFCore</c>.
+    /// </summary>
+    public List<IncludeNode> FilteredIncludes { get; set; } = [];
 
     /// <summary>Internal tree structure for nested selection.</summary>
     internal SelectionNode? SelectTree { get; set; }

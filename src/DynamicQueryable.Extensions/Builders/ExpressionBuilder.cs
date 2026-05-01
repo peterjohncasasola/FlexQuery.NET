@@ -27,6 +27,23 @@ public static class ExpressionBuilder
         return Expression.Lambda<Func<T, bool>>(body, param);
     }
 
+    /// <summary>
+    /// Runtime-type variant used by the Include Pipeline when the element
+    /// type is only known via reflection.  Returns a <see cref="LambdaExpression"/>
+    /// whose delegate type is <c>Func&lt;elementType, bool&gt;</c>.
+    /// </summary>
+    public static LambdaExpression? BuildPredicate(Type elementType, FilterGroup group)
+    {
+        var param = Expression.Parameter(elementType, "x");
+        var body  = BuildGroupExpression(param, group, elementType);
+        if (body is null) return null;
+
+        return Expression.Lambda(
+            typeof(Func<,>).MakeGenericType(elementType, typeof(bool)),
+            body,
+            param);
+    }
+
     // ── Internal recursion ───────────────────────────────────────────────
 
     private static Expression? BuildGroupExpression(

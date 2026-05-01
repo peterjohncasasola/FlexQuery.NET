@@ -62,4 +62,38 @@ public static class QueryableEfCoreExtensions
             Data = data
         };
     }
+
+    // ── Include Pipeline ─────────────────────────────────────────────────
+
+    /// <summary>
+    /// Applies the <b>Include Pipeline</b>: translates every
+    /// <see cref="IncludeNode"/> in <see cref="QueryOptions.FilteredIncludes"/>
+    /// into EF Core <c>Include</c> / <c>ThenInclude</c> calls, each optionally
+    /// filtered by an inline <c>Where</c> clause.
+    ///
+    /// <para>
+    /// This pipeline is <b>completely independent</b> of the WHERE pipeline
+    /// (<see cref="QueryableEfCoreExtensions.ToQueryResultAsync{T}"/>).
+    /// It must be called <em>before</em> any materialisation (e.g.
+    /// <c>ToListAsync</c>) but after <c>ApplyQueryOptions</c>.
+    /// </para>
+    /// </summary>
+    /// <example>
+    /// <code>
+    /// var options = QueryOptionsParser.Parse(Request.Query);
+    ///
+    /// var result = await _context.Customers
+    ///     .ApplyQueryOptions(options)           // WHERE pipeline
+    ///     .ApplyFilteredIncludes(options)       // INCLUDE pipeline
+    ///     .ToListAsync();
+    /// </code>
+    /// </example>
+    public static IQueryable<T> ApplyFilteredIncludes<T>(
+        this IQueryable<T> query,
+        QueryOptions options)
+        where T : class
+    {
+        if (options.FilteredIncludes.Count == 0) return query;
+        return IncludeBuilder.Apply(query, options.FilteredIncludes);
+    }
 }

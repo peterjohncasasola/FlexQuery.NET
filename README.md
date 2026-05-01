@@ -59,6 +59,7 @@ public async Task<IActionResult> Get()
 - **Query formats**: DSL (primary), JSON (advanced), Indexed (compatibility), JQL fallback
 - **EF Core friendly**: expression-tree based, provider-translatable
 - **Pluggable operators**: core ships framework-agnostic handlers, optional packages can override by operator
+- **Dual-Pipeline**: Decouples data filtering (WHERE) from data shaping (Filtered Includes)
 
 ### 🔽 Sorting
 - **Basic**: `?sort=createdAt:desc`
@@ -293,6 +294,41 @@ x => new {
     .ToList()
 }
 ```
+
+## Dual-Pipeline Query System (EF Core)
+
+DynamicQueryable implements a **dual-pipeline** architecture to solve the "over-filtering" problem. It allows you to filter which root entities are returned (WHERE) independently from how their related collections are shaped (Filtered Includes).
+
+### Pipeline 1: Root Filtering (WHERE)
+Filters which root entities appear in the results.
+```http
+?query=orders.any(status = 'Cancelled' AND total > 500)
+```
+
+### Pipeline 2: Data Shaping (Filtered Includes)
+Filters the content of the included child collections without affecting the root entity count.
+```http
+?include=orders(total > 100).items(sku = 'SKU-BBB')
+```
+
+### Applying Both Pipelines
+To use both, chain `ApplyQueryOptions` (for the WHERE/Sort/Paging pipeline) and `ApplyFilteredIncludes` (for the Include pipeline).
+
+```csharp
+using DynamicQueryable.Extensions;
+using DynamicQueryable.Extensions.EFCore;
+
+var options = QueryOptionsParser.Parse(Request.Query);
+
+var results = await _context.Customers
+    .AsNoTracking()
+    .ApplyQueryOptions(options)      // Pipeline 1: Root WHERE
+    .ApplyFilteredIncludes(options)  // Pipeline 2: Filtered Includes
+    .ToListAsync();
+```
+
+> [!IMPORTANT]
+> **Independence**: Filters in the `include` parameter **only** affect the shape of the related data. They do not filter the root entities. If you want to filter root entities based on collection criteria, use the `query` or `filter` parameters (Pipeline 1).
 
 ## API Methods
 

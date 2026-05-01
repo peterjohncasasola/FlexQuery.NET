@@ -42,6 +42,15 @@ internal static class SelectTreeBuilder
             }
         }
 
+        // 4. Filtered Includes (e.g. "Orders(status = 'cancelled')")
+        if (options.FilteredIncludes != null)
+        {
+            foreach (var node in options.FilteredIncludes)
+            {
+                MergeIncludeNode(root, node);
+            }
+        }
+
         return root;
     }
 
@@ -73,6 +82,22 @@ internal static class SelectTreeBuilder
         {
             var targetChild = target.GetOrAddChild(kvp.Key);
             MergeTree(targetChild, kvp.Value);
+        }
+    }
+
+    private static void MergeIncludeNode(SelectionNode target, IncludeNode source)
+    {
+        var node = target.GetOrAddChild(source.Path);
+        node.MarkIncludeAllScalars();
+        
+        if (source.Filter != null)
+        {
+            node.Filter = source.Filter;
+        }
+
+        foreach (var child in source.Children)
+        {
+            MergeIncludeNode(node, child);
         }
     }
 
