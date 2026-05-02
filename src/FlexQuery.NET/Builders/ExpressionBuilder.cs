@@ -21,6 +21,18 @@ public static class ExpressionBuilder
     public static Expression<Func<T, bool>>? BuildPredicate<T>(QueryOptions options)
     {
         if (options.Filter is null) return null;
+
+        if (Caching.QueryCacheManager.ShouldCache(options.EnableCache))
+        {
+            var key = options.GetCacheKey(typeof(T), "predicate");
+            return Caching.QueryCacheManager.GetOrAddExpression(key, () =>
+            {
+                var param = Expression.Parameter(typeof(T), "x");
+                var body = BuildGroupExpression(param, options.Filter, typeof(T), options);
+                return body is null ? null : Expression.Lambda<Func<T, bool>>(body, param);
+            });
+        }
+
         var param = Expression.Parameter(typeof(T), "x");
         var body = BuildGroupExpression(param, options.Filter, typeof(T), options);
         if (body is null) return null;
@@ -43,6 +55,21 @@ public static class ExpressionBuilder
     public static LambdaExpression? BuildPredicate(Type elementType, QueryOptions options)
     {
         if (options.Filter is null) return null;
+
+        if (Caching.QueryCacheManager.ShouldCache(options.EnableCache))
+        {
+            var key = options.GetCacheKey(elementType, "predicate_dynamic");
+            return Caching.QueryCacheManager.GetOrAddExpression(key, () =>
+            {
+                var param = Expression.Parameter(elementType, "x");
+                var body = BuildGroupExpression(param, options.Filter, elementType, options);
+                return body is null ? null : Expression.Lambda(
+                    typeof(Func<,>).MakeGenericType(elementType, typeof(bool)),
+                    body,
+                    param);
+            });
+        }
+
         var param = Expression.Parameter(elementType, "x");
         var body  = BuildGroupExpression(param, options.Filter, elementType, options);
         if (body is null) return null;

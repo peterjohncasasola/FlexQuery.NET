@@ -13,8 +13,6 @@ namespace FlexQuery.NET.Builders;
 /// </summary>
 internal static class ProjectionBuilder
 {
-    private static readonly ConcurrentDictionary<string, Expression> _cache = new();
-
     private static readonly MethodInfo _queryableAsQueryable1 =
         typeof(Queryable).GetMethods()
             .First(m => m.Name == nameof(Queryable.AsQueryable)
@@ -34,15 +32,22 @@ internal static class ProjectionBuilder
 
     public static Expression<Func<T, object>> Build<T>(SelectionNode selectTree, QueryOptions options)
     {
-        var cacheKey = typeof(T).FullName + ":" + GenerateCacheKey(selectTree) + "|F:" + FilterAnalyzer.CacheKey(options.Filter) + "|CI:" + options.CaseInsensitive;
-
-        return (Expression<Func<T, object>>)_cache.GetOrAdd(cacheKey, _ =>
+        if (Caching.QueryCacheManager.ShouldCache(options.EnableCache))
         {
-            var param = Expression.Parameter(typeof(T), "x");
-            var memberInit = BuildMemberInit(param, typeof(T), selectTree, options.Filter, options);
-            var boxed = Expression.Convert(memberInit, typeof(object));
-            return Expression.Lambda<Func<T, object>>(boxed, param);
-        });
+            var cacheKey = options.GetCacheKey(typeof(T), "projection") + ":" + GenerateCacheKey(selectTree);
+            return Caching.QueryCacheManager.GetOrAddExpression(cacheKey, () =>
+            {
+                var param = Expression.Parameter(typeof(T), "x");
+                var memberInit = BuildMemberInit(param, typeof(T), selectTree, options.Filter, options);
+                var boxed = Expression.Convert(memberInit, typeof(object));
+                return Expression.Lambda<Func<T, object>>(boxed, param);
+            });
+        }
+
+        var param = Expression.Parameter(typeof(T), "x");
+        var memberInit = BuildMemberInit(param, typeof(T), selectTree, options.Filter, options);
+        var boxed = Expression.Convert(memberInit, typeof(object));
+        return Expression.Lambda<Func<T, object>>(boxed, param);
     }
 
     private static Expression BuildMemberInit(

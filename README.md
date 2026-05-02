@@ -114,10 +114,47 @@ public class CustomersController : ControllerBase
 - **EF Core friendly**: expression-tree based, provider-translatable; generates clean `LIKE`/`=` SQL without function wrappers
 - **Collation-aware string matching**: relies on database collation (SQL Server CI_AS) instead of `.ToLower()`, preserving index usage
 - **Pluggable operators**: core ships framework-agnostic handlers, optional packages can override by operator
-- **Dual-Pipeline**: Decouples data filtering (WHERE) from data shaping (Filtered Includes)
+- **Dual-Pipeline**: Decouples data filtering (WHERE) from data shaping (Filtered Includes - EF Core only)
 - **Validation Engine**: Pre-execution query validation (field existence, operator validity, type safety)
 - **Field-Level Security**: Built-in whitelisting and blacklisting of fields (supports nested paths)
+- **Expression Caching**: Optional thread-safe caching of generated expression trees for high-frequency queries
 
+## 📦 Core vs. EF Core Package
+
+| Feature | `FlexQuery.NET` (Core) | `FlexQuery.NET.EFCore` |
+| :--- | :---: | :---: |
+| Dynamic Filtering (`Where`) | ✅ | ✅ |
+| Dynamic Sorting (`OrderBy`) | ✅ | ✅ |
+| Dynamic Paging (`Skip/Take`) | ✅ | ✅ |
+| Dynamic Projection (`Select`) | ✅ | ✅ |
+| Async Helpers (`ToListAsync`, etc) | ❌ | ✅ |
+| **Filtered Includes** (`Include`) | ❌ | ✅ |
+
+### 🚀 Filtered Includes (EF Core Only)
+
+The **Include Pipeline** is a specialized feature for EF Core that allows you to eager-load related entities with inline filtering. It translates `include=` parameters into optimized `.Include()` and `.ThenInclude()` calls.
+
+> [!IMPORTANT]
+> This feature is **strictly for EF Core**. It relies on EF Core's query provider to translate navigation filters into SQL.
+
+```csharp
+using FlexQuery.NET.EFCore;
+
+// Apply the Include pipeline before materialization
+var users = await _context.Users
+    .ApplyQueryOptions(options)      // WHERE pipeline
+    .ApplyFilteredIncludes(options)  // INCLUDE pipeline (EF Core Only)
+    .ToListAsync();
+```
+
+**Example Query:** `?include=Orders[status:eq:Cancelled]`
+**SQL Result:**
+```sql
+SELECT ... FROM Users
+LEFT JOIN (
+    SELECT ... FROM Orders WHERE Status = 'Cancelled'
+) AS o ON Users.Id = o.UserId
+```
 
 ## 🔄 Migration from DynamicQueryable.Extensions
 
@@ -884,9 +921,7 @@ query.Where(x => x.Orders.Any(sc => (sc.Status == "Cancelled") && sc.OrderItems.
 orders.any(AND(status eq [Cancelled], orderItems.any(id eq [101])))
 ```
 
-## ⚖️ License
 
-This project is licensed under the **MIT License** - see the [LICENSE](LICENSE) file for details.
 ## Security (Field-Level Access Control)
 
 Never expose your entire database schema. FlexQuery.NET provides a robust, pluggable security pipeline that runs *before* database execution.
@@ -910,4 +945,42 @@ options.MaxFieldDepth = 3; // Prevent 'Orders.Items.Product.Category.Name'
 `
 
 If a client attempts to filter, sort, or select a restricted field, a QueryValidationException is thrown with detailed ValidationResult errors, preventing the query from ever hitting the database.
+
+
+## ⚡ Performance: Expression Caching
+
+FlexQuery.NET can cache the expensive process of parsing query objects into LINQ Expression trees. This is highly recommended for high-traffic APIs where the same query patterns (even with different values) are reused.
+
+### 1. Global Enable
+Enable caching globally in your `Program.cs`:
+
+```csharp
+using FlexQuery.NET.Caching;
+
+FlexQueryCacheSettings.EnableCache = true;
+FlexQueryCacheSettings.MaxCacheSize = 5000; // Prevent memory leaks
+```
+
+### 2. Per-Query Control
+You can override the global setting on individual requests:
+
+```csharp
+var options = QueryOptionsParser.Parse(request);
+options.EnableCache = true; // Force cache for this heavy query
+```
+
+### 3. Compiled Lambda Caching (Optional)
+If you are using LINQ to Objects (not EF Core), you can also cache the compiled delegates:
+
+```csharp
+FlexQueryCacheSettings.CacheCompiledLambdas = true;
+```
+
+> [!TIP]
+> **Hash Normalization**: FlexQuery.NET uses a normalized string representation of the `FilterGroup` as the cache key. This ensures that even if the client sends filters in a different order, the cache remains effective.
+
+
+## ⚖️ License
+
+This project is licensed under the **MIT License** - see the [LICENSE](LICENSE) file for details.
 

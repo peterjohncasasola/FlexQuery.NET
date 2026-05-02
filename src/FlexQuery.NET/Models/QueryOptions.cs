@@ -97,10 +97,34 @@ public class QueryOptions
     internal SelectionNode? SelectTree { get; set; }
 
     /// <summary>
+    /// If true, enables expression caching for this query.
+    /// Default is null (uses global FlexQueryCacheSettings.EnableCache).
+    /// </summary>
+    public bool? EnableCache { get; set; }
+
+    /// <summary>
     /// If true (default), string comparisons (Contains, StartsWith, EndsWith, Equals)
     /// will be case-insensitive using database collation.
     /// </summary>
     public bool CaseInsensitive { get; set; } = true;
+
+    /// <summary>
+    /// If true, enables expression caching for this query.
+    /// Default is null (uses global FlexQueryCacheSettings.EnableCache).
+    /// </summary>
+    public bool? EnableCache { get; set; }
+
+    /// <summary>
+    /// Generates a stable cache key for the current query configuration.
+    /// </summary>
+    public string GetCacheKey(Type entityType, string operation)
+    {
+        var filterKey = Builders.FilterAnalyzer.CacheKey(Filter);
+        var ciKey = CaseInsensitive ? "ci" : "cs";
+        
+        // Include type and operation to prevent collisions between different entities or pipelines
+        return $"{operation}:{entityType.FullName}:{ciKey}:{filterKey}";
+    }
 
     /// <summary>
     /// Creates a shallow clone of the options with a new filter.
@@ -111,6 +135,7 @@ public class QueryOptions
         {
             Filter = filter,
             CaseInsensitive = CaseInsensitive,
+            EnableCache = EnableCache,
             AllowedFields = AllowedFields,
             BlockedFields = BlockedFields,
             FilterableFields = FilterableFields,
