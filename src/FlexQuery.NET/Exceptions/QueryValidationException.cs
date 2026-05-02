@@ -13,11 +13,21 @@ public sealed class QueryValidationException : Exception
     public ValidationResult Result { get; }
 
     /// <summary>
-    /// Creates a new validation exception.
+    /// Creates a new validation exception from a full result.
     /// </summary>
     public QueryValidationException(ValidationResult result)
         : base("Query validation failed. Check the Result property for details.")
     {
         Result = result;
+    }
+
+    /// <summary>
+    /// Creates a new validation exception for a single field error.
+    /// </summary>
+    public QueryValidationException(string message)
+        : base(message)
+    {
+        Result = new ValidationResult();
+        Result.Errors.Add(new ValidationError(message, "VALIDATION_ERROR"));
     }
 }

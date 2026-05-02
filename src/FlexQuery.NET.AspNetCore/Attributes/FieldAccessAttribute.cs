@@ -17,7 +17,22 @@ public class FieldAccessAttribute : Attribute
     public string[]? Blocked { get; set; }
 
     /// <summary>
+    /// Gets or sets the list of fields allowed for filtering.
+    /// </summary>
+    public string[]? Filterable { get; set; }
+
+    /// <summary>
+    /// Gets or sets the list of fields allowed for sorting.
+    /// </summary>
+    public string[]? Sortable { get; set; }
+
+    /// <summary>
+    /// Gets or sets the list of fields allowed for selection/projection.
+    /// </summary>
+    public string[]? Selectable { get; set; }
+
+    /// <summary>
     /// Gets or sets the maximum allowed depth for nested field paths.
     /// </summary>
-    public int MaxDepth { get; set; } = -1; // -1 means not set
+    public int MaxDepth { get; set; } = -1;
 }

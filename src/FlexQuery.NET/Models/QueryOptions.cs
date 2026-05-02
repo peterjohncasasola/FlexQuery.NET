@@ -3,86 +3,96 @@ using FlexQuery.NET.Security;
 namespace FlexQuery.NET.Models;
 
 /// <summary>
-/// Represents the full set of query options that can be applied to an IQueryable.
+/// Configuration options for dynamic querying, including filtering, sorting, pagination, and security.
 /// </summary>
-public sealed class QueryOptions
+public class QueryOptions
 {
-    /// <summary>Top-level filter group (supports nested AND/OR logic).</summary>
+    // --- Data Selection & Projection ---
+    
+    /// <summary>The filter expression (JQL or DSL).</summary>
     public FilterGroup? Filter { get; set; }
 
-    /// <summary>Ordered list of sort instructions.</summary>
-    public List<SortOption> Sort { get; set; } = [];
+    /// <summary>The sorting expressions.</summary>
+    public List<SortOption> Sort { get; set; } = new();
 
-    /// <summary>Alias for <see cref="Sort"/> to support Sorts naming.</summary>
-    public List<SortOption> Sorts
-    {
-        get => Sort;
-        set => Sort = value ?? [];
-    }
-
-    /// <summary>Pagination settings.</summary>
-    public PagingOptions Paging { get; set; } = new();
-
-    /// <summary>Mode for projection (Nested or Flat).</summary>
-    public ProjectionMode ProjectionMode { get; set; } = ProjectionMode.Nested;
-
-    /// <summary>Fields to project (SELECT). Null or empty means all primitive fields.</summary>
+    /// <summary>Flat dot-notation selection paths (e.g. "Id", "Profile.Name").</summary>
     public List<string>? Select { get; set; }
 
-    /// <summary>Fields used for GROUP BY.</summary>
-    public List<string>? GroupBy { get; set; }
-
-    /// <summary>Aggregate projections parsed from select=... expressions (sum/count/avg).</summary>
-    public List<AggregateModel> Aggregates { get; set; } = [];
-
-    /// <summary>Optional HAVING condition applied after grouping.</summary>
-    public HavingCondition? Having { get; set; }
-
-    /// <summary>Navigation properties to include (plain paths, no filters).</summary>
+    /// <summary>Navigation properties to include with all scalars.</summary>
     public List<string>? Includes { get; set; }
 
-    /// <summary>
-    /// Structured include trees parsed from the
-    /// <c>include=orders(status = Cancelled).orderItems(id = 101)</c> syntax.
-    /// Each entry is the root of a depth-first navigation path where every
-    /// level can carry its own optional <see cref="IncludeNode.Filter"/>.
-    /// This is populated automatically by <see cref="FlexQuery.NET.Parsers.QueryOptionsParser"/>
-    /// and is consumed by the <c>ApplyFilteredIncludes</c> extension when
-    /// using <c>FlexQuery.NET.EFCore</c>.
-    /// </summary>
-    public List<IncludeNode> FilteredIncludes { get; set; } = [];
+    /// <summary>Deep, filtered navigation expansion trees.</summary>
+    public List<IncludeNode>? FilteredIncludes { get; set; }
 
-    /// <summary>Internal tree structure for nested selection.</summary>
-    internal SelectionNode? SelectTree { get; set; }
+    /// <summary>Defines how projected data should be shaped (Nested, Flat, FlatMixed).</summary>
+    public ProjectionMode ProjectionMode { get; set; } = ProjectionMode.Nested;
 
-    /// <summary>
-    /// The raw AST produced by the parser (JQL, DSL, etc.). 
-    /// This is used for debugging purposes.
-    /// </summary>
-    public object? Ast { get; set; }
+    /// <summary>Fields to group by for aggregation.</summary>
+    public List<string>? GroupBy { get; set; }
 
-    /// <summary>
-    /// Optional whitelist of fields that are allowed to be queried.
-    /// If not null, any field NOT in this list will trigger a validation error.
-    /// Supports nested paths (e.g. "Name", "Orders.Status").
-    /// </summary>
+    /// <summary>Aggregate projection expressions (sum, count, avg).</summary>
+    public List<AggregateModel> Aggregates { get; set; } = new();
+
+    /// <summary>HAVING condition against aggregate projections.</summary>
+    public HavingCondition? Having { get; set; }
+
+    /// <summary>If true, applies Distinct() to the query.</summary>
+    public bool? Distinct { get; set; }
+
+    // --- Pagination ---
+
+    /// <summary>Pagination parameters (Page, PageSize, Disabled).</summary>
+    public PagingOptions Paging { get; set; } = new();
+
+    /// <summary>Legacy/Internal: Explicit skip count (if set, overrides Paging.Skip).</summary>
+    public int? Skip { get; set; }
+
+    /// <summary>Legacy/Internal: Explicit take count (if set, overrides Paging.PageSize).</summary>
+    public int? Top { get; set; }
+
+    /// <summary>Whether to include the total count in the result.</summary>
+    public bool? IncludeCount { get; set; }
+
+    // --- Field-Level Security & Aliasing ---
+
+    /// <summary>Global list of allowed fields (whitelist).</summary>
     public HashSet<string>? AllowedFields { get; set; }
 
-    /// <summary>
-    /// Optional blacklist of fields that are blocked from being queried.
-    /// Any field in this list will trigger a validation error.
-    /// Supports nested paths (e.g. "SSN", "Customer.SensitiveData").
-    /// </summary>
+    /// <summary>Global list of blocked fields (blacklist).</summary>
     public HashSet<string>? BlockedFields { get; set; }
 
-    /// <summary>
-    /// Optional custom resolver for field-level access control.
-    /// If provided, this will be used by the validation engine to determine field permissions.
-    /// </summary>
+    /// <summary>Fields allowed specifically for filtering operations.</summary>
+    public HashSet<string>? FilterableFields { get; set; }
+
+    /// <summary>Fields allowed specifically for sorting operations.</summary>
+    public HashSet<string>? SortableFields { get; set; }
+
+    /// <summary>Fields allowed specifically for selection/projection operations.</summary>
+    public HashSet<string>? SelectableFields { get; set; }
+
+    /// <summary>Optional limit for the depth of nested field paths.</summary>
+    public int? MaxFieldDepth { get; set; }
+
+    /// <summary>Optional custom resolver for dynamic field-level access control.</summary>
     public IFieldAccessResolver? FieldAccessResolver { get; set; }
 
-    /// <summary>
-    /// Optional limit for the depth of nested field paths (e.g., 3 would allow "A.B.C" but not "A.B.C.D").
-    /// </summary>
-    public int? MaxFieldDepth { get; set; }
+    /// <summary>Maps external field aliases to internal property names.</summary>
+    public Dictionary<string, string>? FieldMappings { get; set; }
+
+    /// <summary>Role-based field permissions. Maps roles to sets of allowed fields.</summary>
+    public Dictionary<string, HashSet<string>>? RoleAllowedFields { get; set; }
+
+    /// <summary>The role to use when evaluating RoleAllowedFields.</summary>
+    public string? CurrentRole { get; set; }
+
+    // --- Metadata & Internal State ---
+
+    /// <summary>Custom metadata or items passed through the validation pipeline.</summary>
+    public Dictionary<string, object> Items { get; } = new();
+
+    /// <summary>Internal representation of the parsed query for debugging.</summary>
+    public object? Ast { get; set; }
+
+    /// <summary>Internal: Merged selection tree from JSON select format.</summary>
+    internal SelectionNode? SelectTree { get; set; }
 }

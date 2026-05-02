@@ -15,10 +15,10 @@ public sealed class QueryValidator : IQueryValidator
     /// </summary>
     public QueryValidator()
     {
+        _rules.Add(new FieldAccessValidator());
         _rules.Add(new FieldExistenceRule());
         _rules.Add(new OperatorValidityRule());
         _rules.Add(new TypeCompatibilityRule());
-        _rules.Add(new FieldAccessValidator());
     }
 
     /// <summary>

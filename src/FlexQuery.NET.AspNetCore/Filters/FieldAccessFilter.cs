@@ -29,22 +29,26 @@ public class FieldAccessFilter : IActionFilter
         if (optionsEntry == null) return;
 
         // 3. Apply settings
-        if (attribute.Allowed != null)
-        {
-            optionsEntry.AllowedFields ??= new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-            foreach (var f in attribute.Allowed) optionsEntry.AllowedFields.Add(f);
-        }
-
-        if (attribute.Blocked != null)
-        {
-            optionsEntry.BlockedFields ??= new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-            foreach (var f in attribute.Blocked) optionsEntry.BlockedFields.Add(f);
-        }
+        ApplyList(attribute.Allowed, ref optionsEntry.AllowedFields);
+        ApplyList(attribute.Blocked, ref optionsEntry.BlockedFields);
+        ApplyList(attribute.Filterable, ref optionsEntry.FilterableFields);
+        ApplyList(attribute.Sortable, ref optionsEntry.SortableFields);
+        ApplyList(attribute.Selectable, ref optionsEntry.SelectableFields);
 
         if (attribute.MaxDepth > 0)
         {
-            // Attribute wins if it's set to a positive value
             optionsEntry.MaxFieldDepth = attribute.MaxDepth;
+        }
+    }
+
+    private void ApplyList(string[]? source, ref HashSet<string>? target)
+    {
+        if (source == null || source.Length == 0) return;
+        
+        target ??= new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var item in source)
+        {
+            target.Add(item);
         }
     }
 

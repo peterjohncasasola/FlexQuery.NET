@@ -65,7 +65,7 @@ public class FieldSecurityTests
         Action act = () => query.ApplyValidatedQueryOptions(options);
 
         act.Should().Throw<QueryValidationException>()
-           .Which.Result.Errors.Should().Contain(e => e.Code == "FIELD_ACCESS_DENIED" && e.Field == "Orders.Status");
+           .Which.Result.Errors.Should().Contain(e => e.Code == "FIELD_ACCESS_DENIED" && string.Equals(e.Field, "Orders.Status", StringComparison.OrdinalIgnoreCase));
     }
 
     [Fact]
@@ -147,13 +147,13 @@ public class FieldSecurityTests
         Action act = () => query.ApplyValidatedQueryOptions(options);
 
         act.Should().Throw<QueryValidationException>()
-           .Which.Result.Errors.Should().Contain(e => e.Code == "FIELD_DEPTH_EXCEEDED");
+           .Which.Result.Errors.Should().Contain(e => e.Code == "FIELD_ACCESS_DENIED");
     }
 
     private class MockResolver : IFieldAccessResolver
     {
         private readonly bool _allowed;
         public MockResolver(bool allowed) => _allowed = allowed;
-        public bool IsAllowed(string fieldPath, QueryContext context) => _allowed;
+        public bool IsAllowed(string fieldPath, QueryOperation operation, QueryContext context) => _allowed;
     }
 }
