@@ -4,6 +4,15 @@ All notable changes to this project will be documented in this file.
 
 ---
 
+## [1.4.0] - 2026-05-02
+
+### Added
+- **Secure Input Binding**: Introduced `QueryRequest` DTO to decouple HTTP input from internal execution logic, preventing malicious clients from overriding server-side security settings (e.g., `AllowedFields`).
+- **Parser Overload**: Added `QueryOptionsParser.Parse(QueryRequest)` to securely map primitive DTO properties to the internal execution model while retaining 100% backward compatibility for existing parsing logic.
+
+### Changed
+- **Documentation Refactor**: Completely updated `README.md` to introduce the new `QueryRequest` usage pattern, detailed real-world query examples, and comprehensive field-level security documentation.
+
 ## [1.3.1] - 2026-05-02
 
 ### Maintenance

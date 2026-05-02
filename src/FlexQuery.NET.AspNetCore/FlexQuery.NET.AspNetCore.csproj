@@ -6,7 +6,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <LangVersion>latest</LangVersion>
     <PackageId>FlexQuery.NET.AspNetCore</PackageId>
-    <Version>1.3.1</Version>
+    <Version>1.4.0</Version>
     <Authors>Peter John Casasola</Authors>
     <Description>ASP.NET Core integration for FlexQuery.NET (Attributes and Action Filters)</Description>
     <PackageReadmeFile>README.md</PackageReadmeFile>

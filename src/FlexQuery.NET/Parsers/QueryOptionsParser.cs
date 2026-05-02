@@ -37,6 +37,32 @@ public static class QueryOptionsParser
     // ── Public entry point ───────────────────────────────────────────────
 
     /// <summary>
+    /// Parses a strongly typed <see cref="QueryRequest"/> into <see cref="QueryOptions"/>.
+    /// </summary>
+    public static QueryOptions Parse(QueryRequest request)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+
+        var dict = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        
+        if (!string.IsNullOrWhiteSpace(request.Query)) dict["query"] = request.Query;
+        if (!string.IsNullOrWhiteSpace(request.Filter)) dict["filter"] = request.Filter;
+        if (!string.IsNullOrWhiteSpace(request.Sort)) dict["sort"] = request.Sort;
+        if (!string.IsNullOrWhiteSpace(request.Select)) dict["select"] = request.Select;
+        if (!string.IsNullOrWhiteSpace(request.Includes)) dict["includes"] = request.Includes; // Assuming 'includes' maps correctly
+        if (!string.IsNullOrWhiteSpace(request.GroupBy)) dict["groupBy"] = request.GroupBy;
+        if (!string.IsNullOrWhiteSpace(request.Having)) dict["having"] = request.Having;
+        if (!string.IsNullOrWhiteSpace(request.Mode)) dict["mode"] = request.Mode;
+        
+        if (request.Page.HasValue) dict["page"] = request.Page.Value.ToString();
+        if (request.PageSize.HasValue) dict["pageSize"] = request.PageSize.Value.ToString();
+        if (request.IncludeCount.HasValue) dict["includeCount"] = request.IncludeCount.Value.ToString();
+        if (request.Distinct.HasValue) dict["distinct"] = request.Distinct.Value.ToString();
+
+        return ParseDictionary(dict);
+    }
+
+    /// <summary>
     /// Auto-detects the query-string format and parses into <see cref="QueryOptions"/>.
     /// Resilient: invalid or unrecognised keys are silently ignored.
     /// </summary>
@@ -49,6 +75,11 @@ public static class QueryOptionsParser
                 g => g.Last().Value.ToString(),
                 StringComparer.OrdinalIgnoreCase);
 
+        return ParseDictionary(dict);
+    }
+
+    private static QueryOptions ParseDictionary(Dictionary<string, string> dict)
+    {
         if (dict.Count == 0) return new QueryOptions();
 
         if (dict.TryGetValue("query", out var jql) && !string.IsNullOrWhiteSpace(jql))

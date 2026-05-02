@@ -38,37 +38,79 @@ dotnet add package FlexQuery.NET.EFCore
 
 ## Quick Start
 
-### Parse request query into `QueryOptions`
+FlexQuery.NET supports two distinct usage patterns. The **Simple Usage** is perfect for rapid prototyping, while the **Advanced Usage** using the `QueryRequest` DTO is highly recommended for production APIs requiring clean OpenAPI/Swagger bindings and strong separation between client input and server-side security.
 
-```csharp
-using FlexQuery.NET.Parsers;
+### 1. Simple Usage (Direct Parsing)
 
-var options = QueryOptionsParser.Parse(Request.Query);
-```
-
-### Apply to `IQueryable`
+Directly parse the raw `Request.Query`.
 
 ```csharp
 using FlexQuery.NET;
-using Microsoft.EntityFrameworkCore;
+using FlexQuery.NET.Parsers;
+using Microsoft.AspNetCore.Mvc;
 
-[HttpGet]
-public async Task<IActionResult> Get()
+[ApiController]
+[Route("api/[controller]")]
+public class CustomersController : ControllerBase
 {
-    var options = QueryOptionsParser.Parse(Request.Query);
+    private readonly AppDbContext _context;
 
-    // Filter + sort + paging
-    var users = await _context.Users
-        .ApplyQueryOptions(options)
-        .ToListAsync();
+    public CustomersController(AppDbContext context) => _context = context;
 
-    // Projection (optional)
-    var projected = await _context.Users
-        .ApplyQueryOptions(options)
-        .ApplySelect(options)
-        .ToListAsync();
+    [HttpGet]
+    public async Task<IActionResult> Get()
+    {
+        // Parse raw query string into internal model
+        var options = QueryOptionsParser.Parse(Request.Query);
 
-    return Ok(new { users, projected });
+        // Filter + sort + paging + projection
+        var users = await _context.Users
+            .ApplyValidatedQueryOptions(options)
+            .ToListAsync();
+
+        return Ok(users);
+    }
+}
+```
+
+### 2. Advanced Usage (Recommended)
+
+> **💡 Tip:** Use the `QueryRequest` DTO to prevent malicious clients from overriding server-side security rules (like `AllowedFields`).
+
+```csharp
+using FlexQuery.NET;
+using FlexQuery.NET.Models;
+using FlexQuery.NET.Parsers;
+using Microsoft.AspNetCore.Mvc;
+
+[ApiController]
+[Route("api/[controller]")]
+public class CustomersController : ControllerBase
+{
+    private readonly AppDbContext _context;
+
+    public CustomersController(AppDbContext context) => _context = context;
+
+    [HttpGet]
+    public async Task<IActionResult> Get([FromQuery] QueryRequest request)
+    {
+        // 1. Parse the safe DTO into the execution model
+        var options = QueryOptionsParser.Parse(request);
+
+        // 2. Apply strict server-side security
+        options.MaxFieldDepth = 3;
+        options.AllowedFields = new HashSet<string>(StringComparer.OrdinalIgnoreCase) 
+        { 
+            "Id", "Name", "Email", "Orders.*" 
+        };
+
+        // 3. Execution (validation happens implicitly)
+        var users = await _context.Users
+            .ApplyValidatedQueryOptions(options)
+            .ToListAsync();
+
+        return Ok(users);
+    }
 }
 ```
 
@@ -220,13 +262,6 @@ Supported JQL operators:
 - Collection predicates: `ANY`, `ALL`, `COUNT`
 
 Unlike DSL/JSON malformed-input handling, invalid JQL syntax is surfaced as a parse exception to callers.
-
-## Migration Notes (v2.0.0)
-
-- Removed legacy format adapters: **Spatie** and **Syncfusion**
-- Removed Syncfusion-style sorting support
-- Supported formats are now **DSL**, **JSON**, **Indexed**, and **JQL fallback**
-- If you were using Spatie/Syncfusion query strings, migrate requests to DSL or Indexed format
 
 ## Operators
 
@@ -820,3 +855,27 @@ orders.any(AND(status eq [Cancelled], orderItems.any(id eq [101])))
 ## ⚖️ License
 
 This project is licensed under the **MIT License** - see the [LICENSE](LICENSE) file for details.
+## Security (Field-Level Access Control)
+
+Never expose your entire database schema. FlexQuery.NET provides a robust, pluggable security pipeline that runs *before* database execution.
+
+When using QueryOptionsParser.Parse(request), configure your rules on the resulting QueryOptions:
+
+`csharp
+// 1. Whitelisting (Only allow these fields to be touched)
+options.AllowedFields = new HashSet<string> { "Id", "Name", "Orders.*" };
+
+// 2. Blacklisting (Deny access to sensitive fields)
+options.BlockedFields = new HashSet<string> { "PasswordHash", "SSN" };
+
+// 3. Operation-Specific Rules
+options.FilterableFields = new HashSet<string> { "Status", "CreatedAt" };
+options.SortableFields = new HashSet<string> { "CreatedAt" };
+options.SelectableFields = new HashSet<string> { "Id", "Name", "Status" };
+
+// 4. Depth Protection
+options.MaxFieldDepth = 3; // Prevent 'Orders.Items.Product.Category.Name'
+`
+
+If a client attempts to filter, sort, or select a restricted field, a QueryValidationException is thrown with detailed ValidationResult errors, preventing the query from ever hitting the database.
+
