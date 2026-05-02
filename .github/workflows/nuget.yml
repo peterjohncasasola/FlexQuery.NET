@@ -10,25 +10,31 @@ on:
 
 env:
   DOTNET_VERSION: '8.0.x'
-  PROJECT_PATH:   'src/FlexQuery.NET/FlexQuery.NET.csproj'
-  TEST_PATH:      'tests/FlexQuery.NET.Tests/FlexQuery.NET.Tests.csproj'
+  PROJECT_PATH: 'src/FlexQuery.NET/FlexQuery.NET.csproj'
+  TEST_PATH: 'tests/FlexQuery.NET.Tests/FlexQuery.NET.Tests.csproj'
 
 jobs:
   build-and-test:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
 
-      - uses: actions/setup-dotnet@v4
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
 
-      - run: dotnet restore
-      - run: dotnet build --no-restore -c Release
+      - name: Restore
+        run: dotnet restore ${{ env.PROJECT_PATH }}
+
+      - name: Build
+        run: dotnet build ${{ env.PROJECT_PATH }} --no-restore -c Release
 
       - name: Test
         run: |
+          dotnet restore ${{ env.TEST_PATH }}
           dotnet test ${{ env.TEST_PATH }} \
             --no-build -c Release
 
@@ -38,21 +44,24 @@ jobs:
     if: startsWith(github.ref, 'refs/tags/v')
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
 
-      - uses: actions/setup-dotnet@v4
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
 
-      - run: dotnet restore
-      - run: dotnet build --no-restore -c Release
+      - name: Restore
+        run: dotnet restore ${{ env.PROJECT_PATH }}
 
-      # 🔥 Extract version (supports prerelease)
+      - name: Build
+        run: dotnet build ${{ env.PROJECT_PATH }} --no-restore -c Release
+
       - name: Extract version from tag
         id: version
         run: |
           RAW=${GITHUB_REF#refs/tags/v}
-
           echo "VERSION=$RAW" >> $GITHUB_OUTPUT
 
           if [[ "$RAW" == *"-"* ]]; then
@@ -61,9 +70,6 @@ jobs:
             echo "IS_PRERELEASE=false" >> $GITHUB_OUTPUT
           fi
 
-          echo "Version: $RAW"
-
-      # 📦 Pack with version injection
       - name: Pack
         run: |
           dotnet pack ${{ env.PROJECT_PATH }} \
@@ -72,7 +78,6 @@ jobs:
             -o ./nupkgs \
             /p:PackageVersion=${{ steps.version.outputs.VERSION }}
 
-      # 🚀 Publish (stable + prerelease supported)
       - name: Publish to NuGet
         run: |
           dotnet nuget push ./nupkgs/*.nupkg \
