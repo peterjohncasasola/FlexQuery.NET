@@ -732,7 +732,7 @@ For ASP.NET Core applications, you can use the `FlexQuery.NET.AspNetCore` packag
 Register the security filters in your `Program.cs`:
 
 ```csharp
-using FlexQuery.AspNetCore.Extensions;
+using FlexQuery.NET.AspNetCore.Extensions;
 
 // For Controllers
 builder.Services.AddControllers()

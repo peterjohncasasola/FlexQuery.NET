@@ -4,6 +4,14 @@ All notable changes to this project will be documented in this file.
 
 ---
 
+## [1.3.1] - 2026-05-02
+
+### Maintenance
+- Synchronized package versions across the solution.
+- Internal cleanup and project structure optimization.
+
+---
+
 ## [1.3.0] - 2026-05-02
 
 ### Added
@@ -29,21 +37,10 @@ All notable changes to this project will be documented in this file.
 ## [1.2.0] - 2026-05-02
 
 ### Added
-- **Query Validation Engine**: Pipeline-based validation for `QueryOptions`
-- **Field-Level Security**:
-  - `AllowedFields` (whitelisting)
-  - `BlockedFields` (blacklisting)
-  - Supports nested property paths
-- **Fail-Fast Safety**:
-  - Introduced `ApplyValidatedQueryOptions` for early validation in the query pipeline
-- **Validation Rules**:
-  - Field existence validation
-  - Operator validity validation
-  - Type compatibility validation
-
-### Changed
-- Standardized all namespaces to `FlexQuery.NET`
-- Refactored validation rules into modular components for better maintainability
+- **Query Validation Engine**: Initial implementation of the pipeline-based validation for `QueryOptions`.
+- **Field-Level Security**: Basic support for `AllowedFields` (whitelisting) and `BlockedFields` (blacklisting).
+- **Fail-Fast Safety**: Introduced `ApplyValidatedQueryOptions` for early validation in the query pipeline.
+- **Validation Rules**: Initial rules for field existence, operator validity, and type compatibility.
 
 ---
 
