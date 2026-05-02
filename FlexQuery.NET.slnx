@@ -2,6 +2,7 @@
   <Folder Name="/src/">
     <Project Path="src/FlexQuery.NET.EFCore/FlexQuery.NET.EFCore.csproj" />
     <Project Path="src/FlexQuery.NET/FlexQuery.NET.csproj" />
+    <Project Path="src/FlexQuery.NET.AspNetCore/FlexQuery.NET.AspNetCore.csproj" />
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/FlexQuery.NET.Tests/FlexQuery.NET.Tests.csproj" />

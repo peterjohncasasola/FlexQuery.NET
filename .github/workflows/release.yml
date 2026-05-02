@@ -24,16 +24,17 @@ jobs:
         dotnet-version: '8.0.x'
 
     - name: 📦 Restore
-      run: dotnet restore
+      run: dotnet restore FlexQuery.NET.slnx
 
     - name: 🔨 Build
-      run: dotnet build --configuration Release --no-restore
+      run: dotnet build FlexQuery.NET.slnx --configuration Release --no-restore
 
     - name: 📦 Pack NuGet
       run: dotnet pack --configuration Release --no-build -o ./nupkg
 
     - name: 📝 Generate Release Notes
-      uses: orhun/git-cliff-action@v3
+      id: git-cliff
+      uses: orhun/git-cliff-action@v4
       with:
         config: cliff.toml
         args: --latest --tag ${{ github.ref_name }}
@@ -41,7 +42,7 @@ jobs:
     - name: 🚀 Create GitHub Release
       uses: softprops/action-gh-release@v2
       with:
-        body_path: CHANGELOG.md
+        body: ${{ steps.git-cliff.outputs.content }}
         files: ./nupkg/*.nupkg
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

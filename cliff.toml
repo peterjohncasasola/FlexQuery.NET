@@ -1,8 +1,6 @@
 [changelog]
 header = """
 ## 🚀 FlexQuery.NET {{ version }}
-
-Initial release of FlexQuery.NET — a powerful dynamic query engine for .NET.
 """
 
 body = """
