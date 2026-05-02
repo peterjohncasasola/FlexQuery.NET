@@ -655,6 +655,38 @@ app.Use(async (context, next) =>
 });
 ```
 
+### 🛡️ Field-Level Security (Whitelisting / Blacklisting)
+
+FlexQuery.NET includes a built-in security rule to restrict access to specific fields. This is integrated into the validation pipeline.
+
+#### Whitelisting (AllowedFields)
+Only fields in this list can be queried. Any attempt to filter, sort, or select a field not in this list will throw a `QueryValidationException`.
+
+```csharp
+var options = QueryOptionsParser.Parse(Request.Query);
+options.AllowedFields = new HashSet<string>(StringComparer.OrdinalIgnoreCase) 
+{ 
+    "Id", "Name", "Email", "Orders.Status", "Orders.Total" 
+};
+
+// Throws if disallowed fields are used
+query.ApplyValidatedQueryOptions(options);
+```
+
+#### Blacklisting (BlockedFields)
+Fields in this list are explicitly forbidden. This is useful for hiding sensitive data like SSNs or internal flags.
+
+```csharp
+options.BlockedFields = new HashSet<string>(StringComparer.OrdinalIgnoreCase) 
+{ 
+    "SSN", "PasswordHash", "InternalMetadata" 
+};
+```
+
+> [!IMPORTANT]
+> - **Nested Support**: Security rules respect nested paths (e.g., `Orders.Status`).
+> - **Casing**: The library uses the **canonical property names** (from your C# model) when checking against the whitelist/blacklist, ensuring protection regardless of the casing used in the query string.
+
 ## 🔍 Query Debug Mode
 
 FlexQuery.NET provides a powerful debug mode to inspect the transformation from string-based queries to LINQ Expression Trees. This is essential for troubleshooting complex nested queries or verifying EF Core translation.

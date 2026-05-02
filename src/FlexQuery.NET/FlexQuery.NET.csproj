@@ -11,7 +11,6 @@
 
      <!-- NuGet Metadata -->
      <PackageId>FlexQuery.NET</PackageId>
-     <Version>1.0.0</Version>
      <Authors>Peter John Casasola</Authors>
      <Company>Peter John Casasola</Company>
      <Product>FlexQuery.NET</Product>

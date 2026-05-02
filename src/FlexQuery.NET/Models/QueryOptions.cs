@@ -58,4 +58,18 @@ public sealed class QueryOptions
     /// This is used for debugging purposes.
     /// </summary>
     public object? Ast { get; set; }
+
+    /// <summary>
+    /// Optional whitelist of fields that are allowed to be queried.
+    /// If not null, any field NOT in this list will trigger a validation error.
+    /// Supports nested paths (e.g. "Name", "Orders.Status").
+    /// </summary>
+    public HashSet<string>? AllowedFields { get; set; }
+
+    /// <summary>
+    /// Optional blacklist of fields that are blocked from being queried.
+    /// Any field in this list will trigger a validation error.
+    /// Supports nested paths (e.g. "SSN", "Customer.SensitiveData").
+    /// </summary>
+    public HashSet<string>? BlockedFields { get; set; }
 }

@@ -18,6 +18,7 @@ public sealed class QueryValidator : IQueryValidator
         _rules.Add(new FieldExistenceRule());
         _rules.Add(new OperatorValidityRule());
         _rules.Add(new TypeCompatibilityRule());
+        _rules.Add(new FieldSecurityRule());
     }
 
     /// <summary>
