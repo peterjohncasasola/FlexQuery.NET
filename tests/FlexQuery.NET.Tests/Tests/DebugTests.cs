@@ -53,7 +53,7 @@ public class DebugTests
         var debug = query.ToFlexQueryDebug(options);
 
         debug.Ast.Should().NotBeNull();
-        debug.Ast.ToString().Should().Contain("id eq [1]");
+        debug.Ast!.ToString().Should().Contain("id eq [1]");
     }
 
     [Fact]

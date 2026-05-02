@@ -222,7 +222,7 @@ public class FilteredIncludeTests : IDisposable
         // Alice has two orders: SO-001 (Total=125.50) and SO-002 (Total=45.00)
         // SO-001 should be included, SO-002 should be filtered out
         orderList.Should().HaveCount(1);
-        orderList[0].GetType().GetProperty("Number").GetValue(orderList[0]).Should().Be("SO-001");
+        orderList[0].GetType().GetProperty("Number")!.GetValue(orderList[0]).Should().Be("SO-001");
     }
 
     [Fact]
@@ -259,7 +259,7 @@ public class FilteredIncludeTests : IDisposable
         
         // SHOULD have only 1 item (SKU-AAA). If this is 2, the nested filter failed.
         itemList.Should().HaveCount(1);
-        itemList[0].GetType().GetProperty("Sku").GetValue(itemList[0]).Should().Be("SKU-AAA");
+        itemList[0].GetType().GetProperty("Sku")!.GetValue(itemList[0]).Should().Be("SKU-AAA");
     }
 
     [Fact]
@@ -295,6 +295,6 @@ public class FilteredIncludeTests : IDisposable
         
         // This confirms the nested filter on 'items' was applied despite the chain and mixed formats.
         itemList.Should().HaveCount(1);
-        itemList[0].GetType().GetProperty("Sku").GetValue(itemList[0]).Should().Be("SKU-AAA");
+        itemList[0].GetType().GetProperty("Sku")!.GetValue(itemList[0]).Should().Be("SKU-AAA");
     }
 }
