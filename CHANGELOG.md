@@ -3,6 +3,44 @@
 All notable changes to this project will be documented in this file.
 
 ---
+## [1.6.0] - 2026-05-03
+
+### Performance
+- **Eliminated `LOWER()` from SQL string comparisons** — `SafeConditionBuilder` no longer wraps member expressions with `.ToLower()` before applying `Contains`, `StartsWith`, `EndsWith`, or `=`. This means EF Core now generates clean `LIKE` and `=` predicates without function calls, allowing SQL Server to use column indexes on string fields.
+
+### Added
+- **`QueryOptions.CaseInsensitive`** (`bool`, default `true`) — New configuration property. When `true` (the default), case-insensitive matching is delegated to the **database collation** (SQL Server default `SQL_Latin1_General_CP1_CI_AS` is case-insensitive). When set to `false`, string comparisons behave as strict ordinal matches.
+- **`QueryOptions.CloneWithFilter(FilterGroup?)`** — Internal helper that creates a shallow clone of `QueryOptions` with a different `Filter`. Used by the nested projection and include pipelines to propagate query configuration without mutation.
+- **Backward-compatible `BuildPredicate` overloads** — `ExpressionBuilder.BuildPredicate<T>(FilterGroup)` and `BuildPredicate(Type, FilterGroup)` are retained as convenience wrappers (default `CaseInsensitive = true`).
+
+### Changed
+- `ExpressionBuilder.BuildPredicate<T>` primary overload now accepts `QueryOptions` to carry the `CaseInsensitive` flag through the full expression tree recursion (including `Any`, `All`, `Count`, and scoped collection expressions).
+- `ProjectionBuilder.Build<T>` now accepts `QueryOptions` (previously accepted only `FilterGroup`). The cache key includes the `CaseInsensitive` flag.
+- `ProjectionEnhancer.ApplyCollectionWhereIfNeeded` now accepts `QueryOptions` and propagates it to nested predicate builders.
+- `IncludeBuilder.Apply` now accepts `QueryOptions` (previously accepted `IEnumerable<IncludeNode>`). Options are threaded through the full include tree recursion.
+- `HavingExpressionBuilder.Build` now accepts a `caseInsensitive` parameter.
+
+### SQL Output — Before vs After
+
+**Before:**
+```sql
+WHERE LOWER([c].[Name]) LIKE '%john%'
+  AND LOWER([o].[Status]) = 'cancelled'
+```
+
+**After:**
+```sql
+WHERE [c].[Name] LIKE '%John%'
+  AND [o].[Status] = 'Cancelled'
+```
+
+### Notes
+- **SQL Server**: The default collation (`CI_AS`) is case-insensitive, so removing `LOWER()` preserves the existing case-insensitive behavior while enabling index seeks.
+- **PostgreSQL**: Default collation is case-sensitive. If you target PostgreSQL and require case-insensitive matching, either configure a `citext` column type, a `ICU` collation, or use `EF.Functions.ILike`.
+- **In-memory / SQLite providers**: String comparison is case-sensitive by nature. Tests against in-memory databases must use values matching the exact stored casing.
+
+---
+
 ## [1.5.0] - 2026-05-02
 ### Added
 - **Secure Input Binding**: Introduced `QueryRequest` DTO to decouple HTTP input from internal execution logic, preventing malicious clients from overriding server-side security settings (e.g., `AllowedFields`).

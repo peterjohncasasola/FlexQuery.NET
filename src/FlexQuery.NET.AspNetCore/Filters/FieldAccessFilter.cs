@@ -29,11 +29,11 @@ public class FieldAccessFilter : IActionFilter
         if (optionsEntry == null) return;
 
         // 3. Apply settings
-        ApplyList(attribute.Allowed, ref optionsEntry.AllowedFields);
-        ApplyList(attribute.Blocked, ref optionsEntry.BlockedFields);
-        ApplyList(attribute.Filterable, ref optionsEntry.FilterableFields);
-        ApplyList(attribute.Sortable, ref optionsEntry.SortableFields);
-        ApplyList(attribute.Selectable, ref optionsEntry.SelectableFields);
+        optionsEntry.AllowedFields = Merge(attribute.Allowed, optionsEntry.AllowedFields);
+        optionsEntry.BlockedFields = Merge(attribute.Blocked, optionsEntry.BlockedFields);
+        optionsEntry.FilterableFields = Merge(attribute.Filterable, optionsEntry.FilterableFields);
+        optionsEntry.SortableFields = Merge(attribute.Sortable, optionsEntry.SortableFields);
+        optionsEntry.SelectableFields = Merge(attribute.Selectable, optionsEntry.SelectableFields);
 
         if (attribute.MaxDepth > 0)
         {
@@ -41,15 +41,16 @@ public class FieldAccessFilter : IActionFilter
         }
     }
 
-    private void ApplyList(string[]? source, ref HashSet<string>? target)
+    private HashSet<string>? Merge(string[]? source, HashSet<string>? target)
     {
-        if (source == null || source.Length == 0) return;
+        if (source == null || source.Length == 0) return target;
         
-        target ??= new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var result = target ?? new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         foreach (var item in source)
         {
-            target.Add(item);
+            result.Add(item);
         }
+        return result;
     }
 
     /// <inheritdoc />

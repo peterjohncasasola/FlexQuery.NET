@@ -22,11 +22,12 @@ internal static class ProjectionEnhancer
     public static Expression ApplyCollectionWhereIfNeeded(
         Expression sourceQueryable,
         Type elementType,
-        FilterGroup? collectionFilter)
+        FilterGroup? collectionFilter,
+        QueryOptions options)
     {
         if (collectionFilter is null) return sourceQueryable;
 
-        var predicate = BuildPredicateLambda(elementType, collectionFilter);
+        var predicate = BuildPredicateLambda(elementType, options.CloneWithFilter(collectionFilter));
         if (predicate is null) return sourceQueryable;
 
         var whereMethod = _queryableWhere2.MakeGenericMethod(elementType);
@@ -34,9 +35,9 @@ internal static class ProjectionEnhancer
         return Expression.Call(null, whereMethod, sourceQueryable, predicate);
     }
 
-    private static LambdaExpression? BuildPredicateLambda(Type elementType, FilterGroup filter)
+    private static LambdaExpression? BuildPredicateLambda(Type elementType, QueryOptions options)
     {
-        return ExpressionBuilder.BuildPredicate(elementType, filter);
+        return ExpressionBuilder.BuildPredicate(elementType, options);
     }
 }
 

@@ -38,11 +38,12 @@ public static class IncludeBuilder
     /// </summary>
     public static IQueryable<T> Apply<T>(
         IQueryable<T> query,
-        IEnumerable<IncludeNode> includes)
+        QueryOptions options)
         where T : class
     {
-        foreach (var root in includes)
-            query = ApplyNode(query, root);
+        if (options.FilteredIncludes is null) return query;
+        foreach (var root in options.FilteredIncludes)
+            query = ApplyNode(query, root, options);
 
         return query;
     }
@@ -53,7 +54,7 @@ public static class IncludeBuilder
     /// Applies a single root <see cref="IncludeNode"/> and recurses into
     /// its children via <see cref="ApplyChildNode{T,TPrev}"/>.
     /// </summary>
-    private static IQueryable<T> ApplyNode<T>(IQueryable<T> query, IncludeNode node)
+    private static IQueryable<T> ApplyNode<T>(IQueryable<T> query, IncludeNode node, QueryOptions options)
         where T : class
     {
         // Reflect the navigation property on the root type.
@@ -78,7 +79,7 @@ public static class IncludeBuilder
             if (node.Filter is not null)
             {
                 // Build predicate for the element type, then wrap with Where().
-                var predicate = ExpressionBuilder.BuildPredicate(elementType, node.Filter);
+                var predicate = ExpressionBuilder.BuildPredicate(elementType, options.CloneWithFilter(node.Filter));
                 if (predicate is not null)
                     navBody = BuildWhereCall(collAccess, navType, elementType, predicate);
             }
@@ -94,7 +95,7 @@ public static class IncludeBuilder
 
             // Recurse into children via ThenInclude.
             foreach (var child in node.Children)
-                included = InvokeApplyChildNode(included, typeof(T), elementType, child);
+                included = InvokeApplyChildNode(included, typeof(T), elementType, child, options);
 
             return (IQueryable<T>)included;
         }
@@ -110,7 +111,7 @@ public static class IncludeBuilder
             var included = includeMethod.Invoke(null, [query, selector])!;
 
             foreach (var child in node.Children)
-                included = InvokeApplyChildReferenceNode(included, typeof(T), navType, child);
+                included = InvokeApplyChildReferenceNode(included, typeof(T), navType, child, options);
 
             return (IQueryable<T>)included;
         }
@@ -123,7 +124,8 @@ public static class IncludeBuilder
     private static object ApplyChildNode<T, TPrev>(
         object source, // IIncludableQueryable<T, IEnumerable<TPrev>>
         Type prevElementType,
-        IncludeNode node)
+        IncludeNode node,
+        QueryOptions options)
         where T : class
     {
         var navProp = prevElementType.GetProperty(
@@ -145,7 +147,7 @@ public static class IncludeBuilder
 
             if (node.Filter is not null)
             {
-                var predicate = ExpressionBuilder.BuildPredicate(elementType, node.Filter);
+                var predicate = ExpressionBuilder.BuildPredicate(elementType, options.CloneWithFilter(node.Filter));
                 if (predicate is not null)
                     navBody = BuildWhereCall(collAccess, navType, elementType, predicate);
             }
@@ -158,7 +160,7 @@ public static class IncludeBuilder
             var next = thenIncludeMethod.Invoke(null, [source, selector])!;
 
             foreach (var child in node.Children)
-                next = InvokeApplyChildNode(next, typeof(T), elementType, child);
+                next = InvokeApplyChildNode(next, typeof(T), elementType, child, options);
 
             return next;
         }
@@ -174,7 +176,7 @@ public static class IncludeBuilder
             var next = thenIncludeMethod.Invoke(null, [source, selector])!;
 
             foreach (var child in node.Children)
-                next = InvokeApplyChildReferenceNode(next, typeof(T), navType, child);
+                next = InvokeApplyChildReferenceNode(next, typeof(T), navType, child, options);
 
             return next;
         }
@@ -186,7 +188,8 @@ public static class IncludeBuilder
     private static object ApplyChildReferenceNode<T, TPrev>(
         object source, // IIncludableQueryable<T, TPrev>
         Type prevType,
-        IncludeNode node)
+        IncludeNode node,
+        QueryOptions options)
         where T : class
     {
         var navProp = prevType.GetProperty(
@@ -208,12 +211,12 @@ public static class IncludeBuilder
         if (TryGetCollectionElementType(navType, out var elementType))
         {
             foreach (var child in node.Children)
-                next = InvokeApplyChildNode(next, typeof(T), elementType, child);
+                next = InvokeApplyChildNode(next, typeof(T), elementType, child, options);
         }
         else
         {
             foreach (var child in node.Children)
-                next = InvokeApplyChildReferenceNode(next, typeof(T), navType, child);
+                next = InvokeApplyChildReferenceNode(next, typeof(T), navType, child, options);
         }
 
         return next;
@@ -227,18 +230,18 @@ public static class IncludeBuilder
     private static readonly MethodInfo _applyChildRefNodeMethod = typeof(IncludeBuilder)
         .GetMethod(nameof(ApplyChildReferenceNode), BindingFlags.NonPublic | BindingFlags.Static)!;
 
-    private static object InvokeApplyChildNode(object source, Type rootType, Type prevElementType, IncludeNode node)
+    private static object InvokeApplyChildNode(object source, Type rootType, Type prevElementType, IncludeNode node, QueryOptions options)
     {
         return _applyChildNodeMethod
             .MakeGenericMethod(rootType, prevElementType)
-            .Invoke(null, [source, prevElementType, node])!;
+            .Invoke(null, [source, prevElementType, node, options])!;
     }
 
-    private static object InvokeApplyChildReferenceNode(object source, Type rootType, Type prevType, IncludeNode node)
+    private static object InvokeApplyChildReferenceNode(object source, Type rootType, Type prevType, IncludeNode node, QueryOptions options)
     {
         return _applyChildRefNodeMethod
             .MakeGenericMethod(rootType, prevType)
-            .Invoke(null, [source, prevType, node])!;
+            .Invoke(null, [source, prevType, node, options])!;
     }
 
     // ── Where() helper ───────────────────────────────────────────────────

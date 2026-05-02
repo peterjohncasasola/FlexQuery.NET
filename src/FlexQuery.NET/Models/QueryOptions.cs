@@ -95,4 +95,47 @@ public class QueryOptions
 
     /// <summary>Internal: Merged selection tree from JSON select format.</summary>
     internal SelectionNode? SelectTree { get; set; }
+
+    /// <summary>
+    /// If true (default), string comparisons (Contains, StartsWith, EndsWith, Equals)
+    /// will be case-insensitive using database collation.
+    /// </summary>
+    public bool CaseInsensitive { get; set; } = true;
+
+    /// <summary>
+    /// Creates a shallow clone of the options with a new filter.
+    /// </summary>
+    public QueryOptions CloneWithFilter(FilterGroup? filter)
+    {
+        return new QueryOptions
+        {
+            Filter = filter,
+            CaseInsensitive = CaseInsensitive,
+            AllowedFields = AllowedFields,
+            BlockedFields = BlockedFields,
+            FilterableFields = FilterableFields,
+            SortableFields = SortableFields,
+            SelectableFields = SelectableFields,
+            MaxFieldDepth = MaxFieldDepth,
+            FieldAccessResolver = FieldAccessResolver,
+            FieldMappings = FieldMappings,
+            RoleAllowedFields = RoleAllowedFields,
+            CurrentRole = CurrentRole,
+            Sort = Sort,
+            Select = Select,
+            Includes = Includes,
+            FilteredIncludes = FilteredIncludes,
+            ProjectionMode = ProjectionMode,
+            GroupBy = GroupBy,
+            Aggregates = Aggregates,
+            Having = Having,
+            Distinct = Distinct,
+            Paging = Paging,
+            Skip = Skip,
+            Top = Top,
+            IncludeCount = IncludeCount,
+            Ast = Ast,
+            SelectTree = SelectTree
+        };
+    }
 }

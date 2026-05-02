@@ -99,6 +99,6 @@ public static class QueryableEfCoreExtensions
         where T : class
     {
         if (options.FilteredIncludes.Count == 0) return query;
-        return IncludeBuilder.Apply(query, options.FilteredIncludes);
+        return IncludeBuilder.Apply(query, options);
     }
 }

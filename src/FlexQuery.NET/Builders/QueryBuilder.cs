@@ -24,7 +24,7 @@ public static class QueryBuilder
         if (options.Filter is null) return query;
         if (!HasAnyCondition(options.Filter)) return query;
 
-        var predicate = ExpressionBuilder.BuildPredicate<T>(options.Filter);
+        var predicate = ExpressionBuilder.BuildPredicate<T>(options);
         return predicate is null ? query : query.Where(predicate);
     }
 
@@ -127,7 +127,7 @@ public static class QueryBuilder
             return FlatProjectionBuilder.BuildAndApplyMixed(query, tree);
         }
 
-        var projection = ProjectionBuilder.Build<T>(tree, options.Filter);
+        var projection = ProjectionBuilder.Build<T>(tree, options);
         return query.Select(projection);
     }
 

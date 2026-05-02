@@ -7,15 +7,15 @@ namespace FlexQuery.NET.Security;
 
 internal static class SafeConditionBuilder
 {
-    public static Expression? Build(Expression member, string op, string? rawValue)
+    public static Expression? Build(Expression member, string op, string? rawValue, bool caseInsensitive = true)
     {
         if (op == FilterOperators.IsNull) return BuildNull(member, true);
         if (op == FilterOperators.IsNotNull) return BuildNull(member, false);
-        if (op == FilterOperators.Contains) return BuildString(member, rawValue, nameof(string.Contains));
-        if (op == FilterOperators.StartsWith) return BuildString(member, rawValue, nameof(string.StartsWith));
-        if (op == FilterOperators.EndsWith) return BuildString(member, rawValue, nameof(string.EndsWith));
+        if (op == FilterOperators.Contains) return BuildString(member, rawValue, nameof(string.Contains), caseInsensitive);
+        if (op == FilterOperators.StartsWith) return BuildString(member, rawValue, nameof(string.StartsWith), caseInsensitive);
+        if (op == FilterOperators.EndsWith) return BuildString(member, rawValue, nameof(string.EndsWith), caseInsensitive);
         if (member.Type == typeof(string) && (op == FilterOperators.Equal || op == FilterOperators.NotEqual))
-            return BuildStringEqual(member, rawValue, op == FilterOperators.Equal);
+            return BuildStringEqual(member, rawValue, op == FilterOperators.Equal, caseInsensitive);
         
         if (OperatorHandlerRegistry.TryGet(op, out var handler))
             return handler?.Build(member, rawValue);
@@ -49,31 +49,35 @@ internal static class SafeConditionBuilder
         return isNull ? Expression.Equal(member, nullConstant) : Expression.NotEqual(member, nullConstant);
     }
 
-    private static Expression? BuildString(Expression member, string? value, string methodName)
+    private static Expression? BuildString(Expression member, string? value, string methodName, bool caseInsensitive)
     {
         var underlying = Nullable.GetUnderlyingType(member.Type) ?? member.Type;
         if (underlying != typeof(string)) return null;
 
         var method = typeof(string).GetMethod(methodName, [typeof(string)]);
-        var toLower = typeof(string).GetMethod(nameof(string.ToLower), Type.EmptyTypes);
-        if (method is null || toLower is null) return null;
+        if (method is null) return null;
 
-        var memberLower = Expression.Call(member, toLower);
-        var valueLower = Parameterize((value ?? string.Empty).ToLowerInvariant(), typeof(string));
-        return Expression.Call(memberLower, method, valueLower);
+        // If case-insensitive is requested, we rely on the database collation.
+        // We no longer use .ToLower() because it breaks index usage in SQL Server.
+        // If the database collation is case-insensitive (default for SQL Server), 
+        // EF Core's translation of .Contains()/.StartsWith()/.EndsWith() to LIKE will just work.
+        var constantValue = value ?? string.Empty;
+        var constant = Parameterize(constantValue, typeof(string));
+
+        return Expression.Call(member, method, constant);
     }
 
-    private static Expression? BuildStringEqual(Expression member, string? value, bool isEqual)
+    private static Expression? BuildStringEqual(Expression member, string? value, bool isEqual, bool caseInsensitive)
     {
-        var toLower = typeof(string).GetMethod(nameof(string.ToLower), Type.EmptyTypes);
-        if (toLower is null) return null;
+        var underlying = Nullable.GetUnderlyingType(member.Type) ?? member.Type;
+        if (underlying != typeof(string)) return null;
 
-        var memberLower = Expression.Call(member, toLower);
-        var valueLower = Parameterize((value ?? string.Empty).ToLowerInvariant(), typeof(string));
-        
+        var constantValue = value ?? string.Empty;
+        var constant = Parameterize(constantValue, typeof(string));
+
         return isEqual 
-            ? Expression.Equal(memberLower, valueLower) 
-            : Expression.NotEqual(memberLower, valueLower);
+            ? Expression.Equal(member, constant) 
+            : Expression.NotEqual(member, constant);
     }
 
     private static Expression? BuildIn(Expression member, string? raw)

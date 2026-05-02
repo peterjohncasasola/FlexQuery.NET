@@ -111,7 +111,8 @@ public class CustomersController : ControllerBase
 - **Paging**: `page` / `pageSize` or `skip` / `take` (format-dependent)
 - **Projection**: `select` with nested properties, plus `include`-style expansion
 - **Query formats**: DSL (primary), JSON (advanced), Indexed (compatibility), JQL fallback
-- **EF Core friendly**: expression-tree based, provider-translatable
+- **EF Core friendly**: expression-tree based, provider-translatable; generates clean `LIKE`/`=` SQL without function wrappers
+- **Collation-aware string matching**: relies on database collation (SQL Server CI_AS) instead of `.ToLower()`, preserving index usage
 - **Pluggable operators**: core ships framework-agnostic handlers, optional packages can override by operator
 - **Dual-Pipeline**: Decouples data filtering (WHERE) from data shaping (Filtered Includes)
 - **Validation Engine**: Pre-execution query validation (field existence, operator validity, type safety)
@@ -647,6 +648,47 @@ When exposing queries over large datasets, performance is critical:
 - **Optimized Paging:** When paging (`skip`/`take`) is requested without an explicit sort, the library automatically injects a default `OrderBy` (using `Id` or the primary key) to prevent EF Core errors on relational databases and ensure deterministic results.
 - **Efficient EXISTS Translation:** Deeply nested filters like `orders.any(orderItems.any(quantity > 5))` are efficiently translated by EF Core into nested SQL `EXISTS` clauses without fetching intermediate records into memory.
 - **Memory Optimization:** Filtering is strictly applied *before* any dynamic projection, reducing the memory footprint of materialized objects.
+
+### Collation-Aware String Matching (Index-Friendly)
+
+FlexQuery.NET generates string predicates **without** `.ToLower()` or `.ToUpper()` function calls. This is critical for query performance on large datasets.
+
+**Before (v1.5 and earlier):**
+```sql
+-- LOWER() prevents index seeks — full table scans on every string comparison
+WHERE LOWER([c].[Name]) LIKE '%john%'
+  AND LOWER([o].[Status]) = 'cancelled'
+```
+
+**After (v1.6+):**
+```sql
+-- Clean predicates — SQL Server CI_AS collation handles case-insensitivity at the index level
+WHERE [c].[Name] LIKE '%John%'
+  AND [o].[Status] = 'Cancelled'
+```
+
+Case-insensitivity is handled by the database collation (SQL Server default: `SQL_Latin1_General_CP1_CI_AS`), which applies at the index level. This means:
+- **No function overhead** on each row evaluation
+- **Index seeks are preserved** on indexed string columns
+- **Behavior is unchanged** for SQL Server users (CI collation = case-insensitive by default)
+
+#### `CaseInsensitive` Option
+
+You can control this behavior explicitly via `QueryOptions.CaseInsensitive`:
+
+```csharp
+var options = QueryOptionsParser.Parse(Request.Query);
+
+// Default: true — relies on database collation (recommended for SQL Server)
+options.CaseInsensitive = true;
+
+// Set to false for strict ordinal string matching (e.g., case-sensitive PostgreSQL columns)
+options.CaseInsensitive = false;
+```
+
+> [!NOTE]
+> **PostgreSQL users**: PostgreSQL's default collation is case-sensitive. To enable case-insensitive string matching with index support on PostgreSQL, use `citext` column types, a case-insensitive collation on the column, or `EF.Functions.ILike` via a custom operator handler.
+
 
 ### Monitoring & Logging
 

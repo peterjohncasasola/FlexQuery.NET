@@ -89,9 +89,13 @@ public class ExpressionBuilderTests : IDisposable
     [Fact]
     public void BuildPredicate_EndsWith_MatchesSuffix()
     {
+        // NOTE: We no longer apply ToLower() on either side.
+        // For SQL Server (case-insensitive collation), 'smith' and 'Smith' both match.
+        // For in-memory / LINQ-to-Objects, string comparison is case-sensitive.
+        // This test verifies the exact-case path; database collation handles case-insensitive.
         var group = new FilterGroup
         {
-            Filters = [new FilterCondition { Field = "Name", Operator = FilterOperators.EndsWith, Value = "smith" }]
+            Filters = [new FilterCondition { Field = "Name", Operator = FilterOperators.EndsWith, Value = "Smith" }]
         };
         var compiled = ExpressionBuilder.BuildPredicate<TestEntity>(group)!.Compile();
         compiled(new TestEntity { Name = "Bob Smith" }).Should().BeTrue();

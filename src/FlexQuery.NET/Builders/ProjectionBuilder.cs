@@ -32,14 +32,14 @@ internal static class ProjectionBuilder
                         && m.IsGenericMethodDefinition
                         && m.GetParameters().Length == 1);
 
-    public static Expression<Func<T, object>> Build<T>(SelectionNode selectTree, FilterGroup? filter = null)
+    public static Expression<Func<T, object>> Build<T>(SelectionNode selectTree, QueryOptions options)
     {
-        var cacheKey = typeof(T).FullName + ":" + GenerateCacheKey(selectTree) + "|F:" + FilterAnalyzer.CacheKey(filter);
+        var cacheKey = typeof(T).FullName + ":" + GenerateCacheKey(selectTree) + "|F:" + FilterAnalyzer.CacheKey(options.Filter) + "|CI:" + options.CaseInsensitive;
 
         return (Expression<Func<T, object>>)_cache.GetOrAdd(cacheKey, _ =>
         {
             var param = Expression.Parameter(typeof(T), "x");
-            var memberInit = BuildMemberInit(param, typeof(T), selectTree, filter);
+            var memberInit = BuildMemberInit(param, typeof(T), selectTree, options.Filter, options);
             var boxed = Expression.Convert(memberInit, typeof(object));
             return Expression.Lambda<Func<T, object>>(boxed, param);
         });
@@ -49,7 +49,8 @@ internal static class ProjectionBuilder
         Expression source,
         Type sourceType,
         SelectionNode selectTree,
-        FilterGroup? filterContext)
+        FilterGroup? filterContext,
+        QueryOptions options)
     {
         var effectiveNode = NormalizeSelection(sourceType, selectTree);
 
@@ -77,7 +78,7 @@ internal static class ProjectionBuilder
                 {
                     // Collection: source.AsQueryable().Where(...).Select(i => new DynamicType { ... }).ToList()
                     var itemParam = Expression.Parameter(itemType, "i");
-                    var itemInit = BuildMemberInit(itemParam, itemType, childNode, childFilterContext);
+                    var itemInit = BuildMemberInit(itemParam, itemType, childNode, childFilterContext, options);
                     var selectLambda = Expression.Lambda(itemInit, itemParam);
 
                     var asQueryableMethod = _queryableAsQueryable1.MakeGenericMethod(itemType);
@@ -88,7 +89,8 @@ internal static class ProjectionBuilder
                     var maybeWhereCall = ProjectionEnhancer.ApplyCollectionWhereIfNeeded(
                         asQueryableCall,
                         itemType,
-                        childFilterContext);
+                        childFilterContext,
+                        options);
 
                     var selectCall = Expression.Call(null, selectMethod, maybeWhereCall, selectLambda);
                     var toListCall = Expression.Call(null, toListMethod, selectCall);
@@ -100,7 +102,7 @@ internal static class ProjectionBuilder
                 else
                 {
                     // Nested Object
-                    var nestedInit = BuildMemberInit(propAccess, propInfo.PropertyType, childNode, childFilterContext);
+                    var nestedInit = BuildMemberInit(propAccess, propInfo.PropertyType, childNode, childFilterContext, options);
                     var isNullable = !propInfo.PropertyType.IsValueType || Nullable.GetUnderlyingType(propInfo.PropertyType) != null;
 
                     if (isNullable)

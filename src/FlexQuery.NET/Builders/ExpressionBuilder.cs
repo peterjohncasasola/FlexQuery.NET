@@ -18,24 +18,33 @@ public static class ExpressionBuilder
     /// Builds a combined predicate expression for the given <see cref="FilterGroup"/>.
     /// Returns null if the group is empty (caller should skip the Where clause).
     /// </summary>
-    public static Expression<Func<T, bool>>? BuildPredicate<T>(FilterGroup group)
+    public static Expression<Func<T, bool>>? BuildPredicate<T>(QueryOptions options)
     {
+        if (options.Filter is null) return null;
         var param = Expression.Parameter(typeof(T), "x");
-        var body = BuildGroupExpression(param, group, typeof(T));
+        var body = BuildGroupExpression(param, options.Filter, typeof(T), options);
         if (body is null) return null;
 
         return Expression.Lambda<Func<T, bool>>(body, param);
     }
 
     /// <summary>
+    /// Backward-compatible overload. Builds a predicate from a <see cref="FilterGroup"/>
+    /// using default options (CaseInsensitive = true).
+    /// </summary>
+    public static Expression<Func<T, bool>>? BuildPredicate<T>(FilterGroup group)
+        => BuildPredicate<T>(new QueryOptions { Filter = group });
+
+    /// <summary>
     /// Runtime-type variant used by the Include Pipeline when the element
     /// type is only known via reflection.  Returns a <see cref="LambdaExpression"/>
     /// whose delegate type is <c>Func&lt;elementType, bool&gt;</c>.
     /// </summary>
-    public static LambdaExpression? BuildPredicate(Type elementType, FilterGroup group)
+    public static LambdaExpression? BuildPredicate(Type elementType, QueryOptions options)
     {
+        if (options.Filter is null) return null;
         var param = Expression.Parameter(elementType, "x");
-        var body  = BuildGroupExpression(param, group, elementType);
+        var body  = BuildGroupExpression(param, options.Filter, elementType, options);
         if (body is null) return null;
 
         return Expression.Lambda(
@@ -44,24 +53,31 @@ public static class ExpressionBuilder
             param);
     }
 
+    /// <summary>
+    /// Backward-compatible overload for the runtime-type variant.
+    /// Uses default options (CaseInsensitive = true).
+    /// </summary>
+    public static LambdaExpression? BuildPredicate(Type elementType, FilterGroup group)
+        => BuildPredicate(elementType, new QueryOptions { Filter = group });
+
     // ── Internal recursion ───────────────────────────────────────────────
 
     private static Expression? BuildGroupExpression(
-        ParameterExpression param, FilterGroup group, Type entityType)
+        ParameterExpression param, FilterGroup group, Type entityType, QueryOptions options)
     {
         var parts = new List<Expression>();
 
         // Leaf filter conditions
         foreach (var condition in group.Filters)
         {
-            var expr = BuildConditionExpression(param, condition, entityType);
+            var expr = BuildConditionExpression(param, condition, entityType, options);
             if (expr is not null) parts.Add(expr);
         }
 
         // Nested sub-groups
         foreach (var subGroup in group.Groups)
         {
-            var subExpr = BuildGroupExpression(param, subGroup, entityType);
+            var subExpr = BuildGroupExpression(param, subGroup, entityType, options);
             if (subExpr is not null) parts.Add(subExpr);
         }
 
@@ -76,7 +92,7 @@ public static class ExpressionBuilder
     }
 
     private static Expression? BuildConditionExpression(
-        ParameterExpression param, FilterCondition condition, Type entityType)
+        ParameterExpression param, FilterCondition condition, Type entityType, QueryOptions options)
     {
         if (string.IsNullOrWhiteSpace(condition.Field)) return null;
         var op = FilterOperators.Normalize(condition.Operator);
@@ -89,15 +105,15 @@ public static class ExpressionBuilder
         // element as a single compound predicate (true "scoped" semantics).
         if (condition.ScopedFilter is not null)
         {
-            return BuildScopedCollectionExpression(param, chain, op, condition.ScopedFilter);
+            return BuildScopedCollectionExpression(param, chain, op, condition.ScopedFilter, options);
         }
 
         Expression? expression = op switch
         {
-            FilterOperators.Any => BuildAnyExpression(param, chain, condition.Value),
-            FilterOperators.All => BuildAllExpression(param, chain, condition.Value),
-            FilterOperators.Count => BuildCountExpression(param, chain, condition.Value),
-            _ => BuildPathExpression(param, chain, 0, op, condition.Value)
+            FilterOperators.Any => BuildAnyExpression(param, chain, condition.Value, options),
+            FilterOperators.All => BuildAllExpression(param, chain, condition.Value, options),
+            FilterOperators.Count => BuildCountExpression(param, chain, condition.Value, options),
+            _ => BuildPathExpression(param, chain, 0, op, condition.Value, options)
         };
 
         if (expression is null) return null;
@@ -114,14 +130,15 @@ public static class ExpressionBuilder
         Expression param,
         IReadOnlyList<PropertyInfo> chain,
         string quantifier,
-        FilterGroup scopedFilter)
+        FilterGroup scopedFilter,
+        QueryOptions options)
     {
         var collectionAccess = ResolvePath(param, chain, out var collectionType);
         if (collectionAccess is null || collectionType is null) return null;
         if (!SafePropertyResolver.TryGetCollectionElementType(collectionType, out var elementType)) return null;
 
         var itemParam = Expression.Parameter(elementType, "sc");
-        var predicate = BuildGroupExpression(itemParam, scopedFilter, elementType);
+        var predicate = BuildGroupExpression(itemParam, scopedFilter, elementType, options);
         if (predicate is null) return null;
 
         var nullCheck = Expression.NotEqual(collectionAccess, Expression.Constant(null, collectionType));
@@ -154,20 +171,21 @@ public static class ExpressionBuilder
         IReadOnlyList<PropertyInfo> chain,
         int index,
         string op,
-        string? rawValue)
+        string? rawValue,
+        QueryOptions options)
     {
         var prop = chain[index];
         var access = Expression.Property(current, prop);
         var isLeaf = index == chain.Count - 1;
         if (isLeaf)
         {
-            return SafeConditionBuilder.Build(access, op, rawValue);
+            return SafeConditionBuilder.Build(access, op, rawValue, options.CaseInsensitive);
         }
 
         if (SafePropertyResolver.TryGetCollectionElementType(prop.PropertyType, out var elementType))
         {
             var itemParam = Expression.Parameter(elementType, $"i{index}");
-            var predicate = BuildPathExpression(itemParam, chain, index + 1, op, rawValue);
+            var predicate = BuildPathExpression(itemParam, chain, index + 1, op, rawValue, options);
             if (predicate is null) return null;
 
             var anyMethod = typeof(Enumerable).GetMethods()
@@ -184,13 +202,14 @@ public static class ExpressionBuilder
             return Expression.AndAlso(nullCheck, anyCall);
         }
 
-        return BuildPathExpression(access, chain, index + 1, op, rawValue);
+        return BuildPathExpression(access, chain, index + 1, op, rawValue, options);
     }
 
     private static Expression? BuildAnyExpression(
         Expression param,
         IReadOnlyList<PropertyInfo> chain,
-        string? rawValue)
+        string? rawValue,
+        QueryOptions options)
     {
         if (string.IsNullOrWhiteSpace(rawValue)) return null;
 
@@ -208,7 +227,7 @@ public static class ExpressionBuilder
         if (!SafePropertyResolver.TryResolveChain(elementType, nestedField, out var nestedChain)) return null;
 
         var itemParam = Expression.Parameter(elementType, "c");
-        var predicate = BuildPathExpression(itemParam, nestedChain, 0, nestedOperator, nestedValue);
+        var predicate = BuildPathExpression(itemParam, nestedChain, 0, nestedOperator, nestedValue, options);
         if (predicate is null) return null;
 
         var anyMethod = typeof(Enumerable).GetMethods()
@@ -223,7 +242,8 @@ public static class ExpressionBuilder
     private static Expression? BuildAllExpression(
         Expression param,
         IReadOnlyList<PropertyInfo> chain,
-        string? rawValue)
+        string? rawValue,
+        QueryOptions options)
     {
         if (string.IsNullOrWhiteSpace(rawValue)) return null;
 
@@ -241,7 +261,7 @@ public static class ExpressionBuilder
         if (!SafePropertyResolver.TryResolveChain(elementType, nestedField, out var nestedChain)) return null;
 
         var itemParam = Expression.Parameter(elementType, "c");
-        var predicate = BuildPathExpression(itemParam, nestedChain, 0, nestedOperator, nestedValue);
+        var predicate = BuildPathExpression(itemParam, nestedChain, 0, nestedOperator, nestedValue, options);
         if (predicate is null) return null;
 
         var allMethod = typeof(Enumerable).GetMethods()
@@ -256,7 +276,8 @@ public static class ExpressionBuilder
     private static Expression? BuildCountExpression(
         Expression param,
         IReadOnlyList<PropertyInfo> chain,
-        string? rawValue)
+        string? rawValue,
+        QueryOptions options)
     {
         if (string.IsNullOrWhiteSpace(rawValue)) return null;
         var segments = rawValue.Split(':', 2, StringSplitOptions.TrimEntries);
