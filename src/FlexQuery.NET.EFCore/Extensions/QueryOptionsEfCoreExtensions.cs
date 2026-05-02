@@ -10,8 +10,6 @@ namespace FlexQuery.NET.EFCore;
 /// </summary>
 public static class QueryOptionsEfCoreExtensions
 {
-    private static int _isRegistered;
-
     /// <summary>
     /// Registers EF Core-specific operator handlers and returns the same options instance.
     /// </summary>
@@ -23,7 +21,6 @@ public static class QueryOptionsEfCoreExtensions
 
     internal static void EnsureEfCoreOperatorsRegistered()
     {
-        if (Interlocked.Exchange(ref _isRegistered, 1) == 1) return;
         OperatorHandlerRegistry.Register(new EfCoreLikeOperatorHandler());
     }
 }
