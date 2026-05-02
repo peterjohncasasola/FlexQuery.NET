@@ -1,5 +1,5 @@
 using FlexQuery.NET.Builders;
-using FlexQuery.NET.Debug;
+using FlexQuery.NET.QueryDebug;
 using FlexQuery.NET.Models;
 using System.Linq.Expressions;
 
