@@ -1,9 +1,12 @@
 [changelog]
 header = """
-## 🚀 FlexQuery.NET {{ version }}
+## 🚀 FlexQuery.NET
 """
 
 body = """
+{% if version %}
+## [{{ version }}] - {{ timestamp | date(format="%Y-%m-%d") }}
+{% endif %}
 ### ✨ Features
 {% for commit in commits | filter(attribute="group", value="Features") %}
 - {{ commit.message }}
