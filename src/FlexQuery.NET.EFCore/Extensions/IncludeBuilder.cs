@@ -33,7 +33,7 @@ public static class IncludeBuilder
 
     /// <summary>
     /// Applies all <see cref="IncludeNode"/> trees in
-    /// <paramref name="includes"/> to <paramref name="query"/>.
+    /// <paramref name="options"/> to <paramref name="query"/>.
     /// Returns <paramref name="query"/> unchanged when the list is empty.
     /// </summary>
     public static IQueryable<T> Apply<T>(

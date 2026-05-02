@@ -72,7 +72,7 @@ public static class QueryableEfCoreExtensions
 
     /// <summary>
     /// Applies the <b>Include Pipeline</b>: translates every
-    /// <see cref="IncludeNode"/> in <see cref="QueryOptions.FilteredIncludes"/>
+    /// <see cref="QueryOptions.FilteredIncludes"/>
     /// into EF Core <c>Include</c> / <c>ThenInclude</c> calls, each optionally
     /// filtered by an inline <c>Where</c> clause.
     ///
@@ -98,7 +98,7 @@ public static class QueryableEfCoreExtensions
         QueryOptions options)
         where T : class
     {
-        if (options.FilteredIncludes.Count == 0) return query;
+        if (options?.FilteredIncludes == null || options.FilteredIncludes.Count == 0) return query;
         return IncludeBuilder.Apply(query, options);
     }
 }

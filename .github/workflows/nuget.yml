@@ -12,7 +12,9 @@ env:
   DOTNET_VERSION: '8.0.x'
   CORE_PROJECT_PATH: 'src/FlexQuery.NET/FlexQuery.NET.csproj'
   EFCORE_PROJECT_PATH: 'src/FlexQuery.NET.EFCore/FlexQuery.NET.EFCore.csproj'
+  ASPNETCORE_PROJECT_PATH: 'src/FlexQuery.NET.AspNetCore/FlexQuery.NET.AspNetCore.csproj'
   TEST_PATH: 'tests/FlexQuery.NET.Tests/FlexQuery.NET.Tests.csproj'
+  SOLUTION_PATH: 'FlexQuery.NET.slnx'
 
 jobs:
   build-and-test:
@@ -29,17 +31,14 @@ jobs:
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
 
-      - name: Restore core
-        run: dotnet restore ${{ env.CORE_PROJECT_PATH }}
-
-      - name: Restore EF Core
-        run: dotnet restore ${{ env.EFCORE_PROJECT_PATH }}
+      - name: Restore
+        run: dotnet restore ${{ env.SOLUTION_PATH }}
 
       - name: Build
-        run: dotnet build ${{ env.EFCORE_PROJECT_PATH }} --no-restore -c Release
+        run: dotnet build ${{ env.SOLUTION_PATH }} --no-restore -c Release
 
       - name: Test
-        run: dotnet test ${{ env.TEST_PATH }} -c Release
+        run: dotnet test ${{ env.TEST_PATH }} -c Release --no-build
 
   publish:
     runs-on: ubuntu-latest
@@ -57,14 +56,11 @@ jobs:
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
 
-      - name: Restore core
-        run: dotnet restore ${{ env.CORE_PROJECT_PATH }}
-
-      - name: Restore EF Core
-        run: dotnet restore ${{ env.EFCORE_PROJECT_PATH }}
+      - name: Restore
+        run: dotnet restore ${{ env.SOLUTION_PATH }}
 
       - name: Build
-        run: dotnet build ${{ env.EFCORE_PROJECT_PATH }} --no-restore -c Release
+        run: dotnet build ${{ env.SOLUTION_PATH }} --no-restore -c Release
 
       - name: Extract version from tag
         id: version
@@ -103,6 +99,13 @@ jobs:
             /p:PackageReleaseNotes="${{ steps.notes.outputs.NOTES }}"
 
           dotnet pack ${{ env.EFCORE_PROJECT_PATH }} \
+            --no-build \
+            -c Release \
+            -o ./nupkgs \
+            /p:PackageVersion=${{ steps.version.outputs.VERSION }} \
+            /p:PackageReleaseNotes="${{ steps.notes.outputs.NOTES }}"
+
+          dotnet pack ${{ env.ASPNETCORE_PROJECT_PATH }} \
             --no-build \
             -c Release \
             -o ./nupkgs \
