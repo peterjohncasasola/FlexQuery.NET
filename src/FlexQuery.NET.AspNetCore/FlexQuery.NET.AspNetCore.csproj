@@ -2,14 +2,31 @@
 
   <PropertyGroup>
     <TargetFrameworks>net6.0;net7.0;net8.0</TargetFrameworks>
+    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <LangVersion>latest</LangVersion>
+
+    <!-- NuGet Metadata -->
     <PackageId>FlexQuery.NET.AspNetCore</PackageId>
-    <Version>1.4.0</Version>
     <Authors>Peter John Casasola</Authors>
-    <Description>ASP.NET Core integration for FlexQuery.NET (Attributes and Action Filters)</Description>
+    <Company>Peter John Casasola</Company>
+    <Product>FlexQuery.NET.AspNetCore</Product>
+
+    <Description>ASP.NET Core integration for FlexQuery.NET — declarative field-access security via [FieldAccess] attributes and action filters</Description>
+    <PackageTags>flexquery;dynamic;linq;aspnetcore;security;field-access;filtering</PackageTags>
+
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <RepositoryUrl>https://github.com/peterjohncasasola/FlexQuery.NET</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PackageProjectUrl>https://github.com/peterjohncasasola/FlexQuery.NET</PackageProjectUrl>
+
     <PackageReadmeFile>README.md</PackageReadmeFile>
+    <PackageIcon>logo.png</PackageIcon>
+
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
+    <Optimize>true</Optimize>
   </PropertyGroup>
 
   <ItemGroup>
@@ -22,6 +39,7 @@
 
   <ItemGroup>
     <None Include="..\..\README.md" Pack="true" PackagePath="" />
+    <None Include="..\..\assets\logo.png" Pack="true" PackagePath="" />
   </ItemGroup>
 
 </Project>

@@ -3,17 +3,17 @@
   <PropertyGroup>
     <TargetFrameworks>net6.0;net7.0;net8.0</TargetFrameworks>
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
-    <Version>1.4.0</Version>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <LangVersion>latest</LangVersion>
 
+    <!-- NuGet Metadata -->
     <PackageId>FlexQuery.NET.EFCore</PackageId>
     <Authors>Peter John Casasola</Authors>
     <Company>Peter John Casasola</Company>
     <Product>FlexQuery.NET.EFCore</Product>
 
-    <Description>EF Core integration for FlexQuery.NET - async execution, filtering, projection, and pagination helpers</Description>
+    <Description>EF Core integration for FlexQuery.NET — async execution, filtered includes, projection, and pagination helpers</Description>
     <PackageTags>flexquery;dynamic;linq;iqueryable;efcore;filtering;projection;pagination</PackageTags>
 
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
@@ -22,23 +22,24 @@
     <PackageProjectUrl>https://github.com/peterjohncasasola/FlexQuery.NET</PackageProjectUrl>
 
     <PackageReadmeFile>README.md</PackageReadmeFile>
-    <PackageReleaseNotes>Initial release</PackageReleaseNotes>
+    <PackageIcon>logo.png</PackageIcon>
 
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
     <Optimize>true</Optimize>
   </PropertyGroup>
 
+  <!-- Use minimum-version ranges (6.x, 7.x, 8.x) so consumers can use any compatible patch release -->
   <ItemGroup Condition="'$(TargetFramework)' == 'net6.0'">
-    <PackageReference Include="Microsoft.EntityFrameworkCore" Version="[6.0.0]" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore" Version="6.0.0" />
   </ItemGroup>
 
   <ItemGroup Condition="'$(TargetFramework)' == 'net7.0'">
-    <PackageReference Include="Microsoft.EntityFrameworkCore" Version="[7.0.0]" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore" Version="7.0.0" />
   </ItemGroup>
 
   <ItemGroup Condition="'$(TargetFramework)' == 'net8.0'">
-    <PackageReference Include="Microsoft.EntityFrameworkCore" Version="[8.0.0]" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore" Version="8.0.0" />
   </ItemGroup>
 
   <ItemGroup>
@@ -47,6 +48,7 @@
 
   <ItemGroup>
     <None Include="..\..\README.md" Pack="true" PackagePath="" />
+    <None Include="..\..\assets\logo.png" Pack="true" PackagePath="" />
   </ItemGroup>
 
 </Project>

@@ -10,7 +10,8 @@ on:
 
 env:
   DOTNET_VERSION: '8.0.x'
-  PROJECT_PATH: 'src/FlexQuery.NET/FlexQuery.NET.csproj'
+  CORE_PROJECT_PATH: 'src/FlexQuery.NET/FlexQuery.NET.csproj'
+  EFCORE_PROJECT_PATH: 'src/FlexQuery.NET.EFCore/FlexQuery.NET.EFCore.csproj'
   TEST_PATH: 'tests/FlexQuery.NET.Tests/FlexQuery.NET.Tests.csproj'
 
 jobs:
@@ -20,17 +21,22 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # IMPORTANT for git history (release notes)
 
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
 
-      - name: Restore
-        run: dotnet restore ${{ env.PROJECT_PATH }}
+      - name: Restore core
+        run: dotnet restore ${{ env.CORE_PROJECT_PATH }}
+
+      - name: Restore EF Core
+        run: dotnet restore ${{ env.EFCORE_PROJECT_PATH }}
 
       - name: Build
-        run: dotnet build ${{ env.PROJECT_PATH }} --no-restore -c Release
+        run: dotnet build ${{ env.EFCORE_PROJECT_PATH }} --no-restore -c Release
 
       - name: Test
         run: dotnet test ${{ env.TEST_PATH }} -c Release
@@ -43,37 +49,65 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # REQUIRED for tags + logs
 
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
 
-      - name: Restore
-        run: dotnet restore ${{ env.PROJECT_PATH }}
+      - name: Restore core
+        run: dotnet restore ${{ env.CORE_PROJECT_PATH }}
+
+      - name: Restore EF Core
+        run: dotnet restore ${{ env.EFCORE_PROJECT_PATH }}
 
       - name: Build
-        run: dotnet build ${{ env.PROJECT_PATH }} --no-restore -c Release
+        run: dotnet build ${{ env.EFCORE_PROJECT_PATH }} --no-restore -c Release
 
       - name: Extract version from tag
         id: version
         run: |
-          RAW=${GITHUB_REF#refs/tags/v}
-          echo "VERSION=$RAW" >> $GITHUB_OUTPUT
+          VERSION=${GITHUB_REF#refs/tags/v}
+          echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
 
-          if [[ "$RAW" == *"-"* ]]; then
+          if [[ "$VERSION" == *"-"* ]]; then
             echo "IS_PRERELEASE=true" >> $GITHUB_OUTPUT
           else
             echo "IS_PRERELEASE=false" >> $GITHUB_OUTPUT
           fi
 
+      - name: Generate Release Notes
+        id: notes
+        run: |
+          PREV_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "")
+
+          if [ -z "$PREV_TAG" ]; then
+            NOTES=$(git log --pretty=format:"- %s")
+          else
+            NOTES=$(git log $PREV_TAG..HEAD --pretty=format:"- %s")
+          fi
+
+          echo "NOTES<<EOF" >> $GITHUB_OUTPUT
+          echo "$NOTES" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
       - name: Pack
         run: |
-          dotnet pack ${{ env.PROJECT_PATH }} \
+          dotnet pack ${{ env.CORE_PROJECT_PATH }} \
             --no-build \
             -c Release \
             -o ./nupkgs \
-            /p:PackageVersion=${{ steps.version.outputs.VERSION }}
+            /p:PackageVersion=${{ steps.version.outputs.VERSION }} \
+            /p:PackageReleaseNotes="${{ steps.notes.outputs.NOTES }}"
+
+          dotnet pack ${{ env.EFCORE_PROJECT_PATH }} \
+            --no-build \
+            -c Release \
+            -o ./nupkgs \
+            /p:PackageVersion=${{ steps.version.outputs.VERSION }} \
+            /p:PackageReleaseNotes="${{ steps.notes.outputs.NOTES }}"
 
       - name: Publish to NuGet
         run: |
