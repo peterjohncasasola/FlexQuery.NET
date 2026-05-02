@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="assets/logo.png" width="200"/>
+  <img src="https://raw.githubusercontent.com/peterjohncasasola/FlexQuery.NET/main/assets/logo.png" width="180"/>
 </p>
 
 <h1 align="center">FlexQuery.NET</h1>
