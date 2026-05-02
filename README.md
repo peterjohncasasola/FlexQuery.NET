@@ -66,6 +66,8 @@ public async Task<IActionResult> Get()
 - **EF Core friendly**: expression-tree based, provider-translatable
 - **Pluggable operators**: core ships framework-agnostic handlers, optional packages can override by operator
 - **Dual-Pipeline**: Decouples data filtering (WHERE) from data shaping (Filtered Includes)
+- **Validation Engine**: Pre-execution query validation (field existence, operator validity, type safety)
+- **Field-Level Security**: Built-in whitelisting and blacklisting of fields (supports nested paths)
 
 
 ## 🔄 Migration from DynamicQueryable.Extensions
@@ -655,6 +657,45 @@ app.Use(async (context, next) =>
 });
 ```
 
+### 🛡️ Query Validation Engine
+
+FlexQuery.NET provides a pluggable validation engine that inspects `QueryOptions` before they are applied to an `IQueryable`. This prevents invalid queries (e.g., non-existent fields, incompatible types) from causing runtime exceptions or database errors.
+
+#### Using `ApplyValidatedQueryOptions`
+The easiest way to use the validation engine is via the `ApplyValidatedQueryOptions` extension method. It validates the options and applies them in a single step, throwing a `QueryValidationException` if any rules are violated.
+
+```csharp
+using FlexQuery.NET;
+
+try
+{
+    var users = await _context.Users
+        .ApplyValidatedQueryOptions(options)
+        .ToListAsync();
+}
+catch (QueryValidationException ex)
+{
+    // Handle validation errors (ex.Result.Errors)
+    return BadRequest(ex.Result.Errors);
+}
+```
+
+#### Manual Validation
+You can also run the validation manually if you need to inspect the results before taking action:
+
+```csharp
+using FlexQuery.NET.Validation;
+
+var validator = new QueryValidator();
+var result = validator.Validate<User>(options);
+
+if (!result.IsValid)
+{
+    var errors = result.Errors;
+    // ...
+}
+```
+
 ### 🛡️ Field-Level Security (Whitelisting / Blacklisting)
 
 FlexQuery.NET includes a built-in security rule to restrict access to specific fields. This is integrated into the validation pipeline.
@@ -683,7 +724,49 @@ options.BlockedFields = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
 };
 ```
 
+### 🌐 ASP.NET Core Integration (`FlexQuery.NET.AspNetCore`)
+
+For ASP.NET Core applications, you can use the `FlexQuery.NET.AspNetCore` package to apply security declaratively via attributes.
+
+#### 1. Registration
+Register the security filters in your `Program.cs`:
+
+```csharp
+using FlexQuery.AspNetCore.Extensions;
+
+// For Controllers
+builder.Services.AddControllers()
+    .AddFlexQuerySecurity();
+
+// OR for Minimal APIs / Web API
+builder.Services.AddControllers(options =>
+{
+    options.Filters.Add<FieldAccessFilter>();
+});
+```
+
+#### 2. Declarative Security
+Use the `[FieldAccess]` attribute on controllers or actions:
+
+```csharp
+[ApiController]
+[Route("api/[controller]")]
+[FieldAccess(Allowed = new[] { "Id", "Name", "Email" })] // Controller-level whitelist
+public class UsersController : ControllerBase
+{
+    [HttpGet]
+    [FieldAccess(Allowed = new[] { "Orders.*" })] // Action-level additional fields
+    public async Task<IActionResult> Get([FromQuery] QueryOptions options)
+    {
+        // Settings from attributes are automatically merged into 'options'
+        return Ok(await _context.Users.ApplyValidatedQueryOptions(options).ToListAsync());
+    }
+}
+```
+
 > [!IMPORTANT]
+> - **Wildcards**: Supports wildcards (e.g., `Orders.*` allows all sub-properties of Orders).
+> - **Custom Resolvers**: Use `IFieldAccessResolver` for complex logic (e.g., role-based).
 > - **Nested Support**: Security rules respect nested paths (e.g., `Orders.Status`).
 > - **Casing**: The library uses the **canonical property names** (from your C# model) when checking against the whitelist/blacklist, ensuring protection regardless of the casing used in the query string.
 

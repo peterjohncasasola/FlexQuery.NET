@@ -1,3 +1,5 @@
+using FlexQuery.NET.Security;
+
 namespace FlexQuery.NET.Models;
 
 /// <summary>
@@ -72,4 +74,15 @@ public sealed class QueryOptions
     /// Supports nested paths (e.g. "SSN", "Customer.SensitiveData").
     /// </summary>
     public HashSet<string>? BlockedFields { get; set; }
+
+    /// <summary>
+    /// Optional custom resolver for field-level access control.
+    /// If provided, this will be used by the validation engine to determine field permissions.
+    /// </summary>
+    public IFieldAccessResolver? FieldAccessResolver { get; set; }
+
+    /// <summary>
+    /// Optional limit for the depth of nested field paths (e.g., 3 would allow "A.B.C" but not "A.B.C.D").
+    /// </summary>
+    public int? MaxFieldDepth { get; set; }
 }

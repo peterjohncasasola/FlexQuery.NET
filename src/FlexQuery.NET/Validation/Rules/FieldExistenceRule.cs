@@ -9,20 +9,22 @@ namespace FlexQuery.NET.Validation.Rules;
 public sealed class FieldExistenceRule : IValidationRule
 {
     /// <inheritdoc />
-    public void Validate<T>(QueryOptions options, ValidationResult result)
+    public void Validate(QueryOptions options, QueryContext context, ValidationResult result)
     {
+        if (context.TargetType == null) return; // Cannot validate existence without target type
+
         if (options.Filter != null)
         {
-            ValidateFilterGroup(options.Filter, typeof(T), result);
+            ValidateFilterGroup(options.Filter, context.TargetType, result);
         }
 
         foreach (var sort in options.Sort)
         {
             if (string.IsNullOrWhiteSpace(sort.Field)) continue;
-            if (!SafePropertyResolver.TryResolveChain(typeof(T), sort.Field, out _))
+            if (!SafePropertyResolver.TryResolveChain(context.TargetType, sort.Field, out _))
             {
                 result.Errors.Add(new ValidationError(
-                    $"Field '{sort.Field}' does not exist on type '{typeof(T).Name}'.", 
+                    $"Field '{sort.Field}' does not exist on type '{context.TargetType.Name}'.", 
                     "FIELD_NOT_FOUND", 
                     sort.Field));
             }

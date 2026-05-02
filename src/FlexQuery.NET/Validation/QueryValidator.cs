@@ -18,7 +18,7 @@ public sealed class QueryValidator : IQueryValidator
         _rules.Add(new FieldExistenceRule());
         _rules.Add(new OperatorValidityRule());
         _rules.Add(new TypeCompatibilityRule());
-        _rules.Add(new FieldSecurityRule());
+        _rules.Add(new FieldAccessValidator());
     }
 
     /// <summary>
@@ -32,12 +32,15 @@ public sealed class QueryValidator : IQueryValidator
     }
 
     /// <inheritdoc />
-    public ValidationResult Validate<T>(QueryOptions options)
+    public ValidationResult Validate(QueryOptions options, QueryContext context)
     {
+        ArgumentNullException.ThrowIfNull(options);
+        ArgumentNullException.ThrowIfNull(context);
+
         var result = ValidationResult.Success();
         foreach (var rule in _rules)
         {
-            rule.Validate<T>(options, result);
+            rule.Validate(options, context, result);
         }
         return result;
     }

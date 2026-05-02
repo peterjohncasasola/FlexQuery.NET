@@ -2,6 +2,7 @@ using FlexQuery.NET.Models;
 using FlexQuery.NET.Parsers;
 using FlexQuery.NET.Validation;
 using FlexQuery.NET.Exceptions;
+using FlexQuery.NET.Security;
 using FluentAssertions;
 using Microsoft.Extensions.Primitives;
 using Xunit;
@@ -106,5 +107,53 @@ public class FieldSecurityTests
         Action act = () => query.ApplyValidatedQueryOptions(options);
 
         act.Should().NotThrow();
+    }
+
+    [Fact]
+    public void Should_Allow_Wildcards_In_Whitelist()
+    {
+        var options = QueryOptionsParser.Parse(new Dictionary<string, StringValues> { { "query", "Orders.any(Status = 'Cancelled' AND Total > 0)" } });
+        options.AllowedFields = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "Id", "Orders", "Orders.*" };
+        
+        var query = new List<Customer>().AsQueryable();
+
+        Action act = () => query.ApplyValidatedQueryOptions(options);
+
+        act.Should().NotThrow();
+    }
+
+    [Fact]
+    public void Should_Block_Field_Via_Custom_Resolver()
+    {
+        var options = QueryOptionsParser.Parse(new Dictionary<string, StringValues> { { "filter", "Name:eq:john" } });
+        options.FieldAccessResolver = new MockResolver(allowed: false);
+        
+        var query = new List<Customer>().AsQueryable();
+
+        Action act = () => query.ApplyValidatedQueryOptions(options);
+
+        act.Should().Throw<QueryValidationException>()
+           .Which.Result.Errors.Should().Contain(e => e.Code == "FIELD_ACCESS_DENIED");
+    }
+
+    [Fact]
+    public void Should_Fail_When_Field_Depth_Is_Exceeded()
+    {
+        var options = QueryOptionsParser.Parse(new Dictionary<string, StringValues> { { "filter", "Orders.Items.Id:eq:1" } });
+        options.MaxFieldDepth = 2; // Orders.Items is depth 2, Orders.Items.Id is depth 3
+        
+        var query = new List<Customer>().AsQueryable();
+
+        Action act = () => query.ApplyValidatedQueryOptions(options);
+
+        act.Should().Throw<QueryValidationException>()
+           .Which.Result.Errors.Should().Contain(e => e.Code == "FIELD_DEPTH_EXCEEDED");
+    }
+
+    private class MockResolver : IFieldAccessResolver
+    {
+        private readonly bool _allowed;
+        public MockResolver(bool allowed) => _allowed = allowed;
+        public bool IsAllowed(string fieldPath, QueryContext context) => _allowed;
     }
 }

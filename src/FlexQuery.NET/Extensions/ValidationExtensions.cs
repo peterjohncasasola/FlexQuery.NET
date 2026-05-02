@@ -15,7 +15,7 @@ public static class ValidationExtensions
     /// Validates the query options using the default validation pipeline.
     /// </summary>
     public static ValidationResult Validate<T>(this IQueryable<T> query, QueryOptions options)
-        => _defaultValidator.Validate<T>(options);
+        => query.Validate(options, _defaultValidator);
 
     /// <summary>
     /// Validates the query options using a specific validator.
@@ -23,7 +23,8 @@ public static class ValidationExtensions
     public static ValidationResult Validate<T>(this IQueryable<T> query, QueryOptions options, IQueryValidator validator)
     {
         ArgumentNullException.ThrowIfNull(validator);
-        return validator.Validate<T>(options);
+        var context = new QueryContext { TargetType = typeof(T) };
+        return validator.Validate(options, context);
     }
 
     /// <summary>

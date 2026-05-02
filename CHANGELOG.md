@@ -4,6 +4,28 @@ All notable changes to this project will be documented in this file.
 
 ---
 
+## [1.3.0] - 2026-05-02
+
+### Added
+- **FlexQuery.NET.AspNetCore Package**:
+  - New integration package for ASP.NET Core applications.
+  - `[FieldAccess]` attribute for declarative controller and action-level security.
+  - `FieldAccessFilter` for automatic discovery and application of security rules.
+  - `AddFlexQuerySecurity()` extension method for easy global registration.
+- **Advanced Security Features**:
+  - **Regex Wildcard Support**: Broad permissions via `*` (e.g., `Orders.*`) using optimized regex matching.
+  - **MaxFieldDepth**: New configuration to limit the complexity of nested property paths.
+- **Enhanced Validation Engine**:
+  - Introduced `QueryContext` for passing request-specific metadata through the validation pipeline.
+  - Refactored `IQueryValidator` and `IValidationRule` to support context-aware validation.
+  - `TypeCompatibilityRule` now performs deep value conversion attempts to ensure data integrity.
+
+### Changed
+- Standardized all namespaces to `FlexQuery.NET` for better consistency across packages.
+- Improved error messaging for type mismatch and depth exceeded errors.
+
+---
+
 ## [1.2.0] - 2026-05-02
 
 ### Added
@@ -28,12 +50,12 @@ All notable changes to this project will be documented in this file.
 ## [1.1.1] - 2026-05-02
 
 ### Changed
-- Improved CI/CD pipeline to support formatted release notes generation
-- Enhanced consistency between GitHub Releases and NuGet metadata
+- Improved CI/CD pipeline to support formatted release notes generation.
+- Enhanced consistency between GitHub Releases and NuGet metadata.
 
 ### Maintenance
-- Refined build and publish workflow
-- Minor pipeline reliability improvements
+- Refined build and publish workflow.
+- Minor pipeline reliability improvements.
 
 ---
 
@@ -80,10 +102,9 @@ All notable changes to this project will be documented in this file.
 ## [1.0.0] - 2026-05-02
 
 ### Added
-- Initial release of **FlexQuery.NET**
-- Dynamic filtering, sorting, projection, and pagination
-- EF Core integration support
+- Initial release of **FlexQuery.NET**.
+- Dynamic filtering, sorting, projection, and pagination.
+- EF Core integration support.
 
 ### Notes
-- Rebranded and redesigned from `DynamicQueryable.Extensions`
-- Version history from the previous project is not carried over
+- Rebranded and redesigned from `DynamicQueryable.Extensions`.

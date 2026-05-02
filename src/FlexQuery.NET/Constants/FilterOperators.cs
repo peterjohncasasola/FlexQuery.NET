@@ -69,4 +69,23 @@ public static class FilterOperators
             _                                                           => (raw ?? string.Empty).Trim().ToLowerInvariant()
         };
     }
+
+    /// <summary>
+    /// Gets all supported canonical operators.
+    /// </summary>
+    public static readonly HashSet<string> AllOperators = new(StringComparer.OrdinalIgnoreCase)
+    {
+        Equal, NotEqual, GreaterThan, GreaterThanOrEq, LessThan, LessThanOrEq,
+        Contains, StartsWith, EndsWith, IsNull, IsNotNull, In, NotIn, Between, Like,
+        Any, All, Count
+    };
+
+    /// <summary>
+    /// Checks if the provided operator string is supported.
+    /// </summary>
+    public static bool IsSupported(string? op)
+    {
+        if (string.IsNullOrWhiteSpace(op)) return false;
+        return AllOperators.Contains(Normalize(op));
+    }
 }

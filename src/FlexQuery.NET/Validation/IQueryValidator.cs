@@ -27,8 +27,8 @@ public sealed class ValidationResult
 /// </summary>
 public interface IQueryValidator
 {
-    /// <summary>Validates the provided query options against type <typeparamref name="T"/>.</summary>
-    ValidationResult Validate<T>(QueryOptions options);
+    /// <summary>Validates the provided query options.</summary>
+    ValidationResult Validate(QueryOptions options, QueryContext context);
 }
 
 /// <summary>
@@ -37,5 +37,5 @@ public interface IQueryValidator
 public interface IValidationRule
 {
     /// <summary>Executes the validation rule.</summary>
-    void Validate<T>(QueryOptions options, ValidationResult result);
+    void Validate(QueryOptions options, QueryContext context, ValidationResult result);
 }

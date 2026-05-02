@@ -1,16 +1,15 @@
-using FlexQuery.NET.Constants;
 using FlexQuery.NET.Models;
-using FlexQuery.NET.Security;
+using FlexQuery.NET.Constants;
 
 namespace FlexQuery.NET.Validation.Rules;
 
 /// <summary>
-/// Validates that all operators used in filters are supported by the registry.
+/// Validates that all operators used in filters are recognized and allowed by the registry.
 /// </summary>
 public sealed class OperatorValidityRule : IValidationRule
 {
     /// <inheritdoc />
-    public void Validate<T>(QueryOptions options, ValidationResult result)
+    public void Validate(QueryOptions options, QueryContext context, ValidationResult result)
     {
         if (options.Filter != null)
         {
@@ -22,8 +21,9 @@ public sealed class OperatorValidityRule : IValidationRule
     {
         foreach (var filter in group.Filters)
         {
-            var op = FilterOperators.Normalize(filter.Operator);
-            if (!OperatorRegistry.IsAllowed(op))
+            if (string.IsNullOrWhiteSpace(filter.Operator)) continue;
+
+            if (!FilterOperators.IsSupported(filter.Operator))
             {
                 result.Errors.Add(new ValidationError(
                     $"Operator '{filter.Operator}' is not supported.", 
