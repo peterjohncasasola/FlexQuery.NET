@@ -109,12 +109,6 @@ public class QueryOptions
     public bool CaseInsensitive { get; set; } = true;
 
     /// <summary>
-    /// If true, enables expression caching for this query.
-    /// Default is null (uses global FlexQueryCacheSettings.EnableCache).
-    /// </summary>
-    public bool? EnableCache { get; set; }
-
-    /// <summary>
     /// Generates a stable cache key for the current query configuration.
     /// </summary>
     public string GetCacheKey(Type entityType, string operation)
