@@ -1,0 +1,26 @@
+[changelog]
+header = """
+## 🚀 FlexQuery.NET {{ version }}
+
+Initial release of FlexQuery.NET — a powerful dynamic query engine for .NET.
+"""
+
+body = """
+### ✨ Features
+{% for commit in commits | filter(attribute="group", value="Features") %}
+- {{ commit.message }}
+{% endfor %}
+
+### 🔄 Rebranding
+- Successor to DynamicQueryable.Extensions
+- Clean versioning (history not carried over)
+
+### ⚠️ Breaking
+{% for commit in commits | filter(attribute="breaking", value=true) %}
+- {{ commit.message }}
+{% endfor %}
+
+### 🧩 Supported
+- .NET 6, 7, 8
+- EF Core 6, 7, 8
+"""

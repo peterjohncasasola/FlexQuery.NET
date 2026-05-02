@@ -14,12 +14,12 @@ jobs:
 
     steps:
     - name: 📥 Checkout
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
       with:
         fetch-depth: 0
 
     - name: 🛠 Setup .NET
-      uses: actions/setup-dotnet@v3
+      uses: actions/setup-dotnet@v4
       with:
         dotnet-version: '8.0.x'
 
@@ -32,24 +32,16 @@ jobs:
     - name: 📦 Pack NuGet
       run: dotnet pack --configuration Release --no-build -o ./nupkg
 
-    - name: 📝 Extract Tag Release Notes
-      run: |
-        echo "## 🚀 Release ${{ github.ref_name }}" > notes.md
-        echo "" >> notes.md
-
-        # Extract annotated tag message
-        TAG_MESSAGE=$(git for-each-ref refs/tags/${{ github.ref_name }} --format='%(contents)')
-
-        if [ -z "$TAG_MESSAGE" ]; then
-          echo "_No release notes provided in tag._" >> notes.md
-        else
-          echo "$TAG_MESSAGE" >> notes.md
-        fi
+    - name: 📝 Generate Release Notes
+      uses: orhun/git-cliff-action@v3
+      with:
+        config: cliff.toml
+        args: --latest --tag ${{ github.ref_name }}
 
     - name: 🚀 Create GitHub Release
-      uses: softprops/action-gh-release@v1
+      uses: softprops/action-gh-release@v2
       with:
-        body_path: notes.md
+        body_path: CHANGELOG.md
         files: ./nupkg/*.nupkg
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
