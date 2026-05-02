@@ -33,10 +33,7 @@ jobs:
         run: dotnet build ${{ env.PROJECT_PATH }} --no-restore -c Release
 
       - name: Test
-        run: |
-          dotnet restore ${{ env.TEST_PATH }}
-          dotnet test ${{ env.TEST_PATH }} \
-            --no-build -c Release
+        run: dotnet test ${{ env.TEST_PATH }} -c Release
 
   publish:
     runs-on: ubuntu-latest
