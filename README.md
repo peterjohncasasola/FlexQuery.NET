@@ -1,8 +1,24 @@
-# 🚀 FlexQuery.NET
+<p align="center">
+  <img src="assets/logo.png" width="200"/>
+</p>
 
-[![NuGet Version](https://img.shields.io/nuget/v/FlexQuery.NET.svg)](https://www.nuget.org/packages/FlexQuery.NET)
-[![NuGet Downloads](https://img.shields.io/nuget/dt/FlexQuery.NET.svg)](https://www.nuget.org/packages/FlexQuery.NET)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+<h1 align="center">FlexQuery.NET</h1>
+
+<p align="center">
+  Dynamic filtering, sorting, pagination and projection for IQueryable in .NET
+</p>
+
+<p align="center">
+  <a href="https://www.nuget.org/packages/FlexQuery.NET">
+    <img src="https://img.shields.io/nuget/v/FlexQuery.NET.svg" />
+  </a>
+  <a href="https://www.nuget.org/packages/FlexQuery.NET">
+    <img src="https://img.shields.io/nuget/dt/FlexQuery.NET.svg" />
+  </a>
+  <img src="https://img.shields.io/badge/License-MIT-yellow.svg" />
+</p>
+
+---
 
 **FlexQuery.NET** is a lightweight and powerful .NET library that enables **dynamic filtering, sorting, paging, and projection** over `IQueryable` (EF Core or any LINQ provider).
 
