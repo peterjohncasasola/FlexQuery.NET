@@ -1,22 +1,12 @@
-<p align="center">
-  <img src="https://raw.githubusercontent.com/peterjohncasasola/FlexQuery.NET/main/assets/logo.png" width="180"/>
-</p>
+![FlexQuery.NET](https://raw.githubusercontent.com/peterjohncasasola/FlexQuery.NET/main/assets/logo.png)
 
-<h1 align="center">FlexQuery.NET</h1>
+# FlexQuery.NET
 
-<p align="center">
-  Dynamic filtering, sorting, pagination and projection for IQueryable in .NET
-</p>
+Dynamic filtering, sorting, pagination and projection for IQueryable in .NET
 
-<p align="center">
-  <a href="https://www.nuget.org/packages/FlexQuery.NET">
-    <img src="https://img.shields.io/nuget/v/FlexQuery.NET.svg" />
-  </a>
-  <a href="https://www.nuget.org/packages/FlexQuery.NET">
-    <img src="https://img.shields.io/nuget/dt/FlexQuery.NET.svg" />
-  </a>
-  <img src="https://img.shields.io/badge/License-MIT-yellow.svg" />
-</p>
+[![NuGet Version](https://img.shields.io/nuget/v/FlexQuery.NET.svg)](https://www.nuget.org/packages/FlexQuery.NET)
+[![NuGet Downloads](https://img.shields.io/nuget/dt/FlexQuery.NET.svg)](https://www.nuget.org/packages/FlexQuery.NET)
+![License](https://img.shields.io/badge/License-MIT-yellow.svg)
 
 ---
 
