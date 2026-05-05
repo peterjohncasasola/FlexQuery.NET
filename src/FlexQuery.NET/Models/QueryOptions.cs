@@ -1,4 +1,6 @@
 
+using FlexQuery.NET.Builders;
+
 namespace FlexQuery.NET.Models;
 
 /// <summary>
@@ -78,10 +80,16 @@ public class QueryOptions
 
     /// <summary>
     /// Generates a stable cache key for the current query configuration.
+    /// This key combines the entity type, operation name, case-sensitivity setting,
+    /// and normalized filter structure to produce a deterministic identifier.
     /// </summary>
+    /// <param name="entityType">The type of entity being queried.</param>
+    /// <param name="operation">The name of the query operation (e.g., "predicate", "projection").</param>
+    /// <returns>A string representing the cache key for this query configuration.</returns>
     public string GetCacheKey(Type entityType, string operation)
     {
-        var filterKey = Builders.FilterAnalyzer.CacheKey(Filter);
+        var normalizedFilter = FilterNormalizer.Normalize(Filter);
+        var filterKey = FilterAnalyzer.CacheKey(normalizedFilter);
         var ciKey = CaseInsensitive ? "ci" : "cs";
         return $"{operation}:{entityType.FullName}:{ciKey}:{filterKey}";
     }
@@ -89,6 +97,8 @@ public class QueryOptions
     /// <summary>
     /// Creates a shallow clone of the options with a new filter.
     /// </summary>
+    /// <param name="filter">The new filter group to apply.</param>
+    /// <returns>A new <see cref="QueryOptions"/> instance with the specified filter and all other properties copied.</returns>
     public QueryOptions CloneWithFilter(FilterGroup? filter)
     {
         return new QueryOptions

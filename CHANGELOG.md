@@ -3,6 +3,17 @@
 All notable changes to this project will be documented in this file.
 
 ---
+## [2.0.1] - 2026-05-06
+### Bug Fixes
+- Fixed `FluentFilterBuilder` nested groups to correctly set the `Logic` property on subgroups (was always defaulting to `And`). `OrGroup` now properly produces groups with `LogicOperator.Or`.
+- Fixed incorrect nesting when adding multiple top-level groups with different logical operators. Previously, mixing `AndGroup` and `OrGroup` would wrap the first group in an extra subgroup, making its filters inaccessible via `Groups[i].Filters`.
+
+### Documentation
+- Updated the Fluent Filter Builder section in README.md to reflect the v2 API (FlexQueryParameters and FlexQuery/FlexQueryAsync)
+- Added "When to Use", "When NOT to Use", and "Recommendation (v2 approach)" sections
+- Provided updated examples using the v2 API
+
+---
 ## [2.0.0] - 2026-05-05
 
 ### Breaking Changes
@@ -13,6 +24,7 @@ All notable changes to this project will be documented in this file.
 ### Added
 - **`QueryExecutionOptions`**: A new, centralized container for server-side rules, security whitelists, and validation constraints.
 - **High-Level `ApplyFlexQuery` API**: Introduced a "one-stop-shop" extension method that handles parsing, validation, and execution with a clean configuration delegate.
+- **Canonical Query Normalization**: Added a filter AST normalizer that deterministically orders equivalent conditions and removes redundant group structure before cache-key generation.
 - **`FlexQueryRequest.ToRequestQuery()`**: Improved DTO mapping for cleaner OpenAPI/Swagger integrations.
 - **Nullable TotalCount**: `QueryResult.TotalCount` is now nullable to support scenarios where counting is explicitly disabled for performance.
 
@@ -22,14 +34,6 @@ All notable changes to this project will be documented in this file.
 - **Public filter model**: `QueryOptions.Filter` now uses the public `FilterGroup` model; JQL and DSL parsers emit `FilterGroup` trees and `FilterCondition.ScopedFilter` preserves scoped collection semantics.
 - **Sort compatibility**: Introduced `SortNode` as the canonical sort model and preserved `SortOption` as a backwards-compatible alias.
 
-## [1.9.0] - 2026-05-05
-
-## [1.8.0] - 2026-05-04
-
-### Added
-- **Attribute-Based Field Control**: Declarative security via `[Filterable]`, `[Sortable]`, and `[Selectable]` attributes directly on entity models.
-- **`AttributeScanner`**: High-performance metadata discovery engine with per-type caching for zero runtime overhead.
-- **Secure-by-Default Mode**: Automatically blocks all properties of an entity for a specific operation if at least one property is explicitly whitelisted via attributes.
 
 ## [1.7.0] - 2026-05-03
 

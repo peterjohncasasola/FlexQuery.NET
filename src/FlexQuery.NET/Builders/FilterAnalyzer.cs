@@ -86,8 +86,11 @@ internal static class FilterAnalyzer
     /// <summary>
     /// Generates a stable cache key for a filter subtree.
     /// </summary>
+    /// <param name="group">The filter group node to generate a key for.</param>
+    /// <returns>A string representing the cache key for this filter subtree.</returns>
     public static string CacheKey(FilterGroupNode? group)
     {
+        group = FilterNormalizer.Normalize(group);
         if (group is null) return string.Empty;
 
         var parts = group.Children.Select(child => child switch

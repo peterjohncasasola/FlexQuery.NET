@@ -18,9 +18,19 @@ public sealed class FilterGroup
     /// <summary>Whether this group is negated.</summary>
     public bool IsNegated { get; set; }
 
+    /// <summary>
+    /// Converts a <see cref="FilterGroup"/> to a <see cref="FilterGroupNode"/> implicitly.
+    /// </summary>
+    /// <param name="group">The source filter group to convert.</param>
+    /// <returns>A <see cref="FilterGroupNode"/> representing the same filter structure as the source group.</returns>
     public static implicit operator FilterGroupNode?(FilterGroup? group)
         => group is null ? null : group.ToFilterGroupNode();
 
+    /// <summary>
+    /// Converts a <see cref="FilterGroupNode"/> to a <see cref="FilterGroup"/> implicitly.
+    /// </summary>
+    /// <param name="group">The source filter group node to convert.</param>
+    /// <returns>A <see cref="FilterGroup"/> representing the same filter structure as the source node.</returns>
     public static implicit operator FilterGroup?(FilterGroupNode? group)
         => group is null ? null : FromFilterGroupNode(group);
 

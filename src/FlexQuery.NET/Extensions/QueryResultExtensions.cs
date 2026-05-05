@@ -24,7 +24,7 @@ public static class QueryResultExtensions
 
 
     /// <summary>
-    /// Awaits a <see cref="QueryResult{TSource}"/> and projects it to <see cref="QueryResult{object}"/>.
+    /// Awaits a <see cref="QueryResult{TSource}"/> and projects it to <see cref="QueryResult{T}"/> with object items.
     /// </summary>
     public static async Task<QueryResult<object>> ToObjectResultAsync<T>(this Task<QueryResult<T>> result)
     {
@@ -33,7 +33,7 @@ public static class QueryResultExtensions
     }
 
     /// <summary>
-    /// Projects a <see cref="QueryResult{TSource}"/> to a <see cref="QueryResult{object}"/>.
+    /// Projects a <see cref="QueryResult{TSource}"/> to a <see cref="QueryResult{T}"/> with object items.
     /// </summary>
     public static QueryResult<object> ToObjectResult<T>(this QueryResult<T> result)
     {
@@ -47,7 +47,7 @@ public static class QueryResultExtensions
     }
 
     /// <summary>
-    /// Awaits a <see cref="QueryResult{TSource}"/> and projects it to <see cref="QueryResult{dynamic}"/>.
+    /// Awaits a <see cref="QueryResult{TSource}"/> and projects it to <see cref="QueryResult{T}"/> with dynamic items.
     /// </summary>
     public static async Task<QueryResult<dynamic>> ToDynamicResultAsync<T>(this Task<QueryResult<T>> result)
     {
@@ -56,7 +56,7 @@ public static class QueryResultExtensions
     }
 
     /// <summary>
-    /// Projects a <see cref="QueryResult{TSource}"/> to a <see cref="QueryResult{dynamic}"/>.
+    /// Projects a <see cref="QueryResult{TSource}"/> to a <see cref="QueryResult{T}"/> with dynamic items.
     /// </summary>
     public static QueryResult<dynamic> ToDynamicResult<T>(this QueryResult<T> result)
     {

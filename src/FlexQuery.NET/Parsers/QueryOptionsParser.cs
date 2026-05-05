@@ -403,6 +403,7 @@ public static class QueryOptionsParser
         var ast = JqlParser.Parse(query);
         options.Filter = JqlFilterConverter.ToFilterGroup(ast);
         options.Ast = ast;
+        options.Filter = Builders.FilterNormalizer.NormalizeOrder(options.Filter);
 
         return options;
     }

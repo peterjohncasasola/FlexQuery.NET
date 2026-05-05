@@ -61,7 +61,94 @@ public class CustomersController : ControllerBase
 }
 ```
 
-### 2. Advanced Usage (Recommended)
+### 2. Fluent Filter Builder
+
+Build filters with a chainable API instead of string-based syntax. This feature is tightly coupled to the v2 API and integrates directly with the `FlexQuery` pipeline.
+
+#### When to Use
+- Building dynamic filters based on user input or runtime conditions
+- When you need compile-time safety with strongly-typed builders (`FilterBuilder<T>`)
+- Creating nested filter groups with AND/OR logic
+- When you prefer a code-first approach over writing raw DSL strings
+
+#### When NOT to Use
+- For simple static filters that can be hardcoded as DSL strings
+- When performance is critical and you want to avoid the slight overhead of building the filter object tree (though negligible)
+- If you are consuming filters from external sources (e.g., stored as JSON) and only need to apply them
+
+#### Recommendation (v2 approach)
+Use the Fluent Filter Builder to construct your filter, serialize it to JSON, and assign it to `FlexQueryParameters.Filter`. Then execute the query using the unified `FlexQuery` pipeline.
+
+##### Example: Basic filtering
+```csharp
+using FlexQuery.NET.Builders;
+using FlexQuery.NET.Models;
+using System.Text.Json;
+
+// Build filter using fluent API
+var filterBuilder = new FilterBuilder()
+    .Field("Age").GreaterThanOrEqual(18)
+    .And.Field("Country").Eq("USA");
+
+// Serialize to JSON
+var filterJson = JsonSerializer.Serialize(filterBuilder.Build());
+
+// Create query parameters
+var parameters = new FlexQueryParameters
+{
+    Filter = filterJson,
+    Sort = "Name:asc",
+    Page = 1,
+    PageSize = 20
+};
+
+// Execute query
+var result = myQueryable.FlexQuery(parameters);
+```
+
+##### Example: Strongly-typed builder
+```csharp
+using FlexQuery.NET.Builders;
+using FlexQuery.NET.Models;
+using System.Text.Json;
+
+var filterBuilder = new FilterBuilder<Product>()
+    .Field(p => p.Price).Between(10, 100)
+    .Or.Field(p => p.Name).Contains("Widget");
+
+var filterJson = JsonSerializer.Serialize(filterBuilder.Build());
+
+var parameters = new FlexQueryParameters { Filter = filterJson };
+var result = products.FlexQuery(parameters);
+```
+
+##### Example: Complex nested groups
+```csharp
+using FlexQuery.NET.Builders;
+using FlexQuery.NET.Models;
+using System.Text.Json;
+
+var filterBuilder = new FilterBuilder()
+    .AndGroup(gb =>
+    {
+        gb.Field("OrderDate").GreaterThanOrEqual(DateTime.UtcNow.AddMonths(-1));
+        gb.Field("Status").Eq("Shipped");
+    })
+    .OrGroup(gb =>
+    {
+        gb.Field("TotalAmount").GreaterThan(1000);
+        gb.Field("IsPriority").Eq(true);
+    });
+
+var filterJson = JsonSerializer.Serialize(filterBuilder.Build());
+
+var parameters = new FlexQueryParameters { Filter = filterJson };
+var result = orders.FlexQuery(parameters);
+```
+
+> **Note**: The Fluent Filter Builder is fully supported in v2 and integrates seamlessly with the `FlexQuery` pipeline. There are no plans to deprecate this feature.
+
+### 3. Advanced Usage (Recommended)
 
 > **💡 Tip:** Use the `FlexQuery` extension for a "one-stop-shop" that handles parsing, validation, and execution with built-in security.
 
@@ -171,6 +258,12 @@ var result = await _context.Users
 ### ✔ Optimized Performance
 
 Automatically handles "Filtered Includes" and dynamic projections in **a single optimized `Select()` statement**, reducing database round-trips.
+
+---
+
+### ✔ Canonical Query Normalization
+
+Equivalent filter expressions are normalized into a deterministic AST and stable cache key before expression caching, so queries like `name = John AND age > 18` and `age > 18 AND name = John` hit the same cached expression.
 
 ---
 
