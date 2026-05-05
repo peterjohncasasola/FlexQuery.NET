@@ -8,7 +8,7 @@ namespace FlexQuery.NET.AspNetCore.Filters;
 
 /// <summary>
 /// An action filter that automatically applies field-level security settings from 
-/// <see cref="FieldAccessAttribute"/> to <see cref="QueryOptions"/> parameters.
+/// <see cref="FieldAccessAttribute"/> to <see cref="QueryExecutionOptions"/> parameters.
 /// </summary>
 public class FieldAccessFilter : IActionFilter
 {
@@ -24,20 +24,20 @@ public class FieldAccessFilter : IActionFilter
 
         if (attribute == null) return;
 
-        // 2. Find QueryOptions in ActionArguments
-        var optionsEntry = context.ActionArguments.Values.OfType<QueryOptions>().FirstOrDefault();
-        if (optionsEntry == null) return;
+        // 2. Find QueryExecutionOptions in ActionArguments
+        var execOptions = context.ActionArguments.Values.OfType<QueryExecutionOptions>().FirstOrDefault();
+        if (execOptions == null) return;
 
         // 3. Apply settings
-        optionsEntry.AllowedFields = Merge(attribute.Allowed, optionsEntry.AllowedFields);
-        optionsEntry.BlockedFields = Merge(attribute.Blocked, optionsEntry.BlockedFields);
-        optionsEntry.FilterableFields = Merge(attribute.Filterable, optionsEntry.FilterableFields);
-        optionsEntry.SortableFields = Merge(attribute.Sortable, optionsEntry.SortableFields);
-        optionsEntry.SelectableFields = Merge(attribute.Selectable, optionsEntry.SelectableFields);
+        execOptions.AllowedFields = Merge(attribute.Allowed, execOptions.AllowedFields);
+        execOptions.BlockedFields = Merge(attribute.Blocked, execOptions.BlockedFields);
+        execOptions.FilterableFields = Merge(attribute.Filterable, execOptions.FilterableFields);
+        execOptions.SortableFields = Merge(attribute.Sortable, execOptions.SortableFields);
+        execOptions.SelectableFields = Merge(attribute.Selectable, execOptions.SelectableFields);
 
         if (attribute.MaxDepth > 0)
         {
-            optionsEntry.MaxFieldDepth = attribute.MaxDepth;
+            execOptions.MaxFieldDepth = attribute.MaxDepth;
         }
     }
 

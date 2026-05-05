@@ -7,7 +7,7 @@ namespace FlexQuery.NET.Models;
 public sealed class QueryResult<T>
 {
     /// <summary>Total count of matching records (before paging).</summary>
-    public int TotalCount { get; init; }
+    public int? TotalCount { get; init; }
 
     /// <summary>Current page number.</summary>
     public int Page { get; init; }
@@ -16,7 +16,9 @@ public sealed class QueryResult<T>
     public int PageSize { get; init; }
 
     /// <summary>Total number of pages.</summary>
-    public int TotalPages => PageSize > 0 ? (int)Math.Ceiling((double)TotalCount / PageSize) : 0;
+    public int TotalPages => (PageSize > 0 && TotalCount.HasValue) 
+        ? (int)Math.Ceiling((double)TotalCount.Value / PageSize) 
+        : 0;
 
     /// <summary>Whether a next page exists.</summary>
     public bool HasNextPage => Page < TotalPages;

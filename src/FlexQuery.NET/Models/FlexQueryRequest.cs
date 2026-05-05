@@ -1,9 +1,13 @@
+using System.ComponentModel;
+
 namespace FlexQuery.NET.Models;
 
 /// <summary>
 /// A framework-agnostic DTO for dynamic queries. 
 /// Automatically documented in Swagger UI when XML comments are enabled.
 /// </summary>
+[Obsolete("FlexQueryRequest is deprecated. Use FlexQueryParameters and bind it via [FromQuery].")]
+[EditorBrowsable(EditorBrowsableState.Never)]
 public class FlexQueryRequest
 {
     /// <summary>

@@ -3,6 +3,34 @@
 All notable changes to this project will be documented in this file.
 
 ---
+## [2.0.0] - 2026-05-05
+
+### Breaking Changes
+- **Dual-Model Architecture**: Successfully decoupled query input (`QueryOptions`) from server-side execution policy (`QueryExecutionOptions`).
+- **Security Logic Migration**: Migrated all security configuration properties (`AllowedFields`, `BlockedFields`, `FilterableFields`, `SortableFields`, `SelectableFields`, `MaxFieldDepth`) out of `QueryOptions` and into the dedicated `QueryExecutionOptions` class.
+- **API Signatures**: Updated `ApplyFlexQuery` and `ApplyFlexQueryAsync` to require or optionally accept `QueryExecutionOptions`. The redundant `ApplyValidatedQueryOptions` has been removed.
+
+### Added
+- **`QueryExecutionOptions`**: A new, centralized container for server-side rules, security whitelists, and validation constraints.
+- **High-Level `ApplyFlexQuery` API**: Introduced a "one-stop-shop" extension method that handles parsing, validation, and execution with a clean configuration delegate.
+- **`FlexQueryRequest.ToRequestQuery()`**: Improved DTO mapping for cleaner OpenAPI/Swagger integrations.
+- **Nullable TotalCount**: `QueryResult.TotalCount` is now nullable to support scenarios where counting is explicitly disabled for performance.
+
+### Changed
+- **AspNetCore Integration**: Updated `FieldAccessFilter` to inject security rules into the new `QueryExecutionOptions` model.
+- **Validation Pipeline**: Refactored `FieldAccessValidator` to consume execution policies, ensuring strict separation between user input and server rules.
+- **Public filter model**: `QueryOptions.Filter` now uses the public `FilterGroup` model; JQL and DSL parsers emit `FilterGroup` trees and `FilterCondition.ScopedFilter` preserves scoped collection semantics.
+- **Sort compatibility**: Introduced `SortNode` as the canonical sort model and preserved `SortOption` as a backwards-compatible alias.
+
+## [1.9.0] - 2026-05-05
+
+## [1.8.0] - 2026-05-04
+
+### Added
+- **Attribute-Based Field Control**: Declarative security via `[Filterable]`, `[Sortable]`, and `[Selectable]` attributes directly on entity models.
+- **`AttributeScanner`**: High-performance metadata discovery engine with per-type caching for zero runtime overhead.
+- **Secure-by-Default Mode**: Automatically blocks all properties of an entity for a specific operation if at least one property is explicitly whitelisted via attributes.
+
 ## [1.7.0] - 2026-05-03
 
 ### Added

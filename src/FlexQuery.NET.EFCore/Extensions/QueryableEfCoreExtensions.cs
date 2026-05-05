@@ -1,6 +1,10 @@
 using FlexQuery.NET.Builders;
+using FlexQuery.NET.Extensions;
 using FlexQuery.NET.Models;
+using FlexQuery.NET.Parsers;
 using Microsoft.EntityFrameworkCore;
+using System.ComponentModel;
+using System.Threading;
 
 namespace FlexQuery.NET.EFCore;
 
@@ -12,6 +16,9 @@ public static class QueryableEfCoreExtensions
     /// <summary>
     /// Async variant of <c>ToQueryResult</c> for EF Core query providers.
     /// </summary>
+    [Obsolete("ToQueryResultAsync is deprecated and will be removed in v3. " +
+    "Use FlexQuery(...) for the unified query pipeline (filtering, sorting,paging and filterincludes).")]
+    [EditorBrowsable(EditorBrowsableState.Never)]
     public static async Task<QueryResult<T>> ToQueryResultAsync<T>(
         this IQueryable<T> query,
         QueryOptions options,
@@ -23,23 +30,20 @@ public static class QueryableEfCoreExtensions
         var filtered = QueryBuilder.ApplyFilter(query, options);
         filtered = QueryBuilder.ApplySort(filtered, options);
 
-        var total = await filtered.CountAsync(cancellationToken);
+        var total = options.IncludeCount == true ? await filtered.CountAsync(cancellationToken) : (int?)null;
 
         var paged = QueryBuilder.ApplyPaging(filtered, options);
         var data = await paged.ApplyFilteredIncludes(options).ToListAsync(cancellationToken);
 
-        return new QueryResult<T>
-        {
-            TotalCount = total,
-            Page = options.Paging.Page,
-            PageSize = options.Paging.PageSize,
-            Data = data
-        };
+        return options.BuildQueryResult(data, total);
     }
 
     /// <summary>
     /// Async projected result variant using options-driven selection.
     /// </summary>
+    [Obsolete("ToProjectedQueryResultAsync is deprecated and will be removed in v3. " +
+    "Use FlexQuery(...) for the unified query pipeline (filtering, sorting, projection, paging and filterincludes).")]
+    [EditorBrowsable(EditorBrowsableState.Never)]
     public static async Task<QueryResult<object>> ToProjectedQueryResultAsync<T>(
         this IQueryable<T> query,
         QueryOptions options,
@@ -51,7 +55,7 @@ public static class QueryableEfCoreExtensions
         var filtered = QueryBuilder.ApplyFilter(query, options);
         filtered = QueryBuilder.ApplySort(filtered, options);
 
-        var total = await filtered.CountAsync(cancellationToken);
+        var total = options.IncludeCount == true ? await filtered.CountAsync(cancellationToken) : (int?)null;
 
         var paged = QueryBuilder.ApplyPaging(filtered, options);
         // Note: ApplySelect already incorporates FilteredIncludes filters into the projection tree,
@@ -59,13 +63,7 @@ public static class QueryableEfCoreExtensions
         // if the projection engine behavior changes.
         var data = await paged.ApplyFilteredIncludes(options).ApplySelect(options).ToListAsync(cancellationToken);
 
-        return new QueryResult<object>
-        {
-            TotalCount = total,
-            Page = options.Paging.Page,
-            PageSize = options.Paging.PageSize,
-            Data = data
-        };
+        return options.BuildQueryResult(data, total);
     }
 
     // ── Include Pipeline ─────────────────────────────────────────────────
@@ -101,4 +99,66 @@ public static class QueryableEfCoreExtensions
         if (options?.FilteredIncludes == null || options.FilteredIncludes.Count == 0) return query;
         return IncludeBuilder.Apply(query, options);
     }
+
+    /// <summary>
+    /// Parses a <see cref="FlexQueryParameters"/>, validates it against server rules,
+    /// and applies it to the query to return a paged result set asynchronously.
+    /// </summary>
+    /// <param name="query">The source queryable.</param>
+    /// <param name="parameters">The OpenAPI-friendly DTO containing user parameters.</param>
+    /// <param name="configure">Optional configuration for server-side security and execution rules.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    public static async Task<QueryResult<object>> FlexQueryAsync<T>(
+        this IQueryable<T> query,
+        FlexQueryParameters parameters,
+        Action<QueryExecutionOptions>? configure = null,
+        CancellationToken cancellationToken = default)
+        where T : class
+    {
+        var exec = new QueryExecutionOptions();
+        configure?.Invoke(exec);
+
+        var options = QueryOptionsParser.Parse(parameters);
+
+        QueryOptionsEfCoreExtensions.EnsureEfCoreOperatorsRegistered();
+
+        options.ValidateOrThrow<T>(exec);
+
+        var hasProjection = options.HasProjection();
+
+        return await query.ApplyFlexQueryAsync(options, hasProjection, cancellationToken);
+
+    }
+
+    private static async Task<QueryResult<object>> ApplyFlexQueryAsync<T>(this IQueryable<T> query, 
+        QueryOptions options, bool hasProjection, CancellationToken cancellationToken = default)
+        where T : class
+    {
+        QueryOptionsEfCoreExtensions.EnsureEfCoreOperatorsRegistered();
+
+        var filtered = QueryBuilder.ApplyFilter(query, options);
+        filtered = QueryBuilder.ApplySort(filtered, options);
+
+        var total = options.IncludeCount == true ? await filtered.CountAsync(cancellationToken) : (int?)null;
+
+        filtered = QueryBuilder.ApplyPaging(filtered, options);
+
+        // Note: ApplySelect already incorporates FilteredIncludes filters into the projection tree,
+        // so calling ApplyFilteredIncludes here is technically redundant but ensures consistency
+        // if the projection engine behavior changes.
+        filtered = filtered.ApplyFilteredIncludes(options);
+
+        if (hasProjection)
+        {
+            var projectedData = await filtered.ApplySelect(options).ToListAsync(cancellationToken);
+            return options.BuildQueryResult(projectedData, total); // QueryResult<object>
+        }
+
+        
+        var filteredData = await filtered.ToListAsync(cancellationToken);
+
+        //convert from QueryResult<T> to QueryResult<object> by treating each T as an object (no projection)
+        return options.BuildQueryResult(filteredData, total).ToObjectResult();
+    }
+
 }

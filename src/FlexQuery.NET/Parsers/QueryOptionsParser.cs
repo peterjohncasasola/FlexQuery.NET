@@ -1,10 +1,11 @@
-using System.Text.Json;
-using System.Text.RegularExpressions;
 using FlexQuery.NET.Constants;
 using FlexQuery.NET.Models;
 using FlexQuery.NET.Parsers.Dsl;
 using FlexQuery.NET.Parsers.Jql;
 using Microsoft.Extensions.Primitives;
+using System.ComponentModel;
+using System.Text.Json;
+using System.Text.RegularExpressions;
 
 namespace FlexQuery.NET.Parsers;
 
@@ -39,6 +40,8 @@ public static class QueryOptionsParser
     /// <summary>
     /// Parses a strongly typed <see cref="QueryRequest"/> into <see cref="QueryOptions"/>.
     /// </summary>
+    [Obsolete("Use Parse(FlexQueryParameters) instead for better separation of concerns and flexibility.")]
+    [EditorBrowsable(EditorBrowsableState.Never)]
     public static QueryOptions Parse(QueryRequest request)
     {
         ArgumentNullException.ThrowIfNull(request);
@@ -58,6 +61,45 @@ public static class QueryOptionsParser
         if (request.PageSize.HasValue) dict["pageSize"] = request.PageSize.Value.ToString();
         if (request.IncludeCount.HasValue) dict["includeCount"] = request.IncludeCount.Value.ToString();
         if (request.Distinct.HasValue) dict["distinct"] = request.Distinct.Value.ToString();
+
+        return ParseDictionary(dict);
+    }
+    /// <summary>
+    /// Parses a strongly typed <see cref="FlexQueryParameters"/> into <see cref="QueryOptions"/>.
+    /// </summary>
+    public static QueryOptions Parse(FlexQueryParameters parameters)
+    {
+        ArgumentNullException.ThrowIfNull(parameters);
+
+        if (parameters == null) return new QueryOptions();
+
+        var dict = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+
+        if (!string.IsNullOrWhiteSpace(parameters.Query))
+            dict["query"] = parameters.Query;
+        if (!string.IsNullOrWhiteSpace(parameters.Filter))
+            dict["filter"] = parameters.Filter;
+        if (!string.IsNullOrWhiteSpace(parameters.Sort))
+            dict["sort"] = parameters.Sort;
+        if (!string.IsNullOrWhiteSpace(parameters.Select))
+            dict["select"] = parameters.Select;
+        if (!string.IsNullOrWhiteSpace(parameters.Includes))
+            dict["includes"] = parameters.Includes; // Assuming 'includes' maps correctly
+        if (!string.IsNullOrWhiteSpace(parameters.GroupBy))
+            dict["groupBy"] = parameters.GroupBy;
+        if (!string.IsNullOrWhiteSpace(parameters.Having))
+            dict["having"] = parameters.Having;
+        if (!string.IsNullOrWhiteSpace(parameters.Mode))
+            dict["mode"] = parameters.Mode;
+
+        if (parameters.Page.HasValue)
+            dict["page"] = parameters.Page.Value.ToString();
+        if (parameters.PageSize.HasValue)
+            dict["pageSize"] = parameters.PageSize.Value.ToString();
+        if (parameters.IncludeCount.HasValue)
+            dict["includeCount"] = parameters.IncludeCount.Value.ToString();
+        if (parameters.Distinct.HasValue)
+            dict["distinct"] = parameters.Distinct.Value.ToString();
 
         return ParseDictionary(dict);
     }
@@ -148,12 +190,12 @@ public static class QueryOptionsParser
 
         // Collect indexed filters: filter[0].field, filter[0].operator, filter[0].value
         var filterMap = CollectIndexed(d, "filter");
-        var filters = new List<FilterCondition>();
+        var children = new List<FilterNode>();
         foreach (var (_, fields) in filterMap.OrderBy(x => x.Key))
         {
             var field = fields.GetValueOrDefault("field");
             if (string.IsNullOrWhiteSpace(field)) continue;
-            filters.Add(new FilterCondition
+            children.Add(new FilterConditionNode
             {
                 Field    = field,
                 Operator = FilterOperators.Normalize(fields.GetValueOrDefault("operator", "eq")),
@@ -161,8 +203,8 @@ public static class QueryOptionsParser
             });
         }
 
-        if (filters.Count > 0)
-            options.Filter = new FilterGroup { Logic = logic, Filters = filters };
+        if (children.Count > 0)
+            options.Filter = new FilterGroupNode { Logic = logic, Children = children };
 
         // Collect indexed sorts: sort[0].field, sort[0].desc
         var sortMap = CollectIndexed(d, "sort");
@@ -170,7 +212,7 @@ public static class QueryOptionsParser
         {
             var field = fields.GetValueOrDefault("field");
             if (string.IsNullOrWhiteSpace(field)) continue;
-            options.Sort.Add(new SortOption
+            options.Sort.Add(new SortNode
             {
                 Field      = field,
                 Descending = ParseBool(fields.GetValueOrDefault("desc"))
@@ -179,6 +221,10 @@ public static class QueryOptionsParser
         
         if (d.TryGetValue("sort", out var sortRaw))
             options.Sort.AddRange(ParseSort(sortRaw));
+
+        // Metadata
+        options.IncludeCount = ParseBool(d.GetValueOrDefault("includeCount"), true);
+        options.Distinct     = ParseBool(d.GetValueOrDefault("distinct"));
 
         return options;
     }
@@ -286,9 +332,9 @@ public static class QueryOptionsParser
         return options;
     }
 
-    private static FilterGroup ParseJsonGroup(JsonElement root)
+    private static FilterGroupNode ParseJsonGroup(JsonElement root)
     {
-        var group = new FilterGroup();
+        var group = new FilterGroupNode();
 
         if (root.TryGetProperty("logic", out var logicEl))
             group.Logic = ParseLogic(logicEl.GetString());
@@ -301,7 +347,7 @@ public static class QueryOptionsParser
                 // Nested group?
                 if (item.TryGetProperty("logic", out _) || item.TryGetProperty("filters", out _))
                 {
-                    group.Groups.Add(ParseJsonGroup(item));
+                    group.Children.Add(ParseJsonGroup(item));
                     continue;
                 }
 
@@ -312,7 +358,7 @@ public static class QueryOptionsParser
                     : null;
 
                 if (!string.IsNullOrWhiteSpace(field))
-                    group.Filters.Add(new FilterCondition
+                    group.Children.Add(new FilterConditionNode
                     {
                         Field    = field,
                         Operator = FilterOperators.Normalize(op),
@@ -397,8 +443,10 @@ public static class QueryOptionsParser
     private static int ParseInt(Dictionary<string, string> d, string key, int defaultValue)
         => d.TryGetValue(key, out var raw) && int.TryParse(raw, out var val) ? val : defaultValue;
 
-    private static bool ParseBool(string? raw)
-        => raw is not null && (raw.Equals("true", StringComparison.OrdinalIgnoreCase) || raw == "1");
+    private static bool ParseBool(string? raw, bool defaultValue = false)
+        => raw is not null 
+            ? (raw.Equals("true", StringComparison.OrdinalIgnoreCase) || raw == "1")
+            : defaultValue;
 
     private static LogicOperator ParseLogic(string? raw)
         => string.Equals(raw?.Trim(), "or", StringComparison.OrdinalIgnoreCase)
@@ -411,16 +459,16 @@ public static class QueryOptionsParser
             : raw.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
                  .ToList();
 
-    private static List<SortOption> ParseGenericSorts(Dictionary<string, string> d)
+    private static List<SortNode> ParseGenericSorts(Dictionary<string, string> d)
     {
-        var result = new List<SortOption>();
+        var result = new List<SortNode>();
 
         var sortMap = CollectIndexed(d, "sort");
         foreach (var (_, fields) in sortMap.OrderBy(x => x.Key))
         {
             var field = fields.GetValueOrDefault("field");
             if (string.IsNullOrWhiteSpace(field)) continue;
-            result.Add(new SortOption
+            result.Add(new SortNode
             {
                 Field = field,
                 Descending = ParseBool(fields.GetValueOrDefault("desc"))
@@ -433,9 +481,9 @@ public static class QueryOptionsParser
         return result;
     }
 
-    internal static List<SortOption> ParseSort(string? sortRaw)
+    internal static List<SortNode> ParseSort(string? sortRaw)
     {
-        var result = new List<SortOption>();
+        var result = new List<SortNode>();
         if (string.IsNullOrWhiteSpace(sortRaw)) return result;
 
         foreach (var item in sortRaw.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
@@ -460,7 +508,7 @@ public static class QueryOptionsParser
                     ? aggregateMatch.Groups["field"].Value
                     : null;
 
-                result.Add(new SortOption
+                result.Add(new SortNode
                 {
                     Field = collection,
                     Descending = isDesc,
@@ -470,7 +518,7 @@ public static class QueryOptionsParser
                 continue;
             }
 
-            result.Add(new SortOption
+            result.Add(new SortNode
             {
                 Field = field,
                 Descending = isDesc
