@@ -35,6 +35,10 @@ public static class QueryOptionsParser
         @"^(?<collection>[A-Za-z_][A-Za-z0-9_\.]*)\.(?<fn>sum|count|max|min|avg)\((?<field>[A-Za-z_][A-Za-z0-9_\.]*)?\)$",
         RegexOptions.Compiled | RegexOptions.IgnoreCase);
 
+    private static readonly Regex JoinPattern = new(
+        @"join\((?<target>[^\s,\)]+)(?:\s+as\s+(?<alias>[A-Za-z_][A-Za-z0-9_]*))?(?:\s*,\s*(?<type>[a-zA-Z]+))?\)\.on\((?<left>[^=\s]+)\s*=\s*(?<right>[^\)]+)\)",
+        RegexOptions.Compiled | RegexOptions.IgnoreCase);
+
     // ── Public entry point ───────────────────────────────────────────────
 
     /// <summary>
@@ -532,5 +536,33 @@ public static class QueryOptionsParser
         }
 
         return result;
+    }
+
+    internal static List<JoinOption> ParseJoins(string? rawJoin)
+    {
+        var joins = new List<JoinOption>();
+        if (string.IsNullOrWhiteSpace(rawJoin)) return joins;
+
+        var matches = JoinPattern.Matches(rawJoin);
+        foreach (Match match in matches)
+        {
+            var typeStr = match.Groups["type"].Value;
+            var joinType = string.Equals(typeStr, "left", StringComparison.OrdinalIgnoreCase)
+                ? JoinType.Left
+                : JoinType.Inner;
+
+            var alias = match.Groups["alias"].Value.Trim();
+            if (string.IsNullOrEmpty(alias)) alias = null;
+
+            joins.Add(new JoinOption
+            {
+                Target = match.Groups["target"].Value.Trim(),
+                LeftKey = match.Groups["left"].Value.Trim(),
+                RightKey = match.Groups["right"].Value.Trim(),
+                Alias = alias,
+                Type = joinType
+            });
+        }
+        return joins;
     }
 }

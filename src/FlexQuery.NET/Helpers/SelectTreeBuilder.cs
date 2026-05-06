@@ -23,7 +23,8 @@ internal static class SelectTreeBuilder
         {
             foreach (var path in options.Select)
             {
-                MergePath(root, path, includeAllScalarsAtLeaf: false);
+                var expandedPath = options.ExpandFieldAlias(path);
+                MergePath(root, expandedPath, includeAllScalarsAtLeaf: false);
             }
         }
 

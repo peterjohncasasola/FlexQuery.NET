@@ -56,6 +56,66 @@ public static class QueryableExtensions
         => QueryBuilder.ApplySelect(query, options);
 
     /// <summary>
+    /// Applies an explicit join operation dynamically.
+    /// </summary>
+    public static IQueryable<JoinResult<TOuter, TInner>> ApplyJoins<TOuter, TInner>(
+        this IQueryable<TOuter> query,
+        IQueryable<TInner> targetQuery,
+        QueryOptions options,
+        string targetName)
+    {
+        var joinOption = options.Joins.FirstOrDefault(j => string.Equals(j.Target, targetName, StringComparison.OrdinalIgnoreCase));
+        if (joinOption == null)
+        {
+            throw new ArgumentException($"No join option found for target: {targetName}");
+        }
+
+        // Expand the LeftKey BEFORE shifting aliases (it refers to existing aliases/root)
+        var expandedLeftKey = options.ExpandFieldAlias(joinOption.LeftKey);
+
+        // Strip alias from RightKey if it matches the current join's alias
+        var expandedRightKey = joinOption.RightKey;
+        if (!string.IsNullOrWhiteSpace(joinOption.Alias) && expandedRightKey.StartsWith(joinOption.Alias + ".", StringComparison.OrdinalIgnoreCase))
+        {
+            expandedRightKey = expandedRightKey.Substring(joinOption.Alias.Length + 1);
+        }
+
+        // 1. Shift all existing tracked aliases one level deeper (e.g. Right -> Left.Right)
+        foreach (var key in options.AliasPaths.Keys.ToList())
+        {
+            options.AliasPaths[key] = "Left." + options.AliasPaths[key];
+        }
+
+        // 2. Track the new join target as "Right"
+        if (!string.IsNullOrWhiteSpace(joinOption.Alias))
+        {
+            options.AliasPaths[joinOption.Alias] = "Right";
+        }
+
+        // 3. Shift the implicit root alias path
+        if (string.IsNullOrEmpty(options.RootAliasPath))
+        {
+            options.RootAliasPath = "Left";
+        }
+        else
+        {
+            options.RootAliasPath = "Left." + options.RootAliasPath;
+        }
+
+        // Create a temporary join option with expanded keys for the builder
+        var effectiveJoinOption = new JoinOption
+        {
+            Target = joinOption.Target,
+            Alias = joinOption.Alias,
+            Type = joinOption.Type,
+            LeftKey = expandedLeftKey,
+            RightKey = expandedRightKey
+        };
+
+        return JoinBuilder.ApplyJoins(query, targetQuery, effectiveJoinOption);
+    }
+
+    /// <summary>
     /// Executes a query like <see cref="ToQueryResult{T}"/>, but returns projected rows.
     /// Uses <paramref name="options"/>.Select (and includes/JSON select if present) to shape the result.
     /// </summary>

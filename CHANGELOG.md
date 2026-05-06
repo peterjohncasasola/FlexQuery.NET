@@ -3,6 +3,22 @@
 All notable changes to this project will be documented in this file.
 
 ---
+
+## [2.2.0] - 2026-05-07
+
+### Added
+- **`Payment` Test Model**: Added `Payment` entity (`OrderId`, `Amount`, `Method`) to the test project to support multi-join and cross-clause alias scenarios.
+- **Expanded Join Test Suite**: Grew `JoinTests` from 4 to 12 comprehensive test cases.
+- **Explicit Join Aliasing**: Added support for the `as` keyword in joins (e.g., `join(orders as o)`).
+- **Cross-Clause Alias Expansion**: Aliases defined in joins can now be used in `filter`, `sort`, and `select` parameters.
+- **Nested Alias Propagation**: Sequential joins now correctly handle alias mapping across nested `JoinResult<TOuter, TInner>` structures.
+- **Join Key Resolution**: Explicit joins now support aliased property paths in `.on()` clauses.
+- **Explicit Joins**: Added `join` parameter support in queries.
+- **`JoinOption` & `JoinResult`**: New models defining the properties and results of a join.
+- **`JoinBuilder`**: Expression tree builder that dynamically applies `IQueryable.Join`.
+- **`ApplyJoins` Extension**: Fluid extension to execute explicit joins between queryables.
+
+
 ## [2.1.0] - 2026-05-07
 
 ### Added
@@ -40,8 +56,8 @@ All notable changes to this project will be documented in this file.
 - **Parameter Key Mismatch**: Resolved a bug where `Includes` and `GroupBy` properties were ignored by the parser due to case-sensitivity and key naming mismatches.
 - **Filter Negation**: Fixed `FilterGroup` conversion logic to correctly propagate the `IsNegated` flag to the expression builder.
 - **Field Access Validation**: Hardened the `FieldAccessValidator` to correctly validate nested property paths against depth limits and whitelists.
-(resolving ambiguous `Normalize()` method references).
-- Fixed `QueryOptions` cache key string formatting errors (updated `Take` to `Top` and `OrderBy` to a properly mapped `Sort` value).
+- **Ambiguous Normalize()**: Resolved ambiguous `Normalize()` method references in builder logic.
+- **Cache Key Formatting**: Fixed `QueryOptions` cache key string formatting errors.
 
 ### Documentation
 - **Comprehensive v2 Refactor**: Reorganized all documentation into a versioned structure (`docs/v1` and `docs/guide` for v2).

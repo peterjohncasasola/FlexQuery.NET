@@ -35,6 +35,44 @@ public class QueryOptions
     /// <summary>Aggregate projection expressions (sum, count, avg).</summary>
     public List<AggregateModel> Aggregates { get; set; } = new();
 
+    /// <summary>Explicit SQL-style JOIN operations.</summary>
+    public List<JoinOption> Joins { get; set; } = new();
+
+    // --- Aliasing ---
+
+    /// <summary>
+    /// Tracks the property path (e.g. Left.Left) pointing to the root entity 
+    /// after one or more JoinResult wraps.
+    /// </summary>
+    public string RootAliasPath { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Tracks property paths for each explicitly defined join alias.
+    /// </summary>
+    public Dictionary<string, string> AliasPaths { get; } = new(StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>
+    /// Expands a raw field (e.g. "p.amount" or "name") into its full JoinResult path
+    /// (e.g. "Left.Right.amount" or "Left.Left.name") if alias routing is active.
+    /// </summary>
+    public string ExpandFieldAlias(string field)
+    {
+        if (string.IsNullOrWhiteSpace(field)) return field;
+
+        var parts = field.Split('.', 2);
+        if (parts.Length == 2 && AliasPaths.TryGetValue(parts[0], out var aliasPath))
+        {
+            return $"{aliasPath}.{parts[1]}";
+        }
+        
+        if (!string.IsNullOrEmpty(RootAliasPath))
+        {
+            return $"{RootAliasPath}.{field}";
+        }
+
+        return field;
+    }
+
     /// <summary>HAVING condition against aggregate projections.</summary>
     public HavingCondition? Having { get; set; }
 
@@ -101,7 +139,7 @@ public class QueryOptions
     /// <returns>A new <see cref="QueryOptions"/> instance with the specified filter and all other properties copied.</returns>
     public QueryOptions CloneWithFilter(FilterGroup? filter)
     {
-        return new QueryOptions
+        var clone = new QueryOptions
         {
             Filter = filter,
             CaseInsensitive = CaseInsensitive,
@@ -120,7 +158,15 @@ public class QueryOptions
             Top = Top,
             IncludeCount = IncludeCount,
             Ast = Ast,
-            SelectTree = SelectTree
+            SelectTree = SelectTree,
+            RootAliasPath = RootAliasPath
         };
+
+        foreach (var kvp in AliasPaths)
+        {
+            clone.AliasPaths[kvp.Key] = kvp.Value;
+        }
+
+        return clone;
     }
 }

@@ -37,6 +37,14 @@ public class OrderItem
     public decimal Price { get; set; }
 }
 
+public class Payment
+{
+    /// <summary>FK to Order.Id</summary>
+    public int OrderId { get; set; }
+    public decimal Amount { get; set; }
+    public string Method { get; set; } = string.Empty;
+}
+
 public enum Status
 {
     Active,

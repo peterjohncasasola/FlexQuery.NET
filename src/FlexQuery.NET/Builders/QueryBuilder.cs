@@ -32,10 +32,10 @@ public static class QueryBuilder
 
     /// <summary>Applies ordered sorting from <paramref name="options"/> to the query.</summary>
     public static IQueryable<T> ApplySort<T>(IQueryable<T> query, QueryOptions options)
-        => ApplySort(query, options.Sort);
+        => ApplySort(query, options.Sort, options);
 
     /// <summary>Applies ordered sorting from <paramref name="sorts"/> to the query.</summary>
-    public static IQueryable<T> ApplySort<T>(IQueryable<T> query, List<SortNode>? sorts)
+    public static IQueryable<T> ApplySort<T>(IQueryable<T> query, List<SortNode>? sorts, QueryOptions? options = null)
     {
         if (sorts is null || sorts.Count == 0) return query;
 
@@ -54,7 +54,8 @@ public static class QueryBuilder
             }
             else
             {
-                if (!BuildPropertyExpression(parameter, sort.Field, out keyExpression))
+                var expandedField = options?.ExpandFieldAlias(sort.Field) ?? sort.Field;
+                if (!BuildPropertyExpression(parameter, expandedField, out keyExpression))
                     continue;
             }
 

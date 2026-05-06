@@ -113,8 +113,13 @@ public static class ExpressionBuilder
         if (string.IsNullOrWhiteSpace(condition.Field)) return null;
         var op = FilterOperators.Normalize(condition.Operator);
         if (!OperatorRegistry.IsAllowed(op)) return null;
+        
+        var expandedField = options.ExpandFieldAlias(condition.Field);
+
+        // Security check using original field name, not expanded JoinResult path
         if (!FieldRegistry.IsAllowed(entityType, condition.Field)) return null;
-        if (!SafePropertyResolver.TryResolveChain(entityType, condition.Field, out var chain)) return null;
+
+        if (!SafePropertyResolver.TryResolveChain(entityType, expandedField, out var chain)) return null;
 
         // ── Scoped collection filter (orders.any(...) / orders[...]) ──────────
         // When ScopedFilter is set, the inner FilterGroupNode is applied to each
