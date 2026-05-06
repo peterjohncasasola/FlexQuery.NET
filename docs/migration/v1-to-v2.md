@@ -9,16 +9,58 @@ FlexQuery.NET v2 is a major refactor focused on **architectural hardening, secur
 ### 1. Separation of Concerns
 In v1, security rules (like `AllowedFields`) were part of the query model. In v2, these are strictly moved to `QueryExecutionOptions` (trusted server rules).
 
-### 2. Renamed DTOs
+### 2. Renamed DTOs & Types
 - `QueryRequest` → **Deprecated** (Use `FlexQueryParameters`)
 - `FlexQueryRequest` → **Deprecated** (Use `FlexQueryParameters`)
+- `SortOption` → **`SortNode`** (Aligned with the new AST-based architecture)
 
 ### 3. Unified Pipeline
 Individual extension methods like `ApplyValidatedQueryOptions`, `ToQueryResultAsync`, and `ApplySelect` are now internal steps of the unified `FlexQuery` method.
 
 ---
 
-## 🆚 Before vs After
+## Renamed Types
+
+`SortOption` was renamed to `SortNode`
+to align with the new query composition architecture introduced in v2.
+
+| v1 API | v2 API |
+| :--- | :--- |
+| `SortOption` | `SortNode` |
+
+### Before (v1.x)
+```csharp
+var options = new QueryOptions
+{
+    Sort = new List<SortOption>
+    {
+        new SortOption
+        {
+            Field = "Name",
+            Descending = false
+        }
+    }
+};
+```
+
+### After (v2.0)
+```csharp
+var options = new QueryOptions
+{
+    Sort = new List<SortNode>
+    {
+        new SortNode
+        {
+            Field = "Name",
+            Descending = false
+        }
+    }
+};
+```
+
+---
+
+## 🆚 Execution Pipeline Comparison
 
 ### ❌ Legacy Approach (v1.x)
 ```csharp
@@ -62,6 +104,7 @@ The following APIs are marked as `[Obsolete]` in v2.0. They will continue to wor
 
 | Deprecated API | Replacement | Reason |
 | :--- | :--- | :--- |
+| `SortOption` | `SortNode` | Part of the AST node standardization. |
 | `QueryRequest` | `FlexQueryParameters` | Renamed for clarity and Swagger support. |
 | `ApplyValidatedQueryOptions` | `FlexQuery(...)` | Logic moved into unified pipeline. |
 | `ToQueryResultAsync` | `FlexQueryAsync(...)` | Unified pipeline handles materialization. |
@@ -73,5 +116,6 @@ The following APIs are marked as `[Obsolete]` in v2.0. They will continue to wor
 
 1. **Update Packages**: Update all `FlexQuery.NET.*` packages to version `2.0.0`.
 2. **Swap DTOs**: Replace `QueryRequest` with `FlexQueryParameters` in your controllers.
-3. **Simplify Pipeline**: Replace the multi-step `Apply...` chain with a single `.FlexQuery()` or `.FlexQueryAsync()` call.
-4. **Move Security**: Relocate your whitelists (`AllowedFields`) and blacklists into the `FlexQuery` configuration delegate.
+3. **Update Sorting**: Replace `SortOption` with `SortNode` in any programmatic query composition logic.
+4. **Simplify Pipeline**: Replace the multi-step `Apply...` chain with a single `.FlexQuery()` or `.FlexQueryAsync()` call.
+5. **Move Security**: Relocate your whitelists (`AllowedFields`) and blacklists into the `FlexQuery` configuration delegate.

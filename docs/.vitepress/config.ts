@@ -75,6 +75,7 @@ export default defineConfig({
             { text: 'Flattening Modes',          link: '/guide/flattening' },
             { text: 'Grouping & Aggregates',     link: '/guide/grouping' },
             { text: 'Include Filtering',         link: '/guide/include-filtering' },
+            { text: 'Query Composition',         link: '/guide/query-composition' },
           ]
         },
         {
@@ -136,6 +137,7 @@ export default defineConfig({
             { text: 'Includes',                  link: '/v1/include' },
             { text: 'Grouping',                  link: '/v1/grouping' },
             { text: 'Security',                  link: '/v1/security' },
+            { text: 'Strongly-Typed Queries',    link: '/v1/strongly-typed-query' },
             { text: 'ASP.NET Integration',       link: '/v1/aspnet-integration' },
             { text: 'Swagger Integration',       link: '/v1/swagger-integration' },
             { text: 'Performance',               link: '/v1/performance' },

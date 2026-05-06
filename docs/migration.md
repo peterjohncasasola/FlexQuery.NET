@@ -159,6 +159,45 @@ options.ValidateOrThrow<User>(execOptions);
 
 ---
 
+## Renamed Types
+In FlexQuery.NET v2, sorting models were renamed from `SortOption` to `SortNode` to align with the new query composition architecture. This standardizes query structures around AST-like nodes.
+
+| v1 API | v2 API |
+| :--- | :--- |
+| `SortOption` | `SortNode` |
+
+### Before (v1.x)
+```csharp
+var options = new QueryOptions
+{
+    Sort = new List<SortOption>
+    {
+        new SortOption
+        {
+            Field = "Name",
+            Descending = false
+        }
+    }
+};
+```
+
+### After (v2.0)
+```csharp
+var options = new QueryOptions
+{
+    Sort = new List<SortNode>
+    {
+        new SortNode
+        {
+            Field = "Name",
+            Descending = false
+        }
+    }
+};
+```
+---
+
+
 ## Common Migration Pitfalls
 
 ### ❌ Still setting AllowedFields on QueryOptions
