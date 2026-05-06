@@ -137,19 +137,44 @@ Validation cost is generally proportional to query complexity rather than datase
 
 # Expression Caching
 
-FlexQuery.NET supports expression caching to reduce repeated expression compilation overhead.
+FlexQuery.NET can cache the expensive process of parsing query objects and building LINQ Expression trees. This is highly recommended for high-traffic APIs where the same query patterns (even with different values) are reused.
 
-Example:
+### 1. Global Enable
+
+Enable caching globally in your `Program.cs`:
 
 ```csharp
-options.EnableCache = true;
+using FlexQuery.NET.Caching;
+
+// Enable the caching engine
+FlexQueryCacheSettings.EnableCache = true;
+
+// Optional: Prevent memory leaks in extremely dynamic scenarios
+FlexQueryCacheSettings.MaxCacheSize = 5000; 
+
+// Optional: Cache the compiled delegates (useful for LINQ to Objects)
+FlexQueryCacheSettings.CacheCompiledLambdas = true;
 ```
 
-Caching is especially useful for:
-- frequently repeated query shapes
-- dashboard APIs
-- reporting endpoints
-- high-throughput APIs
+### 2. Per-Query Control
+
+You can override the global setting on individual requests via `QueryOptions`:
+
+```csharp
+var options = QueryOptionsParser.Parse(request);
+
+// Force cache for this specific heavy query, even if global cache is off
+options.EnableCache = true; 
+```
+
+### 3. How it Works
+
+The caching engine generates a stable, canonical key based on the query's structure (fields, operators, logic) but **ignores the literal values**. This means:
+
+- `status:eq:active`
+- `status:eq:pending`
+
+Both share the same cached expression tree, with only the parameter values being swapped at execution time. This drastically reduces CPU overhead and heap allocations for repetitive API calls.
 
 ---
 
@@ -268,16 +293,32 @@ Actual execution plans depend on:
 
 ---
 
-# Practical Performance Guidance
+# Split Query Optimization
 
-For best results:
+When multiple collection includes are requested, EF Core may generate a single SQL query with many `LEFT JOIN` clauses. This can lead to:
 
-- index commonly filtered fields
-- project only required columns
-- avoid unnecessary includes
-- disable count queries when not needed
-- use expression caching for repeated query patterns
-- monitor generated SQL during development
+- **Cartesian Explosion**: The number of result rows multiplies with each additional collection.
+- **Redundant Data**: Parent entity data is duplicated for every child row, increasing memory and network usage.
+
+FlexQuery.NET supports optional split query execution to mitigate these issues:
+
+```csharp
+var result = await _context.Users.FlexQueryAsync(parameters, exec =>
+{
+    // Force EF Core to execute collection includes as separate SQL queries
+    exec.UseSplitQuery = true;
+});
+```
+
+This internally applies `.AsSplitQuery()` to the pipeline. 
+
+> [!IMPORTANT]
+> Split query behavior is intentionally configured **server-side** through `QueryExecutionOptions`. Clients define **what** data they want; the server defines **how** it is retrieved.
+
+### Performance Tradeoffs
+
+- **Pros**: Drastically reduces data redundancy and memory pressure for wide result sets with many collections.
+- **Cons**: Requires multiple roundtrips to the database (one per collection). Not always faster for small datasets or low-latency networks.
 
 ---
 

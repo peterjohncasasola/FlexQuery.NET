@@ -1196,6 +1196,9 @@ query.ApplyFlexQuery(request, options =>
 
     // 4. Depth Protection
     options.MaxFieldDepth = 3; // Prevent 'Orders.Items.Product.Category.Name'
+
+    // 5. Per-Field Operator Governance (New in v2.1)
+    options.AllowOperators("Email", FilterOperators.Equal, FilterOperators.StartsWith);
 });
 ```
 
@@ -1233,6 +1236,22 @@ FlexQueryCacheSettings.CacheCompiledLambdas = true;
 
 > [!TIP]
 > **Hash Normalization**: FlexQuery.NET uses a normalized string representation of the `FilterGroup` as the cache key. This ensures that even if the client sends filters in a different order, the cache remains effective.
+
+
+## 🚀 EF Core: Split Query Optimization
+
+When including multiple collections, you can prevent "cartesian explosion" by enabling split queries server-side:
+
+```csharp
+var result = await _context.Users.FlexQueryAsync(parameters, exec =>
+{
+    // Executes collection includes as separate SQL queries
+    exec.UseSplitQuery = true;
+    
+    // Automatically applies .AsNoTracking() (default true)
+    exec.UseNoTracking = true; 
+});
+```
 
 
 ## ⚖️ License

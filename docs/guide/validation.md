@@ -148,6 +148,44 @@ With `exec.FilterableFields = { "name", "status" }` (createdAt not included):
 
 ---
 
+## Per-Field Operator Governance
+
+You can restrict which operators are allowed for specific fields. This is useful for preventing expensive scans on certain columns (e.g., blocking `Contains` on a large text field).
+
+```csharp
+var execOptions = new QueryExecutionOptions();
+
+// Only allow Equal and StartsWith on Email
+execOptions.AllowOperators("Email", FilterOperators.Equal, FilterOperators.StartsWith);
+
+// Allow standard comparisons on Age
+execOptions.AllowOperators("Age", FilterOperators.Equal, FilterOperators.GreaterThan, FilterOperators.LessThan);
+```
+
+If a client attempts to use a restricted operator:
+
+**Request:**
+```
+GET /api/users?filter=Email:contains:gmail.com
+```
+
+**Response (400):**
+```json
+{
+  "errors": [
+    {
+      "message": "Operator 'contains' is not allowed for field 'Email'.",
+      "code": "OPERATOR_NOT_ALLOWED",
+      "field": "Email"
+    }
+  ]
+}
+```
+
+By default, if a field is not configured in `AllowedOperators`, all supported operators remain available.
+
+---
+
 ## Strict vs. Lenient Validation
 
 ### StrictFieldValidation = true (default recommended)

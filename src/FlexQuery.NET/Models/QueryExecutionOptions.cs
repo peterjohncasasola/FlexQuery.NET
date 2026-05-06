@@ -17,7 +17,21 @@ public class QueryExecutionOptions
         // Set default values for execution options
         IncludeTotalCount = true;
         DefaultPageSize = 20;
+        UseNoTracking = true;
     }
+
+    // --- Execution Strategies ---
+
+    /// <summary>
+    /// If true, applies .AsSplitQuery() to the EF Core query.
+    /// Use this for complex include trees to avoid cartesian explosion.
+    /// </summary>
+    public bool UseSplitQuery { get; set; }
+
+    /// <summary>
+    /// If true, applies .AsNoTracking() to the query (default is true).
+    /// </summary>
+    public bool UseNoTracking { get; set; } = true;
 
     // --- Security Lists ---
 
@@ -26,6 +40,31 @@ public class QueryExecutionOptions
 
     /// <summary>Global list of blocked fields (blacklist).</summary>
     public HashSet<string>? BlockedFields { get; set; }
+
+    /// <summary>
+    /// Governance: Map of fields to their explicitly allowed operators (canonical strings).
+    /// If a field is not present, all operators are allowed.
+    /// Use <see cref="Constants.FilterOperators"/> for valid keys.
+    /// </summary>
+    public Dictionary<string, HashSet<string>>? AllowedOperators { get; set; }
+
+    /// <summary>
+    /// Ergonomic helper to configure allowed operators for a specific field.
+    /// Use <see cref="Constants.FilterOperators"/> constants for the operator arguments.
+    /// </summary>
+    public void AllowOperators(string field, params string[] operators)
+    {
+        AllowedOperators ??= new Dictionary<string, HashSet<string>>(StringComparer.OrdinalIgnoreCase);
+        if (!AllowedOperators.TryGetValue(field, out var set))
+        {
+            set = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            AllowedOperators[field] = set;
+        }
+        foreach (var op in operators)
+        {
+            set.Add(Constants.FilterOperators.Normalize(op));
+        }
+    }
 
     /// <summary>Fields allowed specifically for filtering operations.</summary>
     public HashSet<string>? FilterableFields { get; set; }

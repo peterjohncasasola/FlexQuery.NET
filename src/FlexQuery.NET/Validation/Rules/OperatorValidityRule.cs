@@ -13,10 +13,10 @@ public sealed class OperatorValidityRule : IValidationRule
     {
         if (options.Filter != null)
         {
-            ValidateFilterGroup(options.Filter!, result);
+            ValidateFilterGroup(options.Filter!, result, context.ExecutionOptions);
         }
     }
-    private void ValidateFilterGroup(FilterGroupNode group, ValidationResult result)
+    private void ValidateFilterGroup(FilterGroupNode group, ValidationResult result, QueryExecutionOptions? execOptions)
     {
         foreach (var child in group.Children)
         {
@@ -24,22 +24,35 @@ public sealed class OperatorValidityRule : IValidationRule
             {
                 if (string.IsNullOrWhiteSpace(filter.Operator)) continue;
 
-                if (!FilterOperators.IsSupported(filter.Operator))
+                var canonicalOp = FilterOperators.Normalize(filter.Operator);
+
+                if (!FilterOperators.IsSupported(canonicalOp))
                 {
                     result.Errors.Add(new ValidationError(
                         $"Operator '{filter.Operator}' is not supported.", 
                         "INVALID_OPERATOR", 
                         filter.Field));
                 }
+                else if (execOptions?.AllowedOperators != null && 
+                         execOptions.AllowedOperators.TryGetValue(filter.Field, out var allowedOps))
+                {
+                    if (!allowedOps.Contains(canonicalOp))
+                    {
+                        result.Errors.Add(new ValidationError(
+                            $"Operator '{filter.Operator}' is not allowed for field '{filter.Field}'.", 
+                            "OPERATOR_NOT_ALLOWED", 
+                            filter.Field));
+                    }
+                }
 
                 if (filter.ScopedFilter != null)
                 {
-                    ValidateFilterGroup(filter.ScopedFilter, result);
+                    ValidateFilterGroup(filter.ScopedFilter, result, execOptions);
                 }
             }
             else if (child is FilterGroupNode subGroup)
             {
-                ValidateFilterGroup(subGroup, result);
+                ValidateFilterGroup(subGroup, result, execOptions);
             }
         }
     }

@@ -319,6 +319,22 @@ if (!result.IsValid)
 
 ---
 
+## Performance & Optimization
+
+For high-traffic APIs, you can enable **Expression Caching** to skip the overhead of building LINQ trees for repeated query shapes.
+
+In `Program.cs`:
+
+```csharp
+using FlexQuery.NET.Caching;
+
+// Enable global caching
+FlexQueryCacheSettings.EnableCache = true;
+FlexQueryCacheSettings.MaxCacheSize = 5000;
+```
+
+---
+
 ## Recommended Production Setup
 
 ```csharp

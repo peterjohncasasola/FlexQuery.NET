@@ -100,6 +100,26 @@ A field in `AllowedFields` but **not** in `FilterableFields` can be selected but
 
 ---
 
+## Per-Field Operator Governance
+
+Different operators have different performance characteristics. For example, `Equal` and `StartsWith` can often leverage indexes, while `Contains` might force a full table scan.
+
+FlexQuery.NET allows you to govern operators at the field level:
+
+```csharp
+exec.AllowOperators("Email", FilterOperators.Equal, FilterOperators.StartsWith);
+exec.AllowOperators("Age", FilterOperators.Equal, FilterOperators.GreaterThan, FilterOperators.LessThan);
+```
+
+### Why Governance Matters
+- **Public APIs**: Prevent malicious users from triggering expensive `contains()` scans.
+- **Admin Grids**: Ensure consistent performance as datasets grow.
+- **Multi-Tenant Systems**: Prevent one tenant's complex queries from impacting global database performance.
+
+If a field is not explicitly configured, all supported operators are allowed by default.
+
+---
+
 ## MaxFieldDepth
 
 Prevents deep path traversal attacks.

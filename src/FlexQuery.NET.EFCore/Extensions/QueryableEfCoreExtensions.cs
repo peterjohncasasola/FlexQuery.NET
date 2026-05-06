@@ -126,15 +126,20 @@ public static class QueryableEfCoreExtensions
 
         var hasProjection = options.HasProjection();
 
-        return await query.ApplyFlexQueryAsync(options, hasProjection, cancellationToken);
+        return await query.ApplyFlexQueryAsync(options, hasProjection, exec, cancellationToken);
 
     }
 
     private static async Task<QueryResult<object>> ApplyFlexQueryAsync<T>(this IQueryable<T> query, 
-        QueryOptions options, bool hasProjection, CancellationToken cancellationToken = default)
+        QueryOptions options, bool hasProjection, QueryExecutionOptions? execOptions = null, CancellationToken cancellationToken = default)
         where T : class
     {
         QueryOptionsEfCoreExtensions.EnsureEfCoreOperatorsRegistered();
+
+        if (execOptions?.UseNoTracking == true)
+        {
+            query = query.AsNoTracking();
+        }
 
         var filtered = QueryBuilder.ApplyFilter(query, options);
         filtered = QueryBuilder.ApplySort(filtered, options);
@@ -142,6 +147,8 @@ public static class QueryableEfCoreExtensions
         var total = options.IncludeCount == true ? await filtered.CountAsync(cancellationToken) : (int?)null;
 
         filtered = QueryBuilder.ApplyPaging(filtered, options);
+
+
 
         // Note: ApplySelect already incorporates FilteredIncludes filters into the projection tree,
         // so calling ApplyFilteredIncludes here is technically redundant but ensures consistency

@@ -3,6 +3,18 @@
 All notable changes to this project will be documented in this file.
 
 ---
+## [2.1.0] - 2026-05-07
+
+### Added
+- **EF Core Split Query Support**: Added `UseSplitQuery` to `QueryExecutionOptions`, allowing servers to opt into `.AsSplitQuery()` for complex include trees to prevent cartesian explosion.
+- **No-Tracking Execution**: Added `UseNoTracking` to `QueryExecutionOptions` (defaulting to `true`) to automatically apply `.AsNoTracking()` in the `FlexQueryAsync` pipeline.
+- **Execution Strategy Control**: Servers now have granular control over *how* queries are executed (Split Query, Tracking), while clients remain focused on *what* data to retrieve.
+- **Per-Field Operator Governance**: Implemented strict server-side validation for operators. Developers can now restrict which operators are permissible per field using `QueryExecutionOptions.AllowOperators()` using canonical `FilterOperators` constants.
+
+### Documentation
+- **Performance Optimization**: Added a dedicated section on "Split Query Optimization" to the Performance and Include Filtering guides.
+- **Architecture Notes**: Clarified the responsibility of the server to define execution strategies, keeping query parameters strictly focused on data requirements.
+
 ## [2.0.0] - 2026-05-06
 
 ### Breaking Changes
@@ -10,25 +22,25 @@ All notable changes to this project will be documented in this file.
 - **Security Logic Migration**: Migrated all security configuration properties (`AllowedFields`, `BlockedFields`, `FilterableFields`, `SortableFields`, `SelectableFields`, `MaxFieldDepth`) out of `QueryOptions` and into the dedicated `QueryExecutionOptions` class.
 - **API Signatures**: Updated `ApplyFlexQuery` and `ApplyFlexQueryAsync` to require or optionally accept `QueryExecutionOptions`. The redundant `ApplyValidatedQueryOptions` has been removed.
 
-### Added
-- **`QueryExecutionOptions`**: A new, centralized container for server-side rules, security whitelists, and validation constraints.
-- **High-Level `ApplyFlexQuery` API**: Introduced a "one-stop-shop" extension method that handles parsing, validation, and execution with a clean configuration delegate.
-- **Canonical Query Normalization**: Added a filter AST normalizer that deterministically orders equivalent conditions and removes redundant group structure before cache-key generation.
-- **`FlexQueryRequest.ToRequestQuery()`**: Improved DTO mapping for cleaner OpenAPI/Swagger integrations.
-- **Nullable TotalCount**: `QueryResult.TotalCount` is now nullable to support scenarios where counting is explicitly disabled for performance.
-- **Strongly-Typed Expression Cache**: Refactored `ExpressionCache.cs` to use strongly-typed generics (`Expression<Func<T, bool>>` and `Func<T, bool>`), and added `TryGetExpression<T>`.
+#### Added
+- **High-Level `FlexQueryAsync` API**: A unified entry point that orchestrates parsing, validation, and execution (Filtering, Sorting, Paging, Includes, and Projection) in a single secure pass.
+- **Dual-Pipeline Architecture**: Successfully decoupled root entity filtering (WHERE) from related data shaping (Filtered Includes), solving the "over-filtering" regression in nested collections.
+- **Unified Projection Engine**: `ProjectionBuilder` now automatically merges `FilteredIncludes` and dynamic `Select` paths into a single optimized `Select()` statement.
+- **Canonical Query Normalization**: Added a filter AST normalizer that deterministically orders conditions for efficient expression caching.
+- **FlexQueryParameters DTO**: Introduced an OpenAPI-friendly DTO with full XML documentation for better Swagger UI integration.
 
 ### Changed
-- **AspNetCore Integration**: Updated `FieldAccessFilter` to inject security rules into the new `QueryExecutionOptions` model.
-- **Validation Pipeline**: Refactored `FieldAccessValidator` to consume execution policies, ensuring strict separation between user input and server rules.
-- **Public filter model**: `QueryOptions.Filter` now uses the public `FilterGroup` model; JQL and DSL parsers emit `FilterGroup` trees and `FilterCondition.ScopedFilter` preserves scoped collection semantics.
-- **Sort compatibility**: Introduced `SortNode` as the canonical sort model and preserved `SortOption` as a backwards-compatible alias.
+- **Security Logic Decoupling**: Migrated all security policies (`AllowedFields`, `MaxFieldDepth`, etc.) out of `QueryOptions` and into the trusted `QueryExecutionOptions` model.
+- **Standardized Parameter Mapping**: `QueryOptionsParser` now uses `include` and `group` as canonical keys, ensuring consistency across JQL, DSL, and JSON formats.
+- **Public Filter Model**: `QueryOptions.Filter` now uses the public `FilterGroup` model; implicit conversions to internal `FilterGroupNode` preserve `IsNegated` and `ScopedFilter` semantics.
+- **Deprecated Legacy APIs**: `ToQueryResultAsync` and `ToProjectedQueryResultAsync` are now deprecated in favor of the unified `FlexQuery` pipeline.
 
 ### Bug Fixes
-- Fixed `FluentFilterBuilder` nested groups to correctly set the `Logic` property on subgroups (was always defaulting to `And`). `OrGroup` now properly produces groups with `LogicOperator.Or`.
-- Fixed incorrect nesting when adding multiple top-level groups with different logical operators. Previously, mixing `AndGroup` and `OrGroup` would wrap the first group in an extra subgroup, making its filters inaccessible via `Groups[i].Filters`.
-- Resolved build failures caused by invalid markdown syntax in `FilterNormalizer.cs`.
-- Fixed test suite compilation errors by merging redundant `QueyNormalizationExtensions.cs` into `QueryOptionsExtensions.cs` (resolving ambiguous `Normalize()` method references).
+- **Filtered Include Regression**: Fixed an issue where filters on nested navigation properties were incorrectly applied or ignored during projection.
+- **Parameter Key Mismatch**: Resolved a bug where `Includes` and `GroupBy` properties were ignored by the parser due to case-sensitivity and key naming mismatches.
+- **Filter Negation**: Fixed `FilterGroup` conversion logic to correctly propagate the `IsNegated` flag to the expression builder.
+- **Field Access Validation**: Hardened the `FieldAccessValidator` to correctly validate nested property paths against depth limits and whitelists.
+(resolving ambiguous `Normalize()` method references).
 - Fixed `QueryOptions` cache key string formatting errors (updated `Take` to `Top` and `OrderBy` to a properly mapped `Sort` value).
 
 ### Documentation

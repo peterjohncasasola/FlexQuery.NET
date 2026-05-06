@@ -189,8 +189,21 @@ var data = await query.ToListAsync();
 
 ---
 
-## Performance Notes
+# Split Query Optimization
 
-- EF Core translates filtered includes to `LEFT JOIN` with a filter condition or split queries.
-- Each additional include adds a JOIN — avoid including many large collections in one request.
-- EF Core 5+ supports split queries (`.AsSplitQuery()`) for better performance on complex include trees. You can apply this before `ApplyFilteredIncludes`.
+When including multiple collections (e.g., `?include=Orders,Profiles`), EF Core may generate a "cartesian explosion" where the result set grows exponentially.
+
+To optimize this, you can enable **Split Queries** in the execution configuration:
+
+```csharp
+var result = await _context.Users.FlexQueryAsync(parameters, exec =>
+{
+    exec.UseSplitQuery = true;
+});
+```
+
+This ensures that each collection is fetched via a separate SQL query, reducing the amount of redundant data transferred.
+
+---
+
+## Summary

@@ -25,9 +25,17 @@ var result = await _context.Users.FlexQueryAsync(parameters, options =>
 
 ---
 
-## ⚡ Version Note (v2.0)
+## ⚡ Performance & Optimization (v2.1)
 
-FlexQuery.NET v2 introduces a **unified query pipeline** and the `FlexQueryParameters` DTO. This version prioritizes security by strictly separating client intent from server-side execution policy.
+FlexQuery.NET v2.1 introduces server-side **Execution Strategies**, including support for EF Core **Split Queries** and automatic **No-Tracking** execution to ensure maximum performance for complex data graphs.
+
+```csharp
+var result = await _context.Users.FlexQueryAsync(parameters, exec => 
+{
+    exec.UseSplitQuery = true; // Avoid cartesian explosion
+    exec.UseNoTracking = true; // Enabled by default
+});
+```
 
 > [!TIP]
 > If you are upgrading from v1.x, please check the [Migration Guide](/migration) for breaking changes and deprecated APIs.
