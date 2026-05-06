@@ -1,218 +1,351 @@
+
 # Performance
 
-FlexQuery.NET is designed for production-scale APIs. This page covers how it performs, where overhead exists, and how to optimize for high-throughput scenarios.
+FlexQuery.NET is designed for production-oriented APIs that require dynamic querying while remaining compatible with EF Core’s server-side query translation pipeline.
+
+This page explains the architectural decisions behind FlexQuery.NET’s performance characteristics, common tradeoffs, and practical optimization guidance.
 
 ---
 
-## Architecture: Why It's Fast
+# Architecture Overview
 
-### Expression Tree Compilation
+FlexQuery.NET converts incoming query definitions into LINQ expression trees that EF Core can translate into SQL.
 
-Every filter, sort, and projection operation is compiled into a **LINQ expression tree**.
+Typical execution flow:
 
-Expression trees are:
-
-- Compiled once per unique query shape (with caching enabled)
-- Translated to parameterized SQL by EF Core — no string concatenation
-- Executed entirely server-side — no client-side evaluation
-
-```
-Filter DSL string
-      │
-      ▼
-  DslParser → AST (FilterGroup)
-      │
-      ▼
-  ExpressionBuilder → LINQ Expression Tree
-      │
-      ▼
-  EF Core → Parameterized SQL
-      │
-      ▼
-  Database → Result Set
+```text
+Query Input
+    │
+    ▼
+Parser → QueryOptions
+    │
+    ▼
+Expression Builder
+    │
+    ▼
+LINQ Expression Tree
+    │
+    ▼
+EF Core SQL Translation
+    │
+    ▼
+Database Execution
 ```
 
-### No Client-Side Evaluation
+This allows filtering, sorting, projection, grouping, and paging to execute primarily at the database level instead of in application memory.
 
-All operators — including `any`, `all`, `contains`, `between`, and `in` — generate server-side SQL.
+---
+
+# Server-Side Execution
+
+FlexQuery.NET is designed to avoid client-side evaluation whenever possible.
+
+Operations such as:
+
+- filtering
+- sorting
+- paging
+- projection
+- aggregates
+- nested collection operators (`any`, `all`)
+
+are translated into LINQ expressions that EF Core can execute server-side.
+
+---
+
+## Example
 
 ```csharp
 // filter=orders:any:status:eq:shipped
-// Generates:
-SELECT * FROM Users u WHERE EXISTS (
-  SELECT 1 FROM Orders o WHERE o.UserId = u.Id AND o.Status = 'shipped'
+```
+
+Typical SQL shape:
+
+```sql
+SELECT *
+FROM Users u
+WHERE EXISTS (
+    SELECT 1
+    FROM Orders o
+    WHERE o.UserId = u.Id
+      AND o.Status = 'shipped'
 )
 ```
 
-This means **no data is loaded into memory** before filtering.
+The exact SQL depends on:
+- EF Core version
+- provider (SQL Server, PostgreSQL, etc.)
+- database capabilities
 
 ---
 
-## Benchmark Goals
+# Expression Trees Instead of String SQL
 
-FlexQuery.NET targets performance **parity with hand-written EF Core queries** for typical filter/sort/page operations.
+FlexQuery.NET does not generate raw SQL strings.
 
-| Scenario | Target Latency | Notes |
-| :--- | :--- | :--- |
-| Simple filter + page | ~2-5ms | Equivalent to hand-written EF Core |
-| Complex nested filter | ~5-15ms | Depends on index coverage |
-| Projection (5-10 fields) | ~3-8ms | SELECT column list narrowed in SQL |
-| Filter + include | ~5-20ms | JOIN per include navigation |
-| GroupBy + aggregate | ~5-20ms | GROUP BY translated to SQL |
+Instead, it generates LINQ expression trees which EF Core translates into parameterized SQL.
 
-> [!NOTE]
-> Latency numbers are for a local SQL Server with indexed columns. Production latency depends on database size, indexing, network, and server load.
+Benefits include:
+
+- provider compatibility
+- parameterized query generation
+- reduced SQL injection risk
+- reuse of EF Core query optimizations
 
 ---
 
-## Parsing Overhead
+# Parsing Overhead
 
-Parsing a query string into `QueryOptions` is fast — typically under **1ms** for typical inputs.
+Dynamic query systems introduce some parsing and expression-generation overhead compared to fully handwritten LINQ.
 
-| Format | Relative Parse Cost |
-| :--- | :--- |
-| DSL (`filter=status:eq:active`) | ~0.1ms |
-| JQL (`query=status = "active"`) | ~0.5ms |
-| JSON filter | ~0.3ms |
-| Indexed format | ~0.2ms |
+Typical overhead sources include:
 
-The JQL format has slightly higher overhead due to recursive descent parsing.
+- parsing filter syntax
+- building expression trees
+- validation
+- projection generation
+- aggregate translation
+
+In most API scenarios, this overhead is relatively small compared to:
+- database execution time
+- network latency
+- serialization cost
+
+Actual performance depends heavily on:
+- query complexity
+- indexing
+- projection size
+- EF Core provider
+- hardware configuration
 
 ---
 
-## Validation Overhead
+# Validation Performance
 
-Validation runs against the parsed AST — it does **not** touch the database.
+Validation operates against parsed query structures and does not require database access.
 
-- Simple field access check: **< 0.1ms**
-- Full validation pipeline (fields, operators, depth): **< 1ms**
+Typical validation tasks include:
 
-The field access validator uses a `ConcurrentDictionary` normalization cache to minimize repeated string allocations.
+- field allow/block checks
+- operator validation
+- depth validation
+- projection validation
+
+Validation cost is generally proportional to query complexity rather than dataset size.
 
 ---
 
-## Expression Caching
+# Expression Caching
 
-FlexQuery.NET supports expression caching to eliminate re-compilation overhead on repeated queries.
+FlexQuery.NET supports expression caching to reduce repeated expression compilation overhead.
 
-Enable it per-request:
+Example:
 
 ```csharp
 options.EnableCache = true;
 ```
 
-Or enable globally via `QueryExecutionOptions`.
-
-**Cache key generation:**
-
-The cache key is derived from:
-- Entity type name
-- Operation (predicate, projection)
-- Case sensitivity setting
-- Normalized filter AST hash
-
-The **FilterNormalizer** canonicalizes the AST before hashing — so `status:eq:active AND age:gte:18` and `age:gte:18 AND status:eq:active` produce the **same cache key**.
-
-```csharp
-var key = options.GetCacheKey(typeof(User), "predicate");
-// e.g., "predicate:MyApp.Entities.User:ci:abc123ef"
-```
+Caching is especially useful for:
+- frequently repeated query shapes
+- dashboard APIs
+- reporting endpoints
+- high-throughput APIs
 
 ---
 
-## COUNT Query Optimization
+# Projection Performance
 
-By default, `FlexQueryAsync` runs a `COUNT(*)` query for `totalCount`.
+Projection reduces the number of selected columns returned by the database.
 
-This is a separate SQL trip. For high-frequency endpoints where count is not needed:
+Example:
 
-```
-GET /api/users?filter=status:eq:active&includeCount=false
-```
-
-```csharp
-// Or in code
-options.IncludeCount = false;
+```http
+GET /api/users?select=id,name,email
 ```
 
----
-
-## Projection Performance
-
-Projection (via `ApplySelect`) reduces the SQL column list:
+Typical SQL behavior:
 
 ```sql
--- Without projection (all columns)
-SELECT Id, Name, Email, PasswordHash, Status, Age, ... FROM Users
-
--- With select=id,name,email
-SELECT Id, Name, Email FROM Users
+SELECT Id, Name, Email
+FROM Users
 ```
 
-This reduces:
-- Network bandwidth (SQL Server → app server)
-- Serialization cost (fewer properties)
-- Memory allocation (smaller objects)
+instead of:
+
+```sql
+SELECT *
+FROM Users
+```
+
+Projection can help reduce:
+- network payload size
+- serialization overhead
+- memory allocations
+
+especially for wide entities.
 
 ---
 
-## Index Recommendations
+# COUNT Query Tradeoff
 
-For best performance, index the fields your clients will filter and sort on most.
+By default, FlexQuery.NET may execute a separate count query when `IncludeCount` is enabled.
 
-| Query Pattern | Index Recommendation |
+Example:
+
+```http
+GET /api/users?includeCount=false
+```
+
+Disabling count queries may reduce overhead for:
+- infinite scrolling APIs
+- streaming-style endpoints
+- dashboards where totals are unnecessary
+
+---
+
+# Index Recommendations
+
+Database indexing remains one of the most important performance factors.
+
+Recommended indexing patterns:
+
+| Query Pattern | Suggested Index |
 | :--- | :--- |
-| `status:eq:active` | Index on `Status` |
-| `createdAt:gte:2024-01-01` | Index on `CreatedAt` |
-| `name:contains:alice` | Full-text index or accept scan |
-| `sort=createdAt:desc` | Index on `CreatedAt DESC` |
-| `groupBy=status` | Index on `Status` |
-
-> [!TIP]
-> The `contains` operator maps to `LIKE '%value%'` which cannot use a B-tree index. For full-text search, use a full-text index and a custom resolver.
+| Equality filters | Index target columns |
+| Sorting | Index sorted columns |
+| Date ranges | Index date fields |
+| Grouping | Index group-by columns |
+| Foreign-key filters | Index relationship keys |
 
 ---
 
-## EF Core Tradeoffs
+# String Search Considerations
 
-| Feature | EF Core Translation | Notes |
-| :--- | :--- | :--- |
-| Simple eq/neq/gt/lt | ✅ Full SQL | Fully server-side |
-| `contains` | ✅ LIKE '%val%' | Server-side, no index |
-| `startswith` | ✅ LIKE 'val%' | Server-side, index-friendly |
-| `in` / `notin` | ✅ SQL IN list | Server-side |
-| `between` | ✅ BETWEEN | Server-side |
-| `any` / `all` | ✅ EXISTS subquery | Server-side |
-| Collection aggregate sort | ✅ Subquery | Server-side |
-| Projection | ✅ SELECT columns | Server-side |
-| GroupBy + aggregate | ✅ GROUP BY | Server-side |
+Operators such as:
 
----
+```text
+contains
+```
 
-## Benchmark Table (Indicative)
+may generate SQL patterns similar to:
 
-Measured on a 100,000 row SQL Server table with standard indexing.
+```sql
+LIKE '%value%'
+```
 
-| Query | FlexQuery.NET | Hand-Written EF Core | OData |
-| :--- | :--- | :--- | :--- |
-| Simple filter + page | ~4ms | ~3ms | ~6ms |
-| Filter + sort + page | ~5ms | ~4ms | ~8ms |
-| Filter + project | ~6ms | ~5ms | ~10ms |
-| Nested any filter | ~7ms | ~6ms | ~12ms |
-| GroupBy + count | ~8ms | ~7ms | N/A |
+Depending on the database engine and indexing strategy, this may result in scans rather than index seeks.
 
-FlexQuery.NET adds **~1-2ms overhead** over hand-written queries, primarily from expression tree compilation (mitigated by caching).
+For large-scale text search scenarios, consider:
+- full-text indexes
+- search engines
+- provider-specific optimizations
 
 ---
 
-## Honest Tradeoffs
+# EF Core Translation Considerations
 
-| Tradeoff | Detail |
+Performance ultimately depends on EF Core’s generated SQL and the underlying database provider.
+
+Some operations naturally translate more efficiently than others.
+
+Examples:
+
+| Operation | Typical Translation |
 | :--- | :--- |
-| **Parse overhead** | ~0.1-0.5ms per request for DSL/JQL parsing |
-| **Expression compilation** | ~0.5-2ms first compile; ~0ms with cache |
-| **COUNT query** | Extra database trip unless disabled |
-| **`contains` operator** | No index support — table scan on unindexed columns |
-| **Deep filter nesting** | Complex nested ANDs/ORs may generate large SQL predicates |
+| Equality filters | Efficient indexed predicates |
+| Range filters | Efficient indexed predicates |
+| StartsWith | Often index-friendly |
+| Contains | May require scans |
+| Any / All | EXISTS subqueries |
+| GroupBy | GROUP BY SQL translation |
 
-These tradeoffs are **transparent and predictable**. For the vast majority of API use cases, the overhead is negligible and the productivity gain is substantial.
+Actual execution plans depend on:
+- indexes
+- query shape
+- database engine
+- statistics
+- data distribution
+
+---
+
+# Practical Performance Guidance
+
+For best results:
+
+- index commonly filtered fields
+- project only required columns
+- avoid unnecessary includes
+- disable count queries when not needed
+- use expression caching for repeated query patterns
+- monitor generated SQL during development
+
+---
+
+# Benchmarking Philosophy
+
+Performance measurements are highly environment-dependent.
+
+Factors such as:
+- hardware
+- network latency
+- EF Core provider
+- database engine
+- indexing
+- query complexity
+- dataset size
+
+can significantly affect results.
+
+Because of this, FlexQuery.NET focuses on:
+- efficient expression generation
+- server-side execution
+- minimizing unnecessary allocations
+- leveraging EF Core optimizations
+
+rather than publishing universal latency guarantees.
+
+---
+
+# Tradeoffs
+
+Like all dynamic query systems, FlexQuery.NET involves tradeoffs.
+
+| Tradeoff | Description |
+| :--- | :--- |
+| Parsing overhead | Additional work compared to handwritten LINQ |
+| Expression generation | Dynamic expression construction has runtime cost |
+| Complex query trees | Deep nested filters may generate larger SQL |
+| Count queries | Optional extra database roundtrip |
+| Dynamic flexibility | More runtime behavior than static queries |
+
+In exchange, FlexQuery.NET provides:
+- reusable query pipelines
+- dynamic filtering
+- projection
+- grouping
+- aggregates
+- validation
+- field-level restrictions
+
+within a REST-friendly API model.
+
+---
+
+# Final Thoughts
+
+FlexQuery.NET is designed to balance:
+- flexibility
+- maintainability
+- query safety
+- REST compatibility
+- EF Core integration
+
+rather than optimizing exclusively for microbenchmark scenarios.
+
+For most applications, overall performance will depend far more on:
+- database design
+- indexing strategy
+- query shape
+- network conditions
+
+than on the small overhead introduced by query parsing and expression generation.

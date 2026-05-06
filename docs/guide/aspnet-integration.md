@@ -1,6 +1,6 @@
 # ASP.NET Core Integration
 
-The `FlexQuery.NET.AspNetCore` package provides first-class integration with ASP.NET Core — including action filters, attributes, and middleware helpers.
+The `FlexQuery.NET.AspNetCore` package provides optional integration helpers for ASP.NET Core applications. These are primarily focused on declarative security and automated validation.
 
 ---
 
@@ -12,183 +12,76 @@ dotnet add package FlexQuery.NET.AspNetCore
 
 ---
 
+## Overview
+
+FlexQuery.NET is designed to be **dependency-injection free** by default. You do not need to register any services to use the core library.
+
+The ASP.NET Core integration package provides two primary features:
+1. **`FieldAccessFilter`**: An action filter that automatically applies security rules from attributes.
+2. **`FlexQueryParameters`**: A unified DTO for query-string binding.
+
+---
+
 ## Service Registration
 
-In `Program.cs`:
+To enable the declarative security attributes, register the security filters in `Program.cs`:
 
 ```csharp
-using FlexQuery.NET.AspNetCore;
+using FlexQuery.NET.AspNetCore.Extensions;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Register FlexQuery.NET ASP.NET Core services
-builder.Services.AddFlexQuery();
+// For MVC/Web API Controllers
+builder.Services.AddControllers()
+    .AddFlexQuerySecurity();
 
-// Or with EF Core services
-builder.Services.AddFlexQuery(options =>
-{
-    options.DefaultPageSize = 20;
-    options.MaxPageSize     = 200;
-});
-
-builder.Services.AddControllers();
-```
-
-`AddFlexQuery()` registers:
-
-- `FieldAccessFilter` as a global action filter
-- `IFieldAccessResolver` if configured
-- Required service dependencies
-
----
-
-## FlexQueryParameters Binding
-
-`FlexQueryParameters` is bound directly from the query string using `[FromQuery]`:
-
-```csharp
-[HttpGet]
-public async Task<IActionResult> GetUsers([FromQuery] FlexQueryParameters parameters)
-{
-    var result = await _context.Users.FlexQueryAsync<User>(parameters, exec =>
-    {
-        exec.AllowedFields = new HashSet<string> { "id", "name", "email" };
-    });
-
-    return Ok(result);
-}
-```
-
-All properties on `FlexQueryParameters` are nullable, so they are optional in the query string.
-
----
-
-## [FieldAccess] Attribute
-
-The `[FieldAccess]` attribute declares field security rules declaratively on controller actions or classes.
-
-```csharp
-[FieldAccess(
-    Allowed    = ["id", "name", "email", "status", "age", "createdAt"],
-    Blocked    = ["passwordHash", "twoFactorSecret"],
-    Filterable = ["name", "status", "age"],
-    Sortable   = ["name", "createdAt", "age"],
-    Selectable = ["id", "name", "email"],
-    MaxDepth   = 2
-)]
-[HttpGet]
-public async Task<IActionResult> GetUsers(
-    [FromQuery] FlexQueryParameters parameters,
-    QueryExecutionOptions exec)
-{
-    var result = await _context.Users.FlexQueryAsync<User>(parameters, o =>
-    {
-        o.AllowedFields    = exec.AllowedFields;
-        o.BlockedFields    = exec.BlockedFields;
-        o.FilterableFields = exec.FilterableFields;
-        o.SortableFields   = exec.SortableFields;
-        o.SelectableFields = exec.SelectableFields;
-        o.MaxFieldDepth    = exec.MaxFieldDepth;
-    });
-
-    return Ok(result);
-}
-```
-
-The `[FieldAccess]` attribute is processed by `FieldAccessFilter` before the action executes. It merges the attribute values into the `QueryExecutionOptions` parameter automatically.
-
-**Action takes priority over controller level:**
-
-```csharp
-// Controller-level default
-[FieldAccess(Allowed = ["id", "name"])]
-public class UsersController : ControllerBase
-{
-    // Action-level override — takes priority
-    [FieldAccess(Allowed = ["id", "name", "email", "salary"])]
-    [HttpGet("admin")]
-    public async Task<IActionResult> GetUsersAdmin(...) { }
-}
-```
-
----
-
-## FieldAccessFilter
-
-`FieldAccessFilter` is an `IActionFilter` that reads the `[FieldAccess]` attribute and populates `QueryExecutionOptions` before the action runs.
-
-### Manual Registration (without AddFlexQuery)
-
-```csharp
+// OR manual filter registration
 builder.Services.AddControllers(options =>
 {
     options.Filters.Add<FieldAccessFilter>();
 });
 ```
 
-### How It Works
-
-1. Finds the `[FieldAccess]` attribute on the action or controller.
-2. Looks for a `QueryExecutionOptions` parameter in the action arguments.
-3. Merges the attribute's field lists into the parameter.
-
-If there is no `[FieldAccess]` attribute or no `QueryExecutionOptions` parameter, the filter is a no-op.
+> [!NOTE]
+> `AddFlexQuerySecurity()` only registers the `FieldAccessFilter`. It does not provide a full DI framework for the core library, which remains intentionally decoupled from the ASP.NET Core container.
 
 ---
 
-## OpenAPI / Swagger Integration
+## Declarative Security: `[FieldAccess]`
 
-`FlexQueryParameters` generates correct Swagger UI documentation automatically because it is a plain POCO with standard property types.
+The `[FieldAccess]` attribute allows you to define field security rules directly on your controller actions.
 
 ```csharp
-builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen(c =>
+[HttpGet]
+[FieldAccess(
+    Allowed    = ["id", "name", "email", "status"],
+    Filterable = ["name", "status"],
+    Sortable   = ["name", "createdAt"],
+    MaxDepth   = 2
+)]
+public async Task<IActionResult> GetUsers(
+    [FromQuery] FlexQueryParameters parameters,
+    QueryExecutionOptions exec)
 {
-    c.SwaggerDoc("v1", new OpenApiInfo { Title = "MyAPI", Version = "v1" });
-});
+    // The FieldAccessFilter automatically populates 'exec' 
+    // from the attribute before the action runs.
+    var result = await _context.Users.FlexQueryAsync<User>(parameters, exec);
+    
+    return Ok(result);
+}
 ```
 
-The Swagger UI will show all `FlexQueryParameters` fields as optional query parameters:
-
-```
-filter     (string)
-sort       (string)
-select     (string)
-page       (integer)
-pageSize   (integer)
-...
-```
+### How it Works
+1. The **`FieldAccessFilter`** intercepts the request.
+2. It looks for a **`QueryExecutionOptions`** parameter in the action signature.
+3. If found, it populates it with the values defined in the **`[FieldAccess]`** attribute.
+4. If no attribute is found, the `QueryExecutionOptions` parameter remains in its default state.
 
 ---
 
-## Error Handling
+## Global Exception Handling
 
-Handle `QueryValidationException` globally via an exception filter:
-
-```csharp
-// Minimal API
-app.UseExceptionHandler(errApp =>
-{
-    errApp.Run(async ctx =>
-    {
-        var ex = ctx.Features.Get<IExceptionHandlerFeature>()?.Error;
-        if (ex is QueryValidationException qve)
-        {
-            ctx.Response.StatusCode = 400;
-            ctx.Response.ContentType = "application/json";
-            await ctx.Response.WriteAsJsonAsync(new
-            {
-                title  = "Query validation failed",
-                errors = qve.ValidationResult.Errors
-            });
-            return;
-        }
-        ctx.Response.StatusCode = 500;
-    });
-});
-```
-
-Or with MVC exception filter:
+You can handle query validation errors globally using an Exception Filter or Middleware.
 
 ```csharp
 public class FlexQueryExceptionFilter : IExceptionFilter
@@ -213,9 +106,32 @@ builder.Services.AddControllers(o => o.Filters.Add<FlexQueryExceptionFilter>());
 
 ---
 
-## Minimal API Support
+## OpenAPI / Swagger Integration
 
-FlexQuery.NET works with Minimal APIs too:
+`FlexQueryParameters` is a standard POCO that maps naturally to OpenAPI/Swagger.
+
+```csharp
+[HttpGet]
+public async Task<ActionResult<QueryResult<User>>> GetUsers(
+    [FromQuery] FlexQueryParameters parameters)
+{
+    return await _context.Users.FlexQueryAsync<User>(parameters);
+}
+```
+
+Swagger UI will automatically display the query parameters:
+- `filter`
+- `sort`
+- `select`
+- `page`
+- `pageSize`
+- `includeCount`
+
+---
+
+## Minimal APIs
+
+The security attributes are currently designed for MVC/Web API Controllers. For Minimal APIs, we recommend manual configuration:
 
 ```csharp
 app.MapGet("/api/users", async (
@@ -224,61 +140,10 @@ app.MapGet("/api/users", async (
 {
     var result = await db.Users.FlexQueryAsync<User>(parameters, exec =>
     {
-        exec.AllowedFields = new HashSet<string> { "id", "name", "email" };
+        exec.AllowedFields = ["id", "name", "email"];
+        exec.MaxFieldDepth = 2;
     });
 
     return Results.Ok(result);
 });
-```
-
----
-
-## Full Controller Example
-
-```csharp
-[ApiController]
-[Route("api/[controller]")]
-public class UsersController : ControllerBase
-{
-    private readonly AppDbContext _context;
-
-    public UsersController(AppDbContext context) => _context = context;
-
-    /// <summary>Get users with dynamic filtering, sorting, and paging.</summary>
-    [HttpGet]
-    [FieldAccess(
-        Allowed    = ["id", "name", "email", "status", "age", "createdAt"],
-        Blocked    = ["passwordHash"],
-        Filterable = ["name", "status", "age"],
-        Sortable   = ["name", "createdAt"],
-        Selectable = ["id", "name", "email"],
-        MaxDepth   = 2
-    )]
-    [ProducesResponseType(typeof(QueryResult<object>), 200)]
-    [ProducesResponseType(400)]
-    public async Task<IActionResult> GetUsers(
-        [FromQuery] FlexQueryParameters parameters,
-        QueryExecutionOptions exec,
-        CancellationToken ct)
-    {
-        try
-        {
-            var result = await _context.Users.FlexQueryAsync<User>(parameters, o =>
-            {
-                o.AllowedFields    = exec.AllowedFields;
-                o.BlockedFields    = exec.BlockedFields;
-                o.FilterableFields = exec.FilterableFields;
-                o.SortableFields   = exec.SortableFields;
-                o.SelectableFields = exec.SelectableFields;
-                o.MaxFieldDepth    = exec.MaxFieldDepth;
-            }, ct);
-
-            return Ok(result);
-        }
-        catch (QueryValidationException ex)
-        {
-            return BadRequest(new { errors = ex.ValidationResult.Errors });
-        }
-    }
-}
 ```
