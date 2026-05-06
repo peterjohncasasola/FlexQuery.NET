@@ -94,4 +94,49 @@ public static class QueryOptionsExtensions
         ArgumentNullException.ThrowIfNull(options);
         options.Filter = FilterNormalizer.Normalize(options.Filter);
         return options;
-    }}
+    }
+
+    /// <summary>
+    /// Normalizes the filter AST structural ordering while preserving original casing.
+    /// Useful for UI display scenarios.
+    /// </summary>
+    public static QueryOptions NormalizeOrder(this QueryOptions options)
+    {
+        if (options.Filter is not null)
+        {
+            options.Filter = FilterNormalizer.NormalizeOrder(options.Filter);
+        }
+
+        return options;
+    }
+
+    /// <summary>
+    /// Generates a stable cache key for the query execution pipeline.
+    /// </summary>
+    public static string GetCacheKey(
+        this QueryOptions options,
+        Type entityType,
+        string operation)
+    {
+        var normalized = FilterNormalizer.Normalize(options.Filter);
+
+        var filterKey = FilterNormalizer.GenerateCacheKey(normalized);
+
+        return string.Join("|",
+            entityType.FullName,
+            operation,
+            filterKey,
+            options.Skip,
+            options.Top,
+            options.Sort != null ? string.Join(",", options.Sort.Select(s => s.Field + (s.Descending ? "_desc" : "_asc"))) : string.Empty,
+            options.Select != null ? string.Join(",", options.Select) : string.Empty);
+    }
+
+    /// <summary>
+    /// Generates SHA256 fingerprint for distributed cache scenarios.
+    /// </summary>
+    public static string GetQueryHash(this QueryOptions options)
+    {
+        return FilterNormalizer.GenerateHash(options.Filter);
+    }
+}

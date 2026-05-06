@@ -4,7 +4,7 @@ using System.Linq.Expressions;
 namespace FlexQuery.NET.Caching;
 
 /// <summary>
-/// A thread-safe cache for compiled LINQ expressions and lambdas.
+/// Thread-safe cache for expression trees and compiled delegates.
 /// </summary>
 public static class ExpressionCache
 {
@@ -12,31 +12,56 @@ public static class ExpressionCache
     private static readonly ConcurrentDictionary<string, Delegate> _compiledCache = new();
 
     /// <summary>
-    /// Retrieves a cached lambda expression or adds a new one.
+    /// Gets or creates a cached expression.
     /// </summary>
-    public static LambdaExpression GetOrAddExpression(string key, Func<LambdaExpression> factory)
+    public static Expression<Func<T, bool>> GetOrAddExpression<T>(
+        string key,
+        Func<Expression<Func<T, bool>>> factory)
     {
         if (_expressionCache.Count >= FlexQueryCacheSettings.MaxCacheSize)
         {
-            _expressionCache.Clear(); // Simple mitigation for memory leaks
+            _expressionCache.Clear();
         }
-        return _expressionCache.GetOrAdd(key, _ => factory());
+        var expression = _expressionCache.GetOrAdd(key, _ => factory());
+        return (Expression<Func<T, bool>>)expression;
     }
 
     /// <summary>
-    /// Retrieves a cached compiled delegate or adds a new one.
+    /// Gets or creates a compiled delegate.
     /// </summary>
-    public static Delegate GetOrAddDelegate(string key, Func<Delegate> factory)
+    public static Func<T, bool> GetOrAddCompiled<T>(
+        string key,
+        Func<Func<T, bool>> factory)
     {
         if (_compiledCache.Count >= FlexQueryCacheSettings.MaxCacheSize)
         {
             _compiledCache.Clear();
         }
-        return _compiledCache.GetOrAdd(key, _ => factory());
+
+        var compiled = _compiledCache.GetOrAdd(key, _ => factory());
+
+        return (Func<T, bool>)compiled;
     }
 
     /// <summary>
-    /// Clears the entire expression and compiled delegate cache.
+    /// Attempts to retrieve a cached expression.
+    /// </summary>
+    public static bool TryGetExpression<T>(
+        string key,
+        out Expression<Func<T, bool>>? expression)
+    {
+        if (_expressionCache.TryGetValue(key, out var lambda))
+        {
+            expression = (Expression<Func<T, bool>>)lambda;
+            return true;
+        }
+
+        expression = null;
+        return false;
+    }
+
+    /// <summary>
+    /// Clears all caches.
     /// </summary>
     public static void Clear()
     {
