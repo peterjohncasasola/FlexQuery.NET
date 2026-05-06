@@ -1,9 +1,11 @@
-using FlexQuery.NET.Security;
+
+using FlexQuery.NET.Builders;
 
 namespace FlexQuery.NET.Models;
 
 /// <summary>
-/// Configuration options for dynamic querying, including filtering, sorting, pagination, and security.
+/// Represents the parsed user input for a dynamic query request.
+/// This model contains the filtering, sorting, and projection parameters provided by the client.
 /// </summary>
 public class QueryOptions
 {
@@ -13,7 +15,7 @@ public class QueryOptions
     public FilterGroup? Filter { get; set; }
 
     /// <summary>The sorting expressions.</summary>
-    public List<SortOption> Sort { get; set; } = new();
+    public List<SortNode> Sort { get; set; } = new();
 
     /// <summary>Flat dot-notation selection paths (e.g. "Id", "Profile.Name").</summary>
     public List<string>? Select { get; set; }
@@ -51,39 +53,19 @@ public class QueryOptions
     public int? Top { get; set; }
 
     /// <summary>Whether to include the total count in the result.</summary>
-    public bool? IncludeCount { get; set; }
+    public bool? IncludeCount { get; set; } = true;
 
-    // --- Field-Level Security & Aliasing ---
+    // --- Execution Configuration ---
 
-    /// <summary>Global list of allowed fields (whitelist).</summary>
-    public HashSet<string>? AllowedFields { get; set; }
+    /// <summary>
+    /// If true (default), string comparisons will be case-insensitive using database collation.
+    /// </summary>
+    public bool CaseInsensitive { get; set; } = true;
 
-    /// <summary>Global list of blocked fields (blacklist).</summary>
-    public HashSet<string>? BlockedFields { get; set; }
-
-    /// <summary>Fields allowed specifically for filtering operations.</summary>
-    public HashSet<string>? FilterableFields { get; set; }
-
-    /// <summary>Fields allowed specifically for sorting operations.</summary>
-    public HashSet<string>? SortableFields { get; set; }
-
-    /// <summary>Fields allowed specifically for selection/projection operations.</summary>
-    public HashSet<string>? SelectableFields { get; set; }
-
-    /// <summary>Optional limit for the depth of nested field paths.</summary>
-    public int? MaxFieldDepth { get; set; }
-
-    /// <summary>Optional custom resolver for dynamic field-level access control.</summary>
-    public IFieldAccessResolver? FieldAccessResolver { get; set; }
-
-    /// <summary>Maps external field aliases to internal property names.</summary>
-    public Dictionary<string, string>? FieldMappings { get; set; }
-
-    /// <summary>Role-based field permissions. Maps roles to sets of allowed fields.</summary>
-    public Dictionary<string, HashSet<string>>? RoleAllowedFields { get; set; }
-
-    /// <summary>The role to use when evaluating RoleAllowedFields.</summary>
-    public string? CurrentRole { get; set; }
+    /// <summary>
+    /// If true, enables expression caching for this query.
+    /// </summary>
+    public bool? EnableCache { get; set; }
 
     // --- Metadata & Internal State ---
 
@@ -97,32 +79,26 @@ public class QueryOptions
     internal SelectionNode? SelectTree { get; set; }
 
     /// <summary>
-    /// If true, enables expression caching for this query.
-    /// Default is null (uses global FlexQueryCacheSettings.EnableCache).
-    /// </summary>
-    public bool? EnableCache { get; set; }
-
-    /// <summary>
-    /// If true (default), string comparisons (Contains, StartsWith, EndsWith, Equals)
-    /// will be case-insensitive using database collation.
-    /// </summary>
-    public bool CaseInsensitive { get; set; } = true;
-
-    /// <summary>
     /// Generates a stable cache key for the current query configuration.
+    /// This key combines the entity type, operation name, case-sensitivity setting,
+    /// and normalized filter structure to produce a deterministic identifier.
     /// </summary>
+    /// <param name="entityType">The type of entity being queried.</param>
+    /// <param name="operation">The name of the query operation (e.g., "predicate", "projection").</param>
+    /// <returns>A string representing the cache key for this query configuration.</returns>
     public string GetCacheKey(Type entityType, string operation)
     {
-        var filterKey = Builders.FilterAnalyzer.CacheKey(Filter);
+        var normalizedFilter = FilterNormalizer.Normalize(Filter);
+        var filterKey = FilterAnalyzer.CacheKey(normalizedFilter);
         var ciKey = CaseInsensitive ? "ci" : "cs";
-        
-        // Include type and operation to prevent collisions between different entities or pipelines
         return $"{operation}:{entityType.FullName}:{ciKey}:{filterKey}";
     }
 
     /// <summary>
     /// Creates a shallow clone of the options with a new filter.
     /// </summary>
+    /// <param name="filter">The new filter group to apply.</param>
+    /// <returns>A new <see cref="QueryOptions"/> instance with the specified filter and all other properties copied.</returns>
     public QueryOptions CloneWithFilter(FilterGroup? filter)
     {
         return new QueryOptions
@@ -130,16 +106,6 @@ public class QueryOptions
             Filter = filter,
             CaseInsensitive = CaseInsensitive,
             EnableCache = EnableCache,
-            AllowedFields = AllowedFields,
-            BlockedFields = BlockedFields,
-            FilterableFields = FilterableFields,
-            SortableFields = SortableFields,
-            SelectableFields = SelectableFields,
-            MaxFieldDepth = MaxFieldDepth,
-            FieldAccessResolver = FieldAccessResolver,
-            FieldMappings = FieldMappings,
-            RoleAllowedFields = RoleAllowedFields,
-            CurrentRole = CurrentRole,
             Sort = Sort,
             Select = Select,
             Includes = Includes,

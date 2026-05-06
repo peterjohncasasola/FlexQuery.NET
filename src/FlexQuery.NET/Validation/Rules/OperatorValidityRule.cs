@@ -16,30 +16,31 @@ public sealed class OperatorValidityRule : IValidationRule
             ValidateFilterGroup(options.Filter, result);
         }
     }
-
-    private void ValidateFilterGroup(FilterGroup group, ValidationResult result)
+    private void ValidateFilterGroup(FilterGroupNode group, ValidationResult result)
     {
-        foreach (var filter in group.Filters)
+        foreach (var child in group.Children)
         {
-            if (string.IsNullOrWhiteSpace(filter.Operator)) continue;
-
-            if (!FilterOperators.IsSupported(filter.Operator))
+            if (child is FilterConditionNode filter)
             {
-                result.Errors.Add(new ValidationError(
-                    $"Operator '{filter.Operator}' is not supported.", 
-                    "INVALID_OPERATOR", 
-                    filter.Field));
-            }
+                if (string.IsNullOrWhiteSpace(filter.Operator)) continue;
 
-            if (filter.ScopedFilter != null)
+                if (!FilterOperators.IsSupported(filter.Operator))
+                {
+                    result.Errors.Add(new ValidationError(
+                        $"Operator '{filter.Operator}' is not supported.", 
+                        "INVALID_OPERATOR", 
+                        filter.Field));
+                }
+
+                if (filter.ScopedFilter != null)
+                {
+                    ValidateFilterGroup(filter.ScopedFilter, result);
+                }
+            }
+            else if (child is FilterGroupNode subGroup)
             {
-                ValidateFilterGroup(filter.ScopedFilter, result);
+                ValidateFilterGroup(subGroup, result);
             }
-        }
-
-        foreach (var subGroup in group.Groups)
-        {
-            ValidateFilterGroup(subGroup, result);
         }
     }
 }

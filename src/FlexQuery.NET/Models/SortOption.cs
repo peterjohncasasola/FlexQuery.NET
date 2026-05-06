@@ -1,9 +1,9 @@
 namespace FlexQuery.NET.Models;
 
 /// <summary>
-/// Specifies a sort field and direction.
+/// Specifies a sort field and direction in the query tree.
 /// </summary>
-public sealed class SortOption
+public class SortNode
 {
     /// <summary>The property name to sort by.</summary>
     public string Field { get; set; } = string.Empty;
@@ -15,12 +15,13 @@ public sealed class SortOption
     public string? AggregateField { get; set; }
 
     /// <summary>If true, sorts descending; otherwise ascending.</summary>
-    public bool Desc
-    {
-        get => Descending;
-        set => Descending = value;
-    }
-
-    /// <summary>If true, sorts descending; otherwise ascending.</summary>
     public bool Descending { get; set; }
+}
+
+/// <summary>
+/// Backwards-compatible sort option alias used by older test and API code.
+/// </summary>
+[Obsolete("SortOption is deprecated. Use SortNode instead.")]
+public sealed class SortOption : SortNode
+{
 }

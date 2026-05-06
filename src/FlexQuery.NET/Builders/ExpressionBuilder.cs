@@ -8,14 +8,14 @@ using FlexQuery.NET.Security;
 namespace FlexQuery.NET.Builders;
 
 /// <summary>
-/// Builds strongly-typed LINQ Expression trees from <see cref="FilterGroup"/> and
+/// Builds strongly-typed LINQ Expression trees from <see cref="FilterGroupNode"/> and
 /// <see cref="FilterCondition"/> objects. All expression building is done without
 /// string-eval so it is EF Core-translatable.
 /// </summary>
 public static class ExpressionBuilder
 {
     /// <summary>
-    /// Builds a combined predicate expression for the given <see cref="FilterGroup"/>.
+    /// Builds a combined predicate expression for the given <see cref="FilterGroupNode"/>.
     /// Returns null if the group is empty (caller should skip the Where clause).
     /// </summary>
     public static Expression<Func<T, bool>>? BuildPredicate<T>(QueryOptions options)
@@ -41,10 +41,10 @@ public static class ExpressionBuilder
     }
 
     /// <summary>
-    /// Backward-compatible overload. Builds a predicate from a <see cref="FilterGroup"/>
+    /// Backward-compatible overload. Builds a predicate from a <see cref="FilterGroupNode"/>
     /// using default options (CaseInsensitive = true).
     /// </summary>
-    public static Expression<Func<T, bool>>? BuildPredicate<T>(FilterGroup group)
+    public static Expression<Func<T, bool>>? BuildPredicate<T>(FilterGroupNode group)
         => BuildPredicate<T>(new QueryOptions { Filter = group });
 
     /// <summary>
@@ -84,28 +84,26 @@ public static class ExpressionBuilder
     /// Backward-compatible overload for the runtime-type variant.
     /// Uses default options (CaseInsensitive = true).
     /// </summary>
-    public static LambdaExpression? BuildPredicate(Type elementType, FilterGroup group)
+    public static LambdaExpression? BuildPredicate(Type elementType, FilterGroupNode group)
         => BuildPredicate(elementType, new QueryOptions { Filter = group });
 
     // ── Internal recursion ───────────────────────────────────────────────
 
     private static Expression? BuildGroupExpression(
-        ParameterExpression param, FilterGroup group, Type entityType, QueryOptions options)
+        ParameterExpression param, FilterGroupNode group, Type entityType, QueryOptions options)
     {
         var parts = new List<Expression>();
 
-        // Leaf filter conditions
-        foreach (var condition in group.Filters)
+        foreach (var child in group.Children)
         {
-            var expr = BuildConditionExpression(param, condition, entityType, options);
-            if (expr is not null) parts.Add(expr);
-        }
+            var expr = child switch
+            {
+                FilterGroupNode g => BuildGroupExpression(param, g, entityType, options),
+                FilterConditionNode c => BuildConditionExpression(param, c, entityType, options),
+                _ => null
+            };
 
-        // Nested sub-groups
-        foreach (var subGroup in group.Groups)
-        {
-            var subExpr = BuildGroupExpression(param, subGroup, entityType, options);
-            if (subExpr is not null) parts.Add(subExpr);
+            if (expr is not null) parts.Add(expr);
         }
 
         if (parts.Count == 0) return null;
@@ -119,7 +117,7 @@ public static class ExpressionBuilder
     }
 
     private static Expression? BuildConditionExpression(
-        ParameterExpression param, FilterCondition condition, Type entityType, QueryOptions options)
+        ParameterExpression param, FilterConditionNode condition, Type entityType, QueryOptions options)
     {
         if (string.IsNullOrWhiteSpace(condition.Field)) return null;
         var op = FilterOperators.Normalize(condition.Operator);
@@ -128,7 +126,7 @@ public static class ExpressionBuilder
         if (!SafePropertyResolver.TryResolveChain(entityType, condition.Field, out var chain)) return null;
 
         // ── Scoped collection filter (orders.any(...) / orders[...]) ──────────
-        // When ScopedFilter is set, the inner FilterGroup is applied to each
+        // When ScopedFilter is set, the inner FilterGroupNode is applied to each
         // element as a single compound predicate (true "scoped" semantics).
         if (condition.ScopedFilter is not null)
         {
@@ -149,7 +147,7 @@ public static class ExpressionBuilder
 
     /// <summary>
     /// Builds a scoped <c>Any</c> or <c>All</c> LINQ call where the inner
-    /// <see cref="FilterGroup"/> is translated recursively and applied as a
+    /// <see cref="FilterGroupNode"/> is translated recursively and applied as a
     /// single lambda to each collection element — guaranteeing that every
     /// condition inside the group refers to the <strong>same</strong> element.
     /// </summary>
@@ -157,7 +155,7 @@ public static class ExpressionBuilder
         Expression param,
         IReadOnlyList<PropertyInfo> chain,
         string quantifier,
-        FilterGroup scopedFilter,
+        FilterGroupNode scopedFilter,
         QueryOptions options)
     {
         var collectionAccess = ResolvePath(param, chain, out var collectionType);

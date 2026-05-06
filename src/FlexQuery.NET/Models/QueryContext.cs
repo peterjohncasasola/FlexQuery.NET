@@ -16,4 +16,9 @@ public class QueryContext
     /// Gets or sets the target entity type being queried.
     /// </summary>
     public Type? TargetType { get; set; }
+
+    /// <summary>
+    /// Gets or sets the server-side execution and security rules.
+    /// </summary>
+    public QueryExecutionOptions? ExecutionOptions { get; set; }
 }

@@ -36,7 +36,7 @@ Directly parse the raw `Request.Query`.
 
 ```csharp
 using FlexQuery.NET;
-using FlexQuery.NET.Parsers;
+using FlexQuery.NET.Models;
 using Microsoft.AspNetCore.Mvc;
 
 [ApiController]
@@ -48,29 +48,113 @@ public class CustomersController : ControllerBase
     public CustomersController(AppDbContext context) => _context = context;
 
     [HttpGet]
-    public async Task<IActionResult> Get()
+    public async Task<IActionResult> Get([FromQuery] FlexQueryParameters parameters)
     {
-        // Parse raw query string into internal model
-        var options = QueryOptionsParser.Parse(Request.Query);
+        // One-stop shop: Parsing + Validation + Execution
+        var result = await _context.Users.FlexQueryAsync(parameters, options => 
+        {
+            options.AllowedFields = ["Id", "Name", "Email"];
+        });
 
-        // Filter + sort + paging + projection
-        var users = await _context.Users
-            .ApplyValidatedQueryOptions(options)
-            .ToListAsync();
-
-        return Ok(users);
+        return Ok(result);
     }
 }
 ```
 
-### 2. Advanced Usage (Recommended)
+### 2. Fluent Filter Builder
 
-> **💡 Tip:** Use the `QueryRequest` DTO to prevent malicious clients from overriding server-side security rules (like `AllowedFields`).
+Build filters with a chainable API instead of string-based syntax. This feature is tightly coupled to the v2 API and integrates directly with the `FlexQuery` pipeline.
+
+#### When to Use
+- Building dynamic filters based on user input or runtime conditions
+- When you need compile-time safety with strongly-typed builders (`FilterBuilder<T>`)
+- Creating nested filter groups with AND/OR logic
+- When you prefer a code-first approach over writing raw DSL strings
+
+#### When NOT to Use
+- For simple static filters that can be hardcoded as DSL strings
+- When performance is critical and you want to avoid the slight overhead of building the filter object tree (though negligible)
+- If you are consuming filters from external sources (e.g., stored as JSON) and only need to apply them
+
+#### Recommendation (v2 approach)
+Use the Fluent Filter Builder to construct your filter, serialize it to JSON, and assign it to `FlexQueryParameters.Filter`. Then execute the query using the unified `FlexQuery` pipeline.
+
+##### Example: Basic filtering
+```csharp
+using FlexQuery.NET.Builders;
+using FlexQuery.NET.Models;
+using System.Text.Json;
+
+// Build filter using fluent API
+var filterBuilder = new FilterBuilder()
+    .Field("Age").GreaterThanOrEqual(18)
+    .And.Field("Country").Eq("USA");
+
+// Serialize to JSON
+var filterJson = JsonSerializer.Serialize(filterBuilder.Build());
+
+// Create query parameters
+var parameters = new FlexQueryParameters
+{
+    Filter = filterJson,
+    Sort = "Name:asc",
+    Page = 1,
+    PageSize = 20
+};
+
+// Execute query
+var result = myQueryable.FlexQuery(parameters);
+```
+
+##### Example: Strongly-typed builder
+```csharp
+using FlexQuery.NET.Builders;
+using FlexQuery.NET.Models;
+using System.Text.Json;
+
+var filterBuilder = new FilterBuilder<Product>()
+    .Field(p => p.Price).Between(10, 100)
+    .Or.Field(p => p.Name).Contains("Widget");
+
+var filterJson = JsonSerializer.Serialize(filterBuilder.Build());
+
+var parameters = new FlexQueryParameters { Filter = filterJson };
+var result = products.FlexQuery(parameters);
+```
+
+##### Example: Complex nested groups
+```csharp
+using FlexQuery.NET.Builders;
+using FlexQuery.NET.Models;
+using System.Text.Json;
+
+var filterBuilder = new FilterBuilder()
+    .AndGroup(gb =>
+    {
+        gb.Field("OrderDate").GreaterThanOrEqual(DateTime.UtcNow.AddMonths(-1));
+        gb.Field("Status").Eq("Shipped");
+    })
+    .OrGroup(gb =>
+    {
+        gb.Field("TotalAmount").GreaterThan(1000);
+        gb.Field("IsPriority").Eq(true);
+    });
+
+var filterJson = JsonSerializer.Serialize(filterBuilder.Build());
+
+var parameters = new FlexQueryParameters { Filter = filterJson };
+var result = orders.FlexQuery(parameters);
+```
+
+> **Note**: The Fluent Filter Builder is fully supported in v2 and integrates seamlessly with the `FlexQuery` pipeline. There are no plans to deprecate this feature.
+
+### 3. Advanced Usage (Recommended)
+
+> **💡 Tip:** Use the `FlexQuery` extension for a "one-stop-shop" that handles parsing, validation, and execution with built-in security.
 
 ```csharp
 using FlexQuery.NET;
 using FlexQuery.NET.Models;
-using FlexQuery.NET.Parsers;
 using Microsoft.AspNetCore.Mvc;
 
 [ApiController]
@@ -81,27 +165,133 @@ public class CustomersController : ControllerBase
 
     public CustomersController(AppDbContext context) => _context = context;
 
+    /// <summary>
+    /// Search customers with dynamic filters and security.
+    /// </summary>
+    /// <param name="parameters">Descriptive DTO for Swagger/OpenAPI documentation.</param>
     [HttpGet]
-    public async Task<IActionResult> Get([FromQuery] QueryRequest request)
+    public async Task<IActionResult> Get([FromQuery] FlexQueryParameters parameters)
     {
-        // 1. Parse the safe DTO into the execution model
-        var options = QueryOptionsParser.Parse(request);
+        // One-line secure execution with a configuration delegate
+        var result = await _context.Users.FlexQueryAsync(parameters, options => 
+        {
+            options.MaxFieldDepth = 3;
+            options.StrictFieldValidation = true;
+            options.AllowedFields = new[] { "Id", "Name", "Email", "Orders.*" };
+        });
 
-        // 2. Apply strict server-side security
-        options.MaxFieldDepth = 3;
-        options.AllowedFields = new HashSet<string>(StringComparer.OrdinalIgnoreCase) 
-        { 
-            "Id", "Name", "Email", "Orders.*" 
-        };
-
-        // 3. Execution (validation happens implicitly)
-        var users = await _context.Users
-            .ApplyValidatedQueryOptions(options)
-            .ToListAsync();
-
-        return Ok(users);
+        return Ok(result);
     }
 }
+```
+
+> [!NOTE]
+> `FlexQueryParameters` is the standard DTO that includes XML documentation comments for better Swagger/OpenAPI UI integration. Legacy DTOs like `QueryRequest` and `FlexQueryRequest` are still supported but deprecated.
+
+## High-Level API: FlexQuery
+
+`FlexQuery` (and `FlexQueryAsync` for EF Core) is the recommended entry point for production APIs.
+
+It encapsulates the full query pipeline into three internal steps:
+
+- **Parsing**: Converts `FlexQueryParameters` into a `QueryOptions` model.
+- **Validation**: Validates the query against `QueryExecutionOptions` (e.g., allowed fields, depth limits).
+- **Execution**: Applies filtering, sorting, paging, and projection to the `IQueryable`.
+
+---
+
+## Why use FlexQuery?
+
+While lower-level APIs like `QueryOptionsParser.Parse` and `ApplyQueryOptions` are available, `FlexQuery` is recommended for most use cases.
+
+### ✔ Built-in Validation
+
+Enforces a **validate-before-execute** pattern. Validation is always applied automatically, reducing the risk of unsafe queries reaching the database.
+
+---
+
+### ✔ Separation of Concerns
+
+- `FlexQueryParameters` → untrusted client input  
+- `QueryExecutionOptions` → trusted server-side rules  
+
+This ensures that clients cannot override security constraints.
+
+---
+
+### ✔ Cleaner Controllers
+
+Replaces multiple steps (parsing, validation, execution) with a single, expressive call:
+
+```csharp
+// Manual Approach (Advanced)
+var options = QueryOptionsParser.Parse(Request.Query);
+var exec = new QueryExecutionOptions { AllowedFields = ["Id", "Name", "Status"] };
+
+try
+{
+    // 1. Validate
+    options.ValidateOrThrow<User>(exec);
+    
+    // 2. Apply and Execute
+    var users = await query.ApplyQueryOptions(options).ToListAsync();
+}
+catch (QueryValidationException ex)
+{
+    return BadRequest(ex.Result.Errors);
+}
+```
+
+```csharp
+// After (recommended)
+var result = await _context.Users
+    .FlexQueryAsync(parameters, options => 
+    {
+        options.MaxFieldDepth = 3;
+        options.StrictFieldValidation = true;
+        options.AllowedFields = ["Id", "Name", "Email", "Orders.*"];
+    });
+```
+
+---
+
+### ✔ Optimized Performance
+
+Automatically handles "Filtered Includes" and dynamic projections in **a single optimized `Select()` statement**, reducing database round-trips.
+
+---
+
+### ✔ Canonical Query Normalization
+
+Equivalent filter expressions are normalized into a deterministic AST and stable cache key before expression caching, so queries like `name = John AND age > 18` and `age > 18 AND name = John` hit the same cached expression.
+
+---
+
+### ✔ Consistent Results
+
+Consistency: Ensures a consistent response shape, including Data, Page, PageSize, and an optional TotalCount based on the IncludeCount setting.
+
+---
+
+### ✔ Supports Modern DTOs
+
+Primarily designed for `FlexQueryParameters`, but remains backward compatible with legacy `QueryRequest` and `FlexQueryRequest` models.
+
+---
+
+## Configuration Options
+
+Use the configuration delegate to set server-side rules that clients cannot override:
+
+```csharp
+query.FlexQuery(parameters, options => 
+{
+    options.MaxPageSize = 100;
+    options.DefaultPageSize = 25;
+    options.StrictFieldValidation = true;
+    options.AllowedFields = new[] { "Id", "Name", "Status" };
+    options.BlockedFields = new[] { "PasswordHash" };
+});
 ```
 
 ## Features
@@ -165,6 +355,8 @@ FlexQuery.NET is the successor of DynamicQueryable.Extensions.
 - Cleaner and more consistent API surface
 - Enhanced EF Core integration
 - Support for multiple query formats (DSL, JSON, Indexed, JQL)
+- Public filter model: `QueryOptions.Filter` now uses a dedicated `FilterGroup` model while internal execution still uses `FilterGroupNode`
+- Backward compatibility helpers: `SortOption` remains supported as a compatibility alias for `SortNode`
 
 > ⚠️ Old versions and changelog history are not carried over to maintain a clean versioning strategy.
 
@@ -184,7 +376,9 @@ FlexQuery.NET is the successor of DynamicQueryable.Extensions.
 
 ## Filtering & Query Formats
 
-FlexQuery.NET parses incoming query parameters into a unified model (`QueryOptions`, `FilterGroup`, `FilterCondition`). Operator behavior is consistent across formats.
+FlexQuery.NET parses incoming query parameters into a unified public model (`QueryOptions`, `FilterGroup`, `FilterCondition`). Parser output now produces `FilterGroup` trees for JSON, DSL, and JQL formats, while the runtime execution engine continues to traverse internal `FilterGroupNode` structures for efficiency.
+
+> Note: `QueryOptions` is intended for user-provided query payloads. Server-side security and execution policy should be configured through the separate `QueryExecutionOptions` model.
 
 ### Generic (indexed)
 
@@ -603,9 +797,10 @@ GET /api/customers?query=(name contains "Connelly")&pageSize=2&select=id,email,n
 ```
 
 In this example:
-- The **root filter** (`query`) limits results to customers whose name contains "Connelly".
-- The **projection** (`select`) ensures we only fetch specific fields for the customer and their orders.
-- The **filtered include** (`include`) ensures that only "cancelled" orders are returned, and within those orders, only the items matching "Tasty Metal Pants" are included in the collection.
+- **Root Filtering**: Limits results to customers whose name contains "Connelly".
+- **Selective Projection**: Only fetches specified fields for customers and orders.
+- **Filtered Include**: Returns only "cancelled" orders and specific items within them.
+- **Total Count**: Returned as `1`. If `includeCount=false` was passed, `totalCount` would be `null` to save on a database round-trip.
 
 ### Return results with metadata
 
@@ -782,21 +977,30 @@ app.Use(async (context, next) =>
 FlexQuery.NET provides a pluggable validation engine that inspects `QueryOptions` before they are applied to an `IQueryable`. This prevents invalid queries (e.g., non-existent fields, incompatible types) from causing runtime exceptions or database errors.
 
 #### Using `ApplyValidatedQueryOptions`
-The easiest way to use the validation engine is via the `ApplyValidatedQueryOptions` extension method. It validates the options and applies them in a single step, throwing a `QueryValidationException` if any rules are violated.
+
+The `ApplyValidatedQueryOptions` extension method validates the query options against a specific execution policy and applies them in a single step. It throws a `QueryValidationException` if any security or structural rules are violated.
+
+This is useful when you have already manually parsed `QueryOptions` and need to apply a custom security policy.
 
 ```csharp
 using FlexQuery.NET;
 
+var options = QueryOptionsParser.Parse(Request.Query);
+var exec = new QueryExecutionOptions 
+{ 
+    AllowedFields = new[] { "Id", "Name", "Status" } 
+};
+
 try
 {
     var users = await _context.Users
-        .ApplyValidatedQueryOptions(options)
+        .ApplyFlexQuery(request, options => { /* configure security rules */ })
         .ToListAsync();
 }
 catch (QueryValidationException ex)
 {
     // Handle validation errors (ex.Result.Errors)
-    return BadRequest(ex.Result.Errors);
+    return BadRequest(new { errors = ex.Result.Errors });
 }
 ```
 
@@ -825,13 +1029,13 @@ Only fields in this list can be queried. Any attempt to filter, sort, or select 
 
 ```csharp
 var options = QueryOptionsParser.Parse(Request.Query);
-options.AllowedFields = new HashSet<string>(StringComparer.OrdinalIgnoreCase) 
+var exec = new QueryExecutionOptions 
 { 
-    "Id", "Name", "Email", "Orders.Status", "Orders.Total" 
+    AllowedFields = new[] { "Id", "Name", "Email", "Orders.Status", "Orders.Total" }
 };
 
 // Throws if disallowed fields are used
-query.ApplyValidatedQueryOptions(options);
+query.ApplyValidatedQueryOptions(options, exec);
 ```
 
 #### Blacklisting (BlockedFields)
@@ -843,6 +1047,54 @@ options.BlockedFields = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
     "SSN", "PasswordHash", "InternalMetadata" 
 };
 ```
+
+### Whitelisting & Default Projection
+
+FlexQuery provides powerful control over which fields can be projected back to the client. This is useful for both security (preventing sensitive data exposure) and performance (returning only what's needed).
+
+#### Defining Selectable Fields
+You can define allowed fields globally via execution options:
+
+```csharp
+var exec = new QueryExecutionOptions 
+{ 
+    SelectableFields = new[] { "Id", "Name", "Orders.Number" } 
+};
+```
+
+#### Wildcard Support (`.*`)
+You can use wildcards to include all scalar properties of a navigation property:
+
+```csharp
+// Includes Id of root, and all scalar properties of the Orders collection
+options.Select = new List<string> { "Id", "Orders.*" };
+```
+
+#### Default Projection
+If `SelectableFields` is configured and the client provides no `select` parameter, FlexQuery will automatically use the `SelectableFields` list as the default projection.
+
+#### Strict Validation
+By default, FlexQuery silently ignores unauthorized fields. Enable `StrictFieldValidation` to throw a `QueryValidationException` instead:
+
+```csharp
+options.StrictFieldValidation = true;
+```
+
+### Whitelisting Filterable & Sortable Fields
+
+Similar to selection, you can restrict which fields can be used for filtering and sorting. This is critical for preventing denial-of-service (DoS) attacks via unindexed columns.
+
+```csharp
+var exec = new QueryExecutionOptions();
+
+// Only allow filtering on Name and Category (and everything under Category)
+exec.FilterableFields = new[] { "Name", "Category.*" };
+
+// Only allow sorting on Id and CreatedAt
+exec.SortableFields = new[] { "Id", "CreatedAt" };
+```
+
+Wildcards (`*`) and deep paths (dot-notation) are fully supported across all security lists.
 
 ### 🌐 ASP.NET Core Integration (`FlexQuery.NET.AspNetCore`)
 
@@ -926,25 +1178,28 @@ orders.any(AND(status eq [Cancelled], orderItems.any(id eq [101])))
 
 Never expose your entire database schema. FlexQuery.NET provides a robust, pluggable security pipeline that runs *before* database execution.
 
-When using QueryOptionsParser.Parse(request), configure your rules on the resulting QueryOptions:
+When using `ApplyFlexQuery`, configure your rules in the configuration delegate:
 
-`csharp
-// 1. Whitelisting (Only allow these fields to be touched)
-options.AllowedFields = new HashSet<string> { "Id", "Name", "Orders.*" };
+```csharp
+query.ApplyFlexQuery(request, options => 
+{
+    // 1. Whitelisting (Only allow these fields to be touched)
+    options.AllowedFields = new[] { "Id", "Name", "Orders.*" };
 
-// 2. Blacklisting (Deny access to sensitive fields)
-options.BlockedFields = new HashSet<string> { "PasswordHash", "SSN" };
+    // 2. Blacklisting (Deny access to sensitive fields)
+    options.BlockedFields = new[] { "PasswordHash", "SSN" };
 
-// 3. Operation-Specific Rules
-options.FilterableFields = new HashSet<string> { "Status", "CreatedAt" };
-options.SortableFields = new HashSet<string> { "CreatedAt" };
-options.SelectableFields = new HashSet<string> { "Id", "Name", "Status" };
+    // 3. Operation-Specific Rules
+    options.FilterableFields = new[] { "Status", "CreatedAt" };
+    options.SortableFields = new[] { "CreatedAt" };
+    options.SelectableFields = new[] { "Id", "Name", "Status" };
 
-// 4. Depth Protection
-options.MaxFieldDepth = 3; // Prevent 'Orders.Items.Product.Category.Name'
-`
+    // 4. Depth Protection
+    options.MaxFieldDepth = 3; // Prevent 'Orders.Items.Product.Category.Name'
+});
+```
 
-If a client attempts to filter, sort, or select a restricted field, a QueryValidationException is thrown with detailed ValidationResult errors, preventing the query from ever hitting the database.
+If a client attempts to filter, sort, or select a restricted field, a `QueryValidationException` is thrown with detailed `ValidationResult` errors, preventing the query from ever hitting the database.
 
 
 ## ⚡ Performance: Expression Caching

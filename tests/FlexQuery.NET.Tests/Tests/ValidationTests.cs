@@ -2,6 +2,7 @@ using FlexQuery.NET.Models;
 using FlexQuery.NET.Parsers;
 using FlexQuery.NET.Validation;
 using FlexQuery.NET.Exceptions;
+using FlexQuery.NET.Extensions;
 using FluentAssertions;
 using Microsoft.Extensions.Primitives;
 using Xunit;
@@ -29,7 +30,7 @@ public class ValidationTests
         var options = QueryOptionsParser.Parse(new Dictionary<string, StringValues> { { "filter", "NonExistent:eq:101" } });
         var query = new List<Customer>().AsQueryable();
 
-        Action act = () => query.ApplyValidatedQueryOptions(options);
+        Action act = () => options.ValidateOrThrow<Customer>();
 
         act.Should().Throw<QueryValidationException>()
            .Which.Result.Errors.Should().Contain(e => e.Code == "FIELD_NOT_FOUND");
@@ -51,7 +52,7 @@ public class ValidationTests
         };
         var query = new List<Customer>().AsQueryable();
 
-        Action act = () => query.ApplyValidatedQueryOptions(options);
+        Action act = () => options.ValidateOrThrow<Customer>();
 
         act.Should().Throw<QueryValidationException>()
            .Which.Result.Errors.Should().Contain(e => e.Code == "INVALID_OPERATOR");
@@ -63,7 +64,7 @@ public class ValidationTests
         var options = QueryOptionsParser.Parse(new Dictionary<string, StringValues> { { "filter", "id:eq:not_a_number" } });
         var query = new List<Customer>().AsQueryable();
 
-        Action act = () => query.ApplyValidatedQueryOptions(options);
+        Action act = () => options.ValidateOrThrow<Customer>();
 
         act.Should().Throw<QueryValidationException>()
            .Which.Result.Errors.Should().Contain(e => e.Code == "TYPE_MISMATCH");
@@ -75,7 +76,7 @@ public class ValidationTests
         var options = QueryOptionsParser.Parse(new Dictionary<string, StringValues> { { "query", "orders.any(Unknown = 1)" } });
         var query = new List<Customer>().AsQueryable();
 
-        Action act = () => query.ApplyValidatedQueryOptions(options);
+        Action act = () => options.ValidateOrThrow<Customer>();
 
         act.Should().Throw<QueryValidationException>()
            .Which.Result.Errors.Should().Contain(e => e.Code == "FIELD_NOT_FOUND");
@@ -87,7 +88,7 @@ public class ValidationTests
         var options = QueryOptionsParser.Parse(new Dictionary<string, StringValues> { { "query", "name.any(id = 1)" } });
         var query = new List<Customer>().AsQueryable();
 
-        Action act = () => query.ApplyValidatedQueryOptions(options);
+        Action act = () => options.ValidateOrThrow<Customer>();
 
         act.Should().Throw<QueryValidationException>()
            .Which.Result.Errors.Should().Contain(e => e.Code == "NOT_A_COLLECTION");
@@ -99,7 +100,7 @@ public class ValidationTests
         var options = QueryOptionsParser.Parse(new Dictionary<string, StringValues> { { "filter", "name:eq:john" } });
         var query = new List<Customer>().AsQueryable();
 
-        Action act = () => query.ApplyValidatedQueryOptions(options);
+        Action act = () => options.ValidateOrThrow<Customer>();
 
         act.Should().NotThrow();
     }

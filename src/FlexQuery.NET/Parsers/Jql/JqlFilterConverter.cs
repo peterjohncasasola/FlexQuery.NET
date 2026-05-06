@@ -13,23 +13,22 @@ public static class JqlFilterConverter
         if (node is JqlLogicalNode logical)
             return ConvertLogical(logical);
 
+        var group = new FilterGroup
+        {
+            Logic = LogicOperator.And
+        };
+
         if (node is JqlCollectionNode collection)
         {
-            // A top-level scoped collection node wraps into an AND group with
-            // a single FilterCondition that carries the ScopedFilter.
-            return new FilterGroup
-            {
-                Logic   = LogicOperator.And,
-                Filters = [ConvertCollection(collection)]
-            };
+            group.Filters.Add(ConvertCollection(collection));
+        }
+        else
+        {
+            var c = (JqlConditionNode)node;
+            group.Filters.Add(ConvertCondition(c));
         }
 
-        var c = (JqlConditionNode)node;
-        return new FilterGroup
-        {
-            Logic   = LogicOperator.And,
-            Filters = [ConvertCondition(c)]
-        };
+        return group;
     }
 
     // ── Private helpers ───────────────────────────────────────────────────
@@ -50,9 +49,6 @@ public static class JqlFilterConverter
                     break;
 
                 case JqlCollectionNode collection:
-                    // A scoped collection node becomes a FilterCondition with a
-                    // populated ScopedFilter rather than a sub-group, so that the
-                    // expression builder can apply all conditions to the SAME element.
                     group.Filters.Add(ConvertCollection(collection));
                     break;
 
@@ -66,10 +62,7 @@ public static class JqlFilterConverter
     }
 
     /// <summary>
-    /// Converts a <see cref="JqlCollectionNode"/> into a <see cref="FilterCondition"/>
-    /// whose <see cref="FilterCondition.ScopedFilter"/> carries the complete inner
-    /// filter group. This ensures that all conditions inside <c>orders.any(...)</c>
-    /// or <c>orders[...]</c> are evaluated against the <strong>same</strong> element.
+    /// Converts a <see cref="JqlCollectionNode"/> into a <see cref="FilterCondition"/>.
     /// </summary>
     private static FilterCondition ConvertCollection(JqlCollectionNode node)
     {

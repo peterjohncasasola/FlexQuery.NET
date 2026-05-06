@@ -17,58 +17,59 @@ internal static class FilterAnalyzer
     /// - AND groups: can partially extract matching conditions/groups (other branches ignored).
     /// - OR  groups: only extract when ALL branches apply to the navigation (otherwise null).
     /// </summary>
-    public static FilterGroup? ExtractForNavigation(FilterGroup group, string navigation)
+    public static FilterGroupNode? ExtractForNavigation(FilterGroupNode group, string navigation)
     {
-        if (group.Filters.Count == 0 && group.Groups.Count == 0) return null;
+        if (group.Children.Count == 0) return null;
         if (string.IsNullOrWhiteSpace(navigation)) return null;
 
         var prefix = navigation.Trim() + ".";
 
-        var extracted = new FilterGroup { Logic = group.Logic };
+        var extracted = new FilterGroupNode { Logic = group.Logic };
         var hasNonApplicable = false;
 
-        foreach (var f in group.Filters)
+        foreach (var child in group.Children)
         {
-            if (string.IsNullOrWhiteSpace(f.Field))
+            if (child is FilterConditionNode f)
             {
-                hasNonApplicable = true;
-                continue;
-            }
-
-            if (f.Field.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
-            {
-                var rebased = f.Field[prefix.Length..];
-                if (!string.IsNullOrWhiteSpace(rebased))
+                if (string.IsNullOrWhiteSpace(f.Field))
                 {
-                    extracted.Filters.Add(new FilterCondition
-                    {
-                        Field = rebased,
-                        Operator = f.Operator,
-                        Value = f.Value
-                    });
-                }
-                else
-                {
-                    // Filter is directly on the navigation (rare/unsupported) → treat as non-applicable.
                     hasNonApplicable = true;
+                    continue;
                 }
 
-                continue;
-            }
+                if (f.Field.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
+                {
+                    var rebased = f.Field[prefix.Length..];
+                    if (!string.IsNullOrWhiteSpace(rebased))
+                    {
+                        extracted.Children.Add(new FilterConditionNode
+                        {
+                            Field = rebased,
+                            Operator = f.Operator,
+                            Value = f.Value
+                        });
+                    }
+                    else
+                    {
+                        hasNonApplicable = true;
+                    }
 
-            hasNonApplicable = true;
-        }
+                    continue;
+                }
 
-        foreach (var g in group.Groups)
-        {
-            var sub = ExtractForNavigation(g, navigation);
-            if (sub is null)
-            {
                 hasNonApplicable = true;
-                continue;
             }
+            else if (child is FilterGroupNode g)
+            {
+                var sub = ExtractForNavigation(g, navigation);
+                if (sub is null)
+                {
+                    hasNonApplicable = true;
+                    continue;
+                }
 
-            extracted.Groups.Add(sub);
+                extracted.Children.Add(sub);
+            }
         }
 
         if (!HasAnyCondition(extracted)) return null;
@@ -85,19 +86,28 @@ internal static class FilterAnalyzer
     /// <summary>
     /// Generates a stable cache key for a filter subtree.
     /// </summary>
-    public static string CacheKey(FilterGroup? group)
+    /// <param name="group">The filter group node to generate a key for.</param>
+    /// <returns>A string representing the cache key for this filter subtree.</returns>
+    public static string CacheKey(FilterGroupNode? group)
     {
+        group = FilterNormalizer.Normalize(group);
         if (group is null) return string.Empty;
+
+        var parts = group.Children.Select(child => child switch
+        {
+            FilterGroupNode g => CacheKey(g),
+            FilterConditionNode f => Escape(f.Field) + ":" + Escape(f.Operator) + ":" + Escape(f.Value),
+            _ => string.Empty
+        });
 
         return "{" +
                "L=" + (group.Logic == LogicOperator.Or ? "or" : "and") +
-               ";F=" + string.Join(",", group.Filters.Select(f => Escape(f.Field) + ":" + Escape(f.Operator) + ":" + Escape(f.Value))) +
-               ";G=" + string.Join(",", group.Groups.Select(CacheKey)) +
+               ";C=" + string.Join(",", parts) +
                "}";
     }
 
-    private static bool HasAnyCondition(FilterGroup group)
-        => group.Filters.Count > 0 || group.Groups.Any(HasAnyCondition);
+    private static bool HasAnyCondition(FilterGroupNode group)
+        => group.Children.Any(c => c is FilterConditionNode || (c is FilterGroupNode g && HasAnyCondition(g)));
 
     private static string Escape(string? s)
         => s is null ? "∅" : s.Replace("\\", "\\\\").Replace(":", "\\:").Replace(",", "\\,").Replace("{", "\\{").Replace("}", "\\}");

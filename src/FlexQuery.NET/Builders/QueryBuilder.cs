@@ -35,7 +35,7 @@ public static class QueryBuilder
         => ApplySort(query, options.Sort);
 
     /// <summary>Applies ordered sorting from <paramref name="sorts"/> to the query.</summary>
-    public static IQueryable<T> ApplySort<T>(IQueryable<T> query, List<SortOption>? sorts)
+    public static IQueryable<T> ApplySort<T>(IQueryable<T> query, List<SortNode>? sorts)
     {
         if (sorts is null || sorts.Count == 0) return query;
 
@@ -147,7 +147,7 @@ public static class QueryBuilder
 
     // ── Private helpers ──────────────────────────────────────────────────
 
-    private static bool HasAggregate(SortOption sort)
+    private static bool HasAggregate(SortNode sort)
         => !string.IsNullOrWhiteSpace(sort.Aggregate);
 
     private static bool BuildPropertyExpression(
@@ -177,7 +177,7 @@ public static class QueryBuilder
 
     private static bool BuildAggregateExpression(
         Expression parameter,
-        SortOption sort,
+        SortNode sort,
         out Expression aggregateExpression)
     {
         aggregateExpression = null!;
