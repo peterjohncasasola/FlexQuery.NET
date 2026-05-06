@@ -3,18 +3,7 @@
 All notable changes to this project will be documented in this file.
 
 ---
-## [2.0.1] - 2026-05-06
-### Bug Fixes
-- Fixed `FluentFilterBuilder` nested groups to correctly set the `Logic` property on subgroups (was always defaulting to `And`). `OrGroup` now properly produces groups with `LogicOperator.Or`.
-- Fixed incorrect nesting when adding multiple top-level groups with different logical operators. Previously, mixing `AndGroup` and `OrGroup` would wrap the first group in an extra subgroup, making its filters inaccessible via `Groups[i].Filters`.
-
-### Documentation
-- Updated the Fluent Filter Builder section in README.md to reflect the v2 API (FlexQueryParameters and FlexQuery/FlexQueryAsync)
-- Added "When to Use", "When NOT to Use", and "Recommendation (v2 approach)" sections
-- Provided updated examples using the v2 API
-
----
-## [2.0.0] - 2026-05-05
+## [2.0.0] - 2026-05-06
 
 ### Breaking Changes
 - **Dual-Model Architecture**: Successfully decoupled query input (`QueryOptions`) from server-side execution policy (`QueryExecutionOptions`).
@@ -27,12 +16,27 @@ All notable changes to this project will be documented in this file.
 - **Canonical Query Normalization**: Added a filter AST normalizer that deterministically orders equivalent conditions and removes redundant group structure before cache-key generation.
 - **`FlexQueryRequest.ToRequestQuery()`**: Improved DTO mapping for cleaner OpenAPI/Swagger integrations.
 - **Nullable TotalCount**: `QueryResult.TotalCount` is now nullable to support scenarios where counting is explicitly disabled for performance.
+- **Strongly-Typed Expression Cache**: Refactored `ExpressionCache.cs` to use strongly-typed generics (`Expression<Func<T, bool>>` and `Func<T, bool>`), and added `TryGetExpression<T>`.
 
 ### Changed
 - **AspNetCore Integration**: Updated `FieldAccessFilter` to inject security rules into the new `QueryExecutionOptions` model.
 - **Validation Pipeline**: Refactored `FieldAccessValidator` to consume execution policies, ensuring strict separation between user input and server rules.
 - **Public filter model**: `QueryOptions.Filter` now uses the public `FilterGroup` model; JQL and DSL parsers emit `FilterGroup` trees and `FilterCondition.ScopedFilter` preserves scoped collection semantics.
 - **Sort compatibility**: Introduced `SortNode` as the canonical sort model and preserved `SortOption` as a backwards-compatible alias.
+
+### Bug Fixes
+- Fixed `FluentFilterBuilder` nested groups to correctly set the `Logic` property on subgroups (was always defaulting to `And`). `OrGroup` now properly produces groups with `LogicOperator.Or`.
+- Fixed incorrect nesting when adding multiple top-level groups with different logical operators. Previously, mixing `AndGroup` and `OrGroup` would wrap the first group in an extra subgroup, making its filters inaccessible via `Groups[i].Filters`.
+- Resolved build failures caused by invalid markdown syntax in `FilterNormalizer.cs`.
+- Fixed test suite compilation errors by merging redundant `QueyNormalizationExtensions.cs` into `QueryOptionsExtensions.cs` (resolving ambiguous `Normalize()` method references).
+- Fixed `QueryOptions` cache key string formatting errors (updated `Take` to `Top` and `OrderBy` to a properly mapped `Sort` value).
+
+### Documentation
+- **Comprehensive v2 Refactor**: Reorganized all documentation into a versioned structure (`docs/v1` and `docs/guide` for v2).
+- **Unified Migration Guide**: Consolidated all v1 → v2 migration steps into a single, clean `/migration` path.
+- **Fluent API Documentation**: Updated all guides to prioritize fluent `IQueryable` extension methods over legacy static builders.
+- **Execution & Security**: Added dedicated sections for the unified execution pipeline (`FlexQueryAsync`) and trusted server-side rules.
+- **Aggregate Syntax**: Documented the new LINQ-style aggregate syntax (e.g., `status.count()`) in the Projection guide.
 
 
 ## [1.7.0] - 2026-05-03

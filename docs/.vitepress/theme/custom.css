@@ -1,0 +1,249 @@
+/* =========================================================
+🎯 FLEXQUERY PREMIUM THEME (STRIPE/VERCEL INSPIRED)
+======================================================== */
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
+:root {
+  /* Typography */
+  --vp-font-family-base: 'Inter', sans-serif;
+  --vp-font-family-mono: 'JetBrains Mono', monospace;
+  
+  /* Layout Widths */
+  --vp-layout-max-width: 1536px;
+  --vp-sidebar-width: 280px;
+  --vp-content-max-width: 960px;
+  
+  /* Brand Colors */
+  --vp-c-brand-1: #2563EB;
+  --vp-c-brand-2: #3B82F6;
+  --vp-c-brand-3: #60A5FA;
+
+  /* Theme Colors (Light) */
+  --custom-bg: #FFFFFF;
+  --custom-bg-soft: #F9FAFB;
+  --custom-bg-alt: #F3F4F6;
+  --custom-divider: #E5E7EB;
+  --custom-text-1: #111827;
+  --custom-text-2: #4B5563;
+  --custom-text-3: #9CA3AF;
+  --custom-code-bg: #FAFAFA;
+  --custom-sidebar-active-bg: #EFF6FF;
+  --custom-sidebar-active-text: #2563EB;
+}
+
+html.dark {
+  /* Theme Colors (Dark) */
+  --custom-bg: #0A0A0A;
+  --custom-bg-soft: #121212;
+  --custom-bg-alt: #1A1A1A;
+  --custom-divider: #262626;
+  --custom-text-1: #EDEDED;
+  --custom-text-2: #A3A3A3;
+  --custom-text-3: #737373;
+  --custom-code-bg: #121212;
+  --custom-sidebar-active-bg: #1E3A8A;
+  --custom-sidebar-active-text: #60A5FA;
+
+  /* VitePress Native Variable Overrides */
+  --vp-c-bg: var(--custom-bg);
+  --vp-c-bg-soft: var(--custom-bg-soft);
+  --vp-c-bg-alt: var(--custom-bg-alt);
+  --vp-c-divider: var(--custom-divider);
+  --vp-c-text-1: var(--custom-text-1);
+  --vp-c-text-2: var(--custom-text-2);
+  --vp-c-text-3: var(--custom-text-3);
+}
+
+/* =========================================================
+🎯 LAYOUT & SPACING
+========================================================= */
+
+.VPDoc {
+  padding: 32px 48px 96px !important;
+}
+
+@media (max-width: 768px) {
+  .VPDoc {
+    padding: 24px 24px 64px !important;
+  }
+}
+
+.VPDoc .container {
+  max-width: 1400px !important;
+  margin: 0 auto;
+}
+
+.VPDoc .content-container {
+  max-width: var(--vp-content-max-width) !important;
+}
+
+.vp-doc > p,
+.vp-doc > ul,
+.vp-doc > ol {
+  max-width: 800px;
+  font-size: 16px;
+  line-height: 1.75;
+  color: var(--custom-text-2);
+}
+
+/* =========================================================
+🎯 TYPOGRAPHY
+========================================================= */
+
+.vp-doc h1 {
+  font-size: 40px !important;
+  font-weight: 700 !important;
+  letter-spacing: -0.03em !important;
+  color: var(--custom-text-1) !important;
+  margin-bottom: 24px !important;
+}
+
+.vp-doc h2 {
+  font-size: 26px !important;
+  font-weight: 600 !important;
+  letter-spacing: -0.02em !important;
+  color: var(--custom-text-1) !important;
+  margin-top: 56px !important;
+  margin-bottom: 24px !important;
+  border-top: none !important;
+  padding-top: 0 !important;
+}
+
+.vp-doc h3 {
+  font-size: 18px !important;
+  font-weight: 600 !important;
+  color: var(--custom-text-1) !important;
+  margin-top: 40px !important;
+  margin-bottom: 16px !important;
+}
+
+/* =========================================================
+🎯 CODE BLOCKS
+========================================================= */
+
+.vp-doc div[class*="language-"] {
+  background-color: var(--custom-code-bg) !important;
+  border: 1px solid var(--custom-divider) !important;
+  border-radius: 12px !important;
+  margin: 32px 0 !important;
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.02) !important;
+}
+
+.vp-doc div[class*="language-"] pre {
+  background: transparent !important;
+  padding: 24px !important;
+}
+
+.vp-doc div[class*="language-"] code {
+  font-family: var(--vp-font-family-mono) !important;
+  font-size: 14px !important;
+  color: var(--custom-text-1) !important;
+}
+
+.vp-doc div[class*="language-"] > span.lang {
+  color: var(--custom-text-3) !important;
+}
+
+.vp-doc div[class*="language-"] > button.copy {
+  border: 1px solid var(--custom-divider);
+  background-color: var(--custom-bg);
+  color: var(--custom-text-2);
+}
+
+.vp-doc code {
+  background-color: var(--custom-bg-alt) !important;
+  color: var(--custom-text-1) !important;
+  border: 1px solid var(--custom-divider);
+}
+
+/* Syntax Highlighting Adjustments */
+html:not(.dark) .vp-doc div[class*="language-"] .token.string { color: #10B981 !important; }
+html:not(.dark) .vp-doc div[class*="language-"] .token.keyword { color: #8B5CF6 !important; }
+html:not(.dark) .vp-doc div[class*="language-"] .token.function { color: #3B82F6 !important; }
+html:not(.dark) .vp-doc div[class*="language-"] .token.number { color: #F59E0B !important; }
+
+/* =========================================================
+🎯 SIDEBAR & NAV
+========================================================= */
+
+.VPSidebar {
+  background-color: var(--custom-bg) !important;
+  border-right: 1px solid var(--custom-divider) !important;
+}
+
+.VPSidebarItem.level-0 > .item > .text {
+  color: var(--custom-text-1) !important;
+}
+
+.VPSidebarItem.level-1 .link {
+  color: var(--custom-text-2) !important;
+}
+
+.VPSidebarItem.level-1 .link:hover {
+  background-color: var(--custom-bg-alt) !important;
+  color: var(--custom-text-1) !important;
+}
+
+.VPSidebarItem.level-1 .link.active {
+  background-color: var(--custom-sidebar-active-bg) !important;
+  color: var(--custom-sidebar-active-text) !important;
+}
+
+.VPDocAsideOutline .root .title {
+  color: var(--custom-text-1) !important;
+}
+
+.VPDocAsideOutline .outline-link {
+  color: var(--custom-text-2) !important;
+}
+
+.VPDocAsideOutline .outline-link.active {
+  color: var(--custom-sidebar-active-text) !important;
+  border-left-color: var(--custom-sidebar-active-text) !important;
+}
+
+.VPNavBar {
+  background-color: var(--custom-bg) !important;
+  opacity: 0.95;
+  backdrop-filter: blur(8px);
+  border-bottom: 1px solid var(--custom-divider) !important;
+}
+
+.VPLocalNav {
+  background-color: var(--custom-bg) !important;
+  border-bottom: 1px solid var(--custom-divider) !important;
+}
+
+.VPLocalNav .current {
+  color: var(--custom-text-1) !important;
+}
+
+.DocSearch-Button {
+  background-color: var(--custom-bg-alt) !important;
+}
+
+/* HTTP */
+.language-http {
+  border-left: 4px solid #22c55e;
+}
+
+/* JSON */
+.language-json {
+  border-left: 4px solid #3b82f6;
+}
+
+/* C# */
+.language-csharp {
+  border-left: 4px solid #a855f7;
+}
+
+/* =========================================================
+🎯 CUSTOM BLUE .NET STYLING
+========================================================= */
+
+
+.blue-net {
+  color: var(--vp-c-brand-1);
+  -webkit-text-fill-color: var(--vp-c-brand-1);
+}
