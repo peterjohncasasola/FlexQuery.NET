@@ -33,7 +33,7 @@ public class FilteredIncludeTests : IDisposable
         // Use the dual pipeline:
         var result = await _db.Customers
             .AsNoTracking()
-            .ApplyQueryOptions(options)     // filter root
+            .Apply(options)     // filter root
             .ApplyFilteredIncludes(options) // filter includes
             .ToListAsync();
 
@@ -68,7 +68,7 @@ public class FilteredIncludeTests : IDisposable
         // Act
         var result = await _db.Customers
             .AsNoTracking()
-            .ApplyQueryOptions(options)
+            .Apply(options)
             .ApplySelect(options)
             .ToListAsync();
 
@@ -108,7 +108,7 @@ public class FilteredIncludeTests : IDisposable
         // Act
         var result = await _db.Customers
             .AsNoTracking()
-            .ApplyQueryOptions(options)
+            .Apply(options)
             .ApplySelect(options)
             .ToListAsync();
 
@@ -138,18 +138,17 @@ public class FilteredIncludeTests : IDisposable
     [Fact]
     public async Task ToProjectedQueryResultAsync_AppliesFilteredIncludes()
     {
-        // Arrange
-        var options = QueryOptionsParser.Parse(new Dictionary<string, Microsoft.Extensions.Primitives.StringValues>
+        var parameters = new FlexQueryParameters
         {
-            ["filter"] = "Id:eq:1",
-            ["include"] = "Orders(Total > 100)",
-            ["select"] = "Id,Name,Orders.Number,Orders.Total"
-        });
+            Filter = "Id:eq:1",
+            Includes = "Orders(Total > 100)",
+            Select = "Id,Name,Orders.Number,Orders.Total"
+        };
 
         // Act
         var result = await _db.Customers
             .AsNoTracking()
-            .ToProjectedQueryResultAsync(options);
+            .FlexQueryAsync(parameters);
 
         // Assert
         result.TotalCount.Should().Be(1);
@@ -170,18 +169,17 @@ public class FilteredIncludeTests : IDisposable
     [Fact]
     public async Task Select_OnNavigation_OverridesIncludeAllScalars()
     {
-        // Arrange
-        var options = QueryOptionsParser.Parse(new Dictionary<string, Microsoft.Extensions.Primitives.StringValues>
+        var parameters = new FlexQueryParameters
         {
-            ["filter"] = "Id:eq:1",
-            ["include"] = "Orders(Total > 100)",
-            ["select"] = "Id,Orders.Number" // We ONLY want Number, not Total!
-        });
+            Filter = "Id:eq:1",
+            Includes = "Orders(Total > 100)",
+            Select = "Id,Orders.Number" // We ONLY want Number, not Total!
+        };
 
         // Act
         var result = await _db.Customers
             .AsNoTracking()
-            .ToProjectedQueryResultAsync(options);
+            .FlexQueryAsync(parameters);
 
         // Assert
         var alice = result.Data.First();
@@ -202,19 +200,17 @@ public class FilteredIncludeTests : IDisposable
     [Fact]
     public async Task FilteredInclude_SupportsDsl()
     {
-        // Arrange
-        // Using DSL format: Total:gt:100
-        var options = QueryOptionsParser.Parse(new Dictionary<string, Microsoft.Extensions.Primitives.StringValues>
+        var parameters = new FlexQueryParameters
         {
-            ["filter"] = "Id:eq:1",
-            ["include"] = "Orders(Total:gt:100)",
-            ["select"] = "Id,Orders.Number,Orders.Total"
-        });
+            Filter = "Id:eq:1",
+            Includes = "Orders(Total:gt:100)",
+            Select = "Id,Orders.Number,Orders.Total"
+        };
 
         // Act
         var result = await _db.Customers
             .AsNoTracking()
-            .ToProjectedQueryResultAsync(options);
+            .FlexQueryAsync(parameters);
 
         // Assert
         var alice = result.Data.First();
@@ -231,20 +227,17 @@ public class FilteredIncludeTests : IDisposable
     [Fact]
     public async Task FilteredInclude_NestedMixed_WorksCorrectly()
     {
-        // Arrange
-        // Mixed: Level 1 is DSL (Total:gt:100), Level 2 is JQL (Sku = 'SKU-AAA')
-        // We use lowercase 'items' to test case-insensitivity.
-        var options = QueryOptionsParser.Parse(new Dictionary<string, Microsoft.Extensions.Primitives.StringValues>
+        var parameters = new FlexQueryParameters
         {
-            ["filter"] = "Id:eq:1",
-            ["include"] = "Orders(Total:gt:100).items(Sku = 'SKU-AAA')",
-            ["select"] = "Id,Orders.Number,Orders.Items.Sku"
-        });
+            Filter = "Id:eq:1",
+            Includes = "Orders(Total:gt:100).items(Sku = 'SKU-AAA')",
+            Select = "Id,Orders.Number,Orders.Items.Sku"
+        };
 
         // Act
         var result = await _db.Customers
             .AsNoTracking()
-            .ToProjectedQueryResultAsync(options);
+            .FlexQueryAsync(parameters);
 
         // Assert
         var alice = result.Data.First();
@@ -268,20 +261,17 @@ public class FilteredIncludeTests : IDisposable
     [Fact]
     public async Task FilteredInclude_ComplexChain_MixedFormats()
     {
-        // Arrange
-        // Exact user example with potential spaces: include=orders(status:eq:cancelled).items(sku = 'AAA')
-        // We use 'Total' and 'Sku' from our seed data to make it real.
-        var options = QueryOptionsParser.Parse(new Dictionary<string, Microsoft.Extensions.Primitives.StringValues>
+        var parameters = new FlexQueryParameters
         {
-            ["filter"] = "Id:eq:1",
-            ["include"] = "Orders(Total:gt:100) . items(Sku = 'SKU-AAA')",
-            ["select"] = "Id,Orders.Number,Orders.Items.Sku"
-        });
+            Filter = "Id:eq:1",
+            Includes = "Orders(Total:gt:100) . items(Sku = 'SKU-AAA')",
+            Select = "Id,Orders.Number,Orders.Items.Sku"
+        };
 
         // Act
         var result = await _db.Customers
             .AsNoTracking()
-            .ToProjectedQueryResultAsync(options);
+            .FlexQueryAsync(parameters);
 
         // Assert
         var alice = result.Data.First();

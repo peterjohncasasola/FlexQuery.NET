@@ -35,7 +35,7 @@ public class FilterTests : IDisposable
             }
         };
 
-        var result = _db.Entities.AsQueryable().ApplyQueryOptions(opts).ToList();
+        var result = _db.Entities.AsQueryable().Apply(opts).ToList();
 
         result.Should().HaveCount(1);
         result[0].Name.Should().Be("Alice Johnson");
@@ -53,7 +53,7 @@ public class FilterTests : IDisposable
             Paging = { Disabled = true }
         };
 
-        var result = _db.Entities.AsQueryable().ApplyQueryOptions(opts).ToList();
+        var result = _db.Entities.AsQueryable().Apply(opts).ToList();
 
         result.Should().HaveCount(1);
         result[0].Name.Should().Be("Bob Smith");
@@ -73,7 +73,7 @@ public class FilterTests : IDisposable
             Paging = { Disabled = true }
         };
 
-        var result = _db.Entities.AsQueryable().ApplyQueryOptions(opts).ToList();
+        var result = _db.Entities.AsQueryable().Apply(opts).ToList();
 
         result.Should().NotContain(e => e.City == "London");
         result.Should().HaveCount(7); // 10 total, 3 in London
@@ -93,7 +93,7 @@ public class FilterTests : IDisposable
             Paging = { Disabled = true }
         };
 
-        var result = _db.Entities.AsQueryable().ApplyQueryOptions(opts).ToList();
+        var result = _db.Entities.AsQueryable().Apply(opts).ToList();
 
         // "Alice Johnson" and "Jack Anderson" contain "son"
         result.Should().HaveCountGreaterThanOrEqualTo(2);
@@ -114,7 +114,7 @@ public class FilterTests : IDisposable
             Paging = { Disabled = true }
         };
 
-        var result = _db.Entities.AsQueryable().ApplyQueryOptions(opts).ToList();
+        var result = _db.Entities.AsQueryable().Apply(opts).ToList();
 
         result.Should().ContainSingle();
         result[0].Name.Should().Be("Alice Johnson");
@@ -132,7 +132,7 @@ public class FilterTests : IDisposable
             Paging = { Disabled = true }
         };
 
-        var result = _db.Entities.AsQueryable().ApplyQueryOptions(opts).ToList();
+        var result = _db.Entities.AsQueryable().Apply(opts).ToList();
 
         result.Should().HaveCount(3);
         result.Should().AllSatisfy(e => e.Name.EndsWith("son", StringComparison.OrdinalIgnoreCase).Should().BeTrue());
@@ -150,7 +150,7 @@ public class FilterTests : IDisposable
             Paging = { Disabled = true }
         };
 
-        var result = _db.Entities.AsQueryable().ApplyQueryOptions(opts).ToList();
+        var result = _db.Entities.AsQueryable().Apply(opts).ToList();
 
         result.Should().NotBeEmpty();
         result.Should().AllSatisfy(e => e.Age.Should().BeGreaterThan(35));
@@ -168,7 +168,7 @@ public class FilterTests : IDisposable
             Paging = { Disabled = true }
         };
 
-        var result = _db.Entities.AsQueryable().ApplyQueryOptions(opts).ToList();
+        var result = _db.Entities.AsQueryable().Apply(opts).ToList();
 
         result.Should().NotBeEmpty();
         result.Should().AllSatisfy(e => e.Age.Should().BeLessThan(25));
@@ -186,7 +186,7 @@ public class FilterTests : IDisposable
             Paging = { Disabled = true }
         };
 
-        var result = _db.Entities.AsQueryable().ApplyQueryOptions(opts).ToList();
+        var result = _db.Entities.AsQueryable().Apply(opts).ToList();
 
         result.Should().AllSatisfy(e => e.Age.Should().BeGreaterThanOrEqualTo(40));
         result.Any(e => e.Age == 40).Should().BeTrue();
@@ -206,7 +206,7 @@ public class FilterTests : IDisposable
             Paging = { Disabled = true }
         };
 
-        var result = _db.Entities.AsQueryable().ApplyQueryOptions(opts).ToList();
+        var result = _db.Entities.AsQueryable().Apply(opts).ToList();
 
         result.Should().NotBeEmpty();
         result.Should().AllSatisfy(e => e.Age.Should().BeInRange(25, 35));
@@ -226,7 +226,7 @@ public class FilterTests : IDisposable
             Paging = { Disabled = true }
         };
 
-        var result = _db.Entities.AsQueryable().ApplyQueryOptions(opts).ToList();
+        var result = _db.Entities.AsQueryable().Apply(opts).ToList();
 
         result.Should().HaveCount(3);
         result.Should().AllSatisfy(e =>
@@ -245,7 +245,7 @@ public class FilterTests : IDisposable
             Paging = { Disabled = true }
         };
 
-        var result = _db.Entities.AsQueryable().ApplyQueryOptions(opts).ToList();
+        var result = _db.Entities.AsQueryable().Apply(opts).ToList();
 
         result.Should().NotBeEmpty();
         result.Should().AllSatisfy(e => e.Status.Should().Be(Status.Active));
@@ -268,7 +268,7 @@ public class FilterTests : IDisposable
             Paging = { Disabled = true }
         };
 
-        var result = _db.Entities.AsQueryable().ApplyQueryOptions(opts).ToList();
+        var result = _db.Entities.AsQueryable().Apply(opts).ToList();
 
         result.Should().NotBeEmpty();
         result.Should().AllSatisfy(e =>
@@ -295,7 +295,7 @@ public class FilterTests : IDisposable
             Paging = { Disabled = true }
         };
 
-        var result = _db.Entities.AsQueryable().ApplyQueryOptions(opts).ToList();
+        var result = _db.Entities.AsQueryable().Apply(opts).ToList();
 
         result.Should().NotBeEmpty();
         result.Should().AllSatisfy(e => e.City.Should().BeOneOf("Berlin", "Paris"));
@@ -327,7 +327,7 @@ public class FilterTests : IDisposable
             Paging = { Disabled = true }
         };
 
-        var result = _db.Entities.AsQueryable().ApplyQueryOptions(opts).ToList();
+        var result = _db.Entities.AsQueryable().Apply(opts).ToList();
 
         result.Should().NotBeEmpty();
         result.Should().AllSatisfy(e =>
@@ -348,7 +348,7 @@ public class FilterTests : IDisposable
         });
         opts.Paging.Disabled = true;
 
-        var result = _db.Entities.AsQueryable().ApplyQueryOptions(opts).ToList();
+        var result = _db.Entities.AsQueryable().Apply(opts).ToList();
 
         result.Should().HaveCount(4);
         result.Should().AllSatisfy(e =>
@@ -369,7 +369,7 @@ public class FilterTests : IDisposable
         });
         opts.Paging.Disabled = true;
 
-        var result = _db.Entities.AsQueryable().ApplyQueryOptions(opts).ToList();
+        var result = _db.Entities.AsQueryable().Apply(opts).ToList();
 
         result.Should().HaveCount(9);
         result.Should().NotContain(e => e.Name == "Alice Johnson");
@@ -384,7 +384,7 @@ public class FilterTests : IDisposable
         });
         opts.Paging.Disabled = true;
 
-        var result = _db.Entities.AsQueryable().ApplyQueryOptions(opts).ToList();
+        var result = _db.Entities.AsQueryable().Apply(opts).ToList();
 
         result.Should().HaveCount(3);
         result.Select(e => e.Name).Should().BeEquivalentTo(["Alice Johnson", "Grace Wilson", "Jack Anderson"]);
@@ -399,7 +399,7 @@ public class FilterTests : IDisposable
         });
         opts.Paging.Disabled = true;
 
-        var result = _db.Entities.AsQueryable().ApplyQueryOptions(opts).ToList();
+        var result = _db.Entities.AsQueryable().Apply(opts).ToList();
 
         result.Should().ContainSingle();
         result[0].Name.Should().Be("David Brown");
@@ -414,7 +414,7 @@ public class FilterTests : IDisposable
         });
         opts.Paging.Disabled = true;
 
-        var result = _db.Entities.AsQueryable().ApplyQueryOptions(opts).ToList();
+        var result = _db.Entities.AsQueryable().Apply(opts).ToList();
 
         result.Should().ContainSingle();
         result[0].Name.Should().Be("Alice Johnson");
@@ -433,7 +433,7 @@ public class FilterTests : IDisposable
         };
 
         // Age is a non-nullable int — isNull always returns false
-        var result = _db.Entities.AsQueryable().ApplyQueryOptions(opts).ToList();
+        var result = _db.Entities.AsQueryable().Apply(opts).ToList();
         result.Should().BeEmpty();
     }
 
@@ -449,7 +449,7 @@ public class FilterTests : IDisposable
             Paging = { Disabled = true }
         };
 
-        var result = _db.Entities.AsQueryable().ApplyQueryOptions(opts).ToList();
+        var result = _db.Entities.AsQueryable().Apply(opts).ToList();
         result.Should().HaveCount(10);
     }
 
@@ -465,7 +465,7 @@ public class FilterTests : IDisposable
             Paging = { Disabled = true }
         };
 
-        var result = _db.Entities.AsQueryable().ApplyQueryOptions(opts).ToList();
+        var result = _db.Entities.AsQueryable().Apply(opts).ToList();
 
         result.Should().HaveCount(3);
         result.Should().AllSatisfy(e => e.Profile.Should().NotBeNull());
@@ -484,7 +484,7 @@ public class FilterTests : IDisposable
         };
 
         // Should not throw — invalid field produces null expression → no filter applied
-        var result = _db.Entities.AsQueryable().ApplyQueryOptions(opts).ToList();
+        var result = _db.Entities.AsQueryable().Apply(opts).ToList();
         result.Should().HaveCount(10);
     }
 
@@ -497,7 +497,7 @@ public class FilterTests : IDisposable
             Paging  = { Disabled = true }
         };
 
-         var result = _db.Entities.AsQueryable().ApplyQueryOptions(opts).ToList();
+         var result = _db.Entities.AsQueryable().Apply(opts).ToList();
          result.Should().HaveCount(10);
      }
 

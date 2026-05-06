@@ -26,7 +26,7 @@ public class WildcardProjectionTests : IDisposable
         // Act
         var result = await _db.Customers
             .AsNoTracking()
-            .ApplyQueryOptions(options)
+            .Apply(options)
             .ApplySelect(options)
             .ToListAsync();
 
@@ -61,7 +61,7 @@ public class WildcardProjectionTests : IDisposable
         // Act
         var result = await _db.Customers
             .AsNoTracking()
-            .ApplyQueryOptions(options)
+            .Apply(options)
             .ApplySelect(options)
             .ToListAsync();
 
@@ -99,7 +99,7 @@ public class WildcardProjectionTests : IDisposable
         options.ValidateOrThrow<SqlCustomer>(execOptions);
         var result = await _db.Customers
             .AsNoTracking()
-            .ApplyQueryOptions(options)
+            .Apply(options)
             .ApplySelect(options) 
             .ToListAsync();
 
@@ -170,7 +170,7 @@ public class WildcardProjectionTests : IDisposable
             SortableFields = new HashSet<string> { "Id" },
             StrictFieldValidation = true
         };
-        options.Sort.Add(new SortOption { Field = "Name" }); // Name not in whitelist
+        options.Sort.Add(new SortNode { Field = "Name" }); // Name not in whitelist
 
         // Act
         var act = () => options.ValidateOrThrow<SqlCustomer>(execOptions);

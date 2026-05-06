@@ -18,11 +18,11 @@ public class SortingTests : IDisposable
     {
         var opts = new QueryOptions
         {
-            Sort   = [new SortOption { Field = "Age", Descending = false }],
+            Sort   = [new SortNode { Field = "Age", Descending = false }],
             Paging = { Disabled = true }
         };
 
-        var result = _db.Entities.AsQueryable().ApplyQueryOptions(opts).ToList();
+        var result = _db.Entities.AsQueryable().Apply(opts).ToList();
 
         result.Should().BeInAscendingOrder(e => e.Age);
     }
@@ -32,11 +32,11 @@ public class SortingTests : IDisposable
     {
         var opts = new QueryOptions
         {
-            Sort   = [new SortOption { Field = "Age", Descending = true }],
+            Sort   = [new SortNode { Field = "Age", Descending = true }],
             Paging = { Disabled = true }
         };
 
-        var result = _db.Entities.AsQueryable().ApplyQueryOptions(opts).ToList();
+        var result = _db.Entities.AsQueryable().Apply(opts).ToList();
 
         result.Should().BeInDescendingOrder(e => e.Age);
     }
@@ -46,11 +46,11 @@ public class SortingTests : IDisposable
     {
         var opts = new QueryOptions
         {
-            Sort   = [new SortOption { Field = "Name", Descending = false }],
+            Sort   = [new SortNode { Field = "Name", Descending = false }],
             Paging = { Disabled = true }
         };
 
-        var result = _db.Entities.AsQueryable().ApplyQueryOptions(opts).ToList();
+        var result = _db.Entities.AsQueryable().Apply(opts).ToList();
 
         result.Should().BeInAscendingOrder(e => e.Name);
     }
@@ -60,11 +60,11 @@ public class SortingTests : IDisposable
     {
         var opts = new QueryOptions
         {
-            Sort   = [new SortOption { Field = "CreatedAt", Descending = true }],
+            Sort   = [new SortNode { Field = "CreatedAt", Descending = true }],
             Paging = { Disabled = true }
         };
 
-        var result = _db.Entities.AsQueryable().ApplyQueryOptions(opts).ToList();
+        var result = _db.Entities.AsQueryable().Apply(opts).ToList();
 
         result.Should().BeInDescendingOrder(e => e.CreatedAt);
     }
@@ -78,13 +78,13 @@ public class SortingTests : IDisposable
         {
             Sort =
             [
-                new SortOption { Field = "City", Descending = false },
-                new SortOption { Field = "Age",  Descending = true  }
+                new SortNode { Field = "City", Descending = false },
+                new SortNode { Field = "Age",  Descending = true  }
             ],
             Paging = { Disabled = true }
         };
 
-        var result = _db.Entities.AsQueryable().ApplyQueryOptions(opts).ToList();
+        var result = _db.Entities.AsQueryable().Apply(opts).ToList();
 
         // Verify primary sort: cities are in ascending order
         var cities = result.Select(e => e.City).ToList();
@@ -102,13 +102,13 @@ public class SortingTests : IDisposable
         {
             Sort =
             [
-                new SortOption { Field = "Status", Descending = false },
-                new SortOption { Field = "Name",   Descending = false }
+                new SortNode { Field = "Status", Descending = false },
+                new SortNode { Field = "Name",   Descending = false }
             ],
             Paging = { Disabled = true }
         };
 
-        var result = _db.Entities.AsQueryable().ApplyQueryOptions(opts).ToList();
+        var result = _db.Entities.AsQueryable().Apply(opts).ToList();
 
         result.Should().HaveCount(10);
 
@@ -123,11 +123,11 @@ public class SortingTests : IDisposable
     {
         var opts = new QueryOptions
         {
-            Sort = [new SortOption { Field = "Profile.Bio", Descending = false }],
+            Sort = [new SortNode { Field = "Profile.Bio", Descending = false }],
             Paging = { Disabled = true }
         };
 
-        var result = _db.Entities.AsQueryable().ApplyQueryOptions(opts).ToList();
+        var result = _db.Entities.AsQueryable().Apply(opts).ToList();
 
         result.Where(e => e.Profile is not null)
             .Select(e => e.Profile!.Bio)
@@ -137,11 +137,11 @@ public class SortingTests : IDisposable
     // ── Edge cases ───────────────────────────────────────────────────────
 
     [Fact]
-    public void Sort_NoSortOptions_PreservesOriginalOrder()
+    public void Sort_NoSortNodes_PreservesOriginalOrder()
     {
         var opts = new QueryOptions { Paging = { Disabled = true } };
 
-        var result = _db.Entities.AsQueryable().ApplyQueryOptions(opts).ToList();
+        var result = _db.Entities.AsQueryable().Apply(opts).ToList();
 
         result.Should().HaveCount(10);
         result.Select(e => e.Id).Should().BeEquivalentTo(Enumerable.Range(1, 10));
@@ -152,12 +152,12 @@ public class SortingTests : IDisposable
     {
         var opts = new QueryOptions
         {
-            Sort   = [new SortOption { Field = "", Descending = false }],
+            Sort   = [new SortNode { Field = "", Descending = false }],
             Paging = { Disabled = true }
         };
 
         // Should not throw — empty field is skipped
-        var act = () => _db.Entities.AsQueryable().ApplyQueryOptions(opts).ToList();
+        var act = () => _db.Entities.AsQueryable().Apply(opts).ToList();
         act.Should().NotThrow();
     }
 
@@ -168,13 +168,13 @@ public class SortingTests : IDisposable
         {
             Sort =
             [
-                new SortOption { Field = "NoSuchField", Descending = true },
-                new SortOption { Field = "Age", Descending = false }
+                new SortNode { Field = "NoSuchField", Descending = true },
+                new SortNode { Field = "Age", Descending = false }
             ],
             Paging = { Disabled = true }
         };
 
-        var result = _db.Entities.AsQueryable().ApplyQueryOptions(opts).ToList();
+        var result = _db.Entities.AsQueryable().Apply(opts).ToList();
 
         result.Should().BeInAscendingOrder(e => e.Age);
     }
@@ -186,13 +186,13 @@ public class SortingTests : IDisposable
         {
             Sort =
             [
-                new SortOption { Field = "Orders.Total", Descending = true },
-                new SortOption { Field = "Id", Descending = false }
+                new SortNode { Field = "Orders.Total", Descending = true },
+                new SortNode { Field = "Id", Descending = false }
             ],
             Paging = { Disabled = true }
         };
 
-        var result = _db.Entities.AsQueryable().ApplyQueryOptions(opts).ToList();
+        var result = _db.Entities.AsQueryable().Apply(opts).ToList();
 
         result.Select(e => e.Id).Should().BeInAscendingOrder();
     }

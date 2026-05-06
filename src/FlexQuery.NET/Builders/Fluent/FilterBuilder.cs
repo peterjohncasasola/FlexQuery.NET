@@ -210,6 +210,15 @@ public sealed class FilterConditionBuilder<TParent>
         _logic = logic;
     }
 
+    /// <summary>
+    /// Negates the next condition.
+    /// </summary>
+    public FilterConditionBuilder<TParent> Not()
+    {
+        _negated = !_negated;
+        return this;
+    }
+
         /// <summary>
         /// Adds an equality condition for the specified field value.
         /// </summary>

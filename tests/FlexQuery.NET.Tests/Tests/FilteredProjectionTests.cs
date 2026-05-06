@@ -35,7 +35,7 @@ public sealed class FilteredProjectionTests : IDisposable
         };
 
         var rows = await _db.Customers
-            .ApplyQueryOptions(options)
+            .Apply(options)
             .ApplySelect(options)
             .ToListAsync();
 
@@ -68,7 +68,7 @@ public sealed class FilteredProjectionTests : IDisposable
         };
 
         var rows = await _db.Customers
-            .ApplyQueryOptions(options)
+            .Apply(options)
             .ApplySelect(options)
             .ToListAsync();
 
@@ -101,7 +101,7 @@ public sealed class FilteredProjectionTests : IDisposable
         };
 
         var rows = await _db.Customers
-            .ApplyQueryOptions(options)
+            .Apply(options)
             .ApplySelect(options)
             .ToListAsync();
 
@@ -134,7 +134,7 @@ public sealed class FilteredProjectionTests : IDisposable
 
         // ApplySelect with no select returns original entity cast to object.
         var rows = await _db.Customers
-            .ApplyQueryOptions(options)
+            .Apply(options)
             .ApplySelect(options)
             .ToListAsync();
 
@@ -163,7 +163,7 @@ public sealed class FilteredProjectionTests : IDisposable
         };
 
         var rows = await _db.Customers
-            .ApplyQueryOptions(options)
+            .Apply(options)
             .ApplySelect(options)
             .ToListAsync();
 
@@ -201,7 +201,7 @@ public sealed class FilteredProjectionTests : IDisposable
         };
 
         var query = _db.Customers
-            .ApplyQueryOptions(options)
+            .Apply(options)
             .ApplySelect(options);
 
         var sql = query.ToQueryString();

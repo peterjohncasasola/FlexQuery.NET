@@ -76,7 +76,7 @@ internal static class ProjectionBuilder
             if (ShouldBuildNestedProjection(propInfo.PropertyType, childNode))
             {
                 var childFilterContext = MergeFilters(
-                    filterContext != null ? FilterAnalyzer.ExtractForNavigation(filterContext, propInfo.Name) : null,
+                    filterContext != null ? FilterAnalyzer.ExtractForNavigation(filterContext!, propInfo.Name) : null,
                     childNode.Filter);
 
                 if (IsIEnumerable(propInfo.PropertyType, out var itemType))

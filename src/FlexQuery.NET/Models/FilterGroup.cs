@@ -56,7 +56,7 @@ public sealed class FilterGroup
 
         foreach (var group in Groups)
         {
-            node.Children.Add(group);
+            node.Children.Add(group!);
         }
 
         return node;

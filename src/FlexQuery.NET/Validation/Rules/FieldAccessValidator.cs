@@ -33,7 +33,7 @@ public sealed class FieldAccessValidator : IValidationRule
             // 2. Process Filters
             if (options.Filter != null)
             {
-                ValidateFilterGroup(options.Filter, options, context);
+                ValidateFilterGroup(options.Filter!, options, context);
             }
 
             // 3. Process Sorts

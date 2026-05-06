@@ -52,8 +52,8 @@ public static class QueryOptionsParser
         if (!string.IsNullOrWhiteSpace(request.Filter)) dict["filter"] = request.Filter;
         if (!string.IsNullOrWhiteSpace(request.Sort)) dict["sort"] = request.Sort;
         if (!string.IsNullOrWhiteSpace(request.Select)) dict["select"] = request.Select;
-        if (!string.IsNullOrWhiteSpace(request.Includes)) dict["includes"] = request.Includes; // Assuming 'includes' maps correctly
-        if (!string.IsNullOrWhiteSpace(request.GroupBy)) dict["groupBy"] = request.GroupBy;
+        if (!string.IsNullOrWhiteSpace(request.Includes)) dict["include"] = request.Includes;
+        if (!string.IsNullOrWhiteSpace(request.GroupBy)) dict["group"] = request.GroupBy;
         if (!string.IsNullOrWhiteSpace(request.Having)) dict["having"] = request.Having;
         if (!string.IsNullOrWhiteSpace(request.Mode)) dict["mode"] = request.Mode;
         
@@ -84,9 +84,9 @@ public static class QueryOptionsParser
         if (!string.IsNullOrWhiteSpace(parameters.Select))
             dict["select"] = parameters.Select;
         if (!string.IsNullOrWhiteSpace(parameters.Includes))
-            dict["includes"] = parameters.Includes; // Assuming 'includes' maps correctly
+            dict["include"] = parameters.Includes;
         if (!string.IsNullOrWhiteSpace(parameters.GroupBy))
-            dict["groupBy"] = parameters.GroupBy;
+            dict["group"] = parameters.GroupBy;
         if (!string.IsNullOrWhiteSpace(parameters.Having))
             dict["having"] = parameters.Having;
         if (!string.IsNullOrWhiteSpace(parameters.Mode))

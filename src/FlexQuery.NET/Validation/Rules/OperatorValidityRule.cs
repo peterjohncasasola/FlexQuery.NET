@@ -13,7 +13,7 @@ public sealed class OperatorValidityRule : IValidationRule
     {
         if (options.Filter != null)
         {
-            ValidateFilterGroup(options.Filter, result);
+            ValidateFilterGroup(options.Filter!, result);
         }
     }
     private void ValidateFilterGroup(FilterGroupNode group, ValidationResult result)

@@ -18,13 +18,13 @@ public sealed class SortingNestedSqliteTests : IDisposable
     {
         var options = new QueryOptions
         {
-            Sort = [new SortOption { Field = "Customer.Name", Descending = false }],
+            Sort = [new SortNode { Field = "Customer.Name", Descending = false }],
             Paging = { Disabled = true }
         };
 
         var result = _db.Orders
             .AsQueryable()
-            .ApplyQueryOptions(options)
+            .Apply(options)
             .Select(x => x.Customer.Name)
             .ToList();
 
@@ -36,13 +36,13 @@ public sealed class SortingNestedSqliteTests : IDisposable
     {
         var options = new QueryOptions
         {
-            Sort = [new SortOption { Field = "Customer.Address.City", Descending = false }],
+            Sort = [new SortNode { Field = "Customer.Address.City", Descending = false }],
             Paging = { Disabled = true }
         };
 
         var result = _db.Orders
             .AsQueryable()
-            .ApplyQueryOptions(options)
+            .Apply(options)
             .Select(x => x.Customer.Address!.City)
             .ToList();
 
@@ -56,15 +56,15 @@ public sealed class SortingNestedSqliteTests : IDisposable
         {
             Sort =
             [
-                new SortOption { Field = "Customer.NoSuchPath", Descending = true },
-                new SortOption { Field = "Customer.Name", Descending = false }
+                new SortNode { Field = "Customer.NoSuchPath", Descending = true },
+                new SortNode { Field = "Customer.Name", Descending = false }
             ],
             Paging = { Disabled = true }
         };
 
         var result = _db.Orders
             .AsQueryable()
-            .ApplyQueryOptions(options)
+            .Apply(options)
             .Select(x => x.Customer.Name)
             .ToList();
 
@@ -78,15 +78,15 @@ public sealed class SortingNestedSqliteTests : IDisposable
         {
             Sort =
             [
-                new SortOption { Field = "Orders.Total", Descending = true },
-                new SortOption { Field = "Name", Descending = false }
+                new SortNode { Field = "Orders.Total", Descending = true },
+                new SortNode { Field = "Name", Descending = false }
             ],
             Paging = { Disabled = true }
         };
 
         var result = _db.Customers
             .AsQueryable()
-            .ApplyQueryOptions(options)
+            .Apply(options)
             .Select(x => x.Name)
             .ToList();
 
@@ -106,7 +106,7 @@ public sealed class SortingNestedSqliteTests : IDisposable
 
         var result = _db.Orders
             .AsQueryable()
-            .ApplyQueryOptions(options)
+            .Apply(options)
             .Select(x => new
             {
                 CustomerName = x.Customer.Name,
@@ -125,7 +125,7 @@ public sealed class SortingNestedSqliteTests : IDisposable
         {
             Sort =
             [
-                new SortOption
+                new SortNode
                 {
                     Field = "Orders",
                     Aggregate = "sum",
@@ -138,7 +138,7 @@ public sealed class SortingNestedSqliteTests : IDisposable
 
         var result = _db.Customers
             .AsQueryable()
-            .ApplyQueryOptions(options)
+            .Apply(options)
             .Select(c => c.Email)
             .ToList();
 
@@ -152,7 +152,7 @@ public sealed class SortingNestedSqliteTests : IDisposable
         {
             Sort =
             [
-                new SortOption
+                new SortNode
                 {
                     Field = "Orders",
                     Aggregate = "count",
@@ -164,7 +164,7 @@ public sealed class SortingNestedSqliteTests : IDisposable
 
         var result = _db.Customers
             .AsQueryable()
-            .ApplyQueryOptions(options)
+            .Apply(options)
             .Select(c => c.Email)
             .ToList();
 
@@ -178,7 +178,7 @@ public sealed class SortingNestedSqliteTests : IDisposable
         {
             Sort =
             [
-                new SortOption
+                new SortNode
                 {
                     Field = "Orders",
                     Aggregate = "max",
@@ -191,7 +191,7 @@ public sealed class SortingNestedSqliteTests : IDisposable
 
         var result = _db.Customers
             .AsQueryable()
-            .ApplyQueryOptions(options)
+            .Apply(options)
             .Select(c => c.Email)
             .ToList();
 
@@ -205,7 +205,7 @@ public sealed class SortingNestedSqliteTests : IDisposable
         {
             Sort =
             [
-                new SortOption
+                new SortNode
                 {
                     Field = "Orders",
                     Aggregate = "min",
@@ -218,7 +218,7 @@ public sealed class SortingNestedSqliteTests : IDisposable
 
         var result = _db.Customers
             .AsQueryable()
-            .ApplyQueryOptions(options)
+            .Apply(options)
             .Select(c => c.Email)
             .ToList();
 
@@ -232,7 +232,7 @@ public sealed class SortingNestedSqliteTests : IDisposable
         {
             Sort =
             [
-                new SortOption
+                new SortNode
                 {
                     Field = "Orders",
                     Aggregate = "avg",
@@ -245,7 +245,7 @@ public sealed class SortingNestedSqliteTests : IDisposable
 
         var result = _db.Customers
             .AsQueryable()
-            .ApplyQueryOptions(options)
+            .Apply(options)
             .Select(c => c.Email)
             .ToList();
 
@@ -264,7 +264,7 @@ public sealed class SortingNestedSqliteTests : IDisposable
 
         var result = _db.Customers
             .AsQueryable()
-            .ApplyQueryOptions(options)
+            .Apply(options)
             .Select(c => new { c.Name, c.Email })
             .ToList();
 
@@ -286,7 +286,7 @@ public sealed class SortingNestedSqliteTests : IDisposable
 
         var result = _db.Customers
             .AsQueryable()
-            .ApplyQueryOptions(options)
+            .Apply(options)
             .Select(c => c.Name)
             .ToList();
 

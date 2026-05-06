@@ -20,7 +20,7 @@ public static class FlexQueryDebugExtensions
         var debugQuery = provider.CreateQuery<T>(query.Expression);
         
         // This will trigger the DebugQueryProvider to capture the expression
-        var applied = debugQuery.ApplyQueryOptions(options);
+        var applied = debugQuery.Apply(options);
         
         return new DebugResult
         {

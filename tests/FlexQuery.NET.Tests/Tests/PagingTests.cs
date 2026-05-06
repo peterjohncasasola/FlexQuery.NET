@@ -18,7 +18,7 @@ public class PagingTests : IDisposable
     {
         var opts = new QueryOptions { Paging = { Page = 1, PageSize = 3 } };
 
-        var result = _db.Entities.AsQueryable().ApplyQueryOptions(opts).ToList();
+        var result = _db.Entities.AsQueryable().Apply(opts).ToList();
 
         result.Should().HaveCount(3);
     }
@@ -30,12 +30,12 @@ public class PagingTests : IDisposable
         var opts2 = new QueryOptions { Paging = { Page = 2, PageSize = 3 } };
 
         var page1 = _db.Entities.AsQueryable()
-            .ApplySort(new QueryOptions { Sort = [new SortOption { Field = "Id" }] })
-            .ApplyQueryOptions(opts1).ToList();
+            .ApplySort(new QueryOptions { Sort = [new SortNode { Field = "Id" }] })
+            .Apply(opts1).ToList();
 
         var page2 = _db.Entities.AsQueryable()
-            .ApplySort(new QueryOptions { Sort = [new SortOption { Field = "Id" }] })
-            .ApplyQueryOptions(opts2).ToList();
+            .ApplySort(new QueryOptions { Sort = [new SortNode { Field = "Id" }] })
+            .Apply(opts2).ToList();
 
         page1.Should().HaveCount(3);
         page2.Should().HaveCount(3);
@@ -48,7 +48,7 @@ public class PagingTests : IDisposable
         // 10 items, pageSize 3 → page 4 has 1 item
         var opts = new QueryOptions { Paging = { Page = 4, PageSize = 3 } };
 
-        var result = _db.Entities.AsQueryable().ApplyQueryOptions(opts).ToList();
+        var result = _db.Entities.AsQueryable().Apply(opts).ToList();
 
         result.Should().HaveCount(1);
     }
@@ -67,9 +67,9 @@ public class PagingTests : IDisposable
     [Fact]
     public void Paging_ToQueryResult_ReturnsCorrectMetadata()
     {
-        var opts = new QueryOptions { Paging = { Page = 2, PageSize = 3 } };
+        var parameters = new FlexQueryParameters { Page = 2, PageSize = 3 };
 
-        var result = _db.Entities.AsQueryable().ToQueryResult(opts);
+        var result = _db.Entities.AsQueryable().FlexQuery(parameters);
 
         result.TotalCount.Should().Be(10);
         result.Page.Should().Be(2);
@@ -83,9 +83,9 @@ public class PagingTests : IDisposable
     [Fact]
     public void Paging_ToQueryResult_FirstPage_HasNoPreviousPage()
     {
-        var opts = new QueryOptions { Paging = { Page = 1, PageSize = 5 } };
+        var parameters = new FlexQueryParameters { Page = 1, PageSize = 5 };
 
-        var result = _db.Entities.AsQueryable().ToQueryResult(opts);
+        var result = _db.Entities.AsQueryable().FlexQuery(parameters);
 
         result.HasPreviousPage.Should().BeFalse();
         result.HasNextPage.Should().BeTrue();
@@ -94,9 +94,9 @@ public class PagingTests : IDisposable
     [Fact]
     public void Paging_ToQueryResult_LastPage_HasNoNextPage()
     {
-        var opts = new QueryOptions { Paging = { Page = 2, PageSize = 5 } };
+        var parameters = new FlexQueryParameters { Page = 2, PageSize = 5 };
 
-        var result = _db.Entities.AsQueryable().ToQueryResult(opts);
+        var result = _db.Entities.AsQueryable().FlexQuery(parameters);
 
         result.HasNextPage.Should().BeFalse();
         result.HasPreviousPage.Should().BeTrue();
@@ -138,7 +138,7 @@ public class PagingTests : IDisposable
     {
         var opts = new QueryOptions { Paging = { Disabled = true } };
 
-        var result = _db.Entities.AsQueryable().ApplyQueryOptions(opts).ToList();
+        var result = _db.Entities.AsQueryable().Apply(opts).ToList();
 
         result.Should().HaveCount(10);
     }

@@ -22,29 +22,26 @@ public static class ExpressionBuilder
     {
         if (options.Filter is null) return null;
 
+        var param = Expression.Parameter(typeof(T), "x");
+        var body = BuildGroupExpression(param, options.Filter!, typeof(T), options);
+        if (body is null) return null;
+
+        var lambda = Expression.Lambda<Func<T, bool>>(body, param);
+
         if (Caching.QueryCacheManager.ShouldCache(options.EnableCache))
         {
             var key = options.GetCacheKey(typeof(T), "predicate");
-            return Caching.QueryCacheManager.GetOrAddExpression(key, () =>
-            {
-                var param = Expression.Parameter(typeof(T), "x");
-                var body = BuildGroupExpression(param, options.Filter, typeof(T), options);
-                return body is null ? null : Expression.Lambda<Func<T, bool>>(body, param);
-            });
+            return Caching.QueryCacheManager.GetOrAddExpression(key, () => lambda);
         }
 
-        var param = Expression.Parameter(typeof(T), "x");
-        var body = BuildGroupExpression(param, options.Filter, typeof(T), options);
-        if (body is null) return null;
-
-        return Expression.Lambda<Func<T, bool>>(body, param);
+        return lambda;
     }
 
     /// <summary>
     /// Backward-compatible overload. Builds a predicate from a <see cref="FilterGroupNode"/>
     /// using default options (CaseInsensitive = true).
     /// </summary>
-    public static Expression<Func<T, bool>>? BuildPredicate<T>(FilterGroupNode group)
+    public static Expression<Func<T, bool>>? BuildPredicate<T>(FilterGroupNode? group)
         => BuildPredicate<T>(new QueryOptions { Filter = group });
 
     /// <summary>
@@ -56,35 +53,29 @@ public static class ExpressionBuilder
     {
         if (options.Filter is null) return null;
 
-        if (Caching.QueryCacheManager.ShouldCache(options.EnableCache))
-        {
-            var key = options.GetCacheKey(elementType, "predicate_dynamic");
-            return Caching.QueryCacheManager.GetOrAddExpression(key, () =>
-            {
-                var param = Expression.Parameter(elementType, "x");
-                var body = BuildGroupExpression(param, options.Filter, elementType, options);
-                return body is null ? null : Expression.Lambda(
-                    typeof(Func<,>).MakeGenericType(elementType, typeof(bool)),
-                    body,
-                    param);
-            });
-        }
-
         var param = Expression.Parameter(elementType, "x");
-        var body  = BuildGroupExpression(param, options.Filter, elementType, options);
+        var body = BuildGroupExpression(param, options.Filter!, elementType, options);
         if (body is null) return null;
 
-        return Expression.Lambda(
+        var lambda = Expression.Lambda(
             typeof(Func<,>).MakeGenericType(elementType, typeof(bool)),
             body,
             param);
+
+        if (Caching.QueryCacheManager.ShouldCache(options.EnableCache))
+        {
+            var key = options.GetCacheKey(elementType, "predicate_dynamic");
+            return Caching.QueryCacheManager.GetOrAddExpression(key, () => lambda);
+        }
+
+        return lambda;
     }
 
     /// <summary>
     /// Backward-compatible overload for the runtime-type variant.
     /// Uses default options (CaseInsensitive = true).
     /// </summary>
-    public static LambdaExpression? BuildPredicate(Type elementType, FilterGroupNode group)
+    public static LambdaExpression? BuildPredicate(Type elementType, FilterGroupNode? group)
         => BuildPredicate(elementType, new QueryOptions { Filter = group });
 
     // ── Internal recursion ───────────────────────────────────────────────
