@@ -14,17 +14,23 @@ namespace FlexQuery.NET;
 public static class QueryableExtensions
 {
     /// <summary>
+    /// Applies filter, sort, and paging in sequence.
+    /// </summary>
+    public static IQueryable<T> Apply<T>(
+        this IQueryable<T> query, QueryOptions options)
+        => QueryBuilder.Apply(query, options);
+
+    /// <summary>
     /// Applies all query options (filter, sort, paging) and returns the shaped queryable.
     /// </summary>
     /// <remarks>
     /// If <see cref="QueryOptions.Select"/> is provided, use <see cref="ApplySelect{T}"/> on the result.
     /// </remarks>
-    [Obsolete("ApplyQueryOptions is deprecated and will be removed in v3. " +
-    "Use FlexQuery(...) for the unified query pipeline (filtering, sorting, and paging).")]
+    [Obsolete("ApplyQueryOptions is deprecated and will be removed in v3. Use Apply(...) or FlexQuery(...).")]
     [EditorBrowsable(EditorBrowsableState.Never)]
     public static IQueryable<T> ApplyQueryOptions<T>(
         this IQueryable<T> query, QueryOptions options)
-        => QueryBuilder.Apply(query, options);
+        => Apply(query, options);
 
     /// <summary>Applies only the filter predicate.</summary>
     public static IQueryable<T> ApplyFilter<T>(

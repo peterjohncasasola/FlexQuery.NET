@@ -24,7 +24,7 @@ namespace FlexQuery.NET.Parsers;
 public static class QueryOptionsParser
 {
     private static readonly Regex SelectAggregatePattern = new(
-        @"^(?<fn>sum|count|avg)\((?<field>[A-Za-z_][A-Za-z0-9_\.]*)?\)$",
+        @"^(?:(?<fn>sum|count|avg)\((?<field>[A-Za-z_][A-Za-z0-9_\.]*)?\)|(?<field2>[A-Za-z_][A-Za-z0-9_\.]*)\.(?<fn2>sum|count|avg)\(\))$",
         RegexOptions.Compiled | RegexOptions.IgnoreCase);
 
     private static readonly Regex HavingPattern = new(
@@ -249,10 +249,15 @@ public static class QueryOptionsParser
                 continue;
             }
 
-            var fn = match.Groups["fn"].Value.ToLowerInvariant();
+            var fn = match.Groups["fn"].Success
+                ? match.Groups["fn"].Value.ToLowerInvariant()
+                : match.Groups["fn2"].Value.ToLowerInvariant();
+
             var aggregateField = match.Groups["field"].Success
                 ? match.Groups["field"].Value
-                : null;
+                : match.Groups["field2"].Success 
+                    ? match.Groups["field2"].Value 
+                    : null;
 
             options.Aggregates.Add(new AggregateModel
             {
