@@ -118,16 +118,33 @@ public static class QueryableEfCoreExtensions
         var exec = new QueryExecutionOptions();
         configure?.Invoke(exec);
 
+        return await query.FlexQueryAsync(parameters, exec, cancellationToken);
+    }
+
+    /// <summary>
+    /// Parses a <see cref="FlexQueryParameters"/>, validates it against server rules,
+    /// and applies it to the query to return a paged result set asynchronously.
+    /// </summary>
+    /// <param name="query">The source queryable.</param>
+    /// <param name="parameters">The OpenAPI-friendly DTO containing user parameters.</param>
+    /// <param name="execOptions">Server-side security and execution rules.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    public static async Task<QueryResult<object>> FlexQueryAsync<T>(
+        this IQueryable<T> query,
+        FlexQueryParameters parameters,
+        QueryExecutionOptions execOptions,
+        CancellationToken cancellationToken = default)
+        where T : class
+    {
         var options = QueryOptionsParser.Parse(parameters);
 
         QueryOptionsEfCoreExtensions.EnsureEfCoreOperatorsRegistered();
 
-        options.ValidateOrThrow<T>(exec);
+        options.ValidateOrThrow<T>(execOptions);
 
         var hasProjection = options.HasProjection();
 
-        return await query.ApplyFlexQueryAsync(options, hasProjection, exec, cancellationToken);
-
+        return await query.ApplyFlexQueryAsync(options, hasProjection, execOptions, cancellationToken);
     }
 
     private static async Task<QueryResult<object>> ApplyFlexQueryAsync<T>(this IQueryable<T> query, 

@@ -60,12 +60,11 @@ The `[FieldAccess]` attribute allows you to define field security rules directly
     MaxDepth   = 2
 )]
 public async Task<IActionResult> GetUsers(
-    [FromQuery] FlexQueryParameters parameters,
-    QueryExecutionOptions exec)
+    [FromQuery] FlexQueryParameters parameters)
 {
-    // The FieldAccessFilter automatically populates 'exec' 
-    // from the attribute before the action runs.
-    var result = await _context.Users.FlexQueryAsync<User>(parameters, exec);
+    // The FieldAccessFilter automatically populates execution options 
+    // into the HttpContext. The FlexQueryAsync overload picks it up.
+    var result = await _context.Users.FlexQueryAsync<User>(parameters, HttpContext);
     
     return Ok(result);
 }
@@ -73,9 +72,9 @@ public async Task<IActionResult> GetUsers(
 
 ### How it Works
 1. The **`FieldAccessFilter`** intercepts the request.
-2. It looks for a **`QueryExecutionOptions`** parameter in the action signature.
-3. If found, it populates it with the values defined in the **`[FieldAccess]`** attribute.
-4. If no attribute is found, the `QueryExecutionOptions` parameter remains in its default state.
+2. It looks for a **`[FieldAccess]`** attribute on the action or controller.
+3. If found, it populates a **`QueryExecutionOptions`** object and stores it in **`HttpContext.Items`**.
+4. The **`FlexQueryAsync(..., HttpContext)`** extension method retrieves it and enforces the server-owned policy.
 
 ---
 

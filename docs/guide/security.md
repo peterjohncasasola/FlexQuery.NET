@@ -8,6 +8,31 @@ FlexQuery.NET has a multi-layered field security system. It validates every fiel
 
 The security model works at the `QueryExecutionOptions` level. You declare rules per-endpoint and the validator enforces them.
 
+### QueryExecutionOptions Are Server-Owned
+`QueryExecutionOptions` represents:
+* field-level security
+* validation governance
+* execution behavior
+* split query configuration
+* operator restrictions
+
+These are SERVER policies and should **never** be bound directly from HTTP requests. 
+
+### Separation of Responsibilities
+
+**Clients define:**
+* filtering
+* sorting
+* paging
+* projection
+
+**Servers define:**
+* allowed fields
+* allowed operators
+* max depth
+* execution strategy
+* split query behavior
+
 **Validation order:**
 
 1. Depth check (`MaxFieldDepth`)
@@ -16,6 +41,7 @@ The security model works at the `QueryExecutionOptions` level. You declare rules
 4. Role-based access (`RoleAllowedFields`)
 5. Operation-level rules (`FilterableFields`, `SortableFields`, `SelectableFields`)
 6. Global allowed list (`AllowedFields`)
+7. Operator rules (`AllowOperators`)
 
 ---
 
@@ -24,6 +50,7 @@ The security model works at the `QueryExecutionOptions` level. You declare rules
 | Property | Type | Description |
 | :--- | :--- | :--- |
 | `AllowedFields` | `HashSet<string>?` | Global allow-list. If set, every field must be in this list. |
+| `AllowedOperators` | `HashSet<FilterOperator>?` | Global allow-list of operators. If set, every operator must be in this list. |
 | `BlockedFields` | `HashSet<string>?` | Fields explicitly denied — always checked, even if in AllowedFields. |
 | `FilterableFields` | `HashSet<string>?` | Fields allowed in filter expressions only. |
 | `SortableFields` | `HashSet<string>?` | Fields allowed in sort expressions only. |
@@ -199,19 +226,12 @@ Best for standardizing rules across a controller.
 )]
 [HttpGet]
 public async Task<IActionResult> GetUsers(
-    [FromQuery] FlexQueryParameters parameters,
-    QueryExecutionOptions exec)
+    [FromQuery] FlexQueryParameters parameters)
 {
-    // exec is populated automatically by FieldAccessFilter
-    var result = await _context.Users.FlexQueryAsync<User>(parameters, o =>
-    {
-        o.AllowedFields    = exec.AllowedFields;
-        o.BlockedFields    = exec.BlockedFields;
-        o.FilterableFields = exec.FilterableFields;
-        o.SortableFields   = exec.SortableFields;
-        o.SelectableFields = exec.SelectableFields;
-        o.MaxFieldDepth    = exec.MaxFieldDepth;
-    });
+    // Execution options are resolved automatically from HttpContext
+    // via the FieldAccess filter.
+    var result = await _context.Users.FlexQueryAsync<User>(parameters, HttpContext);
+    
     return Ok(result);
 }
 ```

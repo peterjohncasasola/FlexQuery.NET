@@ -8,7 +8,7 @@ namespace FlexQuery.NET.AspNetCore.Filters;
 
 /// <summary>
 /// An action filter that automatically applies field-level security settings from 
-/// <see cref="FieldAccessAttribute"/> to <see cref="QueryExecutionOptions"/> parameters.
+/// <see cref="FieldAccessAttribute"/> to <see cref="QueryExecutionOptions"/> and stores it in HttpContext.Items.
 /// </summary>
 public class FieldAccessFilter : IActionFilter
 {
@@ -24,9 +24,9 @@ public class FieldAccessFilter : IActionFilter
 
         if (attribute == null) return;
 
-        // 2. Find QueryExecutionOptions in ActionArguments
-        var execOptions = context.ActionArguments.Values.OfType<QueryExecutionOptions>().FirstOrDefault();
-        if (execOptions == null) return;
+        // 2. Retrieve or create QueryExecutionOptions
+        var execOptions = context.HttpContext.Items["FlexQueryExecutionOptions"] as QueryExecutionOptions 
+                          ?? new QueryExecutionOptions();
 
         // 3. Apply settings
         execOptions.AllowedFields = Merge(attribute.Allowed, execOptions.AllowedFields);
@@ -39,6 +39,9 @@ public class FieldAccessFilter : IActionFilter
         {
             execOptions.MaxFieldDepth = attribute.MaxDepth;
         }
+
+        // 4. Store in HttpContext
+        context.HttpContext.Items["FlexQueryExecutionOptions"] = execOptions;
     }
 
     private HashSet<string>? Merge(string[]? source, HashSet<string>? target)
