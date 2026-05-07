@@ -1,3 +1,4 @@
+using FlexQuery.NET.Caching;
 using FlexQuery.NET.Constants;
 using FlexQuery.NET.Models;
 using FlexQuery.NET.Parsers.Dsl;
@@ -71,37 +72,112 @@ public static class QueryOptionsParser
     {
         ArgumentNullException.ThrowIfNull(parameters);
 
-        if (parameters == null) return new QueryOptions();
+        // Try Cache first
+        var cacheKey = new ParsedQueryCacheKey(
+            parameters.Query, parameters.Filter, parameters.Sort, parameters.Select,
+            parameters.Includes, parameters.GroupBy, parameters.Having,
+            parameters.Page, parameters.PageSize, parameters.IncludeCount,
+            parameters.Distinct, parameters.Mode);
 
-        var dict = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        if (ParserCache.TryGet(cacheKey, out var cached))
+        {
+            return cached!;
+        }
 
-        if (!string.IsNullOrWhiteSpace(parameters.Query))
-            dict["query"] = parameters.Query;
-        if (!string.IsNullOrWhiteSpace(parameters.Filter))
-            dict["filter"] = parameters.Filter;
-        if (!string.IsNullOrWhiteSpace(parameters.Sort))
-            dict["sort"] = parameters.Sort;
-        if (!string.IsNullOrWhiteSpace(parameters.Select))
-            dict["select"] = parameters.Select;
-        if (!string.IsNullOrWhiteSpace(parameters.Includes))
-            dict["include"] = parameters.Includes;
-        if (!string.IsNullOrWhiteSpace(parameters.GroupBy))
-            dict["group"] = parameters.GroupBy;
-        if (!string.IsNullOrWhiteSpace(parameters.Having))
-            dict["having"] = parameters.Having;
+        var options = new QueryOptions();
+
+        // Paging
+        options.Paging.Page = parameters.Page ?? 1;
+        options.Paging.PageSize = parameters.PageSize ?? 20;
+
+        // Mode
         if (!string.IsNullOrWhiteSpace(parameters.Mode))
-            dict["mode"] = parameters.Mode;
+        {
+            options.ProjectionMode = parameters.Mode.Trim().ToLowerInvariant() switch
+            {
+                "flat" => ProjectionMode.Flat,
+                "flat-mixed" => ProjectionMode.FlatMixed,
+                _ => ProjectionMode.Nested
+            };
+        }
 
-        if (parameters.Page.HasValue)
-            dict["page"] = parameters.Page.Value.ToString();
-        if (parameters.PageSize.HasValue)
-            dict["pageSize"] = parameters.PageSize.Value.ToString();
-        if (parameters.IncludeCount.HasValue)
-            dict["includeCount"] = parameters.IncludeCount.Value.ToString();
-        if (parameters.Distinct.HasValue)
-            dict["distinct"] = parameters.Distinct.Value.ToString();
+        // Select
+        if (!string.IsNullOrWhiteSpace(parameters.Select))
+        {
+            ParseSelectWithAggregates(options, parameters.Select);
+        }
 
-        return ParseDictionary(dict);
+        // Grouping
+        if (!string.IsNullOrWhiteSpace(parameters.GroupBy))
+        {
+            options.GroupBy = SplitCsv(parameters.GroupBy);
+        }
+
+        // Having
+        if (!string.IsNullOrWhiteSpace(parameters.Having))
+        {
+            options.Having = ParseHaving(parameters.Having);
+        }
+
+        // Includes
+        if (!string.IsNullOrWhiteSpace(parameters.Includes))
+        {
+            options.Includes = SplitCsv(parameters.Includes.Split('(')[0]);
+            options.FilteredIncludes = FilteredIncludeParser.Parse(parameters.Includes);
+        }
+
+        // Metadata
+        options.IncludeCount = parameters.IncludeCount ?? true;
+        options.Distinct = parameters.Distinct ?? false;
+
+        // Sorting
+        if (!string.IsNullOrWhiteSpace(parameters.Sort))
+        {
+            options.Sort.AddRange(ParseSort(parameters.Sort));
+        }
+
+        // Filters - prioritize JQL 'Query' if present, then 'Filter' string
+        if (!string.IsNullOrWhiteSpace(parameters.Query))
+        {
+            var ast = JqlParser.Parse(parameters.Query);
+            options.Filter = JqlFilterConverter.ToFilterGroup(ast);
+            options.Ast = ast;
+            options.Filter = Builders.FilterNormalizer.NormalizeOrder(options.Filter);
+        }
+        else if (!string.IsNullOrWhiteSpace(parameters.Filter))
+        {
+            var filterVal = parameters.Filter.TrimStart();
+            if (filterVal.StartsWith('{'))
+            {
+                try
+                {
+                    using var doc = JsonDocument.Parse(parameters.Filter);
+                    if (doc.RootElement.TryGetProperty("select", out var selectEl))
+                        options.SelectTree = Helpers.SelectTreeBuilder.ParseJsonSelect(selectEl);
+
+                    if (doc.RootElement.TryGetProperty("filters", out _) || doc.RootElement.TryGetProperty("logic", out _))
+                        options.Filter = ParseJsonGroup(doc.RootElement);
+                    else if (doc.RootElement.TryGetProperty("filter", out var filterEl))
+                        options.Filter = ParseJsonGroup(filterEl);
+                }
+                catch { /* ignore malformed */ }
+            }
+            else
+            {
+                try
+                {
+                    var ast = DslParser.Parse(parameters.Filter);
+                    options.Filter = DslFilterConverter.ToFilterGroup(ast);
+                    options.Ast = ast;
+                }
+                catch (DslParseException) { }
+            }
+        }
+
+        // Store in Cache
+        ParserCache.Set(cacheKey, options);
+
+        return options;
     }
 
     /// <summary>
@@ -425,23 +501,53 @@ public static class QueryOptionsParser
         Dictionary<string, string> d, string prefix)
     {
         var result = new SortedDictionary<int, Dictionary<string, string>>();
-        // matches: prefix[0].field  or  prefix[0][field]
-        var regex = new Regex(
-            $@"^{Regex.Escape(prefix)}\[(\d+)\][.\[]([^\]\s]+)\]?$",
-            RegexOptions.IgnoreCase);
+        var prefixSpan = prefix.AsSpan();
 
         foreach (var kv in d)
         {
-            var m = regex.Match(kv.Key);
-            if (!m.Success) continue;
-            var idx    = int.Parse(m.Groups[1].Value);
-            var subkey = m.Groups[2].Value.ToLowerInvariant();
-            if (!result.TryGetValue(idx, out var inner))
-                result[idx] = inner = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-            inner[subkey] = kv.Value;
+            if (TryParseIndexedKey(kv.Key.AsSpan(), prefixSpan, out var idx, out var subkey))
+            {
+                if (!result.TryGetValue(idx, out var inner))
+                    result[idx] = inner = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+                inner[subkey] = kv.Value;
+            }
         }
 
         return result;
+    }
+
+    private static bool TryParseIndexedKey(
+        ReadOnlySpan<char> key,
+        ReadOnlySpan<char> prefix,
+        out int index,
+        out string subKey)
+    {
+        index = 0;
+        subKey = string.Empty;
+
+        if (!key.StartsWith(prefix, StringComparison.OrdinalIgnoreCase)) return false;
+        var pos = prefix.Length;
+        if (pos >= key.Length || key[pos++] != '[') return false;
+
+        var start = pos;
+        while (pos < key.Length && char.IsDigit(key[pos])) pos++;
+        if (start == pos || pos >= key.Length || key[pos++] != ']') return false;
+        
+        #if NET6_0_OR_GREATER
+        if (!int.TryParse(key[start..(pos - 1)], out index)) return false;
+        #else
+        if (!int.TryParse(key[start..(pos - 1)].ToString(), out index)) return false;
+        #endif
+
+        if (pos >= key.Length || (key[pos] != '.' && key[pos] != '[')) return false;
+        pos++;
+
+        var subStart = pos;
+        while (pos < key.Length && key[pos] != ']' && !char.IsWhiteSpace(key[pos])) pos++;
+        if (subStart == pos) return false;
+
+        subKey = key[subStart..pos].ToString().ToLowerInvariant();
+        return true;
     }
 
 
@@ -460,10 +566,27 @@ public static class QueryOptionsParser
             : LogicOperator.And;
 
     private static List<string> SplitCsv(string? raw)
-        => string.IsNullOrWhiteSpace(raw)
-            ? []
-            : raw.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
-                 .ToList();
+    {
+        if (string.IsNullOrWhiteSpace(raw)) return [];
+
+        ReadOnlySpan<char> span = raw.AsSpan();
+        var result = new List<string>();
+
+        while (!span.IsEmpty)
+        {
+            var comma = span.IndexOf(',');
+            var part = comma < 0 ? span : span[..comma];
+            part = part.Trim();
+
+            if (!part.IsEmpty)
+                result.Add(part.ToString());
+
+            if (comma < 0) break;
+            span = span[(comma + 1)..];
+        }
+
+        return result;
+    }
 
     private static List<SortNode> ParseGenericSorts(Dictionary<string, string> d)
     {
@@ -492,43 +615,56 @@ public static class QueryOptionsParser
         var result = new List<SortNode>();
         if (string.IsNullOrWhiteSpace(sortRaw)) return result;
 
-        foreach (var item in sortRaw.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+        ReadOnlySpan<char> span = sortRaw.AsSpan();
+
+        while (!span.IsEmpty)
         {
-            if (string.IsNullOrWhiteSpace(item)) continue;
+            var comma = span.IndexOf(',');
+            var item = comma < 0 ? span : span[..comma];
+            item = item.Trim();
 
-
-
-            var parts = item.Split(':', 2, StringSplitOptions.TrimEntries);
-            var field = parts[0];
-            if (string.IsNullOrWhiteSpace(field)) continue;
-
-            var direction = parts.Length > 1 ? parts[1] : "asc";
-            var isDesc = direction.Equals("desc", StringComparison.OrdinalIgnoreCase);
-
-            var aggregateMatch = AggregateSortPattern.Match(field);
-            if (aggregateMatch.Success)
+            if (!item.IsEmpty)
             {
-                var aggregate = aggregateMatch.Groups["fn"].Value.ToLowerInvariant();
-                var collection = aggregateMatch.Groups["collection"].Value;
-                var aggregateField = aggregateMatch.Groups["field"].Success
-                    ? aggregateMatch.Groups["field"].Value
-                    : null;
+                var colon = item.IndexOf(':');
+                var fieldSpan = colon < 0 ? item : item[..colon];
+                fieldSpan = fieldSpan.Trim();
 
-                result.Add(new SortNode
+                if (!fieldSpan.IsEmpty)
                 {
-                    Field = collection,
-                    Descending = isDesc,
-                    Aggregate = aggregate,
-                    AggregateField = string.IsNullOrWhiteSpace(aggregateField) ? null : aggregateField
-                });
-                continue;
+                    var field = fieldSpan.ToString();
+                    var direction = colon < 0 ? "asc" : item[(colon + 1)..].Trim().ToString();
+                    var isDesc = direction.Equals("desc", StringComparison.OrdinalIgnoreCase);
+
+                    var aggregateMatch = AggregateSortPattern.Match(field);
+                    if (aggregateMatch.Success)
+                    {
+                        var aggregate = aggregateMatch.Groups["fn"].Value.ToLowerInvariant();
+                        var collection = aggregateMatch.Groups["collection"].Value;
+                        var aggregateField = aggregateMatch.Groups["field"].Success
+                            ? aggregateMatch.Groups["field"].Value
+                            : null;
+
+                        result.Add(new SortNode
+                        {
+                            Field = collection,
+                            Descending = isDesc,
+                            Aggregate = aggregate,
+                            AggregateField = string.IsNullOrWhiteSpace(aggregateField) ? null : aggregateField
+                        });
+                    }
+                    else
+                    {
+                        result.Add(new SortNode
+                        {
+                            Field = field,
+                            Descending = isDesc
+                        });
+                    }
+                }
             }
 
-            result.Add(new SortNode
-            {
-                Field = field,
-                Descending = isDesc
-            });
+            if (comma < 0) break;
+            span = span[(comma + 1)..];
         }
 
         return result;

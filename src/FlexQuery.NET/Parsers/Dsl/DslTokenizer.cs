@@ -90,7 +90,6 @@ public sealed class DslTokenizer
     private DslToken ReadValue()
     {
         var start = _position;
-        var value = new List<char>();
 
         while (_position < _source.Length && char.IsWhiteSpace(_source[_position]))
         {
@@ -108,6 +107,7 @@ public sealed class DslTokenizer
             return ReadQuoted(current);
         }
 
+        var valueStart = _position;
         while (_position < _source.Length)
         {
             current = _source[_position];
@@ -116,19 +116,15 @@ public sealed class DslTokenizer
                 break;
             }
 
-            if (current == '\\' && _position + 1 < _source.Length)
+            if (current == '\\')
             {
-                _position++;
-                value.Add(_source[_position]);
-                _position++;
-                continue;
+                return ReadEscapedValue(tokenStart: start, valueStart: valueStart);
             }
 
-            value.Add(current);
             _position++;
         }
 
-        var s = new string(value.ToArray()).Trim();
+        var s = _source[valueStart.._position].Trim();
         if (s.Length == 0)
         {
             throw new DslParseException($"Missing DSL value at position {start}.");
@@ -137,10 +133,68 @@ public sealed class DslTokenizer
         return new DslToken(DslTokenKind.Identifier, s, start);
     }
 
+    private DslToken ReadEscapedValue(int tokenStart, int valueStart)
+    {
+        var sb = new System.Text.StringBuilder();
+        sb.Append(_source[valueStart.._position]);
+
+        while (_position < _source.Length)
+        {
+            var current = _source[_position];
+            if (current is '&' or '|' or ')' or '(')
+            {
+                break;
+            }
+
+            if (current == '\\' && _position + 1 < _source.Length)
+            {
+                _position++;
+                sb.Append(_source[_position]);
+                _position++;
+                continue;
+            }
+
+            sb.Append(current);
+            _position++;
+        }
+
+        var s = sb.ToString().Trim();
+        if (s.Length == 0)
+        {
+            throw new DslParseException($"Missing DSL value at position {tokenStart}.");
+        }
+
+        return new DslToken(DslTokenKind.Identifier, s, tokenStart);
+    }
+
     private DslToken ReadIdentifier()
     {
         var start = _position;
-        var value = new List<char>();
+
+        while (_position < _source.Length)
+        {
+            var current = _source[_position];
+            if (current is ':' or '&' or '|' or '(' or ')' || char.IsWhiteSpace(current))
+                break;
+
+            if (current == '\\')
+            {
+                return ReadEscapedIdentifier(start);
+            }
+
+            _position++;
+        }
+
+        if (_position == start)
+            throw new DslParseException($"Unexpected character '{_source[_position]}' at position {_position}.");
+
+        return new DslToken(DslTokenKind.Identifier, _source[start.._position], start);
+    }
+
+    private DslToken ReadEscapedIdentifier(int tokenStart)
+    {
+        var sb = new System.Text.StringBuilder();
+        sb.Append(_source[tokenStart.._position]);
 
         while (_position < _source.Length)
         {
@@ -151,26 +205,50 @@ public sealed class DslTokenizer
             if (current == '\\' && _position + 1 < _source.Length)
             {
                 _position++;
-                value.Add(_source[_position]);
+                sb.Append(_source[_position]);
                 _position++;
                 continue;
             }
 
-            value.Add(current);
+            sb.Append(current);
             _position++;
         }
 
-        if (value.Count == 0)
-            throw new DslParseException($"Unexpected character '{_source[_position]}' at position {_position}.");
-
-        return new DslToken(DslTokenKind.Identifier, new string(value.ToArray()), start);
+        return new DslToken(DslTokenKind.Identifier, sb.ToString(), tokenStart);
     }
 
     private DslToken ReadQuoted(char quote)
     {
-        var start = _position;
-        var value = new List<char>();
-        _position++;
+        var tokenStart = _position;
+        _position++; // skip opening quote
+        var valueStart = _position;
+
+        while (_position < _source.Length)
+        {
+            var current = _source[_position];
+
+            if (current == quote)
+            {
+                var value = _source[valueStart.._position];
+                _position++;
+                return new DslToken(DslTokenKind.Identifier, value, tokenStart);
+            }
+
+            if (current == '\\')
+            {
+                return ReadEscapedQuoted(quote, tokenStart, valueStart);
+            }
+
+            _position++;
+        }
+
+        throw new DslParseException($"Unterminated quoted value at position {tokenStart}.");
+    }
+
+    private DslToken ReadEscapedQuoted(char quote, int tokenStart, int valueStart)
+    {
+        var sb = new System.Text.StringBuilder();
+        sb.Append(_source[valueStart.._position]);
 
         while (_position < _source.Length)
         {
@@ -178,7 +256,7 @@ public sealed class DslTokenizer
             if (current == '\\' && _position + 1 < _source.Length)
             {
                 _position++;
-                value.Add(_source[_position]);
+                sb.Append(_source[_position]);
                 _position++;
                 continue;
             }
@@ -186,13 +264,13 @@ public sealed class DslTokenizer
             if (current == quote)
             {
                 _position++;
-                return new DslToken(DslTokenKind.Identifier, new string(value.ToArray()), start);
+                return new DslToken(DslTokenKind.Identifier, sb.ToString(), tokenStart);
             }
 
-            value.Add(current);
+            sb.Append(current);
             _position++;
         }
 
-        throw new DslParseException($"Unterminated quoted value at position {start}.");
+        throw new DslParseException($"Unterminated quoted value at position {tokenStart}.");
     }
 }

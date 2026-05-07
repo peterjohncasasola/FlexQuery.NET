@@ -113,10 +113,8 @@ internal static class FilterNormalizer
             }
         }
 
-        // Remove duplicate conditions
-        normalized.Children = RemoveDuplicates(normalized.Children);
-        // Deterministic ordering
-        normalized.Children.Sort(CompareFilterNodes);
+        // Deterministic ordering and duplicate removal in one pass
+        normalized.Children = DeduplicateAndSort(normalized.Children, preserveCase: false);
         return normalized;
     }
 
@@ -169,7 +167,7 @@ internal static class FilterNormalizer
             }
         }
 
-        normalized.Children.Sort(CompareFilterNodesPreservingCase);
+        normalized.Children = DeduplicateAndSort(normalized.Children, preserveCase: true);
         return normalized;
     }
 
@@ -198,95 +196,95 @@ internal static class FilterNormalizer
         return value.Trim();
     }
 
-    private static List<FilterNode> RemoveDuplicates(List<FilterNode> nodes)
-    {
-        var map = new Dictionary<string, FilterNode>(StringComparer.Ordinal);
+    private sealed record KeyedNode(string Key, FilterNode Node);
 
+    private static List<FilterNode> DeduplicateAndSort(List<FilterNode> nodes, bool preserveCase)
+    {
+        if (nodes.Count == 0) return nodes;
+
+        var map = new Dictionary<string, FilterNode>(nodes.Count, StringComparer.Ordinal);
         foreach (var node in nodes)
         {
-            var key = BuildSortKey(node);
-
+            var key = preserveCase ? BuildSortKeyPreservingCase(node) : BuildSortKey(node);
             map.TryAdd(key, node);
         }
 
-        return map.Values.ToList();
-    }
+        var keyed = new List<KeyedNode>(map.Count);
+        foreach (var kv in map)
+            keyed.Add(new KeyedNode(kv.Key, kv.Value));
 
-    private static int CompareFilterNodes(FilterNode x, FilterNode y)
-    {
-        return string.CompareOrdinal(BuildSortKey(x), BuildSortKey(y));
-    }
+        keyed.Sort(static (a, b) => string.CompareOrdinal(a.Key, b.Key));
 
-    private static int CompareFilterNodesPreservingCase(FilterNode x, FilterNode y)
-    {
-        return string.CompareOrdinal(
-            BuildSortKeyPreservingCase(x),
-            BuildSortKeyPreservingCase(y));
+        var result = new List<FilterNode>(keyed.Count);
+        foreach (var item in keyed)
+            result.Add(item.Node);
+
+        return result;
     }
 
     private static string BuildSortKey(FilterNode? node)
     {
-        if (node is null)
-            return string.Empty;
-
-        return node switch
-        {
-            FilterConditionNode condition =>
-                "C|" +
-                "F:" + condition.Field.Trim().ToLowerInvariant() +
-                "|O:" + FilterOperators.Normalize(condition.Operator) +
-                "|N:" + condition.IsNegated +
-                "|V:" + EscapeKey(condition.Value) +
-                "|S:" + BuildSortKey(condition.ScopedFilter),
-
-            FilterGroupNode group =>
-                "G|" +
-                "L:" + group.Logic +
-                "|N:" + group.IsNegated +
-                "|Children:[" +
-                string.Join(",", group.Children.Select(BuildSortKey)) +
-                "]",
-
-            _ => string.Empty
-        };
+        if (node is null) return string.Empty;
+        var sb = new StringBuilder();
+        BuildSortKeyInternal(node, sb, false);
+        return sb.ToString();
     }
 
     private static string BuildSortKeyPreservingCase(FilterNode? node)
     {
-        if (node is null)
-            return string.Empty;
-
-        return node switch
-        {
-            FilterConditionNode condition =>
-                "C|" +
-                "F:" + condition.Field.Trim() +
-                "|O:" + condition.Operator +
-                "|N:" + condition.IsNegated +
-                "|V:" + EscapeKey(condition.Value) +
-                "|S:" + BuildSortKeyPreservingCase(condition.ScopedFilter),
-
-            FilterGroupNode group =>
-                "G|" +
-                "L:" + group.Logic +
-                "|N:" + group.IsNegated +
-                "|Children:[" +
-                string.Join(",", group.Children.Select(BuildSortKeyPreservingCase)) +
-                "]",
-
-            _ => string.Empty
-        };
+        if (node is null) return string.Empty;
+        var sb = new StringBuilder();
+        BuildSortKeyInternal(node, sb, true);
+        return sb.ToString();
     }
 
-    private static string EscapeKey(string? segment)
+    private static void BuildSortKeyInternal(FilterNode? node, StringBuilder sb, bool preserveCase)
     {
-        return segment is null
-            ? string.Empty
-            : segment
-                .Replace("\\", "\\\\")
-                .Replace("|", "\\|")
-                .Replace(",", "\\,")
-                .Replace("[", "\\[")
-                .Replace("]", "\\]");
+        if (node is null) return;
+
+        switch (node)
+        {
+            case FilterConditionNode condition:
+                sb.Append("C|F:");
+                sb.Append(preserveCase ? condition.Field?.Trim() : condition.Field?.Trim().ToLowerInvariant());
+                sb.Append("|O:");
+                sb.Append(preserveCase ? condition.Operator : FilterOperators.Normalize(condition.Operator));
+                sb.Append("|N:");
+                sb.Append(condition.IsNegated);
+                sb.Append("|V:");
+                EscapeKeyInternal(condition.Value, sb);
+                sb.Append("|S:");
+                BuildSortKeyInternal(condition.ScopedFilter, sb, preserveCase);
+                break;
+
+            case FilterGroupNode group:
+                sb.Append("G|L:");
+                sb.Append(group.Logic);
+                sb.Append("|N:");
+                sb.Append(group.IsNegated);
+                sb.Append("|Children:[");
+                for (int i = 0; i < group.Children.Count; i++)
+                {
+                    if (i > 0) sb.Append(',');
+                    BuildSortKeyInternal(group.Children[i], sb, preserveCase);
+                }
+                sb.Append(']');
+                break;
+        }
+    }
+
+    private static void EscapeKeyInternal(string? segment, StringBuilder sb)
+    {
+        if (string.IsNullOrEmpty(segment)) return;
+        
+        for (int i = 0; i < segment.Length; i++)
+        {
+            var c = segment[i];
+            if (c is '\\' or '|' or ',' or '[' or ']')
+            {
+                sb.Append('\\');
+            }
+            sb.Append(c);
+        }
     }
 }

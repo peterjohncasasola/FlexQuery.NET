@@ -95,6 +95,39 @@ public class QueryOptions
     }
 
     /// <summary>
+    /// Creates a deep-ish clone of the options to support safe caching.
+    /// Collections are newly instantiated, but node elements are shared (assumed immutable).
+    /// </summary>
+    public QueryOptions Clone()
+    {
+        var clone = new QueryOptions
+        {
+            Filter = Filter,
+            Sort = new List<SortNode>(Sort),
+            Select = Select is null ? null : new List<string>(Select),
+            Includes = Includes is null ? null : new List<string>(Includes),
+            FilteredIncludes = FilteredIncludes is null ? null : new List<IncludeNode>(FilteredIncludes),
+            ProjectionMode = ProjectionMode,
+            GroupBy = GroupBy is null ? null : new List<string>(GroupBy),
+            Aggregates = new List<AggregateModel>(Aggregates),
+            Having = Having,
+            Distinct = Distinct,
+            Paging = new PagingOptions { Page = Paging.Page, PageSize = Paging.PageSize, Disabled = Paging.Disabled },
+            Skip = Skip,
+            Top = Top,
+            IncludeCount = IncludeCount,
+            CaseInsensitive = CaseInsensitive,
+            EnableCache = EnableCache,
+            Ast = Ast,
+            SelectTree = SelectTree
+        };
+
+        foreach (var kv in Items) clone.Items[kv.Key] = kv.Value;
+
+        return clone;
+    }
+
+    /// <summary>
     /// Creates a shallow clone of the options with a new filter.
     /// </summary>
     /// <param name="filter">The new filter group to apply.</param>

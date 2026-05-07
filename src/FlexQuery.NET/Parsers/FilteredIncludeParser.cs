@@ -25,11 +25,6 @@ namespace FlexQuery.NET.Parsers;
 /// </summary>
 public static class FilteredIncludeParser
 {
-    // Pre-compiled: matches  name  or  name(...)  at the start of the string.
-    // Group 1 = property name, Group 2 = filter content (without parens) or null.
-    private static readonly Regex SegmentRegex = new(
-        @"^(?<name>[A-Za-z_][A-Za-z0-9_]*)(?:\((?<filter>.*)\))?$",
-        RegexOptions.Compiled | RegexOptions.IgnoreCase | RegexOptions.Singleline);
 
     // ── Public entry point ───────────────────────────────────────────────
 
@@ -97,17 +92,29 @@ public static class FilteredIncludeParser
     {
         if (string.IsNullOrWhiteSpace(segment)) return null;
 
-        var match = SegmentRegex.Match(segment);
-        if (!match.Success) return null;
+        var span = segment.AsSpan();
+        var openParen = span.IndexOf('(');
+        
+        ReadOnlySpan<char> nameSpan;
+        ReadOnlySpan<char> filterSpan = default;
 
-        var name = match.Groups["name"].Value;
-        FilterGroup? filter = null;
-
-        if (match.Groups["filter"].Success)
+        if (openParen < 0)
         {
-            var rawFilter = match.Groups["filter"].Value.Trim();
-            filter = TryParseFilter(rawFilter);
+            nameSpan = span.Trim();
         }
+        else
+        {
+            var closeParen = span.LastIndexOf(')');
+            if (closeParen < openParen) return null;
+            
+            nameSpan = span[..openParen].Trim();
+            filterSpan = span[(openParen + 1)..closeParen].Trim();
+        }
+
+        if (nameSpan.IsEmpty) return null;
+
+        var name = nameSpan.ToString();
+        FilterGroup? filter = filterSpan.IsEmpty ? null : TryParseFilter(filterSpan.ToString());
 
         return new IncludeNode { Path = name, Filter = filter };
     }

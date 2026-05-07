@@ -202,32 +202,60 @@ public sealed class JqlTokenizer
 
     private JqlToken ReadQuoted(char quote)
     {
-        var start = _position;
-        _position++; // skip quote
-        var value = new List<char>();
+        var tokenStart = _position;
+        _position++; // skip opening quote
+        var valueStart = _position;
 
         while (_position < _source.Length)
         {
-            var current = _source[_position];
-            if (current == '\\' && _position + 1 < _source.Length)
+            var ch = _source[_position];
+
+            if (ch == quote)
+            {
+                var value = _source[valueStart.._position];
+                _position++;
+                return new JqlToken(JqlTokenKind.String, value, tokenStart);
+            }
+
+            if (ch == '\\')
+            {
+                return ReadEscapedQuoted(quote, tokenStart, valueStart);
+            }
+
+            _position++;
+        }
+
+        throw new JqlParseException($"Unterminated quoted value at position {tokenStart}.");
+    }
+
+    private JqlToken ReadEscapedQuoted(char quote, int tokenStart, int valueStart)
+    {
+        var sb = new System.Text.StringBuilder();
+        // Append what we've seen so far
+        sb.Append(_source[valueStart.._position]);
+
+        while (_position < _source.Length)
+        {
+            var ch = _source[_position];
+            if (ch == '\\' && _position + 1 < _source.Length)
             {
                 _position++;
-                value.Add(_source[_position]);
+                sb.Append(_source[_position]);
                 _position++;
                 continue;
             }
 
-            if (current == quote)
+            if (ch == quote)
             {
                 _position++;
-                return new JqlToken(JqlTokenKind.String, new string(value.ToArray()), start);
+                return new JqlToken(JqlTokenKind.String, sb.ToString(), tokenStart);
             }
 
-            value.Add(current);
+            sb.Append(ch);
             _position++;
         }
 
-        throw new JqlParseException($"Unterminated quoted value at position {start}.");
+        throw new JqlParseException($"Unterminated quoted value at position {tokenStart}.");
     }
 }
 
