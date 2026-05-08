@@ -16,7 +16,7 @@ This guide helps you translate benchmark numbers into decisions for your project
 | **Nested collection filters (`Any`/`All`)** | FlexQuery.NET only | No overhead — database dominates |
 
 For detailed numbers, see:
-- [Execution Benchmarks](./execution.md)
+- [Execution Benchmarks](../execution.md)
 - [API Benchmarks](./api-benchmarks.md)
 - [Database Execution](./database-execution.md)
 
@@ -229,10 +229,10 @@ Benchmarks can only guide you if you know where your time goes.
 | Your Stack | Most Relevant Benchmark |
 |:------------|:-----------------------|
 | EF Core + SQL Server | [Database Execution](./database-execution.md) |
-| EF Core + InMemory (tests) | [End-to-End Execution](./execution.md) |
+| EF Core + InMemory (tests) | [End-to-End Execution](../execution.md) |
 - ASP.NET Core REST API | [API Benchmarks](./api-benchmarks.md) |
 - Microservices with large payloads | [Scalability](./scalability.md) |
-- Need nested `Any` / `All` | [Execution: Nested](./execution.md#scenario-3-nested-collection-queries-any) |
+- Need nested `Any` / `All` | [Execution: Nested](../execution.md#scenario-3-nested-collection-queries-any) |
 
 ---
 

@@ -23,7 +23,7 @@ Allocation directly impacts garbage collection (GC) frequency and pause times:
 
 ### Scenario 1: Filter + Sort + Page (20–100 records)
 
-From [Execution Benchmarks](./execution.md):
+From [Execution Benchmarks](../execution.md):
 
 | Page Size | FlexQuery.NET | Handwritten LINQ | Gridify | Sieve | OData |
 |:----------:|--------------:|-----------------:|--------:|------:|------:|
@@ -238,6 +238,6 @@ For responses > 100 KB:
 ## Related Pages
 
 - [Scalability](./scalability.md) — How performance scales with dataset size
-- [Execution Benchmarks](./execution.md) — Full pipeline including allocation numbers
+- [Execution Benchmarks](../execution.md) — Full pipeline including allocation numbers
 - [API Benchmarks](./api-benchmarks.md) — Real-world HTTP request memory usage
 - [Database Execution](./database-execution.md) — SQL Server memory characteristics

@@ -61,7 +61,7 @@ Parse (0.1 µs) → Validate (1–10 µs) → Expression Generation (~0.9 µs) �
 
 At **~1 µs**, expression generation is negligible compared to database execution. Even for 10,000 QPS, the total CPU time is < 0.01 seconds per second — essentially free.
 
-However, for **in-memory LINQ-to-Objects** scenarios (no database), expression generation cost becomes more visible (as seen in [Execution Benchmarks](./execution.md) where FlexQuery and handwritten are within milliseconds).
+However, for **in-memory LINQ-to-Objects** scenarios (no database), expression generation cost becomes more visible (as seen in [Execution Benchmarks](../execution.md) where FlexQuery and handwritten are within milliseconds).
 
 ---
 

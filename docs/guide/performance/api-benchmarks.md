@@ -503,7 +503,7 @@ Performance is only one dimension of API design. Flexibility, maintainability, a
 For a complete picture, see also:
 
 - [Parsing Performance](./parsing-performance.md) — upfront cost breakdown
-- [Execution Benchmarks](./execution.md) — InMemory query pipeline
+- [Execution Benchmarks](../execution.md) — InMemory query pipeline
 - [Database Execution](./database-execution.md) — SQL Server performance
 - [Scalability](./scalability.md) — dataset scaling behavior
 - [Fairness Disclaimers](./fairness-disclaimers.md) — architectural context

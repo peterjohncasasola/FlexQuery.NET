@@ -133,7 +133,7 @@ Represents the cost of parsing + expression generation + validation + execution 
 ## Comparison to Other Libraries
 
 This benchmark does **not** include Gridify, Sieve, or OData because `DatabaseExecutionBenchmarks.cs` only measures FlexQuery vs handwritten. To see those libraries' end-to-end performance (including parsing overhead, but still in-memory), refer to:
-- [Execution Benchmarks](./execution.md) (InMemory, includes Gridify, Sieve, Dynamic.Core)
+- [Execution Benchmarks](../execution.md) (InMemory, includes Gridify, Sieve, Dynamic.Core)
 - [API Benchmarks](./api-benchmarks.md) (Full HTTP pipeline includes all libraries)
 
 Those benchmarks consistently show FlexQuery.NET performing within 0–5% of handwritten LINQ for filter+sort+page operations, while Gridify and Sieve are typically 18–40% slower.
@@ -144,6 +144,6 @@ Those benchmarks consistently show FlexQuery.NET performing within 0–5% of han
 
 The raw database execution numbers in this artifact are **not representative** of FlexQuery.NET's real overhead because they include a mandatory COUNT query that handwritten does not. The overhead is thus dominated by an extra roundtrip, not the library's parsing/generation cost.
 
-For actual filtering overhead, see **[Execution Benchmarks](./execution.md)** where all libraries execute entirely in-memory with comparable operations. There, FlexQuery.NET is 2.25× faster than handwritten (InMemory anomaly) or within margin of error on SQL.
+For actual filtering overhead, see **[Execution Benchmarks](../execution.md)** where all libraries execute entirely in-memory with comparable operations. There, FlexQuery.NET is 2.25× faster than handwritten (InMemory anomaly) or within margin of error on SQL.
 
 Future benchmark updates will align both sides to execute the same number of queries.

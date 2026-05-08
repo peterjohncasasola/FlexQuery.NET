@@ -11,7 +11,7 @@ We measure every stage of the query pipeline separately and publish the full met
 ## Documentation Structure
 
 1. **[Methodology](./methodology.md)** — Environment, hardware, dataset, reproducibility
-2. **[Execution Benchmarks](./execution.md)** — Full query pipeline (filter, sort, page, projection, nested)
+2. **[Execution Benchmarks](../execution.md)** — Full query pipeline (filter, sort, page, projection, nested)
 3. **[Parsing Performance](./parsing-performance.md)** — String → Abstract Syntax Tree (AST) conversion cost
 4. **[Expression Generation](./expression-generation.md)** — AST → LINQ Expression translation
 5. **[Database Execution](./database-execution.md)** — SQL Server LocalDB results
@@ -29,9 +29,9 @@ If you want the bottom line without reading all pages:
 
 | Scenario | Expectation | Where to Look |
 |:----------|:-------------|:--------------|
-| **Simple filter + sort + page (20 items)** | FlexQuery matches or exceeds handwritten LINQ; 1–2 ms total latency per request | [Execution](./execution.md) |
-| **Dynamic projection (select specific fields)** | FlexQuery adds ~20 µs overhead vs strongly-typed handwritten; allocation-efficient | [Execution: Projection](./execution.md#scenario-2-dynamic-projection-select-subset-of-fields) |
-| **Nested collection queries (`Any`/`All`)** | Library overhead is negligible (< 2% of total time); database I/O dominates | [Execution: Nested](./execution.md#scenario-3-nested-collection-queries-any) |
+| **Simple filter + sort + page (20 items)** | FlexQuery matches or exceeds handwritten LINQ; 1–2 ms total latency per request | [Execution](../execution.md) |
+| **Dynamic projection (select specific fields)** | FlexQuery adds ~20 µs overhead vs strongly-typed handwritten; allocation-efficient | [Execution: Projection](../execution.md#scenario-2-dynamic-projection-select-subset-of-fields) |
+| **Nested collection queries (`Any`/`All`)** | Library overhead is negligible (< 2% of total time); database I/O dominates | [Execution: Nested](../execution.md#scenario-3-nested-collection-queries-any) |
 | **Large result sets (10,000+ rows)** | Memory scales linearly; consider streaming or paging to prevent OOM | [Scalability](./scalability.md) |
 | **SQL Server production** | FlexQuery adds ~5% overhead vs handwritten; still fastest among dynamic libraries | [Database Execution](./database-execution.md) |
 | **Full API request (including serialization)** | FlexQuery 0.55–1.00× relative to baseline depending on page size | [API Benchmarks](./api-benchmarks.md) |
@@ -65,7 +65,7 @@ We **do** claim:
 - Libraries are configured using their recommended production patterns
 - All benchmarks use deterministic datasets (`Random(42)`) for fairness
 
-For the full philosophy, read the [benchmark suite README](../../benchmarks/FlexQuery.Benchmarks/README.md).
+For the full philosophy, read the [benchmark suite README](https://github.com/peterjohncasasola/FlexQuery.NET/blob/main/benchmarks/FlexQuery.Benchmarks/README.md).
 
 ---
 

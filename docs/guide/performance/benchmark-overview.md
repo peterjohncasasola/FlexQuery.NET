@@ -34,7 +34,7 @@ We separate our benchmarks into three distinct categories to provide maximum tra
 2. **[Expression Generation Benchmarks](./expression-generation.md)**
    Measures the CPU cost and memory allocation of translating the internal model into a concrete `System.Linq.Expressions.Expression` tree.
 
- 3. **[End-to-End Execution Benchmarks](./execution.md)**
+  3. **[End-to-End Execution Benchmarks](../execution.md)**
    Measures the full lifecycle from query string to materialized results using the EF Core InMemory provider.
 
 4. **[API Benchmarks](./api-benchmarks.md)**
@@ -58,6 +58,6 @@ We commit to the following principles in our benchmarks:
 
 ## Navigating the Results
 
-If you are a library consumer deciding whether to adopt FlexQuery.NET, we recommend focusing entirely on the **[End-to-End Execution Benchmarks](./execution.md)**. This reflects the actual latency added to your HTTP requests.
+If you are a library consumer deciding whether to adopt FlexQuery.NET, we recommend focusing entirely on the **[End-to-End Execution Benchmarks](../execution.md)**. This reflects the actual latency added to your HTTP requests.
 
 If you are a contributor or interested in compiler design, the **[Parsing Performance](./parsing-performance.md)** and **[Expression Generation](./expression-generation.md)** benchmarks provide deep insights into our pipeline optimizations.

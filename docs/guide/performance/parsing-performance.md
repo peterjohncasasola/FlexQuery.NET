@@ -134,4 +134,4 @@ Unless your workload consists of:
 
 ...then parsing overhead is unlikely to be your bottleneck.
 
-**Focus on the [End-to-End Execution Benchmarks](./execution.md) instead.** Those reflect actual HTTP request latency.
+**Focus on the [End-to-End Execution Benchmarks](../execution.md) instead.** Those reflect actual HTTP request latency.
