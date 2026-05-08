@@ -7,6 +7,7 @@ export default defineConfig({
 
   cleanUrls: true,
 
+
   head: [
     ['link', { rel: 'icon', href: '/logo.png' }],
     ['meta', { name: 'theme-color', content: '#646cff' }],
@@ -59,55 +60,73 @@ export default defineConfig({
         {
           text: 'Introduction',
           items: [
-            { text: 'Why FlexQuery.NET?',       link: '/guide/why-flexquery' },
-            { text: 'Getting Started',           link: '/guide/getting-started' },
-            { text: 'How It Works',              link: '/guide/how-it-works' },
-            { text: 'Core Concepts',             link: '/guide/core-concepts' }
+            { text: 'Why FlexQuery.NET?', link: '/guide/why-flexquery' },
+            { text: 'Getting Started', link: '/guide/getting-started' },
+            { text: 'How It Works', link: '/guide/how-it-works' },
+            { text: 'Core Concepts', link: '/guide/core-concepts' }
           ]
         },
         {
           text: 'Query Features',
           items: [
-            { text: 'Filtering',                 link: '/guide/filtering' },
-            { text: 'Sorting',                   link: '/guide/sorting' },
-            { text: 'Paging',                    link: '/guide/paging' },
-            { text: 'Projection',                link: '/guide/projection' },
-            { text: 'Flattening Modes',          link: '/guide/flattening' },
-            { text: 'Grouping & Aggregates',     link: '/guide/grouping' },
-            { text: 'Include Filtering',         link: '/guide/include-filtering' },
-            { text: 'Query Composition',         link: '/guide/query-composition' },
+            { text: 'Filtering', link: '/guide/filtering' },
+            { text: 'Sorting', link: '/guide/sorting' },
+            { text: 'Paging', link: '/guide/paging' },
+            { text: 'Projection', link: '/guide/projection' },
+            { text: 'Flattening Modes', link: '/guide/flattening' },
+            { text: 'Grouping & Aggregates', link: '/guide/grouping' },
+            { text: 'Include Filtering', link: '/guide/include-filtering' },
+            { text: 'Query Composition', link: '/guide/query-composition' }
           ]
         },
         {
           text: 'Execution & Security',
           items: [
-            { text: 'Execution Pipeline',        link: '/guide/execution' },
-            { text: 'Validation',                link: '/guide/validation' },
-            { text: 'Security & Field Access',   link: '/guide/security' }
+            { text: 'Execution Pipeline', link: '/guide/execution-pipeline' },
+            { text: 'Validation', link: '/guide/validation' },
+            { text: 'Security & Field Access', link: '/guide/security' }
           ]
         },
         {
           text: 'Integration',
+          collapsed: false,
           items: [
-            { text: 'ASP.NET Core',              link: '/guide/aspnet-integration' },
-            { text: 'Swagger Integration',       link: '/guide/swagger-integration' },
-            { text: 'Performance',               link: '/guide/performance' },
-            { text: 'Debugging',                 link: '/guide/debugging' },
+            { text: 'ASP.NET Core', link: '/guide/aspnet-integration' },
+            { text: 'Swagger Integration', link: '/guide/swagger-integration' },
+            { text: 'Performance Tuning', link: '/guide/performance-tuning' },
+            { text: 'Debugging', link: '/guide/debugging' }
+          ]
+        },
+        {
+          text: 'Performance',
+          items: [
+            { text: 'Benchmarks', link: '/guide/performance/benchmarks' },
+            { text: 'Overview', link: '/guide/performance/benchmark-overview' },
+            { text: 'Methodology', link: '/guide/performance/methodology' },
+            { text: 'Fairness & Disclaimers', link: '/guide/performance/fairness-disclaimers' },
+            { text: 'Parsing Performance', link: '/guide/performance/parsing-performance' },
+            { text: 'Expression Generation', link: '/guide/performance/expression-generation' },
+            { text: 'Database Execution', link: '/guide/performance/database-execution' },
+            { text: 'Memory Usage', link: '/guide/performance/memory-usage' },
+            { text: 'Scalability', link: '/guide/performance/scalability' },
+            { text: 'End-to-End Performance', link: '/guide/performance/end-to-end-execution' },
+            { text: 'API Benchmarks', link: '/guide/performance/api-benchmarks' },
+            { text: 'Interpretation Guide', link: '/guide/performance/interpretation-guide' }
           ]
         },
         {
           text: 'Comparisons',
           items: [
-            { text: 'vs GraphQL & OData',        link: '/guide/comparison' },
-            { text: 'vs .NET Libraries',         link: '/guide/dotnet-comparison' }
+            { text: 'vs GraphQL & OData', link: '/guide/comparison' },
+            { text: 'vs .NET Libraries', link: '/guide/dotnet-comparison' }
           ]
         },
         {
           text: 'Reference',
           items: [
-            { text: 'Query Language',            link: '/shared/query-language' },
-            { text: 'Operators',                 link: '/shared/operators' },
-            { text: 'Migration v1 → v2',         link: '/migration' }
+            { text: 'Query Language', link: '/shared/query-language' },
+            { text: 'Operators', link: '/shared/operators' },
+            { text: 'Migration v1 → v2', link: '/migration' }
           ]
         }
       ],
@@ -116,9 +135,9 @@ export default defineConfig({
         {
           text: 'Examples',
           items: [
-            { text: 'Basic Examples',            link: '/examples/basic' },
-            { text: 'Advanced Examples',         link: '/examples/advanced' },
-            { text: 'Real-World Scenarios',      link: '/examples/real-world' }
+            { text: 'Basic Examples', link: '/examples/basic' },
+            { text: 'Advanced Examples', link: '/examples/advanced' },
+            { text: 'Real-World Scenarios', link: '/examples/real-world' }
           ]
         }
       ],
@@ -128,27 +147,27 @@ export default defineConfig({
           text: 'FlexQuery v1 (Legacy)',
           collapsed: true,
           items: [
-            { text: 'Introduction',              link: '/v1/introduction' },
-            { text: 'Getting Started',           link: '/v1/getting-started' },
-            { text: 'How it Works',              link: '/v1/how-it-works' },
-            { text: 'Filtering',                 link: '/v1/filtering' },
-            { text: 'Sorting',                   link: '/v1/sorting' },
-            { text: 'Projection',                link: '/v1/projection' },
-            { text: 'Includes',                  link: '/v1/include' },
-            { text: 'Grouping',                  link: '/v1/grouping' },
-            { text: 'Security',                  link: '/v1/security' },
-            { text: 'Strongly-Typed Queries',    link: '/v1/strongly-typed-query' },
-            { text: 'ASP.NET Integration',       link: '/v1/aspnet-integration' },
-            { text: 'Swagger Integration',       link: '/v1/swagger-integration' },
-            { text: 'Performance',               link: '/v1/performance' },
-            { text: 'Debugging',                 link: '/v1/debugging' }
+            { text: 'Introduction', link: '/v1/introduction' },
+            { text: 'Getting Started', link: '/v1/getting-started' },
+            { text: 'How it Works', link: '/v1/how-it-works' },
+            { text: 'Filtering', link: '/v1/filtering' },
+            { text: 'Sorting', link: '/v1/sorting' },
+            { text: 'Projection', link: '/v1/projection' },
+            { text: 'Includes', link: '/v1/include' },
+            { text: 'Grouping', link: '/v1/grouping' },
+            { text: 'Security', link: '/v1/security' },
+            { text: 'Strongly-Typed Queries', link: '/v1/strongly-typed-query' },
+            { text: 'ASP.NET Integration', link: '/v1/aspnet-integration' },
+            { text: 'Swagger Integration', link: '/v1/swagger-integration' },
+            { text: 'Performance', link: '/v1/performance' },
+            { text: 'Debugging', link: '/v1/debugging' }
           ]
         },
         {
           text: 'Reference',
           items: [
-            { text: 'Query Language',            link: '/shared/query-language' },
-            { text: 'Operators',                 link: '/shared/operators' }
+            { text: 'Query Language', link: '/shared/query-language' },
+            { text: 'Operators', link: '/shared/operators' }
           ]
         }
       ]
