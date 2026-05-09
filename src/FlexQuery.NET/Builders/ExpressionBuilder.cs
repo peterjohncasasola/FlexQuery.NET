@@ -157,8 +157,6 @@ public static class ExpressionBuilder
         var predicate = BuildGroupExpression(itemParam, scopedFilter, elementType, options);
         if (predicate is null) return null;
 
-        var nullCheck = Expression.NotEqual(collectionAccess, Expression.Constant(null, collectionType));
-
         if (quantifier == FilterOperators.All)
         {
             var allMethod = typeof(Enumerable).GetMethods()
@@ -166,7 +164,7 @@ public static class ExpressionBuilder
                 .MakeGenericMethod(elementType);
 
             var allCall = Expression.Call(allMethod, collectionAccess, Expression.Lambda(predicate, itemParam));
-            // null collection -> true (vacuous truth for All) or we can just say if null then false? 
+            // null collection -> true (vacuous truth for All) or we can just say if null then false?
             // Usually, if collection is null, All should be false or true. Let's do (collection == null) || collection.All(...)
             var isNull = Expression.Equal(collectionAccess, Expression.Constant(null, collectionType));
             return Expression.OrElse(isNull, allCall);
@@ -178,7 +176,7 @@ public static class ExpressionBuilder
                 .MakeGenericMethod(elementType);
 
             var anyCall = Expression.Call(anyMethod, collectionAccess, Expression.Lambda(predicate, itemParam));
-            return Expression.AndAlso(nullCheck, anyCall);
+            return anyCall;
         }
     }
 
@@ -214,8 +212,7 @@ public static class ExpressionBuilder
                 access,
                 Expression.Lambda(predicate, itemParam));
 
-            var nullCheck = Expression.NotEqual(access, Expression.Constant(null, prop.PropertyType));
-            return Expression.AndAlso(nullCheck, anyCall);
+            return anyCall;
         }
 
         return BuildPathExpression(access, chain, index + 1, op, rawValue, options);
@@ -251,8 +248,7 @@ public static class ExpressionBuilder
             .MakeGenericMethod(elementType);
 
         var anyCall = Expression.Call(anyMethod, collectionAccess, Expression.Lambda(predicate, itemParam));
-        var nullCheck = Expression.NotEqual(collectionAccess, Expression.Constant(null, collectionType));
-        return Expression.AndAlso(nullCheck, anyCall);
+        return anyCall;
     }
 
     private static Expression? BuildAllExpression(
@@ -315,10 +311,10 @@ public static class ExpressionBuilder
 
         var countCall = Expression.Call(countMethod, collectionAccess);
         var compareExpr = binaryFactory(countCall, Expression.Constant(countValue, typeof(int)));
-        
+
         var nullCheck = Expression.NotEqual(collectionAccess, Expression.Constant(null, collectionType));
         var zeroCompare = binaryFactory(Expression.Constant(0, typeof(int)), Expression.Constant(countValue, typeof(int)));
-        
+
         return Expression.Condition(nullCheck, compareExpr, zeroCompare);
     }
 
