@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="https://raw.githubusercontent.com/peterjohncasasola/FlexQuery.NET/main/assets/logo.png" alt="FlexQuery.NET Logo" width="400">
+  <img src="assets/logo.png" alt="FlexQuery.NET Logo" width="400">
 </p>
 
 # FlexQuery.NET
@@ -71,12 +71,12 @@ For detailed guides, API references, and advanced scenarios, visit our documenta
 👉 **[https://flexquery.vercel.app](https://flexquery.vercel.app)**
 
 ### Quick Links
-- [Getting Started](https://flexquery.vercel.app/guide/getting-started)
-- [Query Composition](https://flexquery.vercel.app/guide/composition)
-- [Explicit Joins](https://flexquery.vercel.app/guide/joins)
-- [Governance & Security](https://flexquery.vercel.app/guide/security)
-- [Performance Optimization](https://flexquery.vercel.app/guide/performance)
-- [Migration Guide (v1 → v2)](https://flexquery.vercel.app/migration/v1-to-v2)
+- [Getting Started](https://flexquery.vercel.app/guide/getting-started.html)
+- [Query Composition](https://flexquery.vercel.app/guide/query-composition.html)
+- [Include Filtering](https://flexquery.vercel.app/guide/include-filtering.html)
+- [Governance & Security](https://flexquery.vercel.app/guide/security.html)
+- [Performance Optimization](https://flexquery.vercel.app/guide/performance.html)
+- [Migration Guide (v1 → v2)](https://flexquery.vercel.app/migration/v1-to-v2.html)
 
 ---
 
