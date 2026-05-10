@@ -5,9 +5,6 @@ hero:
   name: FlexQuery.NET
   text: Turn your API into a secure, composable query engine
   tagline: Flexible querying for .NET IQueryable — filtering, sorting, paging, projection, validation, and field-level security.
-  image:
-    src: /logo.png
-    alt: FlexQuery.NET
   actions:
     - theme: brand
       text: Get Started

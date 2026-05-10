@@ -247,3 +247,8 @@ html:not(.dark) .vp-doc div[class*="language-"] .token.number { color: #F59E0B !
   color: var(--vp-c-brand-1);
   -webkit-text-fill-color: var(--vp-c-brand-1);
 }
+
+.VPNavBarTitle .logo {
+  height: auto;
+  width: 150px;
+} 

@@ -3,6 +3,18 @@
 All notable changes to this project will be documented in this file.
 
 ---
+## [2.4.0] - 2026-05-10
+
+### Added
+- **Two-Tier Configuration Architecture**: Introduced `FlexQueryOptions` for configuring global application-wide defaults via DI (`builder.Services.AddFlexQuery(options => ...)`).
+- **Per-Request Overrides**: `QueryExecutionOptions` now uses nullable properties to allow per-request overrides that fall back to the global `FlexQueryOptions` defaults.
+- **ASP.NET Core DI Extensions**: Added `AddFlexQuery` extension method to `IServiceCollection` in `FlexQuery.NET.AspNetCore` for easy global configuration registration.
+
+### Changed
+- **Separated Security from Execution Defaults**: Infrastructure default properties (`MaxPageSize`, `DefaultPageSize`, `CaseInsensitive`, `IncludeTotalCount`, `StrictFieldValidation`, `MaxFieldDepth`, `UseNoTracking`) were migrated from `QueryExecutionOptions` to the global `FlexQueryOptions`.
+- **Internal Execution Options**: `EffectiveQueryOptions` has been marked as `internal` and is no longer part of the public API.
+- **Documentation Overhaul**: Restructured performance documentation into a dedicated `docs/guide/performance` directory and comprehensively updated getting-started, security, validation, and migration guides to reflect the new configuration architecture.
+
 ## [2.1.0] - 2026-05-07
 
 ### Added

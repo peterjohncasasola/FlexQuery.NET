@@ -23,16 +23,20 @@ dotnet add package FlexQuery.NET.AspNetCore
 
 ## Basic Setup (ASP.NET Core + EF Core)
 
-FlexQuery.NET itself does **not** require dependency injection or middleware registration.
+### Step 1: Install Packages
 
-The core library works directly through:
-- `QueryOptionsParser`
-- `IQueryable` extension methods
-- expression tree generation
+```bash
+# Core library (filtering, sorting, paging, projection, validation)
+dotnet add package FlexQuery.NET
 
-However, if you are using the optional ASP.NET Core integration package (`FlexQuery.NET.AspNetCore`), you can register automatic field-level security filters.
+# EF Core async execution (FlexQueryAsync, ApplyFilteredIncludes)
+dotnet add package FlexQuery.NET.EFCore
 
----
+# ASP.NET Core integration ([FieldAccess] attribute, FieldAccessFilter)
+dotnet add package FlexQuery.NET.AspNetCore
+```
+
+### Step 2: Configure Services
 
 In `Program.cs`:
 
@@ -47,6 +51,18 @@ builder.Services.AddDbContext<AppDbContext>(opt =>
     opt.UseSqlServer(
         builder.Configuration.GetConnectionString("Default")
     ));
+
+// Configure FlexQuery.NET globally (recommended)
+builder.Services.AddFlexQuery(options =>
+{
+    options.MaxPageSize = 1000;
+    options.DefaultPageSize = 50;
+    options.CaseInsensitive = true;
+    options.IncludeTotalCount = true;
+    options.StrictFieldValidation = true;
+    options.MaxFieldDepth = 5;
+    options.UseNoTracking = true;
+});
 
 // Register MVC + optional FlexQuery security integration
 builder.Services
@@ -88,33 +104,7 @@ You only need it if you use:
 - automatic MVC field-level security
 - global `FieldAccessFilter` behavior
 
-If you only use:
-
-- `QueryOptionsParser`
-- `ApplyQueryOptions`
-- `ApplyValidatedQueryOptions`
-- `ToProjectedQueryResultAsync`
-
-then **no ASP.NET Core registration is required**.
-
----
-
-## Minimal Setup (Without ASP.NET Core Integration)
-
-If you only want the core query engine:
-
-```csharp
-var builder = WebApplication.CreateBuilder(args);
-
-builder.Services.AddDbContext<AppDbContext>(opt =>
-    opt.UseSqlServer(
-        builder.Configuration.GetConnectionString("Default")
-    ));
-
-builder.Services.AddControllers();
-```
-
-That's it — no additional FlexQuery.NET setup is required.
+If you only use inline configuration with `FlexQueryAsync(parameters, exec => ...)`, you can skip this registration.
 
 ### 2. Your Entity
 

@@ -6,15 +6,35 @@ FlexQuery.NET has a multi-layered field security system. It validates every fiel
 
 ## Overview
 
-The security model works at the `QueryExecutionOptions` level. You declare rules per-endpoint and the validator enforces them.
+The security model works at the `QueryExecutionOptions` level for endpoint-specific rules. Global defaults are configured via `FlexQueryOptions` in DI.
 
-### QueryExecutionOptions Are Server-Owned
+### Two-Tier Configuration
+
+**Global Configuration** (`FlexQueryOptions` - DI):
+- MaxPageSize
+- DefaultPageSize  
+- CaseInsensitive
+- IncludeTotalCount
+- StrictFieldValidation
+- MaxFieldDepth
+- UseNoTracking
+
+**Per-Request Configuration** (`QueryExecutionOptions`):
+- AllowedFields, BlockedFields
+- FilterableFields, SortableFields, SelectableFields
+- AllowedOperators
+- FieldAccessResolver
+- RoleAllowedFields, CurrentRole
+- MaxFieldDepth (override), StrictFieldValidation (override)
+- MaxPageSize (override), IncludeTotalCount (override)
+
+### QueryExecutionOptions (v2) - Server-Owned
 `QueryExecutionOptions` represents:
-* field-level security
-* validation governance
-* execution behavior
-* split query configuration
+* field-level security lists (per-request only)
 * operator restrictions
+* MaxFieldDepth override (nullable)
+* Role-based access
+* Custom resolver
 
 These are SERVER policies and should **never** be bound directly from HTTP requests. 
 
@@ -47,20 +67,23 @@ These are SERVER policies and should **never** be bound directly from HTTP reque
 
 ## Field Security Properties
 
-| Property | Type | Description |
-| :--- | :--- | :--- |
-| `AllowedFields` | `HashSet<string>?` | Global allow-list. If set, every field must be in this list. |
-| `AllowedOperators` | `HashSet<FilterOperator>?` | Global allow-list of operators. If set, every operator must be in this list. |
-| `BlockedFields` | `HashSet<string>?` | Fields explicitly denied — always checked, even if in AllowedFields. |
-| `FilterableFields` | `HashSet<string>?` | Fields allowed in filter expressions only. |
-| `SortableFields` | `HashSet<string>?` | Fields allowed in sort expressions only. |
-| `SelectableFields` | `HashSet<string>?` | Fields allowed in select/projection only. |
-| `MaxFieldDepth` | `int?` | Maximum dot-notation path depth (e.g., `2` allows `profile.bio` but not `a.b.c`). |
-| `RoleAllowedFields` | `Dictionary<string, HashSet<string>>?` | Per-role field allow-lists. |
-| `CurrentRole` | `string?` | The current user's role name for role-based checks. |
-| `FieldMappings` | `Dictionary<string, string>?` | Alias → real field name mappings. |
-| `FieldAccessResolver` | `IFieldAccessResolver?` | Custom programmatic resolver. |
-| `StrictFieldValidation` | `bool` | If true, throws on first violation. If false, collects all errors. |
+| Property | Type | Location | Description |
+| :--- | :--- | :--- | :--- |
+| `AllowedFields` | `HashSet<string>?` | QueryExecutionOptions | Per-endpoint allow-list. If set, every field must be in this list. |
+| `AllowedOperators` | `Dictionary<string, HashSet<string>>?` | QueryExecutionOptions | Per-field operator restrictions. |
+| `BlockedFields` | `HashSet<string>?` | QueryExecutionOptions | Fields explicitly denied — always checked. |
+| `FilterableFields` | `HashSet<string>?` | QueryExecutionOptions | Fields allowed in filter expressions only. |
+| `SortableFields` | `HashSet<string>?` | QueryExecutionOptions | Fields allowed in sort expressions only. |
+| `SelectableFields` | `HashSet<string>?` | QueryExecutionOptions | Fields allowed in select/projection only. |
+| `MaxFieldDepth` | `int?` | FlexQueryOptions (global) or QueryExecutionOptions (override) | Maximum dot-notation path depth. |
+| `StrictFieldValidation` | `bool?` | FlexQueryOptions (global) or QueryExecutionOptions (override) | Fail-fast on first violation. |
+| `UseNoTracking` | `bool?` | FlexQueryOptions (global) or QueryExecutionOptions (override) | EF Core no-tracking behavior. |
+| `MaxPageSize` | `int?` | FlexQueryOptions (global) or QueryExecutionOptions (override) | Maximum allowed page size. |
+| `IncludeTotalCount` | `bool?` | FlexQueryOptions (global) or QueryExecutionOptions (override) | Include total count by default. |
+| `RoleAllowedFields` | `Dictionary<string, HashSet<string>>?` | QueryExecutionOptions | Per-role field allow-lists. |
+| `CurrentRole` | `string?` | QueryExecutionOptions | The current user's role name. |
+| `FieldMappings` | `Dictionary<string, string>?` | QueryExecutionOptions | Alias → real field name mappings. |
+| `FieldAccessResolver` | `IFieldAccessResolver?` | QueryExecutionOptions | Custom programmatic resolver. |
 
 ---
 

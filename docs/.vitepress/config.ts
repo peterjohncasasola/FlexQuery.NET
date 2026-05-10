@@ -9,7 +9,7 @@ export default defineConfig({
 
 
   head: [
-    ['link', { rel: 'icon', href: '/logo.png' }],
+    ['link', { rel: 'icon', href: '/icon.png' }],
     ['meta', { name: 'theme-color', content: '#646cff' }],
     ['meta', { property: 'og:type', content: 'website' }],
     ['meta', { property: 'og:title', content: 'FlexQuery.NET' }],
@@ -27,8 +27,11 @@ export default defineConfig({
   ],
 
   themeConfig: {
-    logo: '/logo.png',
-
+    logo: {
+     light: '/logo-light.png',
+     dark: '/logo-dark.png'
+    },
+    siteTitle: false,
     nav: [
       { text: 'Guide', link: '/guide/getting-started' },
       { text: 'Examples', link: '/examples/basic' },

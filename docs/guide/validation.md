@@ -35,10 +35,24 @@ if (!result.IsValid)
 }
 ```
 
-### On IQueryable
+### With Global Configuration
+
+When `FlexQueryOptions` is registered via DI, the validator automatically merges global defaults with per-request overrides:
 
 ```csharp
-var result = _context.Users.Validate(options, execOptions);
+// In Program.cs - global defaults
+builder.Services.AddFlexQuery(options =>
+{
+    options.MaxPageSize = 1000;
+    options.MaxFieldDepth = 5;
+});
+
+// In controller - per-request override only
+var execOptions = new QueryExecutionOptions
+{
+    MaxFieldDepth = 2,  // Override global (5)
+    AllowedFields = new HashSet<string> { "id", "name", "email" }
+};
 ```
 
 ---
@@ -214,8 +228,6 @@ var result = options.ValidateSafe<User>(exec);
 [HttpGet]
 public async Task<IActionResult> GetUsers([FromQuery] FlexQueryParameters parameters)
 {
-    var options = QueryOptionsParser.Parse(parameters);
-
     var execOptions = new QueryExecutionOptions
     {
         AllowedFields = new HashSet<string> { "id", "name", "email", "status" },
@@ -223,23 +235,25 @@ public async Task<IActionResult> GetUsers([FromQuery] FlexQueryParameters parame
         MaxFieldDepth = 2
     };
 
-    var validation = options.ValidateSafe<User>(execOptions);
-    if (!validation.IsValid)
-    {
-        return BadRequest(new
-        {
-            title = "Query validation failed",
-            errors = validation.Errors.Select(e => new
-            {
-                field   = e.Field,
-                code    = e.Code,
-                message = e.Message
-            })
-        });
-    }
+    var result = await _context.Users.FlexQueryAsync<User>(parameters, execOptions);
+    return Ok(result);
+}
+```
 
-    var query = _context.Users.AsQueryable();
-    // ... rest of pipeline
+Or with inline configuration:
+
+```csharp
+[HttpGet]
+public async Task<IActionResult> GetUsers([FromQuery] FlexQueryParameters parameters)
+{
+    var result = await _context.Users.FlexQueryAsync<User>(parameters, exec =>
+    {
+        exec.AllowedFields = new HashSet<string> { "id", "name", "email", "status" };
+        exec.BlockedFields = new HashSet<string> { "passwordHash" };
+        exec.MaxFieldDepth = 2;
+    });
+
+    return Ok(result);
 }
 ```
 
