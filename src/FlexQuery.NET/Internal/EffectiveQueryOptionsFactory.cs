@@ -33,6 +33,7 @@ internal static class EffectiveQueryOptionsFactory
             AllowedFields = execution.AllowedFields,
             BlockedFields = execution.BlockedFields,
             AllowedIncludes = execution.AllowedIncludes,
+            ExpressionMappings = execution.ExpressionMappings,
             FilterableFields = execution.FilterableFields,
             SortableFields = execution.SortableFields,
             SelectableFields = execution.SelectableFields        

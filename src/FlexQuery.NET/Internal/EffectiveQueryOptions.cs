@@ -61,6 +61,11 @@ internal sealed class EffectiveQueryOptions
     public HashSet<string>? AllowedIncludes { get; init; }
 
     /// <summary>
+    /// Mapped expression resolvers.
+    /// </summary>
+    public Dictionary<string, System.Linq.Expressions.LambdaExpression>? ExpressionMappings { get; init; }
+
+    /// <summary>
     /// Fields allowed specifically for filtering.
     /// </summary>
     public HashSet<string>? FilterableFields { get; init; }

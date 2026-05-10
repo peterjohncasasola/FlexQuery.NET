@@ -16,18 +16,17 @@ public sealed class TypeCompatibilityRule : IValidationRule
     {
         if (context.TargetType == null || options.Filter == null) return;
 
-        ValidateFilterGroup(options.Filter, context.TargetType, result);
+        ValidateFilterGroup(options.Filter, context.TargetType, context.ExecutionOptions, result);
     }
 
-    private void ValidateFilterGroup(FilterGroup group, Type entityType, ValidationResult result)
+    private void ValidateFilterGroup(FilterGroup group, Type entityType, QueryExecutionOptions? executionOptions, ValidationResult result)
     {
         foreach (var filter in group.Filters)
         {
             if (string.IsNullOrWhiteSpace(filter.Field) || string.IsNullOrWhiteSpace(filter.Operator)) continue;
 
-            if (SafePropertyResolver.TryResolveChain(entityType, filter.Field, out var chain))
+            if (Builders.FieldResolver.TryResolveType(entityType, filter.Field, executionOptions, out var propertyType))
             {
-                var propertyType = chain[^1].PropertyType;
                 var op = filter.Operator.ToLowerInvariant();
 
                 // 1. Check Operator Compatibility
@@ -58,17 +57,17 @@ public sealed class TypeCompatibilityRule : IValidationRule
 
             if (filter.ScopedFilter != null)
             {
-                if (SafePropertyResolver.TryResolveChain(entityType, filter.Field, out var scopedChain) &&
-                    SafePropertyResolver.TryGetCollectionElementType(scopedChain[^1].PropertyType, out var elementType))
+                if (Builders.FieldResolver.TryResolveType(entityType, filter.Field, executionOptions, out var scopedPropertyType) &&
+                    SafePropertyResolver.TryGetCollectionElementType(scopedPropertyType, out var elementType))
                 {
-                    ValidateFilterGroup(filter.ScopedFilter, elementType, result);
+                    ValidateFilterGroup(filter.ScopedFilter, elementType, executionOptions, result);
                 }
             }
         }
 
         foreach (var subGroup in group.Groups)
         {
-            ValidateFilterGroup(subGroup, entityType, result);
+            ValidateFilterGroup(subGroup, entityType, executionOptions, result);
         }
     }
 

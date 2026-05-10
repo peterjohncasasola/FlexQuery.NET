@@ -15,13 +15,13 @@ public sealed class FieldExistenceRule : IValidationRule
 
         if (options.Filter != null)
         {
-            ValidateFilterGroup(options.Filter, context.TargetType, result);
+            ValidateFilterGroup(options.Filter, context.TargetType, context.ExecutionOptions, result);
         }
 
         foreach (var sort in options.Sort)
         {
             if (string.IsNullOrWhiteSpace(sort.Field)) continue;
-            if (!SafePropertyResolver.TryResolveChain(context.TargetType, sort.Field, out _))
+            if (!Builders.FieldResolver.TryResolveType(context.TargetType, sort.Field, context.ExecutionOptions, out _))
             {
                 result.Errors.Add(new ValidationError(
                     $"Field '{sort.Field}' does not exist on type '{context.TargetType.Name}'.", 
@@ -31,13 +31,13 @@ public sealed class FieldExistenceRule : IValidationRule
         }
     }
 
-    private void ValidateFilterGroup(FilterGroup group, Type entityType, ValidationResult result)
+    private void ValidateFilterGroup(FilterGroup group, Type entityType, QueryExecutionOptions? executionOptions, ValidationResult result)
     {
         foreach (var filter in group.Filters)
         {
             if (string.IsNullOrWhiteSpace(filter.Field)) continue;
 
-            if (!SafePropertyResolver.TryResolveChain(entityType, filter.Field, out var chain))
+            if (!Builders.FieldResolver.TryResolveType(entityType, filter.Field, executionOptions, out var propertyType))
             {
                 result.Errors.Add(new ValidationError(
                     $"Field '{filter.Field}' does not exist on type '{entityType.Name}'.", 
@@ -48,10 +48,9 @@ public sealed class FieldExistenceRule : IValidationRule
 
             if (filter.ScopedFilter != null)
             {
-                var lastProp = chain[^1];
-                if (SafePropertyResolver.TryGetCollectionElementType(lastProp.PropertyType, out var elementType))
+                if (SafePropertyResolver.TryGetCollectionElementType(propertyType, out var elementType))
                 {
-                    ValidateFilterGroup(filter.ScopedFilter, elementType, result);
+                    ValidateFilterGroup(filter.ScopedFilter, elementType, executionOptions, result);
                 }
                 else
                 {
@@ -65,7 +64,7 @@ public sealed class FieldExistenceRule : IValidationRule
 
         foreach (var subGroup in group.Groups)
         {
-            ValidateFilterGroup(subGroup, entityType, result);
+            ValidateFilterGroup(subGroup, entityType, executionOptions, result);
         }
     }
 }

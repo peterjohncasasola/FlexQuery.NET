@@ -63,17 +63,17 @@ internal static class FlatProjectionBuilder
     // ── Entry points ─────────────────────────────────────────────────────
 
     /// <summary>Flat mode: strict single linear path, leaf-only output rows.</summary>
-    public static IQueryable<object> BuildAndApply<T>(IQueryable<T> query, SelectionNode tree)
+    public static IQueryable<object> BuildAndApply<T>(IQueryable<T> query, SelectionNode tree, QueryOptions options)
     {
-        var (hops, fields) = Decompose(tree, typeof(T), parentLevel: -1, allowRootScalars: false);
-        return ApplyFlatChain(query, typeof(T), hops, fields);
+        var (hops, fields) = Decompose(tree, typeof(T), parentLevel: -1, allowRootScalars: false, options);
+        return ApplyFlatChain(query, typeof(T), hops, fields, options);
     }
 
     /// <summary>FlatMixed mode: root + intermediate + leaf fields all in one flat row.</summary>
-    public static IQueryable<object> BuildAndApplyMixed<T>(IQueryable<T> query, SelectionNode tree)
+    public static IQueryable<object> BuildAndApplyMixed<T>(IQueryable<T> query, SelectionNode tree, QueryOptions options)
     {
-        var (hops, fields) = Decompose(tree, typeof(T), parentLevel: -1, allowRootScalars: true);
-        return ApplyFlatMixedChain(query, typeof(T), hops, fields);
+        var (hops, fields) = Decompose(tree, typeof(T), parentLevel: -1, allowRootScalars: true, options);
+        return ApplyFlatMixedChain(query, typeof(T), hops, fields, options);
     }
 
     // ── Flat (strict, leaf-only) ─────────────────────────────────────────
@@ -82,7 +82,8 @@ internal static class FlatProjectionBuilder
         IQueryable source,
         Type currentType,
         List<NavHop> hops,
-        List<FieldSpec> fields)
+        List<FieldSpec> fields,
+        QueryOptions options)
     {
         // Walk the navigation path using single-arg SelectMany
         foreach (var hop in hops)
@@ -101,7 +102,7 @@ internal static class FlatProjectionBuilder
         }
 
         // Project only leaf fields
-        return ProjectToFlatRow(source, currentType, fields, levelAccessors: null);
+        return ProjectToFlatRow(source, currentType, fields, options, levelAccessors: null);
     }
 
     // ── FlatMixed ────────────────────────────────────────────────────────
@@ -110,12 +111,13 @@ internal static class FlatProjectionBuilder
         IQueryable source,
         Type rootType,
         List<NavHop> hops,
-        List<FieldSpec> fields)
+        List<FieldSpec> fields,
+        QueryOptions options)
     {
         if (hops.Count == 0)
         {
             // No navigation — just project root scalars
-            return ProjectToFlatRow(source, rootType, fields, levelAccessors: null);
+            return ProjectToFlatRow(source, rootType, fields, options, levelAccessors: null);
         }
 
         // We use the 3-param SelectMany to carry a context object through the chain.
@@ -230,7 +232,7 @@ internal static class FlatProjectionBuilder
                 levelAccessors[lvl - 1] = Expression.Property(ctxFinalParam, p); // root=-1 → L0
         }
 
-        return ProjectToFlatRow(currentQuery, currentType, fields, levelAccessors, ctxFinalParam);
+        return ProjectToFlatRow(currentQuery, currentType, fields, options, levelAccessors, ctxFinalParam);
     }
 
     // ── Final row projection ─────────────────────────────────────────────
@@ -244,6 +246,7 @@ internal static class FlatProjectionBuilder
         IQueryable source,
         Type sourceType,
         List<FieldSpec> fields,
+        QueryOptions options,
         Dictionary<int, Expression>? levelAccessors,
         ParameterExpression? ctxParam = null)
     {
@@ -264,6 +267,12 @@ internal static class FlatProjectionBuilder
                 // FlatMixed: look up the context property for this level
                 if (!levelAccessors.TryGetValue(field.Level, out ownerAccess))
                     continue;
+            }
+
+            if (FieldResolver.TryResolveMappedExpression(ownerAccess, field.PropName, options, out var resolvedExpr, out var resolvedType))
+            {
+                props[field.OutputName] = (resolvedType, resolvedExpr);
+                continue;
             }
 
             var pi = ownerAccess.Type.GetProperty(field.PropName, BindingFlags.Public | BindingFlags.Instance | BindingFlags.IgnoreCase);
@@ -299,7 +308,8 @@ internal static class FlatProjectionBuilder
         SelectionNode tree,
         Type currentType,
         int parentLevel,
-        bool allowRootScalars)
+        bool allowRootScalars,
+        QueryOptions options)
     {
         var hops = new List<NavHop>();
         var fields = new List<FieldSpec>();
@@ -312,16 +322,29 @@ internal static class FlatProjectionBuilder
         {
             var propName = child.Key;
             var node = child.Value;
+
+            if (options.Items.TryGetValue("ExpressionMappings", out var obj) && obj is IReadOnlyDictionary<string, LambdaExpression> mappings)
+            {
+                if (mappings.TryGetValue(propName, out var mappedLambda))
+                {
+                    leafChildren.Add((propName, node, null!)); 
+                    continue;
+                }
+            }
+
             var pi = currentType.GetProperty(propName, BindingFlags.Public | BindingFlags.Instance | BindingFlags.IgnoreCase);
             if (pi == null) continue;
 
-            bool isNav = IsCollectionType(pi.PropertyType, out var elemType)
-                         || (!IsScalarType(pi.PropertyType) && node.HasChildren);
+            if (pi != null)
+            {
+                bool isNav = IsCollectionType(pi.PropertyType, out var elemType)
+                             || (!IsScalarType(pi.PropertyType) && node.HasChildren);
 
-            if (isNav)
-                navChildren.Add((propName, node, pi, elemType ?? pi.PropertyType));
-            else if (IsScalarType(pi.PropertyType))
-                leafChildren.Add((propName, node, pi));
+                if (isNav)
+                    navChildren.Add((propName, node, pi, elemType ?? pi.PropertyType));
+                else if (IsScalarType(pi.PropertyType))
+                    leafChildren.Add((propName, node, pi));
+            }
         }
 
         // Pass 2: validate
@@ -339,8 +362,18 @@ internal static class FlatProjectionBuilder
         // Collect scalars at this level
         foreach (var (propName, node, pi) in leafChildren)
         {
-            var outputName = !string.IsNullOrWhiteSpace(node.Alias) ? node.Alias : pi.Name;
-            fields.Add(new FieldSpec(parentLevel, propName, outputName, pi.PropertyType));
+            var outputName = !string.IsNullOrWhiteSpace(node.Alias) ? node.Alias : (pi?.Name ?? propName);
+            var propType = pi?.PropertyType;
+
+            if (propType == null && options.Items.TryGetValue("ExpressionMappings", out var obj) && obj is IReadOnlyDictionary<string, LambdaExpression> mappings && mappings.TryGetValue(propName, out var mappedLambda))
+            {
+                propType = mappedLambda.ReturnType;
+            }
+
+            if (propType != null)
+            {
+                fields.Add(new FieldSpec(parentLevel, propName, outputName, propType));
+            }
         }
 
         // Recurse into nav children
@@ -352,7 +385,7 @@ internal static class FlatProjectionBuilder
             if (node.HasChildren)
             {
                 // In flat-mixed, we allow scalars at every nav level (intermediate + leaf)
-                var (subHops, subFields) = Decompose(node, elemType, nextLevel, allowRootScalars);
+                var (subHops, subFields) = Decompose(node, elemType, nextLevel, allowRootScalars, options);
                 hops.AddRange(subHops);
                 fields.AddRange(subFields);
             }

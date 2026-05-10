@@ -32,10 +32,10 @@ public static class QueryBuilder
 
     /// <summary>Applies ordered sorting from <paramref name="options"/> to the query.</summary>
     public static IQueryable<T> ApplySort<T>(IQueryable<T> query, QueryOptions options)
-        => ApplySort(query, options.Sort);
+        => ApplySort(query, options.Sort, options);
 
     /// <summary>Applies ordered sorting from <paramref name="sorts"/> to the query.</summary>
-    public static IQueryable<T> ApplySort<T>(IQueryable<T> query, List<SortNode>? sorts)
+    public static IQueryable<T> ApplySort<T>(IQueryable<T> query, List<SortNode>? sorts, QueryOptions options)
     {
         if (sorts is null || sorts.Count == 0) return query;
 
@@ -49,12 +49,12 @@ public static class QueryBuilder
             Expression keyExpression;
             if (HasAggregate(sort))
             {
-                if (!BuildAggregateExpression(parameter, sort, out keyExpression))
+                if (!BuildAggregateExpression(parameter, sort, options, out keyExpression))
                     continue;
             }
             else
             {
-                if (!BuildPropertyExpression(parameter, sort.Field, out keyExpression))
+                if (!BuildPropertyExpression(parameter, sort.Field, options, out keyExpression))
                     continue;
             }
 
@@ -119,12 +119,12 @@ public static class QueryBuilder
 
         if (options.ProjectionMode == ProjectionMode.Flat)
         {
-            return FlatProjectionBuilder.BuildAndApply(query, tree);
+            return FlatProjectionBuilder.BuildAndApply(query, tree, options);
         }
 
         if (options.ProjectionMode == ProjectionMode.FlatMixed)
         {
-            return FlatProjectionBuilder.BuildAndApplyMixed(query, tree);
+            return FlatProjectionBuilder.BuildAndApplyMixed(query, tree, options);
         }
 
         var projection = ProjectionBuilder.Build<T>(tree, options);
@@ -153,9 +153,18 @@ public static class QueryBuilder
     private static bool BuildPropertyExpression(
         Expression parameter,
         string path,
+        QueryOptions options,
         out Expression propertyExpression)
     {
         propertyExpression = null!;
+
+        if (FieldResolver.TryResolveMappedExpression(parameter, path, options, out var resolvedExpr, out var resolvedType))
+        {
+            if (IsCollectionType(resolvedType)) return false;
+            propertyExpression = resolvedExpr;
+            return true;
+        }
+
         if (!SafePropertyResolver.TryResolveChain(parameter.Type, path, out var chain))
             return false;
         if (chain.Count == 0)
@@ -178,33 +187,45 @@ public static class QueryBuilder
     private static bool BuildAggregateExpression(
         Expression parameter,
         SortNode sort,
+        QueryOptions options,
         out Expression aggregateExpression)
     {
         aggregateExpression = null!;
+        Expression collectionAccess;
+        Type elementType;
 
-        if (string.IsNullOrWhiteSpace(sort.Aggregate)
-            || !SafePropertyResolver.TryResolveChain(parameter.Type, sort.Field, out var chain)
-            || chain.Count == 0)
+        if (FieldResolver.TryResolveMappedExpression(parameter, sort.Field, options, out var resolvedExpr, out var resolvedType))
         {
-            return false;
+            if (!IsCollectionType(resolvedType)) return false;
+            if (!SafePropertyResolver.TryGetCollectionElementType(resolvedType, out elementType)) return false;
+            collectionAccess = resolvedExpr;
         }
-
-        var collectionProp = chain[^1];
-        if (!IsCollectionType(collectionProp.PropertyType))
-            return false;
-
-        // Aggregate sorting only supports a collection at the final segment.
-        if (chain.Take(chain.Count - 1).Any(p => IsCollectionType(p.PropertyType)))
-            return false;
-
-        Expression collectionAccess = parameter;
-        foreach (var prop in chain)
+        else
         {
-            collectionAccess = Expression.Property(collectionAccess, prop);
-        }
+            if (string.IsNullOrWhiteSpace(sort.Aggregate)
+                || !SafePropertyResolver.TryResolveChain(parameter.Type, sort.Field, out var chain)
+                || chain.Count == 0)
+            {
+                return false;
+            }
 
-        if (!SafePropertyResolver.TryGetCollectionElementType(collectionProp.PropertyType, out var elementType))
-            return false;
+            var collectionProp = chain[^1];
+            if (!IsCollectionType(collectionProp.PropertyType))
+                return false;
+
+            // Aggregate sorting only supports a collection at the final segment.
+            if (chain.Take(chain.Count - 1).Any(p => IsCollectionType(p.PropertyType)))
+                return false;
+
+            collectionAccess = parameter;
+            foreach (var prop in chain)
+            {
+                collectionAccess = Expression.Property(collectionAccess, prop);
+            }
+
+            if (!SafePropertyResolver.TryGetCollectionElementType(collectionProp.PropertyType, out elementType))
+                return false;
+        }
 
         var aggregate = sort.Aggregate!.Trim().ToLowerInvariant();
         if (aggregate == "count")

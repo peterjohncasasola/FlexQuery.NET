@@ -39,7 +39,7 @@ internal static class GroupByBuilder
         var sourceType = typeof(T);
         var itemParam = Expression.Parameter(sourceType, "x");
 
-        var keyExpression = BuildGroupKeyExpression(itemParam, sourceType, groupFields, out var keyType);
+        var keyExpression = BuildGroupKeyExpression(itemParam, sourceType, groupFields, options, out var keyType);
         if (keyExpression is null || keyType is null)
             return query.Cast<object>();
 
@@ -57,7 +57,7 @@ internal static class GroupByBuilder
         var groupParam = Expression.Parameter(groupingType, "g");
 
         var selectedFields = BuildSelectedFieldList(options, groupFields);
-        var projection = BuildGroupProjection(groupParam, keyType, sourceType, selectedFields, aggregates, out var projectionType);
+        var projection = BuildGroupProjection(groupParam, keyType, sourceType, selectedFields, aggregates, options, out var projectionType);
         if (projection is null || projectionType is null)
             return query.Cast<object>();
 
@@ -102,6 +102,7 @@ internal static class GroupByBuilder
         ParameterExpression itemParam,
         Type sourceType,
         List<string> groupFields,
+        QueryOptions options,
         out Type? keyType)
     {
         keyType = null;
@@ -113,7 +114,7 @@ internal static class GroupByBuilder
 
         if (groupFields.Count == 1)
         {
-            if (!TryBuildMemberAccess(itemParam, sourceType, groupFields[0], out var access))
+            if (!TryBuildMemberAccess(itemParam, sourceType, groupFields[0], options, out var access))
                 return null;
             keyType = access.Type;
             return access;
@@ -122,7 +123,7 @@ internal static class GroupByBuilder
         var fields = new Dictionary<string, (Type Type, Expression Expr)>(StringComparer.OrdinalIgnoreCase);
         foreach (var field in groupFields)
         {
-            if (!TryBuildMemberAccess(itemParam, sourceType, field, out var access))
+            if (!TryBuildMemberAccess(itemParam, sourceType, field, options, out var access))
                 return null;
             fields[field] = (access.Type, access);
         }
@@ -146,6 +147,7 @@ internal static class GroupByBuilder
         Type sourceType,
         List<string> selectedFields,
         List<AggregateModel> aggregates,
+        QueryOptions options,
         out Type? projectionType)
     {
         projectionType = null;
@@ -168,7 +170,7 @@ internal static class GroupByBuilder
 
         foreach (var aggregate in aggregates)
         {
-            var aggregateExpr = BuildAggregateExpression(groupParam, sourceType, aggregate);
+            var aggregateExpr = BuildAggregateExpression(groupParam, sourceType, aggregate, options);
             if (aggregateExpr is null) continue;
             fields[aggregate.Alias] = (aggregateExpr.Type, aggregateExpr);
         }
@@ -189,7 +191,7 @@ internal static class GroupByBuilder
         return Expression.MemberInit(Expression.New(dynamicType), bindings);
     }
 
-    private static Expression? BuildAggregateExpression(ParameterExpression grouping, Type sourceType, AggregateModel aggregate)
+    private static Expression? BuildAggregateExpression(ParameterExpression grouping, Type sourceType, AggregateModel aggregate, QueryOptions options)
     {
         var fn = aggregate.Function.ToLowerInvariant();
 
@@ -205,7 +207,7 @@ internal static class GroupByBuilder
             return null;
 
         var item = Expression.Parameter(sourceType, "i");
-        if (!TryBuildMemberAccess(item, sourceType, aggregate.Field, out var body))
+        if (!TryBuildMemberAccess(item, sourceType, aggregate.Field, options, out var body))
             return null;
         var selectorBody = body;
 
@@ -236,9 +238,16 @@ internal static class GroupByBuilder
         return Expression.Call(genericMethod, grouping, selector);
     }
 
-    private static bool TryBuildMemberAccess(Expression root, Type rootType, string path, out Expression access)
+    private static bool TryBuildMemberAccess(Expression root, Type rootType, string path, QueryOptions options, out Expression access)
     {
         access = root;
+
+        if (FieldResolver.TryResolveMappedExpression(root, path, options, out var resolvedExpr, out _))
+        {
+            access = resolvedExpr;
+            return true;
+        }
+
         if (!SafePropertyResolver.TryResolveChain(rootType, path, out var chain)) return false;
         if (chain.Any(p => SafePropertyResolver.TryGetCollectionElementType(p.PropertyType, out _))) return false;
         foreach (var prop in chain)

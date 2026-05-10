@@ -114,6 +114,24 @@ public static class ExpressionBuilder
         var op = FilterOperators.Normalize(condition.Operator);
         if (!OperatorRegistry.IsAllowed(op)) return null;
         if (!FieldRegistry.IsAllowed(entityType, condition.Field)) return null;
+
+        if (FieldResolver.TryResolveMappedExpression(param, condition.Field, options, out var resolvedExpr, out var resolvedType))
+        {
+            if (condition.ScopedFilter is not null)
+                return BuildScopedCollectionExpression(resolvedExpr, resolvedType, op, condition.ScopedFilter, options);
+
+            Expression? expr = op switch
+            {
+                FilterOperators.Any => BuildAnyExpression(resolvedExpr, resolvedType, condition.Value, options),
+                FilterOperators.All => BuildAllExpression(resolvedExpr, resolvedType, condition.Value, options),
+                FilterOperators.Count => BuildCountExpression(resolvedExpr, resolvedType, condition.Value, options),
+                _ => SafeConditionBuilder.Build(resolvedExpr, op, condition.Value, options.CaseInsensitive)
+            };
+
+            if (expr is null) return null;
+            return condition.IsNegated ? Expression.Not(expr) : expr;
+        }
+
         if (!SafePropertyResolver.TryResolveChain(entityType, condition.Field, out var chain)) return null;
 
         // ── Scoped collection filter (orders.any(...) / orders[...]) ──────────
@@ -121,14 +139,15 @@ public static class ExpressionBuilder
         // element as a single compound predicate (true "scoped" semantics).
         if (condition.ScopedFilter is not null)
         {
-            return BuildScopedCollectionExpression(param, chain, op, condition.ScopedFilter, options);
+            var collectionAccess = ResolvePath(param, chain, out var collectionType);
+            return BuildScopedCollectionExpression(collectionAccess, collectionType, op, condition.ScopedFilter, options);
         }
 
         Expression? expression = op switch
         {
-            FilterOperators.Any => BuildAnyExpression(param, chain, condition.Value, options),
-            FilterOperators.All => BuildAllExpression(param, chain, condition.Value, options),
-            FilterOperators.Count => BuildCountExpression(param, chain, condition.Value, options),
+            FilterOperators.Any => BuildAnyExpression(ResolvePath(param, chain, out var t1), t1, condition.Value, options),
+            FilterOperators.All => BuildAllExpression(ResolvePath(param, chain, out var t2), t2, condition.Value, options),
+            FilterOperators.Count => BuildCountExpression(ResolvePath(param, chain, out var t3), t3, condition.Value, options),
             _ => BuildPathExpression(param, chain, 0, op, condition.Value, options)
         };
 
@@ -143,13 +162,12 @@ public static class ExpressionBuilder
     /// condition inside the group refers to the <strong>same</strong> element.
     /// </summary>
     private static Expression? BuildScopedCollectionExpression(
-        Expression param,
-        IReadOnlyList<PropertyInfo> chain,
+        Expression? collectionAccess,
+        Type? collectionType,
         string quantifier,
         FilterGroupNode scopedFilter,
         QueryOptions options)
     {
-        var collectionAccess = ResolvePath(param, chain, out var collectionType);
         if (collectionAccess is null || collectionType is null) return null;
         if (!SafePropertyResolver.TryGetCollectionElementType(collectionType, out var elementType)) return null;
 
@@ -222,8 +240,8 @@ public static class ExpressionBuilder
     }
 
     private static Expression? BuildAnyExpression(
-        Expression param,
-        IReadOnlyList<PropertyInfo> chain,
+        Expression? collectionAccess,
+        Type? collectionType,
         string? rawValue,
         QueryOptions options)
     {
@@ -236,7 +254,6 @@ public static class ExpressionBuilder
         var nestedOperator = FilterOperators.Normalize(segments[1]);
         var nestedValue = segments[2];
 
-        var collectionAccess = ResolvePath(param, chain, out var collectionType);
         if (collectionAccess is null || collectionType is null) return null;
         if (!SafePropertyResolver.TryGetCollectionElementType(collectionType, out var elementType)) return null;
 
@@ -256,8 +273,8 @@ public static class ExpressionBuilder
     }
 
     private static Expression? BuildAllExpression(
-        Expression param,
-        IReadOnlyList<PropertyInfo> chain,
+        Expression? collectionAccess,
+        Type? collectionType,
         string? rawValue,
         QueryOptions options)
     {
@@ -270,7 +287,6 @@ public static class ExpressionBuilder
         var nestedOperator = FilterOperators.Normalize(segments[1]);
         var nestedValue = segments[2];
 
-        var collectionAccess = ResolvePath(param, chain, out var collectionType);
         if (collectionAccess is null || collectionType is null) return null;
         if (!SafePropertyResolver.TryGetCollectionElementType(collectionType, out var elementType)) return null;
 
@@ -290,8 +306,8 @@ public static class ExpressionBuilder
     }
 
     private static Expression? BuildCountExpression(
-        Expression param,
-        IReadOnlyList<PropertyInfo> chain,
+        Expression? collectionAccess,
+        Type? collectionType,
         string? rawValue,
         QueryOptions options)
     {
@@ -305,7 +321,6 @@ public static class ExpressionBuilder
         var converted = TypeHelper.ConvertValue(segments[1], typeof(int));
         if (converted is not int countValue) return null;
 
-        var collectionAccess = ResolvePath(param, chain, out var collectionType);
         if (collectionAccess is null || collectionType is null) return null;
         if (!SafePropertyResolver.TryGetCollectionElementType(collectionType, out var elementType)) return null;
 

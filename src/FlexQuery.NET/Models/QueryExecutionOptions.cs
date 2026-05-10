@@ -45,6 +45,20 @@ public class QueryExecutionOptions
     public HashSet<string>? AllowedIncludes { get; set; }
 
     /// <summary>
+    /// Maps a DTO field name to an entity expression for full DTO querying.
+    /// </summary>
+    public Dictionary<string, System.Linq.Expressions.LambdaExpression>? ExpressionMappings { get; set; }
+
+    /// <summary>
+    /// Maps an exposed DTO field to an entity expression for server-side evaluation.
+    /// </summary>
+    public void MapField<TEntity, TProperty>(string alias, System.Linq.Expressions.Expression<Func<TEntity, TProperty>> expression)
+    {
+        ExpressionMappings ??= new Dictionary<string, System.Linq.Expressions.LambdaExpression>(StringComparer.OrdinalIgnoreCase);
+        ExpressionMappings[alias] = expression;
+    }
+
+    /// <summary>
     /// Governance: Map of fields to their explicitly allowed operators (canonical strings).
     /// If a field is not present, all operators are allowed.
     /// Use <see cref="Constants.FilterOperators"/> for valid keys.

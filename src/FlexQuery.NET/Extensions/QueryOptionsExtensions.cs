@@ -49,6 +49,11 @@ public static class QueryOptionsExtensions
     {
         execOptions ??= new QueryExecutionOptions();
 
+        if (execOptions.ExpressionMappings != null)
+        {
+            options.Items["ExpressionMappings"] = execOptions.ExpressionMappings;
+        }
+
         var result = options.Validate(typeof(T), execOptions);
 
         return result;

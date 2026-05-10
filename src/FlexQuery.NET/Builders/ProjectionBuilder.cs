@@ -64,22 +64,33 @@ internal static class ProjectionBuilder
 
         foreach (var kvp in effectiveNode.EnumerateChildren())
         {
-            var propInfo = sourceType.GetProperty(kvp.Key, BindingFlags.Public | BindingFlags.Instance | BindingFlags.IgnoreCase);
-            if (propInfo == null) continue;
-
+            var propName = kvp.Key;
             var childNode = kvp.Value;
-            // Output name: use alias if set, otherwise the CLR property name
-            var outputName = !string.IsNullOrWhiteSpace(childNode.Alias) ? childNode.Alias : propInfo.Name;
+            var outputName = !string.IsNullOrWhiteSpace(childNode.Alias) ? childNode.Alias : propName;
 
-            var propAccess = Expression.Property(source, propInfo);
+            Expression propAccess;
+            Type propType;
 
-            if (ShouldBuildNestedProjection(propInfo.PropertyType, childNode))
+            if (FieldResolver.TryResolveMappedExpression(source, propName, options, out var resolvedExpr, out var resolvedType))
+            {
+                propAccess = resolvedExpr;
+                propType = resolvedType;
+            }
+            else
+            {
+                var propInfo = sourceType.GetProperty(propName, BindingFlags.Public | BindingFlags.Instance | BindingFlags.IgnoreCase);
+                if (propInfo == null) continue;
+                propAccess = Expression.Property(source, propInfo);
+                propType = propInfo.PropertyType;
+            }
+
+            if (ShouldBuildNestedProjection(propType, childNode))
             {
                 var childFilterContext = MergeFilters(
-                    filterContext != null ? FilterAnalyzer.ExtractForNavigation(filterContext!, propInfo.Name) : null,
+                    filterContext != null ? FilterAnalyzer.ExtractForNavigation(filterContext!, propName) : null,
                     childNode.Filter);
 
-                if (IsIEnumerable(propInfo.PropertyType, out var itemType))
+                if (IsIEnumerable(propType, out var itemType))
                 {
                     // Collection: source.AsQueryable().Where(...).Select(i => new DynamicType { ... }).ToList()
                     var itemParam = Expression.Parameter(itemType, "i");
@@ -107,12 +118,12 @@ internal static class ProjectionBuilder
                 else
                 {
                     // Nested Object
-                    var nestedInit = BuildMemberInit(propAccess, propInfo.PropertyType, childNode, childFilterContext, options);
-                    var isNullable = !propInfo.PropertyType.IsValueType || Nullable.GetUnderlyingType(propInfo.PropertyType) != null;
+                    var nestedInit = BuildMemberInit(propAccess, propType, childNode, childFilterContext, options);
+                    var isNullable = !propType.IsValueType || Nullable.GetUnderlyingType(propType) != null;
 
                     if (isNullable)
                     {
-                        var nullCheck = Expression.Equal(propAccess, Expression.Constant(null, propInfo.PropertyType));
+                        var nullCheck = Expression.Equal(propAccess, Expression.Constant(null, propType));
                         var condition = Expression.Condition(
                             nullCheck,
                             Expression.Constant(null, nestedInit.Type),
@@ -130,7 +141,7 @@ internal static class ProjectionBuilder
             else
             {
                 // Leaf scalar: apply alias as output name
-                propertiesToSelect[outputName] = (propInfo.PropertyType, propAccess);
+                propertiesToSelect[outputName] = (propType, propAccess);
             }
         }
 
