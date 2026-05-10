@@ -56,6 +56,11 @@ internal sealed class EffectiveQueryOptions
     public HashSet<string>? BlockedFields { get; init; }
 
     /// <summary>
+    /// Whitelist of allowed includes.
+    /// </summary>
+    public HashSet<string>? AllowedIncludes { get; init; }
+
+    /// <summary>
     /// Fields allowed specifically for filtering.
     /// </summary>
     public HashSet<string>? FilterableFields { get; init; }

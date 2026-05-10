@@ -70,6 +70,7 @@ These are SERVER policies and should **never** be bound directly from HTTP reque
 | Property | Type | Location | Description |
 | :--- | :--- | :--- | :--- |
 | `AllowedFields` | `HashSet<string>?` | QueryExecutionOptions | Per-endpoint allow-list. If set, every field must be in this list. |
+| `AllowedIncludes` | `HashSet<string>?` | QueryExecutionOptions | Per-endpoint allow-list for navigation properties and includes. |
 | `AllowedOperators` | `Dictionary<string, HashSet<string>>?` | QueryExecutionOptions | Per-field operator restrictions. |
 | `BlockedFields` | `HashSet<string>?` | QueryExecutionOptions | Fields explicitly denied — always checked. |
 | `FilterableFields` | `HashSet<string>?` | QueryExecutionOptions | Fields allowed in filter expressions only. |
@@ -106,6 +107,35 @@ exec.AllowedFields = new HashSet<string>
     "id", "name", "profile.*"  // allows profile.bio, profile.avatar, etc.
 };
 ```
+
+---
+
+## AllowedIncludes
+
+Controls which navigation properties/relationships can be expanded using `include` or filtered includes. This is kept strictly separate from `AllowedFields` to prevent large relationship joins simply because a field is allowed for selection.
+
+```csharp
+exec.AllowedIncludes = new HashSet<string>
+{
+    "Orders", "Orders.Items", "Profile"
+};
+```
+
+If a client requests an unlisted include path like `?include=Orders,SecretData`:
+
+```json
+{
+  "errors": [
+    {
+      "message": "Include path 'SecretData' is not allowed.",
+      "code": "INCLUDE_ACCESS_DENIED",
+      "field": "SecretData"
+    }
+  ]
+}
+```
+
+> **Note:** `AllowedIncludes` requires explicit path matching. Wildcards (e.g., `Orders.*`) are not supported to avoid unintentional recursive expansion.
 
 ---
 

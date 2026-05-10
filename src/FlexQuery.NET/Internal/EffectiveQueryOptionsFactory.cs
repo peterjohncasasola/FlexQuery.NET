@@ -32,6 +32,7 @@ internal static class EffectiveQueryOptionsFactory
             UseSplitQuery = execution.UseSplitQuery,
             AllowedFields = execution.AllowedFields,
             BlockedFields = execution.BlockedFields,
+            AllowedIncludes = execution.AllowedIncludes,
             FilterableFields = execution.FilterableFields,
             SortableFields = execution.SortableFields,
             SelectableFields = execution.SelectableFields        

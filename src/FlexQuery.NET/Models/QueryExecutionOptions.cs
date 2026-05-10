@@ -41,6 +41,9 @@ public class QueryExecutionOptions
     /// <summary>Global list of blocked fields (blacklist).</summary>
     public HashSet<string>? BlockedFields { get; set; }
 
+    /// <summary>Global list of allowed includes (whitelist for navigation properties).</summary>
+    public HashSet<string>? AllowedIncludes { get; set; }
+
     /// <summary>
     /// Governance: Map of fields to their explicitly allowed operators (canonical strings).
     /// If a field is not present, all operators are allowed.

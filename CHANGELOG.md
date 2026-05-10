@@ -3,6 +3,13 @@
 All notable changes to this project will be documented in this file.
 
 ---
+## [2.5.0] - 2026-05-10
+
+### Added
+- **AllowedIncludes Governance**: Introduced `AllowedIncludes` to `QueryExecutionOptions` to govern which navigation properties/relationships can be expanded or included.
+- **Separate Include Validation**: Implemented `IncludeAccessValidator` that validates both flat and filtered includes against the `AllowedIncludes` whitelist.
+- **Strict Matching**: `AllowedIncludes` requires explicit path definition (e.g., `"Orders.Items"`) and does not automatically expand wildcard nested fields, keeping include security separate from field projection logic.
+
 ## [2.4.0] - 2026-05-10
 
 ### Added
