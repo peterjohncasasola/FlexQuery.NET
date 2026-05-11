@@ -77,9 +77,9 @@ public async Task<IActionResult> GetUsers([FromQuery] FlexQueryParameters parame
 ### Step 1: Update NuGet Packages
 
 ```bash
-dotnet add package FlexQuery.NET
-dotnet add package FlexQuery.NET.EFCore
-dotnet add package FlexQuery.NET.AspNetCore
+dotnet add package FlexQuery.NET --version 2.4.0
+dotnet add package FlexQuery.NET.EFCore --version 2.4.0
+dotnet add package FlexQuery.NET.AspNetCore --version 2.4.0
 ```
 
 ### Step 2: Replace `QueryRequest` with `FlexQueryParameters`

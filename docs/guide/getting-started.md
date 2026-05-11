@@ -10,13 +10,13 @@ Install the packages that match your stack:
 
 ```bash
 # Core library (filtering, sorting, paging, projection, validation)
-dotnet add package FlexQuery.NET
+dotnet add package FlexQuery.NET --version 2.4.0
 
 # EF Core async execution (FlexQueryAsync, ApplyFilteredIncludes)
-dotnet add package FlexQuery.NET.EFCore
+dotnet add package FlexQuery.NET.EFCore --version 2.4.0
 
 # ASP.NET Core integration ([FieldAccess] attribute, FieldAccessFilter)
-dotnet add package FlexQuery.NET.AspNetCore
+dotnet add package FlexQuery.NET.AspNetCore --version 2.4.0
 ```
 
 ---
@@ -27,13 +27,13 @@ dotnet add package FlexQuery.NET.AspNetCore
 
 ```bash
 # Core library (filtering, sorting, paging, projection, validation)
-dotnet add package FlexQuery.NET
+dotnet add package FlexQuery.NET --version 2.4.0
 
 # EF Core async execution (FlexQueryAsync, ApplyFilteredIncludes)
-dotnet add package FlexQuery.NET.EFCore
+dotnet add package FlexQuery.NET.EFCore --version 2.4.0
 
 # ASP.NET Core integration ([FieldAccess] attribute, FieldAccessFilter)
-dotnet add package FlexQuery.NET.AspNetCore
+dotnet add package FlexQuery.NET.AspNetCore --version 2.4.0
 ```
 
 ### Step 2: Configure Services
