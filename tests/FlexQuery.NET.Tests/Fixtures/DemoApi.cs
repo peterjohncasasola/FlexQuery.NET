@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc;
 using System.Data.Common;
 using FlexQuery.NET.Dapper.Mapping;
+using FlexQuery.NET.Dapper.Mapping.Metadata;
 using Microsoft.Extensions.DependencyInjection;
 using System.Data;
 
@@ -30,29 +31,17 @@ public class DemoApiStartup
         
         var registry = new MappingRegistry();
         
-        var customerMapping = new EntityMapping(typeof(SqlCustomer), "Customers");
-        customerMapping.MapProperty("Id", "Id");
-        customerMapping.MapProperty("Name", "Name");
-        customerMapping.MapProperty("Email", "Email");
-        customerMapping.MapJoin("Address", typeof(SqlAddress), "Addresses", "\"Customers\".\"Id\" = \"Address\".\"CustomerId\"");
-        customerMapping.MapJoin("Orders", typeof(SqlOrder), "Orders", "\"Customers\".\"Id\" = \"Orders\".\"CustomerId\"");
-        registry.Register(customerMapping);
+        registry.Entity<SqlCustomer>()
+            .ToTable("Customers")
+            .HasOne(c => c.Address).WithForeignKey("CustomerId");
+        registry.Entity<SqlCustomer>().HasMany(c => c.Orders).WithForeignKey("CustomerId");
 
-        var orderMapping = new EntityMapping(typeof(SqlOrder), "Orders");
-        orderMapping.MapProperty("Id", "Id");
-        orderMapping.MapProperty("CustomerId", "CustomerId");
-        orderMapping.MapProperty("OrderDate", "OrderDate");
-        orderMapping.MapProperty("Total", "Total");
-        orderMapping.MapJoin("Items", typeof(SqlOrderItem), "OrderItems", "\"Orders\".\"Id\" = \"OrderItems\".\"OrderId\"");
-        registry.Register(orderMapping);
-        
-        var orderItemMapping = new EntityMapping(typeof(SqlOrderItem), "OrderItems");
-        orderItemMapping.MapProperty("Id", "Id");
-        orderItemMapping.MapProperty("OrderId", "OrderId");
-        orderItemMapping.MapProperty("ProductName", "ProductName");
-        orderItemMapping.MapProperty("Quantity", "Quantity");
-        orderItemMapping.MapProperty("UnitPrice", "UnitPrice");
-        registry.Register(orderItemMapping);
+        registry.Entity<SqlOrder>()
+            .ToTable("Orders")
+            .HasMany(o => o.Items).WithForeignKey("OrderId");
+            
+        registry.Entity<SqlOrderItem>()
+            .ToTable("OrderItems");
 
         services.AddSingleton<IMappingRegistry>(registry);
     }

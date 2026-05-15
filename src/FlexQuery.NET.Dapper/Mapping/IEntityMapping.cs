@@ -23,6 +23,9 @@ public interface IEntityMapping
     /// <summary>Get all mapped property names.</summary>
     IEnumerable<string> GetProperties();
 
+    /// <summary>Get relationship mapping metadata.</summary>
+    Metadata.RelationshipMapping? GetRelationship(string navigationProperty);
+
     /// <summary>Get join information for an include relationship.</summary>
     JoinInfo? GetJoinInfo(string navigationProperty);
 }

@@ -75,11 +75,45 @@ public sealed class DapperQueryOptions : BaseQueryOptions
     public ISqlDialect? Dialect { get; set; }
 
     /// <summary>Entity mapping registry. If null, a new empty registry is used by the translator.</summary>
-    public Mapping.IMappingRegistry? MappingRegistry { get; set; }
+    public Mapping.IMappingRegistry MappingRegistry { get; set; } = new Mapping.MappingRegistry();
     
     /// <summary>Command timeout in seconds.</summary>
     public int CommandTimeoutSeconds { get; set; } = 30;
 
     /// <summary>Explicitly set the entity type for mapping resolution. If null, use the generic type T from FlexQueryAsync.</summary>
     public Type? EntityType { get; set; }
+
+    /// <summary>
+    /// Configures the mapping for a specific entity type using fluent builder API.
+    /// </summary>
+    public Mapping.Builders.EntityTypeBuilder<TEntity> Entity<TEntity>() where TEntity : class
+    {
+        return MappingRegistry.Entity<TEntity>();
+    }
+
+    /// <summary>
+    /// Scans the given assembly for types that match typical entity conventions
+    /// (e.g., classes that aren't abstract, are public, and perhaps have key properties).
+    /// </summary>
+    public void ScanEntitiesFromAssembly(System.Reflection.Assembly assembly)
+    {
+        var types = assembly.GetTypes()
+            .Where(t => t.IsClass && !t.IsAbstract && t.IsPublic);
+
+        foreach (var type in types)
+        {
+            // Only scan types that have an Id or Key property, or a Table attribute
+            var hasKey = type.GetProperties().Any(p => 
+                p.Name.Equals("Id", StringComparison.OrdinalIgnoreCase) || 
+                p.Name.Equals(type.Name + "Id", StringComparison.OrdinalIgnoreCase) ||
+                p.GetCustomAttributes(typeof(System.ComponentModel.DataAnnotations.KeyAttribute), true).Any());
+            
+            var hasTable = type.GetCustomAttributes(typeof(System.ComponentModel.DataAnnotations.Schema.TableAttribute), true).Any();
+
+            if (hasKey || hasTable)
+            {
+                MappingRegistry.GetMapping(type);
+            }
+        }
+    }
 }

@@ -3,6 +3,7 @@ using FlexQuery.NET.Dapper.Mapping;
 using FlexQuery.NET.Dapper.Sql;
 using FlexQuery.NET.Dapper.Sql.Translators;
 using FlexQuery.NET.Dapper.Dialects;
+using FlexQuery.NET.Dapper.Mapping.Metadata;
 using FluentAssertions;
 
 namespace FlexQuery.NET.Tests.Dapper.Translation;
@@ -13,9 +14,8 @@ public class SqlTranslatorTests
 
     public SqlTranslatorTests()
     {
-        var entityWithJoin = new EntityMapping(typeof(TestEntityWithJoin), "users", null);
-        entityWithJoin.MapJoin("Roles", typeof(object), "roles", "users.Id = roles.UserId");
-        ((MappingRegistry)_registry).Register(entityWithJoin);
+        _registry.Entity<TestRole>().ToTable("roles");
+        _registry.Entity<TestEntityWithJoin>().ToTable("users").HasMany(e => e.Roles).WithForeignKey("UserId");
     }
 
     private static QueryOptions NoPaging(QueryOptions options)
@@ -326,7 +326,7 @@ public class SqlTranslatorTests
 
         command.Sql.Should().Contain("EXISTS");
         command.Sql.Should().Contain("SELECT 1 FROM [roles]");
-        command.Sql.Should().Contain("users.Id = roles.UserId");
+        command.Sql.Should().Contain("[roles].[UserId] = [users].[Id]");
         command.Sql.Should().Contain("[Name] = @p0");
         command.Parameters["@p0"].Should().Be("Admin");
     }
@@ -384,7 +384,7 @@ public class SqlTranslatorTests
         var command = translator.Translate(options);
 
         command.Sql.Should().Contain("(SELECT COUNT(*) FROM [roles]");
-        command.Sql.Should().Contain("users.Id = roles.UserId");
+        command.Sql.Should().Contain("[roles].[UserId] = [users].[Id]");
         command.Sql.Should().Contain("> @p1");
         command.Parameters["@p1"].Should().Be(5);
     }
@@ -412,7 +412,7 @@ public class SqlTranslatorTests
         var command = translator.Translate(options);
 
         command.Sql.Should().Contain("LEFT JOIN [roles]");
-        command.Sql.Should().Contain("users.Id = roles.UserId");
+        command.Sql.Should().Contain("[Roles].[UserId] = [users].[Id]");
         command.Sql.Should().Contain("AND ([IsActive] = @p0)");
     }
 
@@ -425,9 +425,12 @@ public class SqlTranslatorTests
         public string Status { get; set; } = string.Empty;
     }
 
+    private class TestRole { public int Id { get; set; } }
+
     private class TestEntityWithJoin
     {
         public int Id { get; set; }
         public string Name { get; set; } = string.Empty;
+        public ICollection<TestRole> Roles { get; set; } = new List<TestRole>();
     }
 }

@@ -3,6 +3,7 @@ using FlexQuery.NET.Dapper.Mapping;
 using FlexQuery.NET.Dapper.Sql;
 using FlexQuery.NET.Dapper.Sql.Translators;
 using FlexQuery.NET.Dapper.Dialects;
+using FlexQuery.NET.Dapper.Mapping.Metadata;
 using FluentAssertions;
 
 namespace FlexQuery.NET.Tests.Dapper.Dialects;
@@ -763,9 +764,10 @@ public class DialectTests
     [Fact]
     public void All_Dialects_Generate_Join_Clause()
     {
-        var entityWithJoin = new EntityMapping(typeof(TestEntityWithJoin), "users", null);
-        entityWithJoin.MapJoin("Roles", typeof(object), "roles", "users.Id = roles.UserId");
-        ((MappingRegistry)_registry).Register(entityWithJoin);
+        _registry.Entity<TestEntityWithJoin>()
+            .ToTable("users")
+            .HasMany(e => e.Roles)
+            .WithForeignKey("UserId");
 
         var options = new QueryOptions
         {
@@ -1049,9 +1051,10 @@ public class DialectTests
     private static QueryOptions CreateJoinOptions()
     {
         var registry = new MappingRegistry();
-        var entityWithJoin = new EntityMapping(typeof(TestEntityWithJoin), "users", null);
-        entityWithJoin.MapJoin("Roles", typeof(object), "roles", "users.Id = roles.UserId");
-        ((MappingRegistry)registry).Register(entityWithJoin);
+        registry.Entity<TestEntityWithJoin>()
+            .ToTable("users")
+            .HasMany(e => e.Roles)
+            .WithForeignKey("UserId");
 
         var options = new QueryOptions
         {
@@ -1074,9 +1077,12 @@ public class DialectTests
         public string Status { get; set; } = string.Empty;
     }
 
+    private class TestRole { public int Id { get; set; } }
+
     private class TestEntityWithJoin
     {
         public int Id { get; set; }
         public string Name { get; set; } = string.Empty;
+        public ICollection<TestRole> Roles { get; set; } = new List<TestRole>();
     }
 }

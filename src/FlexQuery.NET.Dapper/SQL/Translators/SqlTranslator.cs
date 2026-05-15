@@ -136,18 +136,18 @@ public sealed class SqlTranslator : ISqlTranslator
         {
             foreach (var include in options.Includes)
             {
-                var joinInfo = mapping.GetJoinInfo(include);
-                if (joinInfo != null)
+                var rel = mapping.GetRelationship(include);
+                if (rel != null)
                 {
-                    var targetMapping = _mappingRegistry.GetMapping(joinInfo.TargetType);
-                    var targetAlias = joinInfo.NavigationProperty; // Use mapped property name for alias
+                    var targetMapping = _mappingRegistry.GetMapping(rel.TargetType);
+                    var targetAlias = rel.NavigationPropertyName; // Use mapped property name for alias
                     foreach (var prop in targetMapping.GetProperties())
                     {
                         var col = targetMapping.GetColumnName(prop);
                         // Prefix with mapped navigation property name for hydration
                         var quotedAlias = _dialect.QuoteIdentifier(targetAlias);
                         var quotedCol = _dialect.QuoteIdentifier(col);
-                        var aliasForHydration = _dialect.QuoteIdentifier(joinInfo.NavigationProperty + "_" + col);
+                        var aliasForHydration = _dialect.QuoteIdentifier(rel.NavigationPropertyName + "_" + col);
                         selectParts.Add($"{quotedAlias}.{quotedCol} AS {aliasForHydration}");
                     }
                 }
@@ -169,20 +169,20 @@ public sealed class SqlTranslator : ISqlTranslator
             {
                 if (!joinedPaths.Add(filteredInclude.Path)) continue;
 
-                var joinInfo = mapping.GetJoinInfo(filteredInclude.Path);
-                if (joinInfo == null) continue;
+                var rel = mapping.GetRelationship(filteredInclude.Path);
+                if (rel == null) continue;
 
                 var node = new FlexQuery.NET.Dapper.Sql.Ast.IncludeNode 
                 { 
-                    NavigationProperty = joinInfo.NavigationProperty, 
+                    NavigationProperty = rel.NavigationPropertyName, 
                     Filter = filteredInclude.Filter 
                 };
                 
                 var sql = _includeTranslator.Translate(node, mapping, filterGroup => 
                 {
-                    var targetMapping = _mappingRegistry.GetMapping(joinInfo.TargetType!);
+                    var targetMapping = _mappingRegistry.GetMapping(rel.TargetType!);
                     return BuildFilterGroupExpression(filterGroup, targetMapping, parameters);
-                });
+                }, _mappingRegistry);
 
                 if (!string.IsNullOrEmpty(sql)) joins.Add(sql);
             }
@@ -196,7 +196,7 @@ public sealed class SqlTranslator : ISqlTranslator
                 if (!joinedPaths.Add(include)) continue;
 
                 var node = new FlexQuery.NET.Dapper.Sql.Ast.IncludeNode { NavigationProperty = include };
-                var sql = _includeTranslator.Translate(node, mapping, _ => string.Empty);
+                var sql = _includeTranslator.Translate(node, mapping, _ => string.Empty, _mappingRegistry);
                 if (!string.IsNullOrEmpty(sql)) joins.Add(sql);
             }
         }
@@ -253,10 +253,10 @@ public sealed class SqlTranslator : ISqlTranslator
             var node = new AnyExpressionNode { NavigationProperty = condition.Field, ScopedFilter = condition.ScopedFilter };
             return _existsTranslator.TranslateAny(node, mapping, group => 
             {
-                var joinInfo = mapping.GetJoinInfo(condition.Field);
-                var targetMapping = joinInfo?.TargetType != null ? _mappingRegistry.GetMapping(joinInfo.TargetType) : mapping;
+                var rel = mapping.GetRelationship(condition.Field);
+                var targetMapping = rel?.TargetType != null ? _mappingRegistry.GetMapping(rel.TargetType) : mapping;
                 return BuildFilterGroupExpression(group, targetMapping, parameters);
-            });
+            }, _mappingRegistry);
         }
         
         if (op == FilterOperators.All && condition.ScopedFilter != null)
@@ -264,10 +264,10 @@ public sealed class SqlTranslator : ISqlTranslator
             var node = new AllExpressionNode { NavigationProperty = condition.Field, ScopedFilter = condition.ScopedFilter };
             return _existsTranslator.TranslateAll(node, mapping, group => 
             {
-                var joinInfo = mapping.GetJoinInfo(condition.Field);
-                var targetMapping = joinInfo?.TargetType != null ? _mappingRegistry.GetMapping(joinInfo.TargetType) : mapping;
+                var rel = mapping.GetRelationship(condition.Field);
+                var targetMapping = rel?.TargetType != null ? _mappingRegistry.GetMapping(rel.TargetType) : mapping;
                 return BuildFilterGroupExpression(group, targetMapping, parameters);
-            });
+            }, _mappingRegistry);
         }
 
         if (op == FilterOperators.Count)
@@ -287,10 +287,10 @@ public sealed class SqlTranslator : ISqlTranslator
             
             return _countTranslator.Translate(node, mapping, group => 
             {
-                var joinInfo = mapping.GetJoinInfo(condition.Field);
-                var targetMapping = joinInfo?.TargetType != null ? _mappingRegistry.GetMapping(joinInfo.TargetType) : mapping;
+                var rel = mapping.GetRelationship(condition.Field);
+                var targetMapping = rel?.TargetType != null ? _mappingRegistry.GetMapping(rel.TargetType) : mapping;
                 return BuildFilterGroupExpression(group, targetMapping, parameters);
-            }, parameters, NextParam);
+            }, parameters, NextParam, _mappingRegistry);
         }
 
         var column = mapping.GetColumnName(condition.Field);

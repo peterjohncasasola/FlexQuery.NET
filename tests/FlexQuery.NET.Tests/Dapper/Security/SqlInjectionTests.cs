@@ -307,7 +307,7 @@ public class SqlInjectionTests
 
         var command = _translator.Translate(options);
 
-        command.Sql.Should().Contain("[tests]"); // Main table (default name from TestEntity)
+        command.Sql.Should().Contain("[TestEntities]"); // Convention-based table name from TestEntity
     }
 
     [Fact]

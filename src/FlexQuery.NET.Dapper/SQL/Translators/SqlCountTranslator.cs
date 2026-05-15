@@ -19,22 +19,31 @@ public class SqlCountTranslator
     /// <summary>
     /// Translates a count condition into a correlated COUNT subquery.
     /// </summary>
-    public string Translate(CountExpressionNode node, IEntityMapping mapping, Func<FlexQuery.NET.Models.FilterGroup, string> filterBuilder, Dictionary<string, object?> parameters, Func<string> paramNameGenerator)
+    public string Translate(
+        CountExpressionNode node,
+        IEntityMapping mapping,
+        Func<FlexQuery.NET.Models.FilterGroup, string> filterBuilder,
+        Dictionary<string, object?> parameters,
+        Func<string> paramNameGenerator,
+        IMappingRegistry registry)
     {
-        var joinInfo = mapping.GetJoinInfo(node.NavigationProperty);
-        if (joinInfo == null) return string.Empty;
+        var rel = mapping.GetRelationship(node.NavigationProperty);
+        if (rel == null) return string.Empty;
+
+        var targetMapping = registry.GetMapping(rel.TargetType);
+        string joinCondition = BuildJoinCondition(mapping, targetMapping, rel, targetMapping.TableName);
 
         var subqueryFilter = filterBuilder(node.ScopedFilter);
-        var subqueryWhere = string.IsNullOrEmpty(subqueryFilter) 
-            ? joinInfo.JoinCondition 
-            : $"{joinInfo.JoinCondition} AND ({subqueryFilter})";
+        var subqueryWhere = string.IsNullOrEmpty(subqueryFilter)
+            ? joinCondition
+            : $"{joinCondition} AND ({subqueryFilter})";
 
         var paramName = paramNameGenerator();
         if (int.TryParse(node.Value, out var countValue))
             parameters[paramName] = countValue;
         else
             parameters[paramName] = node.Value;
-        
+
         var sqlOp = FlexQuery.NET.Constants.FilterOperators.Normalize(node.Operator) switch
         {
             FlexQuery.NET.Constants.FilterOperators.Equal => "=",
@@ -45,8 +54,18 @@ public class SqlCountTranslator
             FlexQuery.NET.Constants.FilterOperators.LessThanOrEq => "<=",
             _ => "="
         };
-        
-        // e.g. (SELECT COUNT(*) FROM orders WHERE users.Id = orders.UserId AND status = @p0) > @p1
-        return $"(SELECT COUNT(*) FROM {_dialect.QuoteIdentifier(joinInfo.TableName)} WHERE {subqueryWhere}) {sqlOp} {paramName}";
+
+        return $"(SELECT COUNT(*) FROM {_dialect.QuoteIdentifier(targetMapping.TableName)} WHERE {subqueryWhere}) {sqlOp} {paramName}";
+    }
+
+    private string BuildJoinCondition(IEntityMapping source, IEntityMapping target, Mapping.Metadata.RelationshipMapping rel, string targetAlias)
+    {
+        string alias = _dialect.QuoteIdentifier(targetAlias);
+        return rel.RelationshipType switch
+        {
+            Mapping.Metadata.RelationshipType.OneToMany => $"{alias}.{_dialect.QuoteIdentifier(rel.ForeignKey)} = {_dialect.QuoteIdentifier(source.TableAlias ?? source.TableName)}.{_dialect.QuoteIdentifier(source.GetColumnName(rel.PrincipalKey ?? "Id"))}",
+            Mapping.Metadata.RelationshipType.ManyToOne => $"{_dialect.QuoteIdentifier(source.TableAlias ?? source.TableName)}.{_dialect.QuoteIdentifier(rel.ForeignKey)} = {alias}.{_dialect.QuoteIdentifier(target.GetColumnName(rel.PrincipalKey ?? "Id"))}",
+            _ => "1=0"
+        };
     }
 }
