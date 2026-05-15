@@ -3,6 +3,8 @@ using FlexQuery.NET.Constants;
 using FlexQuery.NET.Dapper.Mapping;
 using FlexQuery.NET.Dapper.Dialects;
 using FlexQuery.NET.Dapper.Sql.Ast;
+using FlexQuery.NET.Security;
+using System.ComponentModel;
 
 namespace FlexQuery.NET.Dapper.Sql.Translators;
 
@@ -45,9 +47,16 @@ public sealed class SqlTranslator : ISqlTranslator
         var entityType = options.Items.TryGetValue("EntityType", out var type) ? (Type)type : typeof(object);
         var mapping = _mappingRegistry.GetMapping(entityType);
 
+        if (options.Includes?.Count > 0 || options.FilteredIncludes?.Count > 0)
+        {
+            mapping.TableAlias = mapping.TableName;
+        }
+
         var distinctClause = options.Distinct == true ? "DISTINCT" : string.Empty;
         var selectClause = BuildSelectClause(options, mapping, distinctClause);
-        var fromClause = $"FROM {_dialect.QuoteIdentifier(mapping.TableName)}";
+        var fromClause = string.IsNullOrEmpty(mapping.TableAlias)
+            ? $"FROM {_dialect.QuoteIdentifier(mapping.TableName)}"
+            : $"FROM {_dialect.QuoteIdentifier(mapping.TableName)} AS {_dialect.QuoteIdentifier(mapping.TableAlias)}";
         var joinClause = BuildJoinClause(options, mapping, parameters);
         var whereClause = BuildWhereClause(options.Filter, mapping, parameters);
         var groupByClause = BuildGroupByClause(options.GroupBy, mapping);
@@ -71,16 +80,21 @@ public sealed class SqlTranslator : ISqlTranslator
     private string BuildSelectClause(QueryOptions options, IEntityMapping mapping, string distinctClause)
     {
         var distinctPrefix = !string.IsNullOrEmpty(distinctClause) ? $"{distinctClause} " : string.Empty;
-
+        var selectParts = new List<string>();
         if (options.Aggregates?.Count > 0)
         {
-            var selectParts = new List<string>();
+            if (options.GroupBy?.Count > 0)
+            {
+                foreach (var g in options.GroupBy)
+                {
+                    selectParts.Add(QuoteColumn(mapping.GetColumnName(g), mapping));
+                }
+            }
+
             foreach (var agg in options.Aggregates)
             {
                 var column = mapping.GetColumnName(agg.Field ?? "*");
-                var quoted = string.IsNullOrEmpty(mapping.TableAlias)
-                    ? _dialect.QuoteIdentifier(column)
-                    : $"{mapping.TableAlias}.{_dialect.QuoteIdentifier(column)}";
+                var quoted = QuoteColumn(column, mapping);
 
                 if (agg.Function.Equals("count", StringComparison.OrdinalIgnoreCase) && string.IsNullOrEmpty(agg.Field))
                 {
@@ -94,64 +108,95 @@ public sealed class SqlTranslator : ISqlTranslator
             return $"SELECT {distinctPrefix}{string.Join(", ", selectParts)}";
         }
 
+        // 1. Add Main Entity Columns
         if (options.Select?.Count > 0)
         {
-            var columns = options.Select.Select(s =>
+            foreach (var s in options.Select)
             {
-                var column = mapping.GetColumnName(s);
-                var alias = mapping.TableAlias;
-                return string.IsNullOrEmpty(alias)
-                    ? _dialect.QuoteIdentifier(column)
-                    : $"{alias}.{_dialect.QuoteIdentifier(column)}";
-            });
-            return $"SELECT {distinctPrefix}{string.Join(", ", columns)}";
+                selectParts.Add(QuoteColumn(mapping.GetColumnName(s), mapping));
+            }
+        }
+        else if (options.GroupBy?.Count > 0)
+        {
+            foreach (var g in options.GroupBy)
+            {
+                selectParts.Add(QuoteColumn(mapping.GetColumnName(g), mapping));
+            }
+        }
+        else
+        {
+            foreach (var p in mapping.GetProperties())
+            {
+                selectParts.Add(QuoteColumn(mapping.GetColumnName(p), mapping));
+            }
         }
 
-        var allColumns = mapping.GetProperties().Select(p =>
+        // 2. Add Included Entity Columns (Flat mapping for Dapper)
+        if (options.Includes != null)
         {
-            var column = mapping.GetColumnName(p);
-            var alias = mapping.TableAlias;
-            return string.IsNullOrEmpty(alias)
-                ? _dialect.QuoteIdentifier(column)
-                : $"{alias}.{_dialect.QuoteIdentifier(column)}";
-        });
-        return $"SELECT {distinctPrefix}{string.Join(", ", allColumns)}";
+            foreach (var include in options.Includes)
+            {
+                var joinInfo = mapping.GetJoinInfo(include);
+                if (joinInfo != null)
+                {
+                    var targetMapping = _mappingRegistry.GetMapping(joinInfo.TargetType);
+                    var targetAlias = joinInfo.NavigationProperty; // Use mapped property name for alias
+                    foreach (var prop in targetMapping.GetProperties())
+                    {
+                        var col = targetMapping.GetColumnName(prop);
+                        // Prefix with mapped navigation property name for hydration
+                        var quotedAlias = _dialect.QuoteIdentifier(targetAlias);
+                        var quotedCol = _dialect.QuoteIdentifier(col);
+                        var aliasForHydration = _dialect.QuoteIdentifier(joinInfo.NavigationProperty + "_" + col);
+                        selectParts.Add($"{quotedAlias}.{quotedCol} AS {aliasForHydration}");
+                    }
+                }
+            }
+        }
+
+        return $"SELECT {distinctPrefix}{string.Join(", ", selectParts)}";
     }
 
     private string BuildJoinClause(QueryOptions options, IEntityMapping mapping, Dictionary<string, object?> parameters)
     {
         var joins = new List<string>();
+        var joinedPaths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        // Handle Filtered Includes (more specific)
+        if (options.FilteredIncludes != null)
+        {
+            foreach (var filteredInclude in options.FilteredIncludes)
+            {
+                if (!joinedPaths.Add(filteredInclude.Path)) continue;
+
+                var joinInfo = mapping.GetJoinInfo(filteredInclude.Path);
+                if (joinInfo == null) continue;
+
+                var node = new FlexQuery.NET.Dapper.Sql.Ast.IncludeNode 
+                { 
+                    NavigationProperty = joinInfo.NavigationProperty, 
+                    Filter = filteredInclude.Filter 
+                };
+                
+                var sql = _includeTranslator.Translate(node, mapping, filterGroup => 
+                {
+                    var targetMapping = _mappingRegistry.GetMapping(joinInfo.TargetType!);
+                    return BuildFilterGroupExpression(filterGroup, targetMapping, parameters);
+                });
+
+                if (!string.IsNullOrEmpty(sql)) joins.Add(sql);
+            }
+        }
 
         // Handle regular Includes
         if (options.Includes != null)
         {
             foreach (var include in options.Includes)
             {
+                if (!joinedPaths.Add(include)) continue;
+
                 var node = new FlexQuery.NET.Dapper.Sql.Ast.IncludeNode { NavigationProperty = include };
                 var sql = _includeTranslator.Translate(node, mapping, _ => string.Empty);
-                if (!string.IsNullOrEmpty(sql)) joins.Add(sql);
-            }
-        }
-
-        // Handle Filtered Includes
-        if (options.FilteredIncludes != null)
-        {
-            foreach (var filteredInclude in options.FilteredIncludes)
-            {
-                var node = new FlexQuery.NET.Dapper.Sql.Ast.IncludeNode 
-                { 
-                    NavigationProperty = filteredInclude.Path, 
-                    Filter = filteredInclude.Filter 
-                };
-                
-                var sql = _includeTranslator.Translate(node, mapping, filterGroup => 
-                {
-                    var joinInfo = mapping.GetJoinInfo(filteredInclude.Path);
-                    if (joinInfo?.TargetType == null) return string.Empty;
-                    var targetMapping = _mappingRegistry.GetMapping(joinInfo.TargetType);
-                    return BuildFilterGroupExpression(filterGroup, targetMapping, parameters);
-                });
-
                 if (!string.IsNullOrEmpty(sql)) joins.Add(sql);
             }
         }
@@ -167,8 +212,9 @@ public sealed class SqlTranslator : ISqlTranslator
         return string.IsNullOrEmpty(where) ? string.Empty : $"WHERE {where}";
     }
 
-    private string BuildFilterGroupExpression(FilterGroup group, IEntityMapping mapping, Dictionary<string, object?> parameters)
+    private string BuildFilterGroupExpression(FilterGroup? group, IEntityMapping mapping, Dictionary<string, object?> parameters)
     {
+        if (group == null) return string.Empty;
         var parts = new List<string>();
 
         foreach (var filter in group.Filters)
@@ -224,7 +270,7 @@ public sealed class SqlTranslator : ISqlTranslator
             });
         }
 
-        if (op == FilterOperators.Count && condition.ScopedFilter != null)
+        if (op == FilterOperators.Count)
         {
             if (string.IsNullOrWhiteSpace(condition.Value)) return "1=0";
             
@@ -254,19 +300,19 @@ public sealed class SqlTranslator : ISqlTranslator
         {
             FilterOperators.IsNull or "isnull" => $"{quotedColumn} IS NULL",
             FilterOperators.IsNotNull or "isnotnull" => $"{quotedColumn} IS NOT NULL",
-            FilterOperators.In => BuildInExpression(quotedColumn, condition.Value, parameters),
-            FilterOperators.Between => BuildBetweenExpression(quotedColumn, condition.Value, parameters),
+            FilterOperators.In => BuildInExpression(quotedColumn, condition.Field, condition.Value, mapping, parameters),
+            FilterOperators.Between => BuildBetweenExpression(quotedColumn, condition.Field, condition.Value, mapping, parameters),
             FilterOperators.Contains => BuildLikeExpression(quotedColumn, condition.Value, parameters, "%", "%"),
             FilterOperators.StartsWith => BuildLikeExpression(quotedColumn, condition.Value, parameters, "", "%"),
             FilterOperators.EndsWith => BuildLikeExpression(quotedColumn, condition.Value, parameters, "%", ""),
-            _ => BuildComparisonExpression(quotedColumn, condition.Value, op, parameters)
+            _ => BuildComparisonExpression(quotedColumn, condition.Field, condition.Value, op, mapping, parameters)
         };
     }
 
-    private string BuildComparisonExpression(string quotedColumn, string? value, string op, Dictionary<string, object?> parameters)
+    private string BuildComparisonExpression(string quotedColumn, string field, string? value, string op, IEntityMapping mapping, Dictionary<string, object?> parameters)
     {
         var paramName = NextParam();
-        parameters[paramName] = value;
+        parameters[paramName] = ConvertValue(field, value, mapping);
         var sqlOp = op switch
         {
             FilterOperators.Equal => "=",
@@ -280,28 +326,51 @@ public sealed class SqlTranslator : ISqlTranslator
         return $"{quotedColumn} {sqlOp} {paramName}";
     }
 
-    private string BuildInExpression(string quotedColumn, string? value, Dictionary<string, object?> parameters)
+    private string BuildInExpression(string quotedColumn, string field, string? value, IEntityMapping mapping, Dictionary<string, object?> parameters)
     {
         if (string.IsNullOrEmpty(value)) return "1 = 1";
         var values = value.Split(',').Select(v => v.Trim()).ToArray();
         var paramNames = values.Select((_, i) => NextParam()).ToArray();
         for (int i = 0; i < values.Length; i++)
         {
-            parameters[paramNames[i]] = values[i];
+            parameters[paramNames[i]] = ConvertValue(field, values[i], mapping);
         }
         return $"{quotedColumn} IN ({string.Join(", ", paramNames)})";
     }
 
-    private string BuildBetweenExpression(string quotedColumn, string? value, Dictionary<string, object?> parameters)
+    private string BuildBetweenExpression(string quotedColumn, string field, string? value, IEntityMapping mapping, Dictionary<string, object?> parameters)
     {
         if (string.IsNullOrEmpty(value)) return "1 = 1";
         var values = value.Split(',').Select(v => v.Trim()).ToArray();
         if (values.Length != 2) return "1 = 1";
         var fromParam = NextParam();
         var toParam = NextParam();
-        parameters[fromParam] = values[0];
-        parameters[toParam] = values[1];
+        parameters[fromParam] = ConvertValue(field, values[0], mapping);
+        parameters[toParam] = ConvertValue(field, values[1], mapping);
         return $"{quotedColumn} BETWEEN {fromParam} AND {toParam}";
+    }
+
+    private object? ConvertValue(string field, string? value, IEntityMapping mapping)
+    {
+        if (value == null) return null;
+
+        if (SafePropertyResolver.TryResolveChain(mapping.Type, field, out var chain) && chain.Count > 0)
+        {
+            var targetType = chain.Last().PropertyType;
+            var underlyingType = Nullable.GetUnderlyingType(targetType) ?? targetType;
+
+            try
+            {
+                var converter = TypeDescriptor.GetConverter(underlyingType);
+                if (converter != null && converter.CanConvertFrom(typeof(string)))
+                {
+                    return converter.ConvertFromInvariantString(value);
+                }
+            }
+            catch { /* fallback to original string */ }
+        }
+
+        return value;
     }
 
     private string BuildLikeExpression(string quotedColumn, string? value, Dictionary<string, object?> parameters, string prefix, string suffix)
@@ -315,7 +384,8 @@ public sealed class SqlTranslator : ISqlTranslator
     {
         if (string.IsNullOrEmpty(mapping.TableAlias))
             return _dialect.QuoteIdentifier(column);
-        return $"{mapping.TableAlias}.{_dialect.QuoteIdentifier(column)}";
+            
+        return $"{_dialect.QuoteIdentifier(mapping.TableAlias)}.{_dialect.QuoteIdentifier(column)}";
     }
 
     private string BuildGroupByClause(IReadOnlyList<string>? groupBys, IEntityMapping mapping)
@@ -330,8 +400,22 @@ public sealed class SqlTranslator : ISqlTranslator
         if (having == null) return string.Empty;
         var column = QuoteColumn(mapping.GetColumnName(having.Field ?? "*"), mapping);
         var paramName = NextParam();
-        parameters[paramName] = having.Value?.ToString()?.Trim('"');
-        return $"HAVING {having.Function.ToUpperInvariant()}({column}) {having.Operator} {paramName}";
+        
+        var valStr = having.Value?.ToString()?.Trim('"');
+        parameters[paramName] = ConvertValue(having.Field ?? string.Empty, valStr, mapping);
+
+        var sqlOp = having.Operator.ToLowerInvariant() switch
+        {
+            "eq" or "equal" or "equals" or "=" => "=",
+            "neq" or "ne" or "notequal" or "<>" or "!=" => "<>",
+            "gt" or "greaterthan" or ">" => ">",
+            "gte" or "ge" or "greaterthanorequal" or ">=" => ">=",
+            "lt" or "lessthan" or "<" => "<",
+            "lte" or "le" or "lessthanorequal" or "<=" => "<=",
+            _ => having.Operator
+        };
+
+        return $"HAVING {having.Function.ToUpperInvariant()}({column}) {sqlOp} {paramName}";
     }
 
     private string BuildOrderByClause(IReadOnlyList<SortNode>? sorts, IEntityMapping mapping)

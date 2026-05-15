@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 ---
 ## [3.0.0] - 2026-05-15
 
+### Fixed
+- **Dapper Query Engine Stabilization**:
+  - Improved `SqlTranslator` projection logic to explicitly include GroupBy columns when no explicit select list is provided, ensuring valid SQL generation for grouped queries.
+  - Refined parameter binding in `HAVING` clauses to use correct numeric types (ints/decimals) instead of string literals.
+- **Test Suite Integrity**:
+  - Synchronized `SqlTranslatorTests` assertions with the provider's improved typed parameter conversion logic.
+  - Resolved `CS1022` syntax errors in `SecurityValidationTests.cs` caused by illegal namespace nesting.
+  - Updated `WildcardProjectionTests.cs` and `OrderAggregationTests.cs` to align with recent entity model refactorings and seed data.
+  - Achieved 100% pass rate across 365 tests in the solution.
+
 ### Added
 - **FlexQuery.NET.Dapper Package**:
   - Full support for Dapper as a high-performance query engine.

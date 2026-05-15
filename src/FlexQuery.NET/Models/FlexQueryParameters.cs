@@ -19,7 +19,11 @@ public sealed class FlexQueryParameters
     public string? Select { get; set; }
 
     /// <summary>The comma-separated list of fields to include.</summary>
-    public string? Includes { get; set; }
+    public string? Include { get; set; }
+
+    /// <summary>Alias for Include (backward compatibility).</summary>
+    [Obsolete("Use Include instead.")]
+    public string? Includes { get => Include; set => Include = value; }
 
     /// <summary>The comma-separated list of fields to group by.</summary>
     public string? GroupBy { get; set; }

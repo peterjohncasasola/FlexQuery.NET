@@ -12,7 +12,7 @@ public interface IEntityMapping
     string TableName { get; }
 
     /// <summary>Table alias.</summary>
-    string? TableAlias { get; }
+    string? TableAlias { get; set; }
 
     /// <summary>Get the column name for a property.</summary>
     string GetColumnName(string propertyName);

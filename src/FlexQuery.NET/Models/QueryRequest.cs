@@ -37,7 +37,7 @@ public class QueryRequest
     /// For complex filtered includes, use the 'include=' syntax in the filter or query parameters.
     /// </summary>
     /// <example>Orders,Address</example>
-    public string? Includes { get; set; }
+    public string? Include { get; set; }
 
     /// <summary>
     /// Comma-separated list of fields to group by for aggregation.

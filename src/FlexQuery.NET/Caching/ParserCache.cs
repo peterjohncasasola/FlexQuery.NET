@@ -58,7 +58,7 @@ public sealed record ParsedQueryCacheKey(
     string? Filter,
     string? Sort,
     string? Select,
-    string? Includes,
+    string? Include,
     string? GroupBy,
     string? Having,
     int? Page,

@@ -29,7 +29,7 @@ public static class QueryOptionsParser
         RegexOptions.Compiled | RegexOptions.IgnoreCase);
 
     private static readonly Regex HavingPattern = new(
-        @"^(?<fn>sum|count|avg)\((?<field>[A-Za-z_][A-Za-z0-9_\.]*)?\):(?<op>[A-Za-z_][A-Za-z0-9_]*):(?<value>.+)$",
+        @"^(?<fn>sum|count|avg)(?:\((?<field>[A-Za-z_][A-Za-z0-9_\.]*)?\)|:(?<field2>[A-Za-z_][A-Za-z0-9_\.]*)):(?<op>[A-Za-z_][A-Za-z0-9_]*):(?<value>.+)$",
         RegexOptions.Compiled | RegexOptions.IgnoreCase);
 
     private static readonly Regex AggregateSortPattern = new(
@@ -53,7 +53,7 @@ public static class QueryOptionsParser
         if (!string.IsNullOrWhiteSpace(request.Filter)) dict["filter"] = request.Filter;
         if (!string.IsNullOrWhiteSpace(request.Sort)) dict["sort"] = request.Sort;
         if (!string.IsNullOrWhiteSpace(request.Select)) dict["select"] = request.Select;
-        if (!string.IsNullOrWhiteSpace(request.Includes)) dict["include"] = request.Includes;
+        if (!string.IsNullOrWhiteSpace(request.Include)) dict["include"] = request.Include;
         if (!string.IsNullOrWhiteSpace(request.GroupBy)) dict["group"] = request.GroupBy;
         if (!string.IsNullOrWhiteSpace(request.Having)) dict["having"] = request.Having;
         if (!string.IsNullOrWhiteSpace(request.Mode)) dict["mode"] = request.Mode;
@@ -75,7 +75,7 @@ public static class QueryOptionsParser
         // Try Cache first
         var cacheKey = new ParsedQueryCacheKey(
             parameters.Query, parameters.Filter, parameters.Sort, parameters.Select,
-            parameters.Includes, parameters.GroupBy, parameters.Having,
+            parameters.Include, parameters.GroupBy, parameters.Having,
             parameters.Page, parameters.PageSize, parameters.IncludeCount,
             parameters.Distinct, parameters.Mode);
 
@@ -120,10 +120,10 @@ public static class QueryOptionsParser
         }
 
         // Includes
-        if (!string.IsNullOrWhiteSpace(parameters.Includes))
+        if (!string.IsNullOrWhiteSpace(parameters.Include))
         {
-            options.Includes = SplitCsv(parameters.Includes.Split('(')[0]);
-            options.FilteredIncludes = FilteredIncludeParser.Parse(parameters.Includes);
+            options.Includes = SplitCsv(parameters.Include.Split('(')[0]);
+            options.FilteredIncludes = FilteredIncludeParser.Parse(parameters.Include);
         }
 
         // Metadata
@@ -351,10 +351,12 @@ public static class QueryOptionsParser
         if (string.IsNullOrWhiteSpace(rawHaving)) return null;
         var match = HavingPattern.Match(rawHaving.Trim());
         if (!match.Success) return null;
-
+ 
         var fn = match.Groups["fn"].Value.ToLowerInvariant();
-        var field = match.Groups["field"].Success ? match.Groups["field"].Value : null;
-
+        var field = match.Groups["field"].Success 
+            ? match.Groups["field"].Value 
+            : (match.Groups["field2"].Success ? match.Groups["field2"].Value : null);
+ 
         return new HavingCondition
         {
             Function = fn,

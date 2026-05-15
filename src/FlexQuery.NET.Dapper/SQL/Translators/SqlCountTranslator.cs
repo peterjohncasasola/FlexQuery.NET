@@ -30,7 +30,10 @@ public class SqlCountTranslator
             : $"{joinInfo.JoinCondition} AND ({subqueryFilter})";
 
         var paramName = paramNameGenerator();
-        parameters[paramName] = node.Value;
+        if (int.TryParse(node.Value, out var countValue))
+            parameters[paramName] = countValue;
+        else
+            parameters[paramName] = node.Value;
         
         var sqlOp = FlexQuery.NET.Constants.FilterOperators.Normalize(node.Operator) switch
         {

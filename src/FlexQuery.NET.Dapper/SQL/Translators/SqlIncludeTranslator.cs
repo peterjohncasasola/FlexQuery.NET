@@ -24,7 +24,8 @@ public class SqlIncludeTranslator
         var joinInfo = mapping.GetJoinInfo(node.NavigationProperty);
         if (joinInfo == null) return string.Empty;
 
-        var sql = $"LEFT JOIN {_dialect.QuoteIdentifier(joinInfo.TableName)} ON {joinInfo.JoinCondition}";
+        var alias = _dialect.QuoteIdentifier(joinInfo.NavigationProperty);
+        var sql = $"LEFT JOIN {_dialect.QuoteIdentifier(joinInfo.TableName)} AS {alias} ON {joinInfo.JoinCondition}";
 
         if (node.Filter != null)
         {

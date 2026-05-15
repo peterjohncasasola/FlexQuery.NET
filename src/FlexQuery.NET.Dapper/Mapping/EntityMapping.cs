@@ -11,7 +11,7 @@ public sealed class EntityMapping : IEntityMapping
 
     public Type Type { get; }
     public string TableName { get; }
-    public string? TableAlias { get; }
+    public string? TableAlias { get; set; }
 
     public EntityMapping(Type type, string tableName, string? tableAlias = null)
     {
@@ -30,6 +30,7 @@ public sealed class EntityMapping : IEntityMapping
     {
         _joins[navigationProperty] = new JoinInfo
         {
+            NavigationProperty = navigationProperty,
             TargetType = targetType,
             TableName = tableName,
             JoinCondition = joinCondition

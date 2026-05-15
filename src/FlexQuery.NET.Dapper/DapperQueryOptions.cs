@@ -16,8 +16,8 @@ public sealed class DapperQueryOptions : BaseQueryOptions
     /// </summary>
     public DapperQueryOptions()
     {
-        // Dapper defaults - override base IncludeTotalCount to false (Dapper behavior)
-        IncludeTotalCount = false;
+        // Dapper defaults
+        IncludeTotalCount = true;
     }
 
     /// <summary>
@@ -42,7 +42,7 @@ public sealed class DapperQueryOptions : BaseQueryOptions
         SelectableFields = source.SelectableFields;
 
         // Dapper-specific defaults
-        IncludeTotalCount = false; // Override to match Dapper behavior
+        IncludeTotalCount = true;
     }
 
     public QueryExecutionOptions ToQueryExecutionOptions()
@@ -73,7 +73,13 @@ public sealed class DapperQueryOptions : BaseQueryOptions
 
     /// <summary>SQL dialect to use for query generation. If null, resolves via GlobalDefaultDialect, then GlobalDialectResolver.</summary>
     public ISqlDialect? Dialect { get; set; }
+
+    /// <summary>Entity mapping registry. If null, a new empty registry is used by the translator.</summary>
+    public Mapping.IMappingRegistry? MappingRegistry { get; set; }
     
     /// <summary>Command timeout in seconds.</summary>
     public int CommandTimeoutSeconds { get; set; } = 30;
+
+    /// <summary>Explicitly set the entity type for mapping resolution. If null, use the generic type T from FlexQueryAsync.</summary>
+    public Type? EntityType { get; set; }
 }

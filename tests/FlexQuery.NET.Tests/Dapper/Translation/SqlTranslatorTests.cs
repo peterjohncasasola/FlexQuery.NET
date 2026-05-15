@@ -94,8 +94,8 @@ public class SqlTranslatorTests
 
         command.Sql.Should().Contain("BETWEEN");
         command.Parameters.Should().HaveCount(2);
-        command.Parameters["@p0"].Should().Be("20");
-        command.Parameters["@p1"].Should().Be("30");
+        command.Parameters["@p0"].Should().Be(20);
+        command.Parameters["@p1"].Should().Be(30);
     }
 
     [Fact]
@@ -386,7 +386,7 @@ public class SqlTranslatorTests
         command.Sql.Should().Contain("(SELECT COUNT(*) FROM [roles]");
         command.Sql.Should().Contain("users.Id = roles.UserId");
         command.Sql.Should().Contain("> @p1");
-        command.Parameters["@p1"].Should().Be("5");
+        command.Parameters["@p1"].Should().Be(5);
     }
 
     [Fact]
