@@ -34,6 +34,7 @@ FlexQuery.NET is a lightweight and powerful dynamic query engine for .NET. It al
 ```bash
 dotnet add package FlexQuery.NET
 dotnet add package FlexQuery.NET.EFCore
+dotnet add package FlexQuery.NET.Dapper
 dotnet add package FlexQuery.NET.AspNetCore
 ```
 
@@ -60,6 +61,63 @@ public async Task<IActionResult> GetUsers([FromQuery] FlexQueryParameters parame
 
 ```http
 GET /api/users?filter=age:gt:18&sort=createdAt:desc&page=1&pageSize=20&select=id,name,email
+```
+
+### 4. Dapper Integration & Database Dialects
+
+FlexQuery.NET provides a robust Dapper extension (`FlexQuery.NET.Dapper`) that compiles queries into secure, parameterized, and database-specific SQL.
+
+#### Automatic Dialect Resolution
+
+By default, the SQL dialect is automatically resolved from your database connection (e.g., `SqlConnection` -> `SqlServerDialect`, `NpgsqlConnection` -> `PostgreSqlDialect`).
+
+```csharp
+[HttpGet]
+public async Task<IActionResult> GetUsersDapper([FromQuery] FlexQueryParameters parameters)
+{
+    // The dialect is automatically resolved based on the provided NpgsqlConnection
+    using var connection = new NpgsqlConnection("Host=localhost;Database=mydb;");
+    
+    var result = await connection.FlexQueryAsync<UserDto>(parameters, options => 
+    {
+        options.AllowedFields = ["Id", "Name", "Email"];
+        // Dapper specific options
+        options.CommandTimeoutSeconds = 60;
+    });
+
+    return Ok(result);
+}
+```
+
+#### Explicit Dialect Configuration
+
+If you need to force a specific SQL dialect for a single query, you can configure it directly:
+
+```csharp
+using FlexQuery.NET.Dapper.Dialects;
+
+var result = await connection.FlexQueryAsync<UserDto>(parameters, options => 
+{
+    // Explicitly configure the dialect for this specific query
+    options.Dialect = new MySqlDialect(); 
+    // Supported dialects: SqlServerDialect, PostgreSqlDialect, MySqlDialect, MariaDbDialect, SqliteDialect, OracleDialect
+});
+```
+
+#### Global Dialect Configuration (Optional)
+
+If your entire application uses a single database type and you want to bypass the automatic resolution entirely, you can configure a global default dialect once at startup:
+
+```csharp
+// Program.cs or Startup.cs
+using FlexQuery.NET.Dapper;
+using FlexQuery.NET.Dapper.Dialects;
+
+// Set the global dialect once for the entire application
+DapperQueryOptions.GlobalDefaultDialect = new PostgreSqlDialect();
+
+// Or, provide your own custom resolver logic:
+// DapperQueryOptions.GlobalDialectResolver = new MyCustomResolver();
 ```
 
 ---

@@ -3,6 +3,28 @@
 All notable changes to this project will be documented in this file.
 
 ---
+## [3.0.0] - 2026-05-15
+
+### Added
+- **FlexQuery.NET.Dapper Package**:
+  - Full support for Dapper as a high-performance query engine.
+  - Polymorphic `ISqlDialect` system supporting SQL Server, PostgreSQL, MySQL, MariaDB, SQLite, and Oracle.
+  - Automatic dialect resolution via `ISqlDialectResolver` based on `DbConnection` types.
+  - Secure SQL translation engine with parameterization and identifier quoting.
+- **Relationship Query Semantics for Dapper**:
+  - Implemented `any()`, `all()`, and `count()` semantics using efficient `EXISTS` and correlated subqueries.
+  - Support for `include` and Filtered Includes using `LEFT JOIN` syntax.
+  - Semantic parity with EF Core relationship queries.
+- **Dapper AST & Translators**:
+  - Dedicated AST nodes for relationship queries, decoupled from core models.
+  - Specialized translators for Includes, Existence checks, and Counts.
+
+### Changed
+- **Mapping Registry Evolution**: Updated `JoinInfo` to support `TargetType`, enabling deep property resolution for related entity filters in Dapper.
+- **Dapper Multi-Targeting**: Added support for `.net6.0`, `.net7.0`, and `.net8.0` in the Dapper package.
+- **Internal Reorganization**: Moved SQL translators to a dedicated `Translators` folder and namespace for better maintainability.
+
+---
 ## [2.5.0] - 2026-05-10
 
 ### Added

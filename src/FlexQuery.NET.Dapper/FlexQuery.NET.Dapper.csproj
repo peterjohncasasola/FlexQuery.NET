@@ -6,15 +6,16 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <LangVersion>latest</LangVersion>
+    <SuppressTfmSupportBuildWarnings>true</SuppressTfmSupportBuildWarnings>
 
     <!-- NuGet Metadata -->
-    <PackageId>FlexQuery.NET.EFCore</PackageId>
+    <PackageId>FlexQuery.NET.Dapper</PackageId>
     <Authors>Peter John Casasola</Authors>
     <Company>Peter John Casasola</Company>
-    <Product>FlexQuery.NET.EFCore</Product>
+    <Product>FlexQuery.NET.Dapper</Product>
 
-    <Description>EF Core integration for FlexQuery.NET — async execution, filtered includes, projection, and pagination helpers</Description>
-    <PackageTags>flexquery;dynamic;linq;iqueryable;efcore;filtering;projection;pagination</PackageTags>
+    <Description>Dapper integration for FlexQuery.NET — async execution, filtered includes, projection, and pagination helpers</Description>
+    <PackageTags>flexquery;dynamic;linq;iqueryable;;filtering;projection;pagination</PackageTags>
 
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <RepositoryUrl>https://github.com/peterjohncasasola/FlexQuery.NET</RepositoryUrl>
@@ -30,7 +31,6 @@
     <Version>3.0.0</Version>
   </PropertyGroup>
 
-  <!-- Use minimum-version ranges (6.x, 7.x, 8.x) so consumers can use any compatible patch release -->
   <ItemGroup Condition="'$(TargetFramework)' == 'net6.0'">
     <PackageReference Include="Microsoft.EntityFrameworkCore" Version="6.0.0" />
   </ItemGroup>
@@ -50,6 +50,11 @@
   <ItemGroup>
     <None Include="..\..\README.md" Pack="true" PackagePath="" />
     <None Include="..\..\assets\logo.png" Pack="true" PackagePath="" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Dapper" Version="2.1.72" />
+    <PackageReference Include="Microsoft.Extensions.Primitives" Version="8.0.0" />
   </ItemGroup>
 
 </Project>
