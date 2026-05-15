@@ -31,6 +31,7 @@
       <ProjectReference Include="..\..\src\FlexQuery.NET.Dapper\FlexQuery.NET.Dapper.csproj" />
       <ProjectReference Include="..\..\src\FlexQuery.NET.EFCore\FlexQuery.NET.EFCore.csproj" />
       <ProjectReference Include="..\..\src\FlexQuery.NET.AspNetCore\FlexQuery.NET.AspNetCore.csproj" />
+      <ProjectReference Include="..\..\src\FlexQuery.NET.MiniOData\FlexQuery.NET.MiniOData.csproj" />
     </ItemGroup>
 
 </Project>

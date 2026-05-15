@@ -27,6 +27,19 @@ All notable changes to this project will be documented in this file.
   - Updated `SqlTranslatorTests` to register `TestRole` (`ToTable("roles")`) and adjusted assertions for proper quoted SQL (`[roles].[UserId] = [users].[Id]`).
   - Fixed navigation‑property test to expect table name `[TestEntities]`.
   - Resolved CS1022 / CS1519 syntax errors in translation files.
+- **FlexQuery.NET.MiniOData Package**:
+  - Lightweight OData-compatible query syntax adapter — completely optional, zero core dependencies.
+  - Parses `$filter`, `$orderby`, `$select`, `$top`, `$skip`, `$expand`, and `$count` into the unified FlexQuery AST.
+  - OData filter parser supporting binary comparisons (`eq`, `ne`, `gt`, `ge`, `lt`, `le`), function calls (`contains`, `startswith`, `endswith`), logical operators (`and`, `or`, `not`), grouping, null checks, `in` lists, and lambda navigation (`any`/`all`).
+  - Automatic OData path separator (`/`) to dot-notation conversion.
+  - `$` prefix stripping for seamless compatibility with both `$filter` and `filter` key formats.
+  - Lambda variable stripping for `any(o: o/status eq 'active')` expressions.
+  - DI registration via `services.AddFlexQueryMiniOData()`.
+  - Multi-targeting support for .NET 6, 7, and 8.
+- **Mini OData ↔ Native DSL Equivalence**:
+  - 63 comprehensive tests verifying AST equivalence between Native DSL and Mini OData syntaxes.
+  - Proven semantic parity: both parsers produce identical `FilterGroup`, `SortNode`, and `QueryOptions` structures.
+  - Full solution test suite: 428 tests passing (365 existing + 63 new).
 
 ### Changed
 - **Mapping Registry Evolution**: Updated `JoinInfo` to support `TargetType`, enabling deep property resolution for related entity filters in Dapper.
