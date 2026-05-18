@@ -18,10 +18,3 @@ public class SortNode
     public bool Descending { get; set; }
 }
 
-/// <summary>
-/// Backwards-compatible sort option alias used by older test and API code.
-/// </summary>
-[Obsolete("SortOption is deprecated. Use SortNode instead.")]
-public sealed class SortOption : SortNode
-{
-}

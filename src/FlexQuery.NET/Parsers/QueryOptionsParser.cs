@@ -69,51 +69,6 @@ public static class QueryOptionsParser
     public static void RegisterParser(IQueryParser parser) => _parsers.Insert(0, parser);
 
     // ── Public entry point ───────────────────────────────────────────────
-
-    /// <summary>
-    /// Parses a strongly typed <see cref="QueryRequest"/> into <see cref="QueryOptions"/>.
-    /// </summary>
-    [Obsolete("Use Parse(FlexQueryParameters) instead for better separation of concerns and flexibility.")]
-    [EditorBrowsable(EditorBrowsableState.Never)]
-    public static QueryOptions Parse(QueryRequest request)
-    {
-        ArgumentNullException.ThrowIfNull(request);
-
-        var dict = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-        
-        if (!string.IsNullOrWhiteSpace(request.Query)) dict["query"] = request.Query;
-        if (!string.IsNullOrWhiteSpace(request.Filter)) dict["filter"] = request.Filter;
-        if (!string.IsNullOrWhiteSpace(request.Sort)) dict["sort"] = request.Sort;
-        if (!string.IsNullOrWhiteSpace(request.Select)) dict["select"] = request.Select;
-        if (!string.IsNullOrWhiteSpace(request.Include)) dict["include"] = request.Include;
-        if (!string.IsNullOrWhiteSpace(request.GroupBy)) dict["group"] = request.GroupBy;
-        if (!string.IsNullOrWhiteSpace(request.Having)) dict["having"] = request.Having;
-        if (!string.IsNullOrWhiteSpace(request.Mode)) dict["mode"] = request.Mode;
-        
-        if (request.Page.HasValue) dict["page"] = request.Page.Value.ToString();
-        if (request.PageSize.HasValue) dict["pageSize"] = request.PageSize.Value.ToString();
-        if (request.IncludeCount.HasValue) dict["includeCount"] = request.IncludeCount.Value.ToString();
-        if (request.Distinct.HasValue) dict["distinct"] = request.Distinct.Value.ToString();
-
-        var parameters = new FlexQueryParameters
-        {
-            Query = request.Query,
-            Filter = request.Filter,
-            Sort = request.Sort,
-            Select = request.Select,
-            Include = request.Include,
-            GroupBy = request.GroupBy,
-            Having = request.Having,
-            Page = request.Page,
-            PageSize = request.PageSize,
-            IncludeCount = request.IncludeCount,
-            Distinct = request.Distinct,
-            Mode = request.Mode,
-            RawParameters = dict
-        };
-
-        return Parse(parameters);
-    }
     /// <summary>
     /// Parses a strongly typed <see cref="FlexQueryParameters"/> into <see cref="QueryOptions"/>.
     /// </summary>
