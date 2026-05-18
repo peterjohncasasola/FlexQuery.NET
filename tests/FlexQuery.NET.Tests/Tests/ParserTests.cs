@@ -2,6 +2,7 @@ using FlexQuery.NET.Constants;
 using FlexQuery.NET.Models;
 using FlexQuery.NET.Parsers;
 using FlexQuery.NET.Parsers.Jql;
+using JqlParser = FlexQuery.NET.Parsers.Jql.JqlParser;
 using FluentAssertions;
 using Microsoft.Extensions.Primitives;
 

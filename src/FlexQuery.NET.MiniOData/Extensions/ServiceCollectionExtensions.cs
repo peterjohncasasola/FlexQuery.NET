@@ -1,4 +1,5 @@
 using Microsoft.Extensions.DependencyInjection;
+using FlexQuery.NET.Parsers;
 
 namespace FlexQuery.NET.MiniOData.Extensions;
 
@@ -26,8 +27,18 @@ public static class ServiceCollectionExtensions
     {
         // Register the Mini OData feature flag so middleware/controllers can detect it
         services.AddSingleton<MiniODataFeature>();
+
+        // Register the parser in the central coordinator
+        QueryOptionsParser.RegisterParser(new Parsers.MiniODataParser());
+
         return services;
     }
+
+    /// <summary>
+    /// Alias for <see cref="AddFlexQueryMiniOData"/> for cleaner chaining.
+    /// </summary>
+    public static IServiceCollection AddMiniOData(this IServiceCollection services)
+        => services.AddFlexQueryMiniOData();
 }
 
 /// <summary>

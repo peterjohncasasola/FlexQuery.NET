@@ -64,13 +64,17 @@ public static class FlexQueryDapperExtensions
         IDictionary<string, StringValues> parameters,
         Action<DapperQueryOptions>? configureDapper = null) where T : class
     {
+        var dict = parameters.ToDictionary(k => k.Key, v => v.Value.ToString(), StringComparer.OrdinalIgnoreCase);
+        
         var flexParams = new FlexQueryParameters
         {
-            Filter = parameters.TryGetValue("filter", out var filter) ? filter.ToString() : null,
-            Sort = parameters.TryGetValue("sort", out var sort) ? sort.ToString() : null,
-            Select = parameters.TryGetValue("select", out var select) ? select.ToString() : null,
-            Page = parameters.TryGetValue("page", out var p) && int.TryParse(p, out var page) ? page : null,
-            PageSize = parameters.TryGetValue("pageSize", out var ps) && int.TryParse(ps, out var pageSize) ? pageSize : null
+            Filter = dict.GetValueOrDefault("filter") ?? dict.GetValueOrDefault("$filter"),
+            Sort = dict.GetValueOrDefault("sort") ?? dict.GetValueOrDefault("orderby") ?? dict.GetValueOrDefault("$orderby"),
+            Select = dict.GetValueOrDefault("select") ?? dict.GetValueOrDefault("$select"),
+            Include = dict.GetValueOrDefault("include") ?? dict.GetValueOrDefault("expand") ?? dict.GetValueOrDefault("$expand"),
+            Page = dict.TryGetValue("page", out var p) && int.TryParse(p, out var page) ? page : null,
+            PageSize = dict.TryGetValue("pageSize", out var ps) && int.TryParse(ps, out var pageSize) ? pageSize : null,
+            RawParameters = dict
         };
 
         return await FlexQueryAsync<T>(connection, flexParams, configureDapper);

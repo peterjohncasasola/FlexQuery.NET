@@ -66,5 +66,6 @@ public sealed record ParsedQueryCacheKey(
     bool? IncludeCount,
     bool? Distinct,
     string? Mode,
-    string Version = "v1"
+    string? RawKey = null,
+    string Version = "v2"
 );

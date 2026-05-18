@@ -45,4 +45,10 @@ public sealed class FlexQueryParameters
 
     /// <summary>The projection mode (Flat, FlatMixed, Nested).</summary>
     public string? Mode { get; set; }
+
+    /// <summary>
+    /// Optional raw dictionary of query parameters.
+    /// Used by parsers for syntax auto-detection (e.g., detecting OData $ prefix).
+    /// </summary>
+    public IDictionary<string, string>? RawParameters { get; set; }
 }

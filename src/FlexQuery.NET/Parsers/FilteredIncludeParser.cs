@@ -136,7 +136,7 @@ public static class FilteredIncludeParser
             catch { /* fallback to JQL */ }
         }
 
-        var jqlAst = JqlParser.Parse(raw);
+        var jqlAst = Jql.JqlParser.Parse(raw);
         return JqlFilterConverter.ToFilterGroup(jqlAst);
     }
 
