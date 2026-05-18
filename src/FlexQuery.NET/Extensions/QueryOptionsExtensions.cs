@@ -23,10 +23,35 @@ public static class QueryOptionsExtensions
         this QueryOptions options,
         QueryExecutionOptions? execOptions = null)
     {
-        var result = ValidateInternal<T>(options, execOptions);
+        options.ValidateOrThrow(typeof(T), execOptions);
+    }
+
+    /// <summary>
+    /// Validates the query options or throws a <see cref="QueryValidationException"/>.
+    /// </summary>
+    /// <param name="options">The query options to validate.</param>
+    /// <param name="entityType">The entity type that the query targets.</param>
+    /// <param name="execOptions">Optional execution options that define server-side constraints.</param>
+    /// <exception cref="QueryValidationException">Thrown when validation fails.</exception>
+    public static void ValidateOrThrow(
+        this QueryOptions options,
+        Type entityType,
+        QueryExecutionOptions? execOptions = null)
+    {
+        execOptions ??= new QueryExecutionOptions();
+
+        if (execOptions.ExpressionMappings != null)
+        {
+            options.Items["ExpressionMappings"] = execOptions.ExpressionMappings;
+        }
+
+        var result = options.Validate(entityType, execOptions);
 
         if (!result.IsValid)
-            throw new QueryValidationException(result);
+        {
+            var errors = string.Join("; ", result.Errors.Select(e => e.Message));
+            throw new QueryValidationException($"Query validation failed: {errors}", result);
+        }
     }
 
     /// <summary>

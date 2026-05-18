@@ -19,6 +19,15 @@ public static class DslFilterConverter
         if (node is LogicalNode logical)
             return ConvertLogical(logical);
 
+        if (node is RelationshipNode rel)
+        {
+            return new FilterGroup
+            {
+                Logic = LogicOperator.And,
+                Filters = [ConvertRelationship(rel)]
+            };
+        }
+
         return new FilterGroup
         {
             Logic = LogicOperator.And,
@@ -41,10 +50,33 @@ public static class DslFilterConverter
                 continue;
             }
 
+            if (child is RelationshipNode rel)
+            {
+                group.Filters.Add(ConvertRelationship(rel));
+                continue;
+            }
+
             group.Groups.Add(ToFilterGroup(child));
         }
 
         return group;
+    }
+
+    private static FilterCondition ConvertRelationship(RelationshipNode node)
+    {
+        var cond = new FilterCondition
+        {
+            Field = node.Property,
+            Operator = node.Quantifier.ToLowerInvariant(),
+            ScopedFilter = node.ScopedFilter != null ? ToFilterGroup(node.ScopedFilter) : null
+        };
+
+        if (node.Operator != null)
+        {
+            cond.Value = $"{node.Operator}:{node.Value}";
+        }
+
+        return cond;
     }
 
     private static FilterCondition ConvertCondition(ConditionNode node)

@@ -76,6 +76,41 @@ public sealed class DslParser
             return new NotNode(inner);
         }
 
+        if (Current.Kind == DslTokenKind.Identifier && (Current.Value.Contains(".any", StringComparison.OrdinalIgnoreCase) 
+            || Current.Value.Contains(".all", StringComparison.OrdinalIgnoreCase)
+            || Current.Value.Contains(".count", StringComparison.OrdinalIgnoreCase)))
+        {
+            var val = Current.Value;
+            var dotIndex = val.LastIndexOf('.');
+            var property = val.Substring(0, dotIndex);
+            var quantifier = val.Substring(dotIndex + 1);
+            
+            _position++; // consume identifier
+            
+            if (Match(DslTokenKind.OpenParen))
+            {
+                DslAstNode? inner = null;
+                if (Current.Kind != DslTokenKind.CloseParen)
+                {
+                    inner = ParseOr();
+                }
+                Expect(DslTokenKind.CloseParen);
+                
+                if (quantifier.Equals("count", StringComparison.OrdinalIgnoreCase) && Match(DslTokenKind.Colon))
+                {
+                    var op = Expect(DslTokenKind.Identifier).Value;
+                    Expect(DslTokenKind.Colon);
+                    var value = Expect(DslTokenKind.Identifier).Value;
+                    return new RelationshipNode(property, quantifier, inner, op, value);
+                }
+
+                return new RelationshipNode(property, quantifier, inner);
+            }
+            
+            // Revert if no paren (fallback to plain condition)
+            _position--;
+        }
+
         if (Match(DslTokenKind.OpenParen))
         {
             var node = ParseOr();

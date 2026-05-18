@@ -43,7 +43,7 @@ public sealed class TypeCompatibilityRule : IValidationRule
                 }
 
                 // 2. Check Value Compatibility (Simple types)
-                if (filter.Value != null)
+                if (filter.Value != null && op != FilterOperators.Any && op != FilterOperators.All && op != FilterOperators.Count)
                 {
                     if (!CanConvert(filter.Value, propertyType))
                     {

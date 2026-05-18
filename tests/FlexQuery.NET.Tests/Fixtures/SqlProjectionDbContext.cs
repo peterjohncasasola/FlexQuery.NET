@@ -1,5 +1,6 @@
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
+using FlexQuery.NET.Tests.Models;
 
 namespace FlexQuery.NET.Tests.Fixtures;
 
@@ -43,6 +44,7 @@ public sealed class SqlProjectionDbContext : DbContext, IDisposable
         {
             entity.HasKey(x => x.Id);
             entity.Property(x => x.Number).IsRequired();
+            entity.Property(x => x.Total).HasColumnType("NUMERIC");
             entity.HasMany(x => x.Items)
                 .WithOne(x => x.Order)
                 .HasForeignKey(x => x.OrderId);
@@ -95,7 +97,7 @@ public sealed class SqlProjectionDbContext : DbContext, IDisposable
                         Id = 10,
                         Number = "SO-001",
                         Total = 125.50m,
-                        CreatedAtUtc = new DateTime(2025, 1, 1, 8, 0, 0, DateTimeKind.Utc),
+                        OrderDate = new DateTime(2025, 1, 1, 8, 0, 0, DateTimeKind.Utc),
                         Items =
                         [
                             new SqlOrderItem { Id = 1000, Sku = "SKU-AAA" },
@@ -107,7 +109,7 @@ public sealed class SqlProjectionDbContext : DbContext, IDisposable
                         Id = 11,
                         Number = "SO-002",
                         Total = 45.00m,
-                        CreatedAtUtc = new DateTime(2025, 1, 2, 8, 0, 0, DateTimeKind.Utc),
+                        OrderDate = new DateTime(2025, 1, 2, 8, 0, 0, DateTimeKind.Utc),
                         Items =
                         [
                             new SqlOrderItem { Id = 1002, Sku = "SKU-CCC" }
@@ -129,7 +131,7 @@ public sealed class SqlProjectionDbContext : DbContext, IDisposable
                         Id = 12,
                         Number = "SO-003",
                         Total = 99.00m,
-                        CreatedAtUtc = new DateTime(2025, 1, 3, 8, 0, 0, DateTimeKind.Utc)
+                        OrderDate = new DateTime(2025, 1, 3, 8, 0, 0, DateTimeKind.Utc)
                     }
                 ]
             };
@@ -147,7 +149,7 @@ public sealed class SqlProjectionDbContext : DbContext, IDisposable
                         Id = 13,
                         Number = "SO-004",
                         Total = 10.00m,
-                        CreatedAtUtc = new DateTime(2025, 1, 4, 8, 0, 0, DateTimeKind.Utc)
+                        OrderDate = new DateTime(2025, 1, 4, 8, 0, 0, DateTimeKind.Utc)
                     }
                 ]
             };
@@ -158,40 +160,4 @@ public sealed class SqlProjectionDbContext : DbContext, IDisposable
 
         return context;
     }
-}
-
-public sealed class SqlCustomer
-{
-    public int Id { get; set; }
-    public string Name { get; set; } = string.Empty;
-    public string Email { get; set; } = string.Empty;
-    public SqlAddress? Address { get; set; }
-    public List<SqlOrder> Orders { get; set; } = [];
-}
-
-public sealed class SqlAddress
-{
-    public int Id { get; set; }
-    public string City { get; set; } = string.Empty;
-    public int CustomerId { get; set; }
-    public SqlCustomer Customer { get; set; } = null!;
-}
-
-public sealed class SqlOrder
-{
-    public int Id { get; set; }
-    public string Number { get; set; } = string.Empty;
-    public decimal Total { get; set; }
-    public DateTime CreatedAtUtc { get; set; }
-    public int CustomerId { get; set; }
-    public SqlCustomer Customer { get; set; } = null!;
-    public List<SqlOrderItem> Items { get; set; } = [];
-}
-
-public sealed class SqlOrderItem
-{
-    public int Id { get; set; }
-    public string Sku { get; set; } = string.Empty;
-    public int OrderId { get; set; }
-    public SqlOrder Order { get; set; } = null!;
 }

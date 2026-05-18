@@ -3,6 +3,66 @@
 All notable changes to this project will be documented in this file.
 
 ---
+## [3.0.0] - 2026-05-15
+
+### Added
+- **.NET 10.0 Support**: Added support for `.NET 10.0` (`net10.0`) across all packages (`FlexQuery.NET`, `FlexQuery.NET.EFCore`, `FlexQuery.NET.Dapper`, `FlexQuery.NET.AspNetCore`, `FlexQuery.NET.MiniOData`).
+- **Internal Options Base Class**: Introduced `BaseQueryExecutionOptions` to clean up and consolidate core options and security configuration fields.
+- **Automatic OData Parser Discovery**: Implemented automatic reflection-based detection and registration of `MiniODataParser` within `QueryOptionsParser` to enable zero-configuration OData query parsing.
+- **FlexQuery.NET.Dapper Package**:
+  - Full support for Dapper as a high-performance query engine.
+  - Polymorphic `ISqlDialect` system supporting SQL Server, PostgreSQL, MySQL, MariaDB, SQLite, and Oracle.
+  - Automatic dialect resolution via `ISqlDialectResolver` based on `DbConnection` types.
+  - Secure SQL translation engine with parameterization and identifier quoting.
+- **Relationship Query Semantics for Dapper**:
+  - Implemented `any()`, `all()`, and `count()` semantics using efficient `EXISTS` and correlated subqueries.
+  - Support for `include` and Filtered Includes using `LEFT JOIN` syntax.
+  - Semantic parity with EF Core relationship queries.
+- **Dapper AST & Translators**:
+  - Dedicated AST nodes for relationship queries, decoupled from core models.
+  - Specialized translators for Includes, Existence checks, and Counts.
+- **Dapper Query Engine Stabilization**:
+  - Reimplemented `SqlCountTranslator` to use convention‑based `RelationshipMapping` via `IMappingRegistry`.
+  - Added missing `using FlexQuery.NET.Dapper.Mapping.Metadata` to `SqlExistsTranslator` and `SqlIncludeTranslator`.
+  - Fixed string interpolation issues and removed redundant `Metadata.` prefixes.
+  - Refactored Dapper mapping system to convention‑over‑configuration using `IMappingRegistry`.
+- **Test Suite Integrity**:
+  - Updated `SqlTranslatorTests` to register `TestRole` (`ToTable("roles")`) and adjusted assertions for proper quoted SQL (`[roles].[UserId] = [users].[Id]`).
+  - Fixed navigation‑property test to expect table name `[TestEntities]`.
+  - Resolved CS1022 / CS1519 syntax errors in translation files.
+- **FlexQuery.NET.MiniOData Package**:
+  - Lightweight OData-compatible query syntax adapter — completely optional, zero core dependencies.
+  - Parses `$filter`, `$orderby`, `$select`, `$top`, `$skip`, `$expand`, and `$count` into the unified FlexQuery AST.
+  - OData filter parser supporting binary comparisons (`eq`, `ne`, `gt`, `ge`, `lt`, `le`), function calls (`contains`, `startswith`, `endswith`), logical operators (`and`, `or`, `not`), grouping, null checks, `in` lists, and lambda navigation (`any`/`all`).
+  - Automatic OData path separator (`/`) to dot-notation conversion.
+  - `$` prefix stripping for seamless compatibility with both `$filter` and `filter` key formats.
+  - Lambda variable stripping for `any(o: o/status eq 'active')` expressions.
+  - DI registration via `services.AddFlexQueryMiniOData()`.
+  - Multi-targeting support for .NET 6, 8, and 10.
+- **Mini OData ↔ Native DSL Equivalence**:
+  - 63 comprehensive tests verifying AST equivalence between Native DSL and Mini OData syntaxes.
+  - Proven semantic parity: both parsers produce identical `FilterGroup`, `SortNode`, and `QueryOptions` structures.
+  - Full solution test suite: 431 tests passing.
+
+### Changed
+- **JQL Status Promotion**: Removed obsolete/deprecation attributes from JQL parser components (`JqlParser`, `FlexQueryParameters.Query`, and `QuerySyntax.Jql`), reinstating JQL as a first-class supported query syntax option alongside DSL and OData.
+- **Mini OData Cleanups**: Streamlined the dynamic registration calls and brought in namespaces natively in `ServiceCollectionExtensions`.
+- **Dapper Parameter Binding**: Simplified and optimized clean parameter naming iteration in `FlexQueryDapperExtensions`.
+- **Documentation Refactoring**: Reorganized the main `README.md` with new .NET 10.0 badges, dark-mode logo assets, and streamlined links.
+- **Mapping Registry Evolution**: Updated `JoinInfo` to support `TargetType`, enabling deep property resolution for related entity filters in Dapper.
+- **Dapper Multi-Targeting**: Updated support to target `.net6.0`, `.net8.0`, and `.net10.0` in the Dapper package (dropping EOL `.net7.0`).
+- **Internal Reorganization**: Moved SQL translators to a dedicated `Translators` folder and namespace for better maintainability.
+
+### Removed (Breaking Changes)
+- **.NET 7.0 EOL Drop**: Dropped support for `.NET 7.0` (reached end-of-life on May 14, 2024) across all projects.
+- **Obsolete APIs Cleanup**: Fully removed deprecated and legacy methods that were scheduled for removal:
+  - `ToQueryResultAsync` and `ToProjectedQueryResultAsync` from `QueryableEfCoreExtensions`.
+  - `ToQueryResult`, `ToProjectedQueryResult`, and `ApplyQueryOptions` from `QueryableExtensions`.
+  - `Validate` and `ApplyValidatedQueryOptions` overloads from `ValidationExtensions`.
+  - `QueryOptionsParser.Parse(QueryRequest)` helper from `QueryOptionsParser`.
+  - `SortOption` alias in favor of the unified `SortNode` class.
+
+---
 ## [2.5.0] - 2026-05-10
 
 ### Added
