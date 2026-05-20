@@ -8,5 +8,6 @@ namespace FlexQuery.NET.Dapper.Conventions;
 /// </summary>
 public interface IRelationshipConvention
 {
+    /// <summary>Applies convention-based relationship discovery and configuration.</summary>
     void Apply(EntityMapping mapping, IMappingRegistry registry);
 }

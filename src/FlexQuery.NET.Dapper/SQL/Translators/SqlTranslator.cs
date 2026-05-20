@@ -13,7 +13,7 @@ namespace FlexQuery.NET.Dapper.Sql.Translators;
 /// </summary>
 public interface ISqlTranslator
 {
-    /// <summary>Translates QueryOptions into a SQL command.</summary>
+    /// <summary>Translates QueryOptions into fully parameterized SQL.</summary>
     SqlCommand Translate(QueryOptions options);
 }
 
@@ -30,6 +30,7 @@ public sealed class SqlTranslator : ISqlTranslator
     private readonly SqlCountTranslator _countTranslator;
     private int _parameterIndex;
 
+    /// <summary>Creates a new SQL translator.</summary>
     public SqlTranslator(IMappingRegistry mappingRegistry, ISqlDialect dialect)
     {
         _mappingRegistry = mappingRegistry;
@@ -39,6 +40,7 @@ public sealed class SqlTranslator : ISqlTranslator
         _countTranslator = new SqlCountTranslator(dialect);
     }
 
+    /// <summary>Translates the query options into a complete SQL command with parameters.</summary>
     public SqlCommand Translate(QueryOptions options)
     {
         _parameterIndex = 0;
@@ -77,6 +79,7 @@ public sealed class SqlTranslator : ISqlTranslator
 
     private string NextParam() => _dialect.CreateParameterName($"p{_parameterIndex++}");
 
+    /// <summary>Builds the SELECT clause including main entity columns and included entity columns.</summary>
     private string BuildSelectClause(QueryOptions options, IEntityMapping mapping, string distinctClause)
     {
         var distinctPrefix = !string.IsNullOrEmpty(distinctClause) ? $"{distinctClause} " : string.Empty;
@@ -280,7 +283,7 @@ public sealed class SqlTranslator : ISqlTranslator
             var node = new CountExpressionNode 
             { 
                 NavigationProperty = condition.Field, 
-                ScopedFilter = condition.ScopedFilter,
+                ScopedFilter = condition.ScopedFilter!,
                 Operator = segments[0],
                 Value = segments[1]
             };

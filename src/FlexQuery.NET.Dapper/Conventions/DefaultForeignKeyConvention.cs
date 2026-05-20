@@ -8,6 +8,7 @@ namespace FlexQuery.NET.Dapper.Conventions;
 /// </summary>
 public class DefaultForeignKeyConvention : IForeignKeyConvention
 {
+    /// <summary>Infers the foreign key column name for the given navigation property and relationship type.</summary>
     public string GetForeignKeyName(PropertyInfo navigationProperty, Type targetType, RelationshipType relationshipType, Type entityType)
     {
         if (relationshipType == RelationshipType.OneToMany)

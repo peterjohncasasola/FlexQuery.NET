@@ -7,5 +7,6 @@ namespace FlexQuery.NET.Dapper.Conventions;
 /// </summary>
 public interface IEntityConvention
 {
+    /// <summary>Applies convention-based mapping rules to the given entity mapping.</summary>
     void Apply(EntityMapping mapping);
 }

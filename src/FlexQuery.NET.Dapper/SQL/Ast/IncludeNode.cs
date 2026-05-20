@@ -7,6 +7,8 @@ namespace FlexQuery.NET.Dapper.Sql.Ast;
 /// </summary>
 public class IncludeNode
 {
+    /// <summary>The navigation property name on the parent entity.</summary>
     public string NavigationProperty { get; set; } = string.Empty;
+    /// <summary>Optional filter applied to the included entity.</summary>
     public FilterGroup? Filter { get; set; }
 }

@@ -17,32 +17,37 @@ namespace FlexQuery.NET.Dapper.Dialects;
 /// </summary>
 public sealed class MariaDbDialect : ISqlDialect
 {
-    /// <summary>MariaDB uses ? parameter prefix with MariaDB Connector/NET and MySqlConnector.</summary>
+    /// <summary>MariaDB parameter prefix, used by MariaDB Connector/NET and MySqlConnector.</summary>
     public string ParameterPrefix => "?";
 
+    /// <summary>SQL expression for COUNT.</summary>
     public string GetCountExpression => "COUNT(1)";
 
-    /// <summary>MariaDB treats TRUE as 1 and FALSE as 0, but supports TRUE/FALSE keywords in SQL mode.</summary>
+    /// <summary>MariaDB TRUE literal.</summary>
     public string BooleanTrue => "TRUE";
+    /// <summary>MariaDB FALSE literal.</summary>
     public string BooleanFalse => "FALSE";
 
-    /// <summary>MariaDB uses backtick quoting for identifiers (same as MySQL).</summary>
+    /// <summary>MariaDB identifier quote prefix.</summary>
     public char QuotePrefix => '`';
+    /// <summary>MariaDB identifier quote suffix.</summary>
     public char QuoteSuffix => '`';
 
+    /// <summary>Quotes an identifier using backtick characters.</summary>
     public string QuoteIdentifier(string identifier) => $"`{identifier}`";
 
-    /// <summary>MariaDB uses the same LIMIT/OFFSET pagination syntax as MySQL.</summary>
+    /// <summary>Generates a LIMIT/OFFSET pagination clause.</summary>
     public string GetPagingClause(string offsetParam, string limitParam)
         => $"LIMIT {limitParam} OFFSET {offsetParam}";
 
-    /// <summary>MariaDB supports LIMIT without OFFSET for top-N queries.</summary>
+    /// <summary>Generates a LIMIT clause for top-N queries.</summary>
     public string GetLimitExpression(string limitParam)
         => $"LIMIT {limitParam}";
 
-    /// <summary>MariaDB uses CONCAT() function for string concatenation.</summary>
+    /// <summary>Concatenates expressions using the CONCAT() function.</summary>
     public string Concatenate(params string[] parts)
         => "CONCAT(" + string.Join(", ", parts) + ")";
 
+    /// <summary>Prepends the parameter prefix to a parameter name.</summary>
     public string CreateParameterName(string name) => $"?{name}";
 }

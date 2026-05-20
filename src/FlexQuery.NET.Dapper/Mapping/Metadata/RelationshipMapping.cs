@@ -7,11 +7,15 @@ namespace FlexQuery.NET.Dapper.Mapping.Metadata;
 /// </summary>
 public sealed class RelationshipMapping
 {
+    /// <summary>The reflection PropertyInfo for the navigation property.</summary>
     public PropertyInfo NavigationProperty { get; }
+    /// <summary>The name of the navigation property.</summary>
     public string NavigationPropertyName => NavigationProperty.Name;
     
+    /// <summary>The target entity type of the relationship.</summary>
     public Type TargetType { get; set; }
     
+    /// <summary>The type of relationship between the two entities.</summary>
     public RelationshipType RelationshipType { get; set; }
     
     /// <summary>

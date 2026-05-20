@@ -18,32 +18,34 @@ namespace FlexQuery.NET.Dapper.Dialects;
 /// </summary>
 public sealed class SqliteDialect : ISqlDialect
 {
-    /// <summary>SQLite uses @ parameter prefix with Microsoft.Data.Sqlite.</summary>
+    /// <summary>SQLite parameter prefix, used by Microsoft.Data.Sqlite.</summary>
     public string ParameterPrefix => "@";
-
+    /// <summary>SQL expression for COUNT.</summary>
     public string GetCountExpression => "COUNT(1)";
-
-    /// <summary>SQLite does not have native TRUE/FALSE keywords; uses 1 and 0.</summary>
+    /// <summary>SQLite TRUE literal (uses 1 for booleans).</summary>
     public string BooleanTrue => "1";
+    /// <summary>SQLite FALSE literal (uses 0 for booleans).</summary>
     public string BooleanFalse => "0";
-
-    /// <summary>SQLite uses double-quote identifier escaping (ANSI SQL).</summary>
+    /// <summary>SQLite identifier quote prefix (double quote, ANSI SQL style).</summary>
     public char QuotePrefix => '"';
+    /// <summary>SQLite identifier quote suffix (double quote, ANSI SQL style).</summary>
     public char QuoteSuffix => '"';
 
+    /// <summary>Quotes an identifier using double-quote characters.</summary>
     public string QuoteIdentifier(string identifier) => $"\"{identifier}\"";
 
-    /// <summary>SQLite uses LIMIT/OFFSET for pagination.</summary>
+    /// <summary>Generates a LIMIT/OFFSET pagination clause.</summary>
     public string GetPagingClause(string offsetParam, string limitParam)
         => $"LIMIT {limitParam} OFFSET {offsetParam}";
 
-    /// <summary>SQLite supports LIMIT for top-N queries without OFFSET.</summary>
+    /// <summary>Generates a LIMIT clause for top-N queries.</summary>
     public string GetLimitExpression(string limitParam)
         => $"LIMIT {limitParam}";
 
-    /// <summary>SQLite uses || operator for string concatenation (same as PostgreSQL).</summary>
+    /// <summary>Concatenates expressions using the || operator.</summary>
     public string Concatenate(params string[] parts)
         => string.Join(" || ", parts);
 
+    /// <summary>Prepends the parameter prefix to a parameter name.</summary>
     public string CreateParameterName(string name) => $"@{name}";
 }

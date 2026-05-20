@@ -5,6 +5,7 @@ namespace FlexQuery.NET.Dapper.Conventions;
 /// </summary>
 public class DefaultPluralizer : IPluralizer
 {
+    /// <summary>Pluralizes an English word using simple rules.</summary>
     public string Pluralize(string name)
     {
         if (string.IsNullOrWhiteSpace(name))

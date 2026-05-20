@@ -21,16 +21,20 @@ public sealed class OracleDialect : ISqlDialect
     /// <summary>Oracle uses : parameter prefix for named parameters.</summary>
     public string ParameterPrefix => ":";
 
+    /// <summary>SQL expression for COUNT.</summary>
     public string GetCountExpression => "COUNT(1)";
 
-    /// <summary>Oracle does not have native TRUE/FALSE in SQL; uses 1 and 0.</summary>
+    /// <summary>Oracle TRUE literal (uses 1 for booleans).</summary>
     public string BooleanTrue => "1";
+    /// <summary>Oracle FALSE literal (uses 0 for booleans).</summary>
     public string BooleanFalse => "0";
 
-    /// <summary>Oracle uses double-quote identifier escaping; identifiers are case-sensitive when quoted.</summary>
+    /// <summary>Oracle identifier quote prefix (double quote).</summary>
     public char QuotePrefix => '"';
+    /// <summary>Oracle identifier quote suffix (double quote).</summary>
     public char QuoteSuffix => '"';
 
+    /// <summary>Quotes an identifier using double-quote characters.</summary>
     public string QuoteIdentifier(string identifier) => $"\"{identifier}\"";
 
     /// <summary>Oracle 12c+ supports OFFSET/FETCH pagination syntax.</summary>
@@ -45,5 +49,6 @@ public sealed class OracleDialect : ISqlDialect
     public string Concatenate(params string[] parts)
         => string.Join(" || ", parts);
 
+    /// <summary>Prepends the parameter prefix to a parameter name.</summary>
     public string CreateParameterName(string name) => $":{name}";
 }

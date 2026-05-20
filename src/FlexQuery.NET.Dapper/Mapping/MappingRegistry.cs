@@ -30,13 +30,17 @@ public sealed class MappingRegistry : IMappingRegistry
         _relationshipConvention = new DefaultRelationshipConvention(foreignKeyConvention);
     }
 
+    /// <summary>Returns or creates the entity mapping for the given type.</summary>
+    /// <summary>Returns or creates the entity mapping for the given type.</summary>
     public IEntityMapping GetMapping(Type entityType)
         => _mappings.GetOrAdd(entityType, CreateAndApplyConventions);
 
     public IEntityMapping GetMapping<T>() => GetMapping(typeof(T));
 
+    /// <summary>Registers an existing entity mapping.</summary>
     public void Register(EntityMapping mapping) => _mappings[mapping.Type] = mapping;
 
+    /// <summary>Returns a fluent builder for the given entity type.</summary>
     public EntityTypeBuilder<TEntity> Entity<TEntity>() where TEntity : class
     {
         var mapping = _mappings.GetOrAdd(typeof(TEntity), CreateAndApplyConventions);

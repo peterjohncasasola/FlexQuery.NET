@@ -1,8 +1,9 @@
 using FlexQuery.NET.Models;
 using FlexQuery.NET.Dapper.Sql;
 using FlexQuery.NET.Dapper.Dialects;
+using FlexQuery.NET.Dapper.Mapping;
 using FlexQuery.NET.Security;
-
+using System.Data.Common;
 
 namespace FlexQuery.NET.Dapper;
 
@@ -23,10 +24,9 @@ public sealed class DapperQueryOptions : BaseQueryOptions
     /// <summary>
     /// Copy constructor - creates a new instance by copying all properties from source.
     /// </summary>
-    /// <param name="source">The source options to copy.</param>
+    /// <summary>Creates default Dapper query options.</summary>
     public DapperQueryOptions(QueryExecutionOptions source)
     {
-        // Copy all properties from the base options
         MaxPageSize = source.MaxPageSize;
         DefaultPageSize = source.DefaultPageSize;
         CaseInsensitiveFields = source.CaseInsensitiveFields;
@@ -45,6 +45,7 @@ public sealed class DapperQueryOptions : BaseQueryOptions
         IncludeTotalCount = true;
     }
 
+    /// <summary>Converts to a base QueryExecutionOptions instance.</summary>
     public QueryExecutionOptions ToQueryExecutionOptions()
     {
         return new QueryExecutionOptions
@@ -65,22 +66,22 @@ public sealed class DapperQueryOptions : BaseQueryOptions
         };
     }
 
-    /// <summary>Global default SQL dialect. If set, overrides the automatic connection-based resolution for all queries unless a specific query provides its own dialect.</summary>
+    /// <summary>Global default SQL dialect for all queries when not explicitly configured.</summary>
     public static ISqlDialect? GlobalDefaultDialect { get; set; }
 
-    /// <summary>Global default resolver for SQL dialects. Defaults to DefaultSqlDialectResolver.</summary>
+    /// <summary>Global default resolver for SQL dialects.</summary>
     public static ISqlDialectResolver GlobalDialectResolver { get; set; } = new DefaultSqlDialectResolver();
 
-    /// <summary>SQL dialect to use for query generation. If null, resolves via GlobalDefaultDialect, then GlobalDialectResolver.</summary>
+    /// <summary>SQL dialect to use for query generation. If null, resolves via GlobalDefaultDialect or GlobalDialectResolver.</summary>
     public ISqlDialect? Dialect { get; set; }
 
-    /// <summary>Entity mapping registry. If null, a new empty registry is used by the translator.</summary>
-    public Mapping.IMappingRegistry MappingRegistry { get; set; } = new Mapping.MappingRegistry();
-    
+    /// <summary>Entity mapping registry. If null, a new registry is created.</summary>
+    public IMappingRegistry? MappingRegistry { get; set; }
+
     /// <summary>Command timeout in seconds.</summary>
     public int CommandTimeoutSeconds { get; set; } = 30;
 
-    /// <summary>Explicitly set the entity type for mapping resolution. If null, use the generic type T from FlexQueryAsync.</summary>
+    /// <summary>Explicitly set the entity type for mapping resolution.</summary>
     public Type? EntityType { get; set; }
 
     /// <summary>
@@ -88,21 +89,21 @@ public sealed class DapperQueryOptions : BaseQueryOptions
     /// </summary>
     public Mapping.Builders.EntityTypeBuilder<TEntity> Entity<TEntity>() where TEntity : class
     {
-        return MappingRegistry.Entity<TEntity>();
+        return (MappingRegistry ?? new Mapping.MappingRegistry()).Entity<TEntity>();
     }
 
     /// <summary>
-    /// Scans the given assembly for types that match typical entity conventions
-    /// (e.g., classes that aren't abstract, are public, and perhaps have key properties).
+    /// Scans the given assembly for entity types.
     /// </summary>
+    /// <summary>Scans the given assembly for entity types and registers them.</summary>
     public void ScanEntitiesFromAssembly(System.Reflection.Assembly assembly)
     {
+        var registry = MappingRegistry ?? new Mapping.MappingRegistry();
         var types = assembly.GetTypes()
             .Where(t => t.IsClass && !t.IsAbstract && t.IsPublic);
 
         foreach (var type in types)
         {
-            // Only scan types that have an Id or Key property, or a Table attribute
             var hasKey = type.GetProperties().Any(p => 
                 p.Name.Equals("Id", StringComparison.OrdinalIgnoreCase) || 
                 p.Name.Equals(type.Name + "Id", StringComparison.OrdinalIgnoreCase) ||
@@ -112,8 +113,29 @@ public sealed class DapperQueryOptions : BaseQueryOptions
 
             if (hasKey || hasTable)
             {
-                MappingRegistry.GetMapping(type);
+                registry.GetMapping(type);
             }
         }
+
+        if (MappingRegistry == null)
+            MappingRegistry = registry;
+    }
+
+    /// <summary>
+    /// Resolves the dialect by checking: explicit setting, GlobalDefaultDialect, GlobalDialectResolver.
+    /// </summary>
+    internal ISqlDialect ResolveDialect(DbConnection connection)
+    {
+        return Dialect 
+            ?? GlobalDefaultDialect 
+            ?? GlobalDialectResolver.Resolve(connection);
+    }
+
+    /// <summary>
+    /// Resolves the mapping registry from explicit setting or creates a new one.
+    /// </summary>
+    internal IMappingRegistry ResolveMappingRegistry()
+    {
+        return MappingRegistry ?? new Mapping.MappingRegistry();
     }
 }

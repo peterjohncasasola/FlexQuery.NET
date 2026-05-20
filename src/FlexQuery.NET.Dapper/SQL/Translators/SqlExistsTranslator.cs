@@ -20,6 +20,7 @@ public class SqlExistsTranslator
     /// <summary>
     /// Translates an ANY condition into an EXISTS subquery.
     /// </summary>
+    /// <summary>Translates an AnyExpressionNode into an EXISTS subquery fragment.</summary>
     public string TranslateAny(AnyExpressionNode node, IEntityMapping mapping, Func<FlexQuery.NET.Models.FilterGroup, string> filterBuilder, IMappingRegistry registry)
     {
         var rel = mapping.GetRelationship(node.NavigationProperty);
@@ -39,6 +40,7 @@ public class SqlExistsTranslator
     /// <summary>
     /// Translates an ALL condition into a NOT EXISTS subquery.
     /// </summary>
+    /// <summary>Translates an AllExpressionNode into a NOT EXISTS subquery fragment.</summary>
     public string TranslateAll(AllExpressionNode node, IEntityMapping mapping, Func<FlexQuery.NET.Models.FilterGroup, string> filterBuilder, IMappingRegistry registry)
     {
         var rel = mapping.GetRelationship(node.NavigationProperty);

@@ -17,6 +17,7 @@ public class DefaultEntityConvention : IEntityConvention
         _pluralizer = pluralizer;
     }
 
+    /// <summary>Applies entity-level conventions (table name, column names, primary key detection) to the mapping.</summary>
     public void Apply(EntityMapping mapping)
     {
         var type = mapping.Type;

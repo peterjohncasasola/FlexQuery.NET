@@ -19,6 +19,7 @@ public class SqlCountTranslator
     /// <summary>
     /// Translates a count condition into a correlated COUNT subquery.
     /// </summary>
+    /// <summary>Translates a count AST node into a correlated COUNT subquery fragment.</summary>
     public string Translate(
         CountExpressionNode node,
         IEntityMapping mapping,

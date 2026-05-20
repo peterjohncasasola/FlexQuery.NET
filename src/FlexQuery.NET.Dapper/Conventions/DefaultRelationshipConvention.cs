@@ -18,6 +18,7 @@ public class DefaultRelationshipConvention : IRelationshipConvention
         _foreignKeyConvention = foreignKeyConvention;
     }
 
+    /// <summary>Applies relationship-level conventions: discovers navigation properties, infers foreign keys, and registers relationships.</summary>
     public void Apply(EntityMapping mapping, IMappingRegistry registry)
     {
         var type = mapping.Type;
