@@ -1,6 +1,7 @@
 using FlexQuery.NET.Models;
 using FlexQuery.NET.Constants;
 using FlexQuery.NET.Dapper.Mapping;
+using FlexQuery.NET.Dapper.Mapping.Metadata;
 using FlexQuery.NET.Dapper.Dialects;
 using FlexQuery.NET.Dapper.Sql.Ast;
 using FlexQuery.NET.Security;
@@ -48,18 +49,19 @@ public sealed class SqlTranslator : ISqlTranslator
 
         var entityType = options.Items.TryGetValue("EntityType", out var type) ? (Type)type : typeof(object);
         var mapping = _mappingRegistry.GetMapping(entityType);
+        var selectTree = Helpers.SelectTreeBuilder.Build(options);
 
-        if (options.Includes?.Count > 0 || options.FilteredIncludes?.Count > 0)
+        if (options.Includes?.Count > 0 || options.FilteredIncludes?.Count > 0 || selectTree.HasChildren)
         {
             mapping.TableAlias = mapping.TableName;
         }
 
         var distinctClause = options.Distinct == true ? "DISTINCT" : string.Empty;
-        var selectClause = BuildSelectClause(options, mapping, distinctClause);
+        var selectClause = BuildSelectClause(options, mapping, distinctClause, selectTree);
         var fromClause = string.IsNullOrEmpty(mapping.TableAlias)
             ? $"FROM {_dialect.QuoteIdentifier(mapping.TableName)}"
             : $"FROM {_dialect.QuoteIdentifier(mapping.TableName)} AS {_dialect.QuoteIdentifier(mapping.TableAlias)}";
-        var joinClause = BuildJoinClause(options, mapping, parameters);
+        var joinClause = BuildJoinClause(options, mapping, parameters, selectTree);
         var whereClause = BuildWhereClause(options.Filter, mapping, parameters);
         var groupByClause = BuildGroupByClause(options.GroupBy, mapping);
         var havingClause = BuildHavingClause(options.Having, mapping, parameters);
@@ -79,8 +81,8 @@ public sealed class SqlTranslator : ISqlTranslator
 
     private string NextParam() => _dialect.CreateParameterName($"p{_parameterIndex++}");
 
-    /// <summary>Builds the SELECT clause including main entity columns and included entity columns.</summary>
-    private string BuildSelectClause(QueryOptions options, IEntityMapping mapping, string distinctClause)
+    /// <summary>Builds the SELECT clause by recursively walking the SelectionNode AST.</summary>
+    private string BuildSelectClause(QueryOptions options, IEntityMapping mapping, string distinctClause, SelectionNode selectTree)
     {
         var distinctPrefix = !string.IsNullOrEmpty(distinctClause) ? $"{distinctClause} " : string.Empty;
         var selectParts = new List<string>();
@@ -111,61 +113,85 @@ public sealed class SqlTranslator : ISqlTranslator
             return $"SELECT {distinctPrefix}{string.Join(", ", selectParts)}";
         }
 
-        // 1. Add Main Entity Columns
-        if (options.Select?.Count > 0)
-        {
-            foreach (var s in options.Select)
-            {
-                selectParts.Add(QuoteColumn(mapping.GetColumnName(s), mapping));
-            }
-        }
-        else if (options.GroupBy?.Count > 0)
+        if (options.GroupBy?.Count > 0)
         {
             foreach (var g in options.GroupBy)
             {
                 selectParts.Add(QuoteColumn(mapping.GetColumnName(g), mapping));
             }
+            return $"SELECT {distinctPrefix}{string.Join(", ", selectParts)}";
         }
-        else
+
+        TraverseSelectTree(selectTree, mapping, mapping.TableAlias, string.Empty, selectParts);
+
+        if (selectParts.Count == 0)
         {
+            // Fallback if AST is totally empty
             foreach (var p in mapping.GetProperties())
             {
                 selectParts.Add(QuoteColumn(mapping.GetColumnName(p), mapping));
             }
         }
 
-        // 2. Add Included Entity Columns (Flat mapping for Dapper)
-        if (options.Includes != null)
-        {
-            foreach (var include in options.Includes)
-            {
-                var rel = mapping.GetRelationship(include);
-                if (rel != null)
-                {
-                    var targetMapping = _mappingRegistry.GetMapping(rel.TargetType);
-                    var targetAlias = rel.NavigationPropertyName; // Use mapped property name for alias
-                    foreach (var prop in targetMapping.GetProperties())
-                    {
-                        var col = targetMapping.GetColumnName(prop);
-                        // Prefix with mapped navigation property name for hydration
-                        var quotedAlias = _dialect.QuoteIdentifier(targetAlias);
-                        var quotedCol = _dialect.QuoteIdentifier(col);
-                        var aliasForHydration = _dialect.QuoteIdentifier(rel.NavigationPropertyName + "_" + col);
-                        selectParts.Add($"{quotedAlias}.{quotedCol} AS {aliasForHydration}");
-                    }
-                }
-            }
-        }
-
         return $"SELECT {distinctPrefix}{string.Join(", ", selectParts)}";
     }
 
-    private string BuildJoinClause(QueryOptions options, IEntityMapping mapping, Dictionary<string, object?> parameters)
+    private void TraverseSelectTree(SelectionNode node, IEntityMapping currentMapping, string? currentAlias, string prefix, List<string> selectParts)
+    {
+        bool hasSpecificFields = false;
+
+        foreach (var child in node.EnumerateChildren())
+        {
+            var rel = currentMapping.GetRelationship(child.Key);
+            if (rel != null)
+            {
+                // It's a navigation property
+                var targetMapping = _mappingRegistry.GetMapping(rel.TargetType);
+                var nextPrefix = prefix + rel.NavigationPropertyName + "_";
+                var nextAlias = rel.NavigationPropertyName; // Dapper extensions use this
+
+                TraverseSelectTree(child.Value, targetMapping, nextAlias, nextPrefix, selectParts);
+            }
+            else
+            {
+                // It's a regular property
+                hasSpecificFields = true;
+                var col = currentMapping.GetColumnName(child.Key);
+                var outputName = child.Value.Alias ?? (prefix + col);
+                
+                var quotedAlias = string.IsNullOrEmpty(currentAlias) ? "" : _dialect.QuoteIdentifier(currentAlias) + ".";
+                var quotedCol = _dialect.QuoteIdentifier(col);
+                var quotedOutput = _dialect.QuoteIdentifier(outputName);
+                
+                selectParts.Add($"{quotedAlias}{quotedCol} AS {quotedOutput}");
+            }
+        }
+
+        if (node.IncludeAllScalars || (!hasSpecificFields && !node.HasChildren))
+        {
+            foreach (var prop in currentMapping.GetProperties())
+            {
+                var col = currentMapping.GetColumnName(prop);
+                var outputName = prefix + col;
+
+                var quotedAlias = string.IsNullOrEmpty(currentAlias) ? "" : _dialect.QuoteIdentifier(currentAlias) + ".";
+                var quotedCol = _dialect.QuoteIdentifier(col);
+                var quotedOutput = _dialect.QuoteIdentifier(outputName);
+                
+                selectParts.Add($"{quotedAlias}{quotedCol} AS {quotedOutput}");
+            }
+        }
+    }
+
+    private string BuildJoinClause(QueryOptions options, IEntityMapping mapping, Dictionary<string, object?> parameters, SelectionNode selectTree)
     {
         var joins = new List<string>();
         var joinedPaths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
-        // Handle Filtered Includes (more specific)
+        // 1. Infer joins from deep projection tree
+        TraverseJoinTree(selectTree, mapping, mapping.TableAlias, joins, joinedPaths, parameters);
+
+        // 2. Explicit Includes and Filtered Includes
         if (options.FilteredIncludes != null)
         {
             foreach (var filteredInclude in options.FilteredIncludes)
@@ -205,6 +231,49 @@ public sealed class SqlTranslator : ISqlTranslator
         }
 
         return string.Join(" ", joins);
+    }
+
+    private void TraverseJoinTree(SelectionNode node, IEntityMapping currentMapping, string? parentAlias, List<string> joins, HashSet<string> joinedPaths, Dictionary<string, object?> parameters)
+    {
+        foreach (var child in node.EnumerateChildren())
+        {
+            var rel = currentMapping.GetRelationship(child.Key);
+            if (rel != null)
+            {
+                var childAlias = rel.NavigationPropertyName;
+                
+                if (joinedPaths.Add(childAlias))
+                {
+                    var targetMapping = _mappingRegistry.GetMapping(rel.TargetType);
+                    
+                    var parentRef = string.IsNullOrEmpty(parentAlias) ? currentMapping.TableName : parentAlias;
+                    
+                    string joinCondition = rel.RelationshipType switch
+                    {
+                        RelationshipType.OneToMany => $"{_dialect.QuoteIdentifier(childAlias)}.{_dialect.QuoteIdentifier(rel.ForeignKey)} = {_dialect.QuoteIdentifier(parentRef)}.{_dialect.QuoteIdentifier(currentMapping.GetColumnName(rel.PrincipalKey ?? "Id"))}",
+                        RelationshipType.ManyToOne => $"{_dialect.QuoteIdentifier(parentRef)}.{_dialect.QuoteIdentifier(rel.ForeignKey)} = {_dialect.QuoteIdentifier(childAlias)}.{_dialect.QuoteIdentifier(targetMapping.GetColumnName(rel.PrincipalKey ?? "Id"))}",
+                        _ => "1=0"
+                    };
+
+                    var sql = $"LEFT JOIN {_dialect.QuoteIdentifier(targetMapping.TableName)} AS {_dialect.QuoteIdentifier(childAlias)} ON {joinCondition}";
+                    
+                    if (child.Value.Filter != null)
+                    {
+                        var filterSql = BuildFilterGroupExpression(child.Value.Filter, targetMapping, parameters);
+                        if (!string.IsNullOrEmpty(filterSql))
+                            sql += $" AND ({filterSql})";
+                    }
+
+                    joins.Add(sql);
+                    TraverseJoinTree(child.Value, targetMapping, childAlias, joins, joinedPaths, parameters);
+                }
+                else
+                {
+                    var targetMapping = _mappingRegistry.GetMapping(rel.TargetType);
+                    TraverseJoinTree(child.Value, targetMapping, childAlias, joins, joinedPaths, parameters);
+                }
+            }
+        }
     }
 
     private string BuildWhereClause(FilterGroup? filter, IEntityMapping mapping, Dictionary<string, object?> parameters)
