@@ -8,20 +8,13 @@ namespace FlexQuery.NET.Dapper.Sql.Translators;
 /// <summary>
 /// Translator for relationship existence queries (Any/All).
 /// </summary>
-public class SqlExistsTranslator
+public class SqlExistsTranslator(ISqlDialect dialect)
 {
-    private readonly ISqlDialect _dialect;
-
-    public SqlExistsTranslator(ISqlDialect dialect)
-    {
-        _dialect = dialect;
-    }
-
     /// <summary>
     /// Translates an ANY condition into an EXISTS subquery.
     /// </summary>
     /// <summary>Translates an AnyExpressionNode into an EXISTS subquery fragment.</summary>
-    public string TranslateAny(AnyExpressionNode node, IEntityMapping mapping, Func<FlexQuery.NET.Models.FilterGroup, string> filterBuilder, IMappingRegistry registry)
+    public string TranslateAny(AnyExpressionNode node, IEntityMapping mapping, Func<Models.FilterGroup, string> filterBuilder, IMappingRegistry registry)
     {
         var rel = mapping.GetRelationship(node.NavigationProperty);
         if (rel == null) return string.Empty;
@@ -34,14 +27,14 @@ public class SqlExistsTranslator
             ? joinCondition 
             : $"{joinCondition} AND ({subqueryFilter})";
 
-        return $"EXISTS (SELECT 1 FROM {_dialect.QuoteIdentifier(targetMapping.TableName)} WHERE {subqueryWhere})";
+        return $"EXISTS (SELECT 1 FROM {dialect.QuoteIdentifier(targetMapping.TableName)} WHERE {subqueryWhere})";
     }
 
     /// <summary>
     /// Translates an ALL condition into a NOT EXISTS subquery.
     /// </summary>
     /// <summary>Translates an AllExpressionNode into a NOT EXISTS subquery fragment.</summary>
-    public string TranslateAll(AllExpressionNode node, IEntityMapping mapping, Func<FlexQuery.NET.Models.FilterGroup, string> filterBuilder, IMappingRegistry registry)
+    public string TranslateAll(AllExpressionNode node, IEntityMapping mapping, Func<Models.FilterGroup, string> filterBuilder, IMappingRegistry registry)
     {
         var rel = mapping.GetRelationship(node.NavigationProperty);
         if (rel == null) return string.Empty;
@@ -54,16 +47,16 @@ public class SqlExistsTranslator
             ? $"{joinCondition} AND NOT (1=1)" 
             : $"{joinCondition} AND NOT ({subqueryFilter})";
 
-        return $"NOT EXISTS (SELECT 1 FROM {_dialect.QuoteIdentifier(targetMapping.TableName)} WHERE {subqueryWhere})";
+        return $"NOT EXISTS (SELECT 1 FROM {dialect.QuoteIdentifier(targetMapping.TableName)} WHERE {subqueryWhere})";
     }
 
     private string BuildJoinCondition(IEntityMapping source, IEntityMapping target, RelationshipMapping rel, string targetAlias)
     {
-        string alias = _dialect.QuoteIdentifier(targetAlias);
+        string alias = dialect.QuoteIdentifier(targetAlias);
         return rel.RelationshipType switch
         {
-            RelationshipType.OneToMany => $"{alias}.{_dialect.QuoteIdentifier(rel.ForeignKey)} = {_dialect.QuoteIdentifier(source.TableAlias ?? source.TableName)}.{_dialect.QuoteIdentifier(source.GetColumnName(rel.PrincipalKey ?? "Id"))}",
-            RelationshipType.ManyToOne => $"{_dialect.QuoteIdentifier(source.TableAlias ?? source.TableName)}.{_dialect.QuoteIdentifier(rel.ForeignKey)} = {alias}.{_dialect.QuoteIdentifier(target.GetColumnName(rel.PrincipalKey ?? "Id"))}",
+            RelationshipType.OneToMany => $"{alias}.{dialect.QuoteIdentifier(rel.ForeignKey)} = {dialect.QuoteIdentifier(source.TableAlias ?? source.TableName)}.{dialect.QuoteIdentifier(source.GetColumnName(rel.PrincipalKey ?? "Id"))}",
+            RelationshipType.ManyToOne => $"{dialect.QuoteIdentifier(source.TableAlias ?? source.TableName)}.{dialect.QuoteIdentifier(rel.ForeignKey)} = {alias}.{dialect.QuoteIdentifier(target.GetColumnName(rel.PrincipalKey ?? "Id"))}",
             _ => "1=0"
         };
     }

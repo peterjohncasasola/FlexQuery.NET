@@ -201,7 +201,7 @@ public sealed class SqlTranslator : ISqlTranslator
                 var rel = mapping.GetRelationship(filteredInclude.Path);
                 if (rel == null) continue;
 
-                var node = new FlexQuery.NET.Dapper.Sql.Ast.IncludeNode 
+                var node = new Ast.IncludeNode 
                 { 
                     NavigationProperty = rel.NavigationPropertyName, 
                     Filter = filteredInclude.Filter 
@@ -224,7 +224,7 @@ public sealed class SqlTranslator : ISqlTranslator
             {
                 if (!joinedPaths.Add(include)) continue;
 
-                var node = new FlexQuery.NET.Dapper.Sql.Ast.IncludeNode { NavigationProperty = include };
+                var node = new Ast.IncludeNode { NavigationProperty = include };
                 var sql = _includeTranslator.Translate(node, mapping, _ => string.Empty, _mappingRegistry);
                 if (!string.IsNullOrEmpty(sql)) joins.Add(sql);
             }
@@ -434,7 +434,7 @@ public sealed class SqlTranslator : ISqlTranslator
             try
             {
                 var converter = TypeDescriptor.GetConverter(underlyingType);
-                if (converter != null && converter.CanConvertFrom(typeof(string)))
+                if (converter.CanConvertFrom(typeof(string)))
                 {
                     return converter.ConvertFromInvariantString(value);
                 }

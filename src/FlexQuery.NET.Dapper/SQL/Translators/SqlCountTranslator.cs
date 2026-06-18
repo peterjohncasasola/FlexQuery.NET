@@ -1,21 +1,16 @@
+using FlexQuery.NET.Constants;
 using FlexQuery.NET.Dapper.Sql.Ast;
 using FlexQuery.NET.Dapper.Dialects;
 using FlexQuery.NET.Dapper.Mapping;
+using FlexQuery.NET.Models;
 
 namespace FlexQuery.NET.Dapper.Sql.Translators;
 
 /// <summary>
 /// Translator for relationship count queries.
 /// </summary>
-public class SqlCountTranslator
+public class SqlCountTranslator(ISqlDialect dialect)
 {
-    private readonly ISqlDialect _dialect;
-
-    public SqlCountTranslator(ISqlDialect dialect)
-    {
-        _dialect = dialect;
-    }
-
     /// <summary>
     /// Translates a count condition into a correlated COUNT subquery.
     /// </summary>
@@ -23,7 +18,7 @@ public class SqlCountTranslator
     public string Translate(
         CountExpressionNode node,
         IEntityMapping mapping,
-        Func<FlexQuery.NET.Models.FilterGroup, string> filterBuilder,
+        Func<FilterGroup, string> filterBuilder,
         Dictionary<string, object?> parameters,
         Func<string> paramNameGenerator,
         IMappingRegistry registry)
@@ -32,7 +27,7 @@ public class SqlCountTranslator
         if (rel == null) return string.Empty;
 
         var targetMapping = registry.GetMapping(rel.TargetType);
-        string joinCondition = BuildJoinCondition(mapping, targetMapping, rel, targetMapping.TableName);
+        var joinCondition = BuildJoinCondition(mapping, targetMapping, rel, targetMapping.TableName);
 
         var subqueryFilter = filterBuilder(node.ScopedFilter);
         var subqueryWhere = string.IsNullOrEmpty(subqueryFilter)
@@ -45,27 +40,27 @@ public class SqlCountTranslator
         else
             parameters[paramName] = node.Value;
 
-        var sqlOp = FlexQuery.NET.Constants.FilterOperators.Normalize(node.Operator) switch
+        var sqlOp = FilterOperators.Normalize(node.Operator) switch
         {
-            FlexQuery.NET.Constants.FilterOperators.Equal => "=",
-            FlexQuery.NET.Constants.FilterOperators.NotEqual => "<>",
-            FlexQuery.NET.Constants.FilterOperators.GreaterThan => ">",
-            FlexQuery.NET.Constants.FilterOperators.GreaterThanOrEq => ">=",
-            FlexQuery.NET.Constants.FilterOperators.LessThan => "<",
-            FlexQuery.NET.Constants.FilterOperators.LessThanOrEq => "<=",
+            FilterOperators.Equal => "=",
+            FilterOperators.NotEqual => "<>",
+            FilterOperators.GreaterThan => ">",
+            FilterOperators.GreaterThanOrEq => ">=",
+            FilterOperators.LessThan => "<",
+            FilterOperators.LessThanOrEq => "<=",
             _ => "="
         };
 
-        return $"(SELECT COUNT(*) FROM {_dialect.QuoteIdentifier(targetMapping.TableName)} WHERE {subqueryWhere}) {sqlOp} {paramName}";
+        return $"(SELECT COUNT(*) FROM {dialect.QuoteIdentifier(targetMapping.TableName)} WHERE {subqueryWhere}) {sqlOp} {paramName}";
     }
 
     private string BuildJoinCondition(IEntityMapping source, IEntityMapping target, Mapping.Metadata.RelationshipMapping rel, string targetAlias)
     {
-        string alias = _dialect.QuoteIdentifier(targetAlias);
+        var alias = dialect.QuoteIdentifier(targetAlias);
         return rel.RelationshipType switch
         {
-            Mapping.Metadata.RelationshipType.OneToMany => $"{alias}.{_dialect.QuoteIdentifier(rel.ForeignKey)} = {_dialect.QuoteIdentifier(source.TableAlias ?? source.TableName)}.{_dialect.QuoteIdentifier(source.GetColumnName(rel.PrincipalKey ?? "Id"))}",
-            Mapping.Metadata.RelationshipType.ManyToOne => $"{_dialect.QuoteIdentifier(source.TableAlias ?? source.TableName)}.{_dialect.QuoteIdentifier(rel.ForeignKey)} = {alias}.{_dialect.QuoteIdentifier(target.GetColumnName(rel.PrincipalKey ?? "Id"))}",
+            Mapping.Metadata.RelationshipType.OneToMany => $"{alias}.{dialect.QuoteIdentifier(rel.ForeignKey)} = {dialect.QuoteIdentifier(source.TableAlias ?? source.TableName)}.{dialect.QuoteIdentifier(source.GetColumnName(rel.PrincipalKey ?? "Id"))}",
+            Mapping.Metadata.RelationshipType.ManyToOne => $"{dialect.QuoteIdentifier(source.TableAlias ?? source.TableName)}.{dialect.QuoteIdentifier(rel.ForeignKey)} = {alias}.{dialect.QuoteIdentifier(target.GetColumnName(rel.PrincipalKey ?? "Id"))}",
             _ => "1=0"
         };
     }
