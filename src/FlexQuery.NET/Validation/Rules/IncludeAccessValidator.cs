@@ -9,6 +9,11 @@ namespace FlexQuery.NET.Validation.Rules;
 /// <summary>
 /// Validates requested includes against the AllowedIncludes whitelist.
 /// </summary>
+/// <remarks>
+/// In non-strict mode (StrictFieldValidation = false), unauthorized includes
+/// are silently removed from the query. In strict mode (default), validation
+/// errors cause exceptions to be thrown.
+/// </remarks>
 public sealed class IncludeAccessValidator : IValidationRule
 {
     /// <inheritdoc />
@@ -23,60 +28,78 @@ public sealed class IncludeAccessValidator : IValidationRule
         var comparer = execOptions.CaseInsensitiveFields ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal;
         var allowedIncludes = new HashSet<string>(execOptions.AllowedIncludes, comparer);
 
-        try
+        // Check flat includes - remove unauthorized ones in non-strict mode
+        if (options.Includes is not null)
         {
-            // Check flat includes
-            if (options.Includes is not null)
+            for (int i = options.Includes.Count - 1; i >= 0; i--)
             {
-                foreach (var include in options.Includes)
+                var include = options.Includes[i];
+                if (!allowedIncludes.Contains(include))
                 {
-                    CheckIncludeAccess(include, allowedIncludes);
-                }
-            }
-
-            // Check filtered includes
-            if (options.FilteredIncludes is not null)
-            {
-                foreach (var node in options.FilteredIncludes)
-                {
-                    ValidateIncludeNode(node, string.Empty, allowedIncludes);
+                    var message = $"Include path '{include}' is not allowed.";
+                    if (execOptions.StrictFieldValidation)
+                    {
+                        throw new QueryValidationException(message);
+                    }
+                    result.Errors.Add(new ValidationError(message, ValidationErrorCodes.IncludeAccessDenied, include));
+                    // Remove in non-strict mode
+                    options.Includes.RemoveAt(i);
                 }
             }
         }
-        catch (QueryValidationException ex)
+
+        // Check filtered includes - remove unauthorized ones in non-strict mode
+        if (options.FilteredIncludes is not null)
         {
-            if (execOptions.StrictFieldValidation)
+            for (int i = options.FilteredIncludes.Count - 1; i >= 0; i--)
             {
-                throw;
+                var node = options.FilteredIncludes[i];
+                if (ShouldRemoveIncludeNode(node, string.Empty, allowedIncludes, execOptions, result))
+                {
+                    options.FilteredIncludes.RemoveAt(i);
+                }
             }
-
-            // Extract include path from message if possible (format: "Include path '...' is not allowed.")
-            var path = "unknown";
-            var parts = ex.Message.Split('\'');
-            if (parts.Length >= 2) path = parts[1];
-
-            result.Errors.Add(new ValidationError(ex.Message, ValidationErrorCodes.IncludeAccessDenied, path));
         }
     }
 
-    private void ValidateIncludeNode(IncludeNode node, string parentPath, HashSet<string> allowedIncludes)
+    private bool ShouldRemoveIncludeNode(
+        IncludeNode node,
+        string parentPath,
+        HashSet<string> allowedIncludes,
+        QueryExecutionOptions options,
+        ValidationResult result)
     {
         var currentPath = string.IsNullOrEmpty(parentPath) ? node.Path : $"{parentPath}.{node.Path}";
 
-        CheckIncludeAccess(currentPath, allowedIncludes);
-
-        foreach (var child in node.Children)
+        // Check if this node's path is allowed
+        if (!allowedIncludes.Contains(currentPath))
         {
-            ValidateIncludeNode(child, currentPath, allowedIncludes);
+            var message = $"Include path '{currentPath}' is not allowed.";
+            if (options.StrictFieldValidation)
+            {
+                throw new QueryValidationException(message);
+            }
+            result.Errors.Add(new ValidationError(message, ValidationErrorCodes.IncludeAccessDenied, currentPath));
+            
+            // Remove unauthorized child nodes
+            for (int i = node.Children.Count - 1; i >= 0; i--)
+            {
+                ShouldRemoveIncludeNode(node.Children[i], currentPath, allowedIncludes, options, result);
+            }
+            
+            return true; // Remove this node
         }
-    }
 
-    private void CheckIncludeAccess(string path, HashSet<string> allowedIncludes)
-    {
-        // Exact match required; no wildcard evaluation per requirements.
-        if (!allowedIncludes.Contains(path))
+        // Check children recursively
+        for (int i = node.Children.Count - 1; i >= 0; i--)
         {
-            throw new QueryValidationException($"Include path '{path}' is not allowed.");
+            var child = node.Children[i];
+            if (ShouldRemoveIncludeNode(child, currentPath, allowedIncludes, options, result))
+            {
+                node.Children.RemoveAt(i);
+            }
         }
+
+        return false;
     }
 }
