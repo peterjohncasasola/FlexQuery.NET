@@ -6,7 +6,7 @@ namespace FlexQuery.NET.Helpers;
 /// <summary>
 /// Combines different select formats into a merged navigation tree.
 /// </summary>
-internal static class SelectTreeBuilder
+public static class SelectTreeBuilder
 {
     public static SelectionNode Build(QueryOptions options)
     {

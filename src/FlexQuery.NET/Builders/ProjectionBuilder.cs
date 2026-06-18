@@ -286,4 +286,48 @@ internal static class ProjectionBuilder
 
         return scalarMarker + "(" + payload + ")";
     }
+
+    /// <summary>
+    /// Builds a projection expression from a list of dot-notation field paths.
+    /// Used by ProjectionExpressionCache for caching projections by field list.
+    /// </summary>
+    public static Expression BuildFromSelectionFields(
+        Type entityType,
+        IReadOnlyList<string> selectionFields,
+        QueryOptions options)
+    {
+        var tree = new SelectionNode();
+
+        foreach (var field in selectionFields)
+        {
+            MergeFieldPath(tree, field);
+        }
+
+        var param = Expression.Parameter(entityType, "x");
+        var memberInit = BuildMemberInit(param, entityType, tree, options.Filter, options);
+        return Expression.Convert(memberInit, typeof(object));
+    }
+
+    private static void MergeFieldPath(SelectionNode current, string path)
+    {
+        if (string.IsNullOrWhiteSpace(path)) return;
+
+        // Handle alias
+        var aliasParts = System.Text.RegularExpressions.Regex.Split(path, @"\s+as\s+", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+        var actualPath = aliasParts[0].Trim();
+        var alias = aliasParts.Length > 1 ? aliasParts[1].Trim() : null;
+
+        var parts = actualPath.Split('.', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        var node = current;
+
+        for (int i = 0; i < parts.Length; i++)
+        {
+            var part = parts[i];
+            node = node.GetOrAddChild(part);
+            if (i == parts.Length - 1 && alias != null)
+            {
+                node.Alias = alias;
+            }
+        }
+    }
 }
