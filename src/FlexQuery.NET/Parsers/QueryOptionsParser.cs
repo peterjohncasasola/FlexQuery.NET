@@ -135,18 +135,18 @@ public static class QueryOptionsParser
 
         var parameters = new FlexQueryParameters
         {
-            Query = dict.GetValueOrDefault("query"),
-            Filter = dict.GetValueOrDefault("filter") ?? dict.GetValueOrDefault("$filter"),
-            Sort = dict.GetValueOrDefault("sort") ?? dict.GetValueOrDefault("orderby") ?? dict.GetValueOrDefault("$orderby"),
-            Select = dict.GetValueOrDefault("select") ?? dict.GetValueOrDefault("$select"),
-            Include = dict.GetValueOrDefault("include") ?? dict.GetValueOrDefault("expand") ?? dict.GetValueOrDefault("$expand"),
-            GroupBy = dict.GetValueOrDefault("group"),
-            Having = dict.GetValueOrDefault("having"),
-            Page = dict.TryGetValue("page", out var p) && int.TryParse(p, out var page) ? page : null,
-            PageSize = dict.TryGetValue("pageSize", out var ps) && int.TryParse(ps, out var pageSize) ? pageSize : null,
-            IncludeCount = dict.TryGetValue("includeCount", out var ic) ? ic.Equals("true", StringComparison.OrdinalIgnoreCase) : null,
-            Distinct = dict.TryGetValue("distinct", out var d) ? d.Equals("true", StringComparison.OrdinalIgnoreCase) : null,
-            Mode = dict.GetValueOrDefault("mode"),
+            Query = dict.GetValueOrDefault(QueryOptionKeys.Query),
+            Filter = dict.GetValueOrDefault(QueryOptionKeys.Filter) ?? dict.GetValueOrDefault("$filter"),
+            Sort = dict.GetValueOrDefault(QueryOptionKeys.Sort) ?? dict.GetValueOrDefault(QueryOptionKeys.OrderBy) ?? dict.GetValueOrDefault("$orderby"),
+            Select = dict.GetValueOrDefault(QueryOptionKeys.Select) ?? dict.GetValueOrDefault("$select"),
+            Include = dict.GetValueOrDefault(QueryOptionKeys.Include) ?? dict.GetValueOrDefault(QueryOptionKeys.Expand) ?? dict.GetValueOrDefault("$expand"),
+            GroupBy = dict.GetValueOrDefault(QueryOptionKeys.Group),
+            Having = dict.GetValueOrDefault(QueryOptionKeys.Having),
+            Page = dict.TryGetValue(QueryOptionKeys.Page, out var p) && int.TryParse(p, out var page) ? page : null,
+            PageSize = dict.TryGetValue(QueryOptionKeys.PageSize, out var ps) && int.TryParse(ps, out var pageSize) ? pageSize : null,
+            IncludeCount = dict.TryGetValue(QueryOptionKeys.IncludeCount, out var ic) ? ic.Equals("true", StringComparison.OrdinalIgnoreCase) : null,
+            Distinct = dict.TryGetValue(QueryOptionKeys.Distinct, out var d) ? d.Equals("true", StringComparison.OrdinalIgnoreCase) : null,
+            Mode = dict.GetValueOrDefault(QueryOptionKeys.Mode),
             RawParameters = dict
         };
 
@@ -157,13 +157,13 @@ public static class QueryOptionsParser
     {
         if (dict.Count == 0) return new QueryOptions();
 
-        if (dict.TryGetValue("query", out var jql) && !string.IsNullOrWhiteSpace(jql))
+        if (dict.TryGetValue(QueryOptionKeys.Query, out var jql) && !string.IsNullOrWhiteSpace(jql))
             return InternalParseJql(dict, jql);
 
         if (dict.Keys.Any(k => k.StartsWith("filter[0]", StringComparison.OrdinalIgnoreCase)))
             return InternalParseGeneric(dict);
 
-        if (dict.TryGetValue("filter", out var filterVal) && !string.IsNullOrWhiteSpace(filterVal))
+        if (dict.TryGetValue(QueryOptionKeys.Filter, out var filterVal) && !string.IsNullOrWhiteSpace(filterVal))
         {
             if (filterVal.TrimStart().StartsWith('{'))
                 return InternalParseJsonFilter(dict);
@@ -208,11 +208,11 @@ public static class QueryOptionsParser
         var options = new QueryOptions();
 
         // Paging
-        options.Paging.Page     = InternalParseInt(d, "page", 1);
-        options.Paging.PageSize = InternalParseInt(d, "pageSize", 20);
+        options.Paging.Page     = InternalParseInt(d, QueryOptionKeys.Page, 1);
+        options.Paging.PageSize = InternalParseInt(d, QueryOptionKeys.PageSize, 20);
 
         // Mode
-        if (d.TryGetValue("mode", out var modeStr))
+        if (d.TryGetValue(QueryOptionKeys.Mode, out var modeStr))
         {
             options.ProjectionMode = modeStr.Trim().ToLowerInvariant() switch
             {
@@ -223,41 +223,41 @@ public static class QueryOptionsParser
         }
 
         // Select
-        if (d.TryGetValue("select", out var sel))
+        if (d.TryGetValue(QueryOptionKeys.Select, out var sel))
         {
             InternalParseSelectWithAggregates(options, sel);
         }
 
-        if (d.TryGetValue("group", out var groupRaw))
+        if (d.TryGetValue(QueryOptionKeys.Group, out var groupRaw))
             options.GroupBy = InternalSplitCsv(groupRaw);
 
-        if (d.TryGetValue("having", out var havingRaw))
+        if (d.TryGetValue(QueryOptionKeys.Having, out var havingRaw))
             options.Having = InternalParseHaving(havingRaw);
 
         // Includes — parse both as plain strings (backward-compat) and as
         // structured IncludeNode trees that support inline JQL filters.
-        if (d.TryGetValue("include", out var inc))
+        if (d.TryGetValue(QueryOptionKeys.Include, out var inc))
         {
             options.Includes         = InternalSplitCsv(inc.Split('(')[0]); // plain names only
             options.FilteredIncludes = FilteredIncludeParser.Parse(inc);
         }
 
         // Top-level logic
-        var logicValue = d.TryGetValue("logic", out var l) ? l : "and";
+        var logicValue = d.TryGetValue(QueryOptionKeys.Logic, out var l) ? l : "and";
         var logic = InternalParseLogic(logicValue);
 
         // Collect indexed filters: filter[0].field, filter[0].operator, filter[0].value
-        var filterMap = InternalCollectIndexed(d, "filter");
+        var filterMap = InternalCollectIndexed(d, QueryOptionKeys.Filter);
         var children = new List<FilterNode>();
         foreach (var (_, fields) in filterMap.OrderBy(x => x.Key))
         {
-            var field = fields.TryGetValue("field", out var f) ? f : null;
+            var field = fields.TryGetValue(QueryOptionKeys.Field, out var f) ? f : null;
             if (string.IsNullOrWhiteSpace(field)) continue;
             children.Add(new FilterConditionNode
             {
                 Field    = field,
-                Operator = FilterOperators.Normalize(fields.TryGetValue("operator", out var o) ? o : "eq"),
-                Value    = fields.TryGetValue("value", out var v) ? v : null
+                Operator = FilterOperators.Normalize(fields.TryGetValue(QueryOptionKeys.Operator, out var o) ? o : "eq"),
+                Value    = fields.TryGetValue(QueryOptionKeys.Value, out var v) ? v : null
             });
         }
 
@@ -265,26 +265,26 @@ public static class QueryOptionsParser
             options.Filter = new FilterGroupNode { Logic = logic, Children = children };
 
         // Collect indexed sorts: sort[0].field, sort[0].desc
-        var sortMap = InternalCollectIndexed(d, "sort");
+        var sortMap = InternalCollectIndexed(d, QueryOptionKeys.Sort);
         foreach (var (_, fields) in sortMap.OrderBy(x => x.Key))
         {
-            var field = fields.TryGetValue("field", out var f) ? f : null;
+            var field = fields.TryGetValue(QueryOptionKeys.Field, out var f) ? f : null;
             if (string.IsNullOrWhiteSpace(field)) continue;
             options.Sort.Add(new SortNode
             {
                 Field      = field,
-                Descending = InternalParseBool(fields.TryGetValue("desc", out var dsc) ? dsc : null)
+                Descending = InternalParseBool(fields.TryGetValue(QueryOptionKeys.Desc, out var dsc) ? dsc : null)
             });
         }
         
-        if (d.TryGetValue("sort", out var sortRaw))
+        if (d.TryGetValue(QueryOptionKeys.Sort, out var sortRaw))
             options.Sort.AddRange(InternalParseSort(sortRaw));
 
         // Metadata
-        var incCountStr = d.TryGetValue("includeCount", out var ic) ? ic : null;
+        var incCountStr = d.TryGetValue(QueryOptionKeys.IncludeCount, out var ic) ? ic : null;
         options.IncludeCount = InternalParseBool(incCountStr, true);
         
-        var distinctStr = d.TryGetValue("distinct", out var dist) ? dist : null;
+        var distinctStr = d.TryGetValue(QueryOptionKeys.Distinct, out var dist) ? dist : null;
         options.Distinct     = InternalParseBool(distinctStr);
 
         return options;
@@ -393,14 +393,14 @@ public static class QueryOptionsParser
         var options = new QueryOptions();
 
         // Paging & select same as generic
-        options.Paging.Page     = InternalParseInt(d, "page", 1);
-        options.Paging.PageSize = InternalParseInt(d, "pageSize", 20);
-        if (d.TryGetValue("select", out var sel)) options.Select = InternalSplitCsv(sel);
+        options.Paging.Page     = InternalParseInt(d, QueryOptionKeys.Page, 1);
+        options.Paging.PageSize = InternalParseInt(d, QueryOptionKeys.PageSize, 20);
+        if (d.TryGetValue(QueryOptionKeys.Select, out var sel)) options.Select = InternalSplitCsv(sel);
 
         // Sort (generic format + sort string)
         options.Sort.AddRange(ParseGenericSorts(d));
 
-        if (!d.TryGetValue("filter", out var json)) return options;
+        if (!d.TryGetValue(QueryOptionKeys.Filter, out var json)) return options;
 
         try
         {
@@ -429,24 +429,24 @@ public static class QueryOptionsParser
     {
         var group = new FilterGroupNode();
 
-        if (root.TryGetProperty("logic", out var logicEl))
+        if (root.TryGetProperty(QueryOptionKeys.Logic, out var logicEl))
             group.Logic = ParseLogic(logicEl.GetString());
 
-        if (root.TryGetProperty("filters", out var filtersEl)
+        if (root.TryGetProperty(QueryOptionKeys.Filters, out var filtersEl)
             && filtersEl.ValueKind == JsonValueKind.Array)
         {
             foreach (var item in filtersEl.EnumerateArray())
             {
                 // Nested group?
-                if (item.TryGetProperty("logic", out _) || item.TryGetProperty("filters", out _))
+                if (item.TryGetProperty(QueryOptionKeys.Logic, out _) || item.TryGetProperty(QueryOptionKeys.Filters, out _))
                 {
                     group.Children.Add(ParseJsonGroup(item));
                     continue;
                 }
 
-                var field = item.TryGetProperty("field",    out var f) ? f.GetString() : null;
-                var op    = item.TryGetProperty("operator", out var o) ? o.GetString() : "eq";
-                var value = item.TryGetProperty("value",    out var v)
+                var field = item.TryGetProperty(QueryOptionKeys.Field,    out var f) ? f.GetString() : null;
+                var op    = item.TryGetProperty(QueryOptionKeys.Operator, out var o) ? o.GetString() : "eq";
+                var value = item.TryGetProperty(QueryOptionKeys.Value,    out var v)
                     ? (v.ValueKind == JsonValueKind.String ? v.GetString() : v.GetRawText())
                     : null;
 

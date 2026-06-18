@@ -28,7 +28,7 @@ public class SqlTranslatorTests
     public void Translate_EmptyFilter_GeneratesSelectAll()
     {
         var options = NoPaging(new QueryOptions());
-        options.Items["EntityType"] = typeof(TestEntity);
+        options.Items[ContextKeys.EntityType] = typeof(TestEntity);
 
         var translator = new SqlTranslator(_registry, new SqlServerDialect());
         var command = translator.Translate(options);
@@ -48,7 +48,7 @@ public class SqlTranslatorTests
                 Filters = [new FilterCondition { Field = "Name", Operator = "eq", Value = "Alice" }]
             }
         });
-        options.Items["EntityType"] = typeof(TestEntity);
+        options.Items[ContextKeys.EntityType] = typeof(TestEntity);
 
         var translator = new SqlTranslator(_registry, new SqlServerDialect());
         var command = translator.Translate(options);
@@ -68,7 +68,7 @@ public class SqlTranslatorTests
                 Filters = [new FilterCondition { Field = "Status", Operator = "in", Value = "Active,Pending" }]
             }
         });
-        options.Items["EntityType"] = typeof(TestEntity);
+        options.Items[ContextKeys.EntityType] = typeof(TestEntity);
 
         var translator = new SqlTranslator(_registry, new SqlServerDialect());
         var command = translator.Translate(options);
@@ -87,7 +87,7 @@ public class SqlTranslatorTests
                 Filters = [new FilterCondition { Field = "Age", Operator = "between", Value = "20,30" }]
             }
         });
-        options.Items["EntityType"] = typeof(TestEntity);
+        options.Items[ContextKeys.EntityType] = typeof(TestEntity);
 
         var translator = new SqlTranslator(_registry, new SqlServerDialect());
         var command = translator.Translate(options);
@@ -108,7 +108,7 @@ public class SqlTranslatorTests
                 Filters = [new FilterCondition { Field = "Name", Operator = "contains", Value = "John" }]
             }
         });
-        options.Items["EntityType"] = typeof(TestEntity);
+        options.Items[ContextKeys.EntityType] = typeof(TestEntity);
 
         var translator = new SqlTranslator(_registry, new SqlServerDialect());
         var command = translator.Translate(options);
@@ -125,7 +125,7 @@ public class SqlTranslatorTests
         {
             Sort = [new SortNode { Field = "Name", Descending = true }]
         });
-        options.Items["EntityType"] = typeof(TestEntity);
+        options.Items[ContextKeys.EntityType] = typeof(TestEntity);
 
         var translator = new SqlTranslator(_registry, new SqlServerDialect());
         var command = translator.Translate(options);
@@ -141,7 +141,7 @@ public class SqlTranslatorTests
         {
             GroupBy = ["City"]
         });
-        options.Items["EntityType"] = typeof(TestEntity);
+        options.Items[ContextKeys.EntityType] = typeof(TestEntity);
 
         var translator = new SqlTranslator(_registry, new SqlServerDialect());
         var command = translator.Translate(options);
@@ -156,7 +156,7 @@ public class SqlTranslatorTests
         {
             Aggregates = [new AggregateModel { Function = "count", Alias = "TotalCount" }]
         });
-        options.Items["EntityType"] = typeof(TestEntity);
+        options.Items[ContextKeys.EntityType] = typeof(TestEntity);
 
         var translator = new SqlTranslator(_registry, new SqlServerDialect());
         var command = translator.Translate(options);
@@ -171,7 +171,7 @@ public class SqlTranslatorTests
         {
             Paging = { Page = 2, PageSize = 10 }
         };
-        options.Items["EntityType"] = typeof(TestEntity);
+        options.Items[ContextKeys.EntityType] = typeof(TestEntity);
 
         var translator = new SqlTranslator(_registry, new SqlServerDialect());
         var command = translator.Translate(options);
@@ -197,7 +197,7 @@ public class SqlTranslatorTests
                 ]
             }
         });
-        options.Items["EntityType"] = typeof(TestEntity);
+        options.Items[ContextKeys.EntityType] = typeof(TestEntity);
 
         var translator = new SqlTranslator(_registry, new SqlServerDialect());
         var command = translator.Translate(options);
@@ -221,7 +221,7 @@ public class SqlTranslatorTests
                 ]
             }
         });
-        options.Items["EntityType"] = typeof(TestEntity);
+        options.Items[ContextKeys.EntityType] = typeof(TestEntity);
 
         var translator = new SqlTranslator(_registry, new SqlServerDialect());
         var command = translator.Translate(options);
@@ -237,7 +237,7 @@ public class SqlTranslatorTests
         {
             Select = ["Id", "Name", "Age"]
         });
-        options.Items["EntityType"] = typeof(TestEntity);
+        options.Items[ContextKeys.EntityType] = typeof(TestEntity);
 
         var translator = new SqlTranslator(_registry, new SqlServerDialect());
         var command = translator.Translate(options);
@@ -254,7 +254,7 @@ public class SqlTranslatorTests
         {
             Distinct = true
         });
-        options.Items["EntityType"] = typeof(TestEntity);
+        options.Items[ContextKeys.EntityType] = typeof(TestEntity);
 
         var translator = new SqlTranslator(_registry, new SqlServerDialect());
         var command = translator.Translate(options);
@@ -276,7 +276,7 @@ public class SqlTranslatorTests
                 Function = "sum"
             }
         });
-        options.Items["EntityType"] = typeof(TestEntity);
+        options.Items[ContextKeys.EntityType] = typeof(TestEntity);
 
         var translator = new SqlTranslator(_registry, new SqlServerDialect());
         var command = translator.Translate(options);
@@ -293,7 +293,7 @@ public class SqlTranslatorTests
         {
             Includes = new List<string> { "Roles" }
         });
-        options.Items["EntityType"] = typeof(TestEntityWithJoin);
+        options.Items[ContextKeys.EntityType] = typeof(TestEntityWithJoin);
 
         var translator = new SqlTranslator(_registry, new SqlServerDialect());
         var command = translator.Translate(options);
@@ -319,7 +319,7 @@ public class SqlTranslatorTests
                 }]
             }
         });
-        options.Items["EntityType"] = typeof(TestEntityWithJoin);
+        options.Items[ContextKeys.EntityType] = typeof(TestEntityWithJoin);
 
         var translator = new SqlTranslator(_registry, new SqlServerDialect());
         var command = translator.Translate(options);
@@ -349,7 +349,7 @@ public class SqlTranslatorTests
                 }]
             }
         });
-        options.Items["EntityType"] = typeof(TestEntityWithJoin);
+        options.Items[ContextKeys.EntityType] = typeof(TestEntityWithJoin);
 
         var translator = new SqlTranslator(_registry, new SqlServerDialect());
         var command = translator.Translate(options);
@@ -378,7 +378,7 @@ public class SqlTranslatorTests
                 }]
             }
         });
-        options.Items["EntityType"] = typeof(TestEntityWithJoin);
+        options.Items[ContextKeys.EntityType] = typeof(TestEntityWithJoin);
 
         var translator = new SqlTranslator(_registry, new SqlServerDialect());
         var command = translator.Translate(options);
@@ -406,7 +406,7 @@ public class SqlTranslatorTests
                 }
             ]
         });
-        options.Items["EntityType"] = typeof(TestEntityWithJoin);
+        options.Items[ContextKeys.EntityType] = typeof(TestEntityWithJoin);
 
         var translator = new SqlTranslator(_registry, new SqlServerDialect());
         var command = translator.Translate(options);

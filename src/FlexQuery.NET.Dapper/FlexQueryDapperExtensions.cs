@@ -8,6 +8,7 @@ using FlexQuery.NET.Dapper.Sql.Translators;
 using FlexQuery.NET.Dapper.Dialects;
 using FlexQuery.NET.Extensions;
 using Microsoft.Extensions.Primitives;
+using FlexQuery.NET.Constants;
 
 namespace FlexQuery.NET.Dapper;
 
@@ -28,7 +29,7 @@ public static class FlexQueryDapperExtensions
         configureDapper?.Invoke(dapperOptions);
 
         var parsedOptions = QueryOptionsParser.Parse(parameters);
-        parsedOptions.Items["EntityType"] = dapperOptions.EntityType ?? typeof(T);
+        parsedOptions.Items[ContextKeys.EntityType] = dapperOptions.EntityType ?? typeof(T);
 
         var execOptions = dapperOptions.ToQueryExecutionOptions();
 
@@ -47,7 +48,7 @@ public static class FlexQueryDapperExtensions
     {
         var dapperOptions = dapperQueryOptions ?? new DapperQueryOptions();
         var parsedOptions = QueryOptionsParser.Parse(parameters);
-        parsedOptions.Items["EntityType"] = dapperOptions.EntityType ?? typeof(T);
+        parsedOptions.Items[ContextKeys.EntityType] = dapperOptions.EntityType ?? typeof(T);
        
         var execOptions = dapperOptions.ToQueryExecutionOptions();
 
@@ -93,7 +94,7 @@ public static class FlexQueryDapperExtensions
         
         // Propagate EntityType to options for translator
         if (execOptions.EntityType != null)
-            options.Items["EntityType"] = execOptions.EntityType;
+            options.Items[ContextKeys.EntityType] = execOptions.EntityType;
 
         var translator = new SqlTranslator(registry, dialect);
         var command = translator.Translate(options);

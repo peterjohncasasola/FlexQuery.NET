@@ -3,6 +3,7 @@ using System.Reflection;
 using FlexQuery.NET.Models;
 using FlexQuery.NET.Security;
 using FlexQuery.NET.Helpers;
+using FlexQuery.NET.Constants;
 
 namespace FlexQuery.NET.Builders;
 
@@ -323,7 +324,7 @@ internal static class FlatProjectionBuilder
             var propName = child.Key;
             var node = child.Value;
 
-            if (options.Items.TryGetValue("ExpressionMappings", out var obj) && obj is IReadOnlyDictionary<string, LambdaExpression> mappings)
+            if (options.Items.TryGetValue(ContextKeys.ExpressionMappings, out var obj) && obj is IReadOnlyDictionary<string, LambdaExpression> mappings)
             {
                 if (mappings.TryGetValue(propName, out var mappedLambda))
                 {
@@ -365,7 +366,7 @@ internal static class FlatProjectionBuilder
             var outputName = !string.IsNullOrWhiteSpace(node.Alias) ? node.Alias : (pi?.Name ?? propName);
             var propType = pi?.PropertyType;
 
-            if (propType == null && options.Items.TryGetValue("ExpressionMappings", out var obj) && obj is IReadOnlyDictionary<string, LambdaExpression> mappings && mappings.TryGetValue(propName, out var mappedLambda))
+            if (propType == null && options.Items.TryGetValue(ContextKeys.ExpressionMappings, out var obj) && obj is IReadOnlyDictionary<string, LambdaExpression> mappings && mappings.TryGetValue(propName, out var mappedLambda))
             {
                 propType = mappedLambda.ReturnType;
             }

@@ -2,6 +2,7 @@ using FlexQuery.NET.Models;
 using FlexQuery.NET.Security;
 using FlexQuery.NET.Exceptions;
 using System.Collections.Concurrent;
+using FlexQuery.NET.Constants;
 
 namespace FlexQuery.NET.Validation.Rules;
 
@@ -67,7 +68,7 @@ public sealed class FieldAccessValidator : IValidationRule
             var parts = ex.Message.Split('\'');
             if (parts.Length >= 2) field = parts[1];
 
-            result.Errors.Add(new ValidationError(ex.Message, "FIELD_ACCESS_DENIED", field));
+            result.Errors.Add(new ValidationError(ex.Message, ValidationErrorCodes.FieldAccessDenied, field));
         }
     }
 

@@ -4,6 +4,7 @@ using FlexQuery.NET.Parsers;
 using FlexQuery.NET.Exceptions;
 using FlexQuery.NET.Validation;
 using System.Collections.Generic;
+using FlexQuery.NET.Constants;
 
 namespace FlexQuery.NET.Extensions;
 
@@ -42,7 +43,7 @@ public static class QueryOptionsExtensions
 
         if (execOptions.ExpressionMappings != null)
         {
-            options.Items["ExpressionMappings"] = execOptions.ExpressionMappings;
+            options.Items[ContextKeys.ExpressionMappings] = execOptions.ExpressionMappings;
         }
 
         var result = options.Validate(entityType, execOptions);
@@ -76,7 +77,7 @@ public static class QueryOptionsExtensions
 
         if (execOptions.ExpressionMappings != null)
         {
-            options.Items["ExpressionMappings"] = execOptions.ExpressionMappings;
+            options.Items[ContextKeys.ExpressionMappings] = execOptions.ExpressionMappings;
         }
 
         var result = options.Validate(typeof(T), execOptions);

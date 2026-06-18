@@ -773,7 +773,7 @@ public class DialectTests
         {
             Includes = new List<string> { "Roles" }
         };
-        options.Items["EntityType"] = typeof(TestEntityWithJoin);
+        options.Items[ContextKeys.EntityType] = typeof(TestEntityWithJoin);
 
         var sqlServerCmd = new SqlTranslator(_registry, new SqlServerDialect()).Translate(options);
         var pgCmd = new SqlTranslator(_registry, new PostgreSqlDialect()).Translate(options);
@@ -935,7 +935,7 @@ public class DialectTests
         {
             Paging = { Page = 2, PageSize = 10 }
         };
-        options.Items["EntityType"] = typeof(TestEntity);
+        options.Items[ContextKeys.EntityType] = typeof(TestEntity);
         return options;
     }
 
@@ -948,7 +948,7 @@ public class DialectTests
                 Filters = [new FilterCondition { Field = "Name", Operator = "eq", Value = "Test" }]
             }
         };
-        options.Items["EntityType"] = typeof(TestEntity);
+        options.Items[ContextKeys.EntityType] = typeof(TestEntity);
         return options;
     }
 
@@ -961,7 +961,7 @@ public class DialectTests
                 Filters = [new FilterCondition { Field = "Name", Operator = "contains", Value = "test" }]
             }
         };
-        options.Items["EntityType"] = typeof(TestEntity);
+        options.Items[ContextKeys.EntityType] = typeof(TestEntity);
         return options;
     }
 
@@ -974,7 +974,7 @@ public class DialectTests
                 Filters = [new FilterCondition { Field = "Status", Operator = "in", Value = "Active,Pending" }]
             }
         };
-        options.Items["EntityType"] = typeof(TestEntity);
+        options.Items[ContextKeys.EntityType] = typeof(TestEntity);
         return options;
     }
 
@@ -987,7 +987,7 @@ public class DialectTests
                 Filters = [new FilterCondition { Field = "Age", Operator = "between", Value = "20,30" }]
             }
         };
-        options.Items["EntityType"] = typeof(TestEntity);
+        options.Items[ContextKeys.EntityType] = typeof(TestEntity);
         return options;
     }
 
@@ -997,7 +997,7 @@ public class DialectTests
         {
             Aggregates = [new AggregateModel { Function = "count", Alias = "TotalCount", Field = "*" }]
         };
-        options.Items["EntityType"] = typeof(TestEntity);
+        options.Items[ContextKeys.EntityType] = typeof(TestEntity);
         return options;
     }
 
@@ -1007,7 +1007,7 @@ public class DialectTests
         {
             Sort = [new SortNode { Field = "Name", Descending = descending }]
         };
-        options.Items["EntityType"] = typeof(TestEntity);
+        options.Items[ContextKeys.EntityType] = typeof(TestEntity);
         return options;
     }
 
@@ -1017,7 +1017,7 @@ public class DialectTests
         {
             Distinct = true
         };
-        options.Items["EntityType"] = typeof(TestEntity);
+        options.Items[ContextKeys.EntityType] = typeof(TestEntity);
         return options;
     }
 
@@ -1027,7 +1027,7 @@ public class DialectTests
         {
             GroupBy = ["Status"]
         };
-        options.Items["EntityType"] = typeof(TestEntity);
+        options.Items[ContextKeys.EntityType] = typeof(TestEntity);
         return options;
     }
 
@@ -1044,7 +1044,7 @@ public class DialectTests
                 Function = "sum"
             }
         };
-        options.Items["EntityType"] = typeof(TestEntity);
+        options.Items[ContextKeys.EntityType] = typeof(TestEntity);
         return options;
     }
 
@@ -1060,7 +1060,7 @@ public class DialectTests
         {
             Includes = new List<string> { "Roles" }
         };
-        options.Items["EntityType"] = typeof(TestEntityWithJoin);
+        options.Items[ContextKeys.EntityType] = typeof(TestEntityWithJoin);
 
         var translator = new SqlTranslator(registry, new SqlServerDialect());
         var _ = translator.Translate(options); // warm-up

@@ -1,5 +1,6 @@
 using FlexQuery.NET.Exceptions;
 using FlexQuery.NET.Models;
+using FlexQuery.NET.Constants;
 using System;
 using System.Collections.Generic;
 
@@ -54,7 +55,7 @@ public sealed class IncludeAccessValidator : IValidationRule
             var parts = ex.Message.Split('\'');
             if (parts.Length >= 2) path = parts[1];
 
-            result.Errors.Add(new ValidationError(ex.Message, "INCLUDE_ACCESS_DENIED", path));
+            result.Errors.Add(new ValidationError(ex.Message, ValidationErrorCodes.IncludeAccessDenied, path));
         }
     }
 

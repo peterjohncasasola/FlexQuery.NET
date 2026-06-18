@@ -36,7 +36,7 @@ public sealed class TypeCompatibilityRule : IValidationRule
                     {
                         result.Errors.Add(new ValidationError(
                             $"Operator '{op}' is only compatible with string fields, but '{filter.Field}' is '{propertyType.Name}'.",
-                            "TYPE_MISMATCH",
+                            ValidationErrorCodes.TypeMismatch,
                             filter.Field));
                         continue;
                     }
@@ -49,7 +49,7 @@ public sealed class TypeCompatibilityRule : IValidationRule
                     {
                         result.Errors.Add(new ValidationError(
                             $"Value '{filter.Value}' cannot be converted to type '{propertyType.Name}' for field '{filter.Field}'.",
-                            "TYPE_MISMATCH",
+                            ValidationErrorCodes.TypeMismatch,
                             filter.Field));
                     }
                 }

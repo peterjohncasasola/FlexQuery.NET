@@ -47,7 +47,7 @@ public sealed class SqlTranslator : ISqlTranslator
         _parameterIndex = 0;
         var parameters = new Dictionary<string, object?>();
 
-        var entityType = options.Items.TryGetValue("EntityType", out var type) ? (Type)type : typeof(object);
+        var entityType = options.Items.TryGetValue(ContextKeys.EntityType, out var type) ? (Type)type : typeof(object);
         var mapping = _mappingRegistry.GetMapping(entityType);
         var selectTree = Helpers.SelectTreeBuilder.Build(options);
 
