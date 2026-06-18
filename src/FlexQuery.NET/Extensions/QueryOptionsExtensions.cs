@@ -1,12 +1,11 @@
 using FlexQuery.NET.Builders;
-using FlexQuery.NET.Models;
-using FlexQuery.NET.Parsers;
-using FlexQuery.NET.Exceptions;
-using FlexQuery.NET.Validation;
-using System.Collections.Generic;
+using FlexQuery.NET.Caching;
 using FlexQuery.NET.Constants;
+using FlexQuery.NET.Exceptions;
+using FlexQuery.NET.Models;
+using FlexQuery.NET.Validation;
 
-namespace FlexQuery.NET.Extensions;
+namespace FlexQuery.NET;
 
 /// <summary>
 /// Extensions for <see cref="QueryOptions"/>.
@@ -111,7 +110,12 @@ public static class QueryOptionsExtensions
     /// <returns><c>true</c> if the options specify a projection; otherwise, <c>false</c>.</returns>
     public static bool HasProjection(this QueryOptions options)
     {
-        return options.Select != null && options.Select.Count > 0;
+        return (options.Select?.Count ?? 0) > 0
+               || options.SelectTree is not null
+               || (options.Includes?.Count ?? 0) > 0
+               || (options.FilteredIncludes?.Count ?? 0) > 0
+               || (options.GroupBy?.Count ?? 0) > 0
+               || options.Aggregates.Count > 0;
     }
 
     /// <summary>
@@ -149,18 +153,7 @@ public static class QueryOptionsExtensions
         Type entityType,
         string operation)
     {
-        var normalized = FilterNormalizer.Normalize(options.Filter);
-
-        var filterKey = FilterNormalizer.GenerateCacheKey(normalized);
-
-        return string.Join("|",
-            entityType.FullName,
-            operation,
-            filterKey,
-            options.Skip,
-            options.Top,
-            options.Sort != null ? string.Join(",", options.Sort.Select(s => s.Field + (s.Descending ? "_desc" : "_asc"))) : string.Empty,
-            options.Select != null ? string.Join(",", options.Select) : string.Empty);
+        return QueryCacheKeyBuilder.Build(options, entityType, operation);
     }
 
     /// <summary>

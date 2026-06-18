@@ -1,5 +1,6 @@
 
 using FlexQuery.NET.Builders;
+using FlexQuery.NET.Caching;
 
 namespace FlexQuery.NET.Models;
 
@@ -87,12 +88,7 @@ public class QueryOptions
     /// <param name="operation">The name of the query operation (e.g., "predicate", "projection").</param>
     /// <returns>A string representing the cache key for this query configuration.</returns>
     public string GetCacheKey(Type entityType, string operation)
-    {
-        var normalizedFilter = FilterNormalizer.Normalize(Filter);
-        var filterKey = FilterAnalyzer.CacheKey(normalizedFilter);
-        var ciKey = CaseInsensitive ? "ci" : "cs";
-        return $"{operation}:{entityType.FullName}:{ciKey}:{filterKey}";
-    }
+        => QueryCacheKeyBuilder.Build(this, entityType, operation);
 
     /// <summary>
     /// Creates a deep-ish clone of the options to support safe caching.
@@ -102,15 +98,15 @@ public class QueryOptions
     {
         var clone = new QueryOptions
         {
-            Filter = Filter,
-            Sort = new List<SortNode>(Sort),
+            Filter = CloneFilterGroup(Filter),
+            Sort = Sort.Select(CloneSort).ToList(),
             Select = Select is null ? null : new List<string>(Select),
             Includes = Includes is null ? null : new List<string>(Includes),
-            FilteredIncludes = FilteredIncludes is null ? null : new List<IncludeNode>(FilteredIncludes),
+            FilteredIncludes = FilteredIncludes is null ? null : FilteredIncludes.Select(CloneInclude).ToList(),
             ProjectionMode = ProjectionMode,
             GroupBy = GroupBy is null ? null : new List<string>(GroupBy),
-            Aggregates = new List<AggregateModel>(Aggregates),
-            Having = Having,
+            Aggregates = Aggregates.Select(CloneAggregate).ToList(),
+            Having = CloneHaving(Having),
             Distinct = Distinct,
             Paging = new PagingOptions { Page = Paging.Page, PageSize = Paging.PageSize, Disabled = Paging.Disabled },
             Skip = Skip,
@@ -119,7 +115,7 @@ public class QueryOptions
             CaseInsensitive = CaseInsensitive,
             EnableCache = EnableCache,
             Ast = Ast,
-            SelectTree = SelectTree
+            SelectTree = CloneSelection(SelectTree)
         };
 
         foreach (var kv in Items) clone.Items[kv.Key] = kv.Value;
@@ -136,24 +132,122 @@ public class QueryOptions
     {
         return new QueryOptions
         {
-            Filter = filter,
+            Filter = CloneFilterGroup(filter),
             CaseInsensitive = CaseInsensitive,
             EnableCache = EnableCache,
-            Sort = Sort,
-            Select = Select,
-            Includes = Includes,
-            FilteredIncludes = FilteredIncludes,
+            Sort = Sort.Select(CloneSort).ToList(),
+            Select = Select is null ? null : new List<string>(Select),
+            Includes = Includes is null ? null : new List<string>(Includes),
+            FilteredIncludes = FilteredIncludes is null ? null : FilteredIncludes.Select(CloneInclude).ToList(),
             ProjectionMode = ProjectionMode,
-            GroupBy = GroupBy,
-            Aggregates = Aggregates,
-            Having = Having,
+            GroupBy = GroupBy is null ? null : new List<string>(GroupBy),
+            Aggregates = Aggregates.Select(CloneAggregate).ToList(),
+            Having = CloneHaving(Having),
             Distinct = Distinct,
-            Paging = Paging,
+            Paging = new PagingOptions { Page = Paging.Page, PageSize = Paging.PageSize, Disabled = Paging.Disabled },
             Skip = Skip,
             Top = Top,
             IncludeCount = IncludeCount,
             Ast = Ast,
-            SelectTree = SelectTree
+            SelectTree = CloneSelection(SelectTree)
         };
+    }
+
+    private static FilterGroup? CloneFilterGroup(FilterGroup? group)
+        => group is null
+            ? null
+            : new FilterGroup
+            {
+                Logic = group.Logic,
+                IsNegated = group.IsNegated,
+                Filters = group.Filters.Select(CloneFilterCondition).ToList(),
+                Groups = group.Groups.Select(g => CloneFilterGroup(g)!).ToList()
+            };
+
+    private static FilterCondition CloneFilterCondition(FilterCondition condition)
+        => new()
+        {
+            Field = condition.Field,
+            Operator = condition.Operator,
+            Value = condition.Value,
+            IsNegated = condition.IsNegated,
+            ScopedFilter = CloneFilterGroup(condition.ScopedFilter)
+        };
+
+    private static SortNode CloneSort(SortNode sort)
+        => new()
+        {
+            Field = sort.Field,
+            Aggregate = sort.Aggregate,
+            AggregateField = sort.AggregateField,
+            Descending = sort.Descending
+        };
+
+    private static IncludeNode CloneInclude(IncludeNode include)
+        => new()
+        {
+            Path = include.Path,
+            Filter = CloneFilterGroup(include.Filter),
+            Children = include.Children.Select(CloneInclude).ToList()
+        };
+
+    private static AggregateModel CloneAggregate(AggregateModel aggregate)
+        => new()
+        {
+            Function = aggregate.Function,
+            Field = aggregate.Field,
+            Alias = aggregate.Alias
+        };
+
+    private static HavingCondition? CloneHaving(HavingCondition? having)
+        => having is null
+            ? null
+            : new HavingCondition
+            {
+                Function = having.Function,
+                Field = having.Field,
+                Operator = having.Operator,
+                Value = having.Value
+            };
+
+    private static SelectionNode? CloneSelection(SelectionNode? node)
+    {
+        if (node is null) return null;
+
+        var clone = new SelectionNode
+        {
+            Filter = CloneFilterGroup(node.Filter),
+            Alias = node.Alias
+        };
+
+        if (node.IncludeAllScalars)
+        {
+            clone.MarkIncludeAllScalars();
+        }
+
+        foreach (var child in node.EnumerateChildren())
+        {
+            var clonedChild = CloneSelection(child.Value)!;
+            var targetChild = clone.GetOrAddChild(child.Key);
+            CopySelectionInto(targetChild, clonedChild);
+        }
+
+        return clone;
+    }
+
+    private static void CopySelectionInto(SelectionNode target, SelectionNode source)
+    {
+        target.Filter = CloneFilterGroup(source.Filter);
+        target.Alias = source.Alias;
+        if (source.IncludeAllScalars)
+        {
+            target.MarkIncludeAllScalars();
+        }
+
+        foreach (var child in source.EnumerateChildren())
+        {
+            var targetChild = target.GetOrAddChild(child.Key);
+            CopySelectionInto(targetChild, child.Value);
+        }
     }
 }

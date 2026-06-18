@@ -10,7 +10,7 @@ namespace FlexQuery.NET.Caching;
 /// </summary>
 public static class ProjectionExpressionCache
 {
-    private static readonly ConcurrentDictionary<string, CachedProjection> _projectionCache = new();
+    private static readonly BoundedConcurrentCache<string, CachedProjection> _projectionCache = new();
 
     /// <summary>
     /// Gets or creates a cached projection for the specified entity type and selection.

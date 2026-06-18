@@ -8,8 +8,8 @@ namespace FlexQuery.NET.Caching;
 /// </summary>
 public static class ExpressionCache
 {
-    private static readonly ConcurrentDictionary<string, LambdaExpression> _expressionCache = new();
-    private static readonly ConcurrentDictionary<string, Delegate> _compiledCache = new();
+    private static readonly BoundedConcurrentCache<string, LambdaExpression> _expressionCache = new();
+    private static readonly BoundedConcurrentCache<string, Delegate> _compiledCache = new();
 
     /// <summary>
     /// Gets or creates a cached expression.
@@ -18,10 +18,6 @@ public static class ExpressionCache
         string key,
         Func<Expression<Func<T, bool>>> factory)
     {
-        if (_expressionCache.Count >= FlexQueryCacheSettings.MaxCacheSize)
-        {
-            _expressionCache.Clear();
-        }
         var expression = _expressionCache.GetOrAdd(key, _ => factory());
         return (Expression<Func<T, bool>>)expression;
     }
@@ -33,14 +29,9 @@ public static class ExpressionCache
         string key,
         Func<Func<T, bool>> factory)
     {
-        if (_compiledCache.Count >= FlexQueryCacheSettings.MaxCacheSize)
-        {
-            _compiledCache.Clear();
-        }
-
         var compiled = _compiledCache.GetOrAdd(key, _ => factory());
 
-        return (Func<T, bool>)compiled;
+        return (Func<T, bool>)compiled!;
     }
 
     /// <summary>

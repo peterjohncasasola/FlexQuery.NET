@@ -9,7 +9,7 @@ namespace FlexQuery.NET.Caching;
 /// </summary>
 public static class ParserCache
 {
-    private static readonly ConcurrentDictionary<ParsedQueryCacheKey, QueryOptions> _cache = new();
+    private static readonly BoundedConcurrentCache<ParsedQueryCacheKey, QueryOptions> _cache = new();
 
     /// <summary>
     /// Attempts to get a cached <see cref="QueryOptions"/> for the given key.
@@ -19,7 +19,7 @@ public static class ParserCache
     {
         if (_cache.TryGetValue(key, out var cached))
         {
-            options = cached.Clone();
+            options = cached!.Clone();
             return true;
         }
 
@@ -33,12 +33,7 @@ public static class ParserCache
     /// </summary>
     public static void Set(ParsedQueryCacheKey key, QueryOptions options)
     {
-        if (_cache.Count >= FlexQueryCacheSettings.MaxCacheSize)
-        {
-            _cache.Clear();
-        }
-
-        _cache[key] = options.Clone();
+        _cache.Set(key, options.Clone());
     }
 
     /// <summary>
