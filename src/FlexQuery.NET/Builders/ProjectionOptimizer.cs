@@ -1,6 +1,7 @@
 using System.Linq.Expressions;
 using System.Reflection;
 using System.Collections.Concurrent;
+using FlexQuery.NET.Metadata;
 using FlexQuery.NET.Models;
 
 namespace FlexQuery.NET.Builders;
@@ -68,12 +69,12 @@ public static class ProjectionOptimizer
                 navPaths[outputName] = childPath;
                 CollectFields(kvp.Value, elemType, childPath, fields, navPaths, level + 1, notes);
             }
-            else if (!IsScalarType(propInfo.PropertyType) && kvp.Value.HasChildren)
+            else if (!TypeClassification.IsScalarType(propInfo.PropertyType) && kvp.Value.HasChildren)
             {
                 navPaths[outputName] = childPath;
                 CollectFields(kvp.Value, propInfo.PropertyType, childPath, fields, navPaths, level + 1, notes);
             }
-            else if (IsScalarType(propInfo.PropertyType))
+            else if (TypeClassification.IsScalarType(propInfo.PropertyType))
             {
                 fields.Add(ProjectedField.Create(
                     sourcePath: childPath,
@@ -90,21 +91,6 @@ public static class ProjectionOptimizer
     {
         var prop = entityType.GetProperty(propertyName, BindingFlags.Public | BindingFlags.Instance | BindingFlags.IgnoreCase);
         return prop != null && Security.SafePropertyResolver.TryGetCollectionElementType(prop.PropertyType, out _);
-    }
-
-    private static bool IsScalarType(Type type)
-    {
-        var unwrapped = Nullable.GetUnderlyingType(type) ?? type;
-        return unwrapped.IsPrimitive
-            || unwrapped.IsEnum
-            || unwrapped == typeof(string)
-            || unwrapped == typeof(decimal)
-            || unwrapped == typeof(DateTime)
-            || unwrapped == typeof(DateTimeOffset)
-            || unwrapped == typeof(Guid)
-            || unwrapped == typeof(TimeSpan)
-            || unwrapped == typeof(DateOnly)
-            || unwrapped == typeof(TimeOnly);
     }
 
     private static string GenerateOptimizationCacheKey(SelectionNode tree, Type entityType)

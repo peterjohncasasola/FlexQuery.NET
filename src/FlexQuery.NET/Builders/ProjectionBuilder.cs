@@ -1,7 +1,9 @@
 using System.Linq.Expressions;
 using System.Reflection;
 using System.Collections.Concurrent;
+using FlexQuery.NET.Caching;
 using FlexQuery.NET.Helpers;
+using FlexQuery.NET.Metadata;
 using FlexQuery.NET.Models;
 
 namespace FlexQuery.NET.Builders;
@@ -32,10 +34,11 @@ internal static class ProjectionBuilder
 
     public static Expression<Func<T, object>> Build<T>(SelectionNode selectTree, QueryOptions options)
     {
-        if (Caching.QueryCacheManager.ShouldCache(options.EnableCache))
+        if (QueryCacheManager.ShouldCache(options.EnableCache)
+            && QueryCacheKeyBuilder.CanCache(options))
         {
-            var cacheKey = options.GetCacheKey(typeof(T), "projection") + ":" + GenerateCacheKey(selectTree);
-            return Caching.QueryCacheManager.GetOrAddExpression(cacheKey, () =>
+            var cacheKey = QueryCacheKeyBuilder.Build(options, typeof(T), "projection") + ":" + GenerateCacheKey(selectTree);
+            return QueryCacheManager.GetOrAddExpression(cacheKey, () =>
             {
                 var param = Expression.Parameter(typeof(T), "x");
                 var memberInit = BuildMemberInit(param, typeof(T), selectTree, options.Filter, options);
@@ -188,7 +191,7 @@ internal static class ProjectionBuilder
         {
             foreach (var prop in sourceType.GetProperties(BindingFlags.Public | BindingFlags.Instance))
             {
-                if (IsScalarType(prop.PropertyType))
+                if (TypeClassification.IsScalarType(prop.PropertyType))
                 {
                     effective.GetOrAddChild(prop.Name);
                 }
@@ -209,7 +212,7 @@ internal static class ProjectionBuilder
         {
             foreach (var prop in sourceType.GetProperties(BindingFlags.Public | BindingFlags.Instance))
             {
-                if (IsScalarType(prop.PropertyType))
+                if (TypeClassification.IsScalarType(prop.PropertyType))
                 {
                     effective.GetOrAddChild(prop.Name);
                 }
@@ -226,7 +229,7 @@ internal static class ProjectionBuilder
             return node.IncludeAllScalars || node.HasChildren;
         }
 
-        return !IsScalarType(propertyType) && (node.IncludeAllScalars || node.HasChildren);
+        return ! TypeClassification.IsScalarType(propertyType) && (node.IncludeAllScalars || node.HasChildren);
     }
 
     private static void MergeNodes(SelectionNode target, SelectionNode source)
@@ -254,28 +257,13 @@ internal static class ProjectionBuilder
         }
     }
 
-    private static bool IsScalarType(Type type)
-    {
-        var unwrapped = Nullable.GetUnderlyingType(type) ?? type;
-        return unwrapped.IsPrimitive
-            || unwrapped.IsEnum
-            || unwrapped == typeof(string)
-            || unwrapped == typeof(decimal)
-            || unwrapped == typeof(DateTime)
-            || unwrapped == typeof(DateTimeOffset)
-            || unwrapped == typeof(Guid)
-            || unwrapped == typeof(TimeSpan)
-            || unwrapped == typeof(DateOnly)
-            || unwrapped == typeof(TimeOnly);
-    }
-
     private static string GenerateCacheKey(SelectionNode tree)
     {
         if (!tree.HasChildren && !tree.IncludeAllScalars) return "*";
 
         var keys = tree.EnumerateChildren()
             .OrderBy(k => k.Key)
-            .Select(k => $"{k.Key}@{k.Value.Alias ?? ""}:{GenerateCacheKey(k.Value)}|F:{FilterAnalyzer.CacheKey(k.Value.Filter)}");
+            .Select(k => $"{k.Key}@{k.Value.Alias ?? ""}:{GenerateCacheKey(k.Value)}|F:{FilterNormalizer.GenerateCacheKey(k.Value.Filter)}");
 
         var scalarMarker = tree.IncludeAllScalars ? "!" : string.Empty;
         var payload = string.Join(",", keys);

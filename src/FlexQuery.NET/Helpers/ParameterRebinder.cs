@@ -7,7 +7,7 @@ internal sealed class ParameterRebinder : ExpressionVisitor
 {
     private readonly Dictionary<ParameterExpression, Expression> _map;
 
-    public ParameterRebinder(Dictionary<ParameterExpression, Expression> map)
+    private ParameterRebinder(Dictionary<ParameterExpression, Expression>? map)
     {
         _map = map ?? new Dictionary<ParameterExpression, Expression>();
     }

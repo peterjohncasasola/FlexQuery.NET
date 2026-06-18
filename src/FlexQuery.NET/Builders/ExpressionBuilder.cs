@@ -1,6 +1,8 @@
 using System.Linq.Expressions;
 using System.Reflection;
+using FlexQuery.NET.Caching;
 using FlexQuery.NET.Constants;
+using FlexQuery.NET.Expressions;
 using FlexQuery.NET.Helpers;
 using FlexQuery.NET.Models;
 using FlexQuery.NET.Security;
@@ -28,10 +30,11 @@ public static class ExpressionBuilder
 
         var lambda = Expression.Lambda<Func<T, bool>>(body, param);
 
-        if (Caching.QueryCacheManager.ShouldCache(options.EnableCache))
+        if (QueryCacheManager.ShouldCache(options.EnableCache)
+            && QueryCacheKeyBuilder.CanCache(options))
         {
-            var key = options.GetCacheKey(typeof(T), "predicate");
-            return Caching.QueryCacheManager.GetOrAddExpression(key, () => lambda);
+            var key = QueryCacheKeyBuilder.Build(options, typeof(T), "predicate");
+            return QueryCacheManager.GetOrAddExpression(key, () => lambda);
         }
 
         return lambda;
@@ -62,10 +65,11 @@ public static class ExpressionBuilder
             body,
             param);
 
-        if (Caching.QueryCacheManager.ShouldCache(options.EnableCache))
+        if (QueryCacheManager.ShouldCache(options.EnableCache)
+            && QueryCacheKeyBuilder.CanCache(options))
         {
             var key = options.GetCacheKey(elementType, "predicate_dynamic");
-            return Caching.QueryCacheManager.GetOrAddExpression(key, () => lambda);
+            return QueryCacheManager.GetOrAddExpression(key, () => lambda);
         }
 
         return lambda;
@@ -177,9 +181,7 @@ public static class ExpressionBuilder
 
         if (quantifier == FilterOperators.All)
         {
-            var allMethod = typeof(Enumerable).GetMethods()
-                .First(m => m.Name == nameof(Enumerable.All) && m.GetParameters().Length == 2)
-                .MakeGenericMethod(elementType);
+            var allMethod = ExpressionMethodCache.EnumerableAll(elementType);
 
             var allCall = Expression.Call(allMethod, collectionAccess, Expression.Lambda(predicate, itemParam));
             // null collection -> true (vacuous truth for All) or we can just say if null then false?
@@ -187,15 +189,12 @@ public static class ExpressionBuilder
             var isNull = Expression.Equal(collectionAccess, Expression.Constant(null, collectionType));
             return Expression.OrElse(isNull, allCall);
         }
-        else // "any" is the default
-        {
-            var anyMethod = typeof(Enumerable).GetMethods()
-                .First(m => m.Name == nameof(Enumerable.Any) && m.GetParameters().Length == 2)
-                .MakeGenericMethod(elementType);
 
-            var anyCall = Expression.Call(anyMethod, collectionAccess, Expression.Lambda(predicate, itemParam));
-            return anyCall;
-        }
+        // "any" is the default
+        var anyMethod = ExpressionMethodCache.EnumerableAnyWithPredicate(elementType);
+
+        var anyCall = Expression.Call(anyMethod, collectionAccess, Expression.Lambda(predicate, itemParam));
+        return anyCall;
     }
 
     private static Expression? BuildPathExpression(
@@ -220,10 +219,7 @@ public static class ExpressionBuilder
             var predicate = BuildPathExpression(itemParam, chain, index + 1, op, rawValue, options);
             if (predicate is null) return null;
 
-            var anyMethod = typeof(Enumerable).GetMethods()
-                .First(m => m.Name == nameof(Enumerable.Any)
-                            && m.GetParameters().Length == 2)
-                .MakeGenericMethod(elementType);
+            var anyMethod = ExpressionMethodCache.EnumerableAnyWithPredicate(elementType);
 
             var anyCall = Expression.Call(
                 anyMethod,
@@ -260,9 +256,7 @@ public static class ExpressionBuilder
         var predicate = BuildPathExpression(itemParam, nestedChain, 0, nestedOperator, nestedValue, options);
         if (predicate is null) return null;
 
-        var anyMethod = typeof(Enumerable).GetMethods()
-            .First(m => m.Name == nameof(Enumerable.Any) && m.GetParameters().Length == 2)
-            .MakeGenericMethod(elementType);
+        var anyMethod = ExpressionMethodCache.EnumerableAnyWithPredicate(elementType);
 
         var anyCall = Expression.Call(anyMethod, collectionAccess, Expression.Lambda(predicate, itemParam));
         return anyCall;
@@ -292,9 +286,7 @@ public static class ExpressionBuilder
         var predicate = BuildPathExpression(itemParam, nestedChain, 0, nestedOperator, nestedValue, options);
         if (predicate is null) return null;
 
-        var allMethod = typeof(Enumerable).GetMethods()
-            .First(m => m.Name == nameof(Enumerable.All) && m.GetParameters().Length == 2)
-            .MakeGenericMethod(elementType);
+        var allMethod = ExpressionMethodCache.EnumerableAll(elementType);
 
         var allCall = Expression.Call(allMethod, collectionAccess, Expression.Lambda(predicate, itemParam));
         var isNull = Expression.Equal(collectionAccess, Expression.Constant(null, collectionType));
@@ -320,9 +312,7 @@ public static class ExpressionBuilder
         if (collectionAccess is null || collectionType is null) return null;
         if (!SafePropertyResolver.TryGetCollectionElementType(collectionType, out var elementType)) return null;
 
-        var countMethod = typeof(Enumerable).GetMethods()
-            .First(m => m.Name == nameof(Enumerable.Count) && m.GetParameters().Length == 1)
-            .MakeGenericMethod(elementType);
+        var countMethod = ExpressionMethodCache.EnumerableCount(elementType);
 
         var countCall = Expression.Call(countMethod, collectionAccess);
         var compareExpr = binaryFactory(countCall, Expression.Constant(countValue, typeof(int)));

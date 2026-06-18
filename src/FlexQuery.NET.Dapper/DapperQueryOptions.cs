@@ -27,43 +27,16 @@ public sealed class DapperQueryOptions : BaseQueryOptions
     /// <summary>Creates default Dapper query options.</summary>
     public DapperQueryOptions(QueryExecutionOptions source)
     {
-        MaxPageSize = source.MaxPageSize;
-        DefaultPageSize = source.DefaultPageSize;
-        CaseInsensitiveFields = source.CaseInsensitiveFields;
-        IncludeTotalCount = source.IncludeTotalCount;
-        StrictFieldValidation = source.StrictFieldValidation;
-        MaxFieldDepth = source.MaxFieldDepth;
-        AllowedFields = source.AllowedFields;
-        BlockedFields = source.BlockedFields;
-        AllowedIncludes = source.AllowedIncludes;
-        ExpressionMappings = source.ExpressionMappings;
-        FilterableFields = source.FilterableFields;
-        SortableFields = source.SortableFields;
-        SelectableFields = source.SelectableFields;
-
-        // Dapper-specific defaults
-        IncludeTotalCount = true;
+        ArgumentNullException.ThrowIfNull(source);
+        CopyBaseOptions(source, this);
     }
 
     /// <summary>Converts to a base QueryExecutionOptions instance.</summary>
     public QueryExecutionOptions ToQueryExecutionOptions()
     {
-        return new QueryExecutionOptions
-        {
-            MaxPageSize = this.MaxPageSize,
-            DefaultPageSize = this.DefaultPageSize,
-            CaseInsensitiveFields = this.CaseInsensitiveFields,
-            IncludeTotalCount = this.IncludeTotalCount,
-            StrictFieldValidation = this.StrictFieldValidation,
-            MaxFieldDepth = this.MaxFieldDepth,
-            AllowedFields = this.AllowedFields,
-            BlockedFields = this.BlockedFields,
-            AllowedIncludes = this.AllowedIncludes,
-            ExpressionMappings = this.ExpressionMappings,
-            FilterableFields = this.FilterableFields,
-            SortableFields = this.SortableFields,
-            SelectableFields = this.SelectableFields
-        };
+        var target = new QueryExecutionOptions();
+        CopyBaseOptions(this, target);
+        return target;
     }
 
     /// <summary>Global default SQL dialect for all queries when not explicitly configured.</summary>
@@ -89,7 +62,8 @@ public sealed class DapperQueryOptions : BaseQueryOptions
     /// </summary>
     public Mapping.Builders.EntityTypeBuilder<TEntity> Entity<TEntity>() where TEntity : class
     {
-        return (MappingRegistry ?? new Mapping.MappingRegistry()).Entity<TEntity>();
+        MappingRegistry ??= new Mapping.MappingRegistry();
+        return MappingRegistry.Entity<TEntity>();
     }
 
     /// <summary>
@@ -137,5 +111,28 @@ public sealed class DapperQueryOptions : BaseQueryOptions
     internal IMappingRegistry ResolveMappingRegistry()
     {
         return MappingRegistry ?? new Mapping.MappingRegistry();
+    }
+
+    private static void CopyBaseOptions(BaseQueryOptions source, BaseQueryOptions target)
+    {
+        target.AllowedFields = source.AllowedFields;
+        target.BlockedFields = source.BlockedFields;
+        target.AllowedIncludes = source.AllowedIncludes;
+        target.ExpressionMappings = source.ExpressionMappings;
+        target.AllowedOperators = source.AllowedOperators;
+        target.FilterableFields = source.FilterableFields;
+        target.SortableFields = source.SortableFields;
+        target.SelectableFields = source.SelectableFields;
+        target.MaxFieldDepth = source.MaxFieldDepth;
+        target.StrictFieldValidation = source.StrictFieldValidation;
+        target.IncludeTotalCount = source.IncludeTotalCount;
+        target.DefaultPageSize = source.DefaultPageSize;
+        target.MaxPageSize = source.MaxPageSize;
+        target.CaseInsensitiveFields = source.CaseInsensitiveFields;
+        target.FieldMappings = source.FieldMappings;
+        target.FieldAccessResolver = source.FieldAccessResolver;
+        target.RoleAllowedFields = source.RoleAllowedFields;
+        target.CurrentRole = source.CurrentRole;
+        target.AllowedFieldsResolver = source.AllowedFieldsResolver;
     }
 }
