@@ -178,6 +178,91 @@ public class FieldSecurityTests
            .Which.Result.Errors.Should().Contain(e => e.Code == "FIELD_ACCESS_DENIED");
     }
 
+    [Fact]
+    public void NonStrictValidation_ShouldRemoveUnauthorizedFilterFields()
+    {
+        var options = QueryOptionsParser.Parse(new Dictionary<string, StringValues> { { "filter", "Name:eq:john&SSN:eq:123" } });
+        var execOptions = new QueryExecutionOptions
+        {
+            BlockedFields = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "SSN" },
+            StrictFieldValidation = false
+        };
+        
+        var result = options.Validate(typeof(Customer), execOptions);
+
+        // Should have error recorded
+        result.IsValid.Should().BeFalse();
+        result.Errors.Should().Contain(e => e.Field == "SSN");
+        
+        // But SSN should be removed from filter
+        options.Filter.Should().NotBeNull();
+        options.Filter!.Filters.Should().HaveCount(1);
+        options.Filter.Filters.First().Field.Should().Be("Name");
+    }
+
+    [Fact]
+    public void NonStrictValidation_ShouldRemoveUnauthorizedSelectFields()
+    {
+        var options = QueryOptionsParser.Parse(new Dictionary<string, StringValues> { { "select", "Id,Name,SSN" } });
+        var execOptions = new QueryExecutionOptions
+        {
+            BlockedFields = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "SSN" },
+            StrictFieldValidation = false
+        };
+        
+        var result = options.Validate(typeof(Customer), execOptions);
+
+        // Should have error recorded
+        result.IsValid.Should().BeFalse();
+        result.Errors.Should().Contain(e => e.Field == "SSN");
+        
+        // But SSN should be removed from select
+        options.Select.Should().NotBeNull();
+        options.Select.Should().HaveCount(2);
+        options.Select.Should().Contain("Id");
+        options.Select.Should().Contain("Name");
+        options.Select.Should().NotContain("SSN");
+    }
+
+    [Fact]
+    public void NonStrictValidation_ShouldRemoveUnauthorizedSortFields()
+    {
+        var options = QueryOptionsParser.Parse(new Dictionary<string, StringValues> { { "sort", "Name:asc,SSN:desc" } });
+        var execOptions = new QueryExecutionOptions
+        {
+            BlockedFields = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "SSN" },
+            StrictFieldValidation = false
+        };
+        
+        var result = options.Validate(typeof(Customer), execOptions);
+
+        // Should have error recorded
+        result.IsValid.Should().BeFalse();
+        result.Errors.Should().Contain(e => e.Field == "SSN");
+        
+        // But SSN should be removed from sort
+        options.Sort.Should().NotBeNull();
+        options.Sort.Should().HaveCount(1);
+        options.Sort.First().Field.Should().Be("Name");
+    }
+
+    [Fact]
+    public void NonStrictValidation_ShouldRemoveUnauthorizedBlockedFields()
+    {
+        var options = QueryOptionsParser.Parse(new Dictionary<string, StringValues> { { "filter", "Name:eq:john&SSN:eq:123" } });
+        var execOptions = new QueryExecutionOptions
+        {
+            BlockedFields = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "SSN" },
+            StrictFieldValidation = false
+        };
+        
+        var result = options.Validate(typeof(Customer), execOptions);
+
+        result.IsValid.Should().BeFalse();
+        result.Errors.Should().Contain(e => e.Field == "SSN");
+        options.Filter!.Filters.Should().HaveCount(1);
+    }
+
     private class MockResolver : IFieldAccessResolver
     {
         private readonly bool _allowed;

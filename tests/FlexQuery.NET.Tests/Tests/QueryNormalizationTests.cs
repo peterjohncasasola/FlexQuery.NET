@@ -1,4 +1,5 @@
 using FlexQuery.NET.Extensions;
+using FlexQuery.NET.Caching;
 using FlexQuery.NET.Models;
 using FlexQuery.NET.Parsers;
 using FlexQuery.NET.Tests.Models;
@@ -91,5 +92,111 @@ public class QueryNormalizationTests
         options.Filter.Should().NotBeNull();
         options.Filter!.Filters.Select(f => f.Field).Should().ContainInOrder("age", "name");
         options.Filter.Filters.Select(f => f.Operator).Should().Equal(new[] { "gt", "eq" });
+    }
+
+    [Fact]
+    public void ParserCache_ReturnsIsolatedQueryOptionsInstances()
+    {
+        ParserCache.Clear();
+        var raw = new Dictionary<string, string>
+        {
+            ["filter"] = "Name:eq:Alice",
+            ["select"] = "Id,Name"
+        };
+
+        var first = Parse(raw);
+        first.Filter!.Filters[0].Field = "Mutated";
+        first.Select!.Add("Secret");
+
+        var second = Parse(raw);
+
+        second.Filter!.Filters[0].Field.Should().Be("Name");
+        second.Select.Should().BeEquivalentTo(["Id", "Name"]);
+    }
+
+    [Fact]
+    public void GetCacheKey_DiffersForNegatedAndNonNegatedFilters()
+    {
+        var normal = new QueryOptions
+        {
+            Filter = new FilterGroup
+            {
+                Filters = [new FilterCondition { Field = "Name", Operator = "eq", Value = "Alice" }]
+            }
+        };
+
+        var negated = new QueryOptions
+        {
+            Filter = new FilterGroup
+            {
+                IsNegated = true,
+                Filters = [new FilterCondition { Field = "Name", Operator = "eq", Value = "Alice" }]
+            }
+        };
+
+        normal.GetCacheKey(typeof(TestEntity), "predicate")
+            .Should().NotBe(negated.GetCacheKey(typeof(TestEntity), "predicate"));
+    }
+
+    [Fact]
+    public void GetCacheKey_DiffersForScopedFilterShape()
+    {
+        var statusScoped = new QueryOptions
+        {
+            Filter = new FilterGroup
+            {
+                Filters =
+                [
+                    new FilterCondition
+                    {
+                        Field = "Orders",
+                        Operator = "any",
+                        ScopedFilter = new FilterGroup
+                        {
+                            Filters = [new FilterCondition { Field = "Status", Operator = "eq", Value = "Open" }]
+                        }
+                    }
+                ]
+            }
+        };
+
+        var totalScoped = new QueryOptions
+        {
+            Filter = new FilterGroup
+            {
+                Filters =
+                [
+                    new FilterCondition
+                    {
+                        Field = "Orders",
+                        Operator = "any",
+                        ScopedFilter = new FilterGroup
+                        {
+                            Filters = [new FilterCondition { Field = "Total", Operator = "gt", Value = "100" }]
+                        }
+                    }
+                ]
+            }
+        };
+
+        statusScoped.GetCacheKey(typeof(TestEntity), "predicate")
+            .Should().NotBe(totalScoped.GetCacheKey(typeof(TestEntity), "predicate"));
+    }
+
+    [Fact]
+    public void HasProjection_ReturnsTrueForAllProjectionShapes()
+    {
+        new QueryOptions { Select = ["Id"] }.HasProjection().Should().BeTrue();
+        new QueryOptions { Includes = ["Orders"] }.HasProjection().Should().BeTrue();
+        new QueryOptions { FilteredIncludes = [new IncludeNode { Path = "Orders" }] }.HasProjection().Should().BeTrue();
+        new QueryOptions { GroupBy = ["Status"] }.HasProjection().Should().BeTrue();
+        new QueryOptions { Aggregates = [new AggregateModel { Function = "count", Alias = "Count" }] }.HasProjection().Should().BeTrue();
+
+        var jsonSelect = Parse(new Dictionary<string, string>
+        {
+            ["filter"] = """{"select":{"id":true}}"""
+        });
+
+        jsonSelect.HasProjection().Should().BeTrue();
     }
 }
