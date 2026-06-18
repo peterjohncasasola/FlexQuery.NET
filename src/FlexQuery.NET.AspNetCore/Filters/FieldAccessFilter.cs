@@ -13,6 +13,8 @@ namespace FlexQuery.NET.AspNetCore.Filters;
 /// </summary>
 public class FieldAccessFilter : IActionFilter
 {
+    private const string LegacyExecutionOptionsKey = "FlexQueryExecutionOptions";
+
     /// <inheritdoc />
     public void OnActionExecuting(ActionExecutingContext context)
     {
@@ -26,7 +28,8 @@ public class FieldAccessFilter : IActionFilter
         if (attribute == null) return;
 
         // 2. Retrieve or create QueryExecutionOptions
-        var execOptions = context.HttpContext.Items[ContextKeys.ExecutionOptions] as QueryExecutionOptions 
+        var execOptions = context.HttpContext.Items[ContextKeys.ExecutionOptions] as QueryExecutionOptions
+                          ?? context.HttpContext.Items[LegacyExecutionOptionsKey] as QueryExecutionOptions
                           ?? new QueryExecutionOptions();
 
         // 3. Apply settings

@@ -3,7 +3,7 @@ namespace FlexQuery.NET.Constants;
 /// <summary>
 /// Standard error codes used in validation rules.
 /// </summary>
-public static class ValidationErrorCodes
+internal static class ValidationErrorCodes
 {
     public const string FieldNotFound = "FIELD_NOT_FOUND";
     public const string TypeMismatch = "TYPE_MISMATCH";

@@ -3,7 +3,7 @@ namespace FlexQuery.NET.Constants;
 /// <summary>
 /// Keys used for dictionary lookups in FlexQuery context or options.
 /// </summary>
-public static class ContextKeys
+internal static class ContextKeys
 {
     public const string EntityType = nameof(EntityType);
     public const string ExpressionMappings = nameof(ExpressionMappings);

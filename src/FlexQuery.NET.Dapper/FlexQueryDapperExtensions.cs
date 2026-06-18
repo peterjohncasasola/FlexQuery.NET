@@ -9,6 +9,7 @@ using FlexQuery.NET.Dapper.Dialects;
 using FlexQuery.NET.Extensions;
 using Microsoft.Extensions.Primitives;
 using FlexQuery.NET.Constants;
+using FlexQuery.NET.Dapper.Materialization;
 
 namespace FlexQuery.NET.Dapper;
 
@@ -69,12 +70,12 @@ public static class FlexQueryDapperExtensions
         
         var flexParams = new FlexQueryParameters
         {
-            Filter = dict.GetValueOrDefault("filter") ?? dict.GetValueOrDefault("$filter"),
-            Sort = dict.GetValueOrDefault("sort") ?? dict.GetValueOrDefault("orderby") ?? dict.GetValueOrDefault("$orderby"),
-            Select = dict.GetValueOrDefault("select") ?? dict.GetValueOrDefault("$select"),
-            Include = dict.GetValueOrDefault("include") ?? dict.GetValueOrDefault("expand") ?? dict.GetValueOrDefault("$expand"),
-            Page = dict.TryGetValue("page", out var p) && int.TryParse(p, out var page) ? page : null,
-            PageSize = dict.TryGetValue("pageSize", out var ps) && int.TryParse(ps, out var pageSize) ? pageSize : null,
+            Filter = dict.GetValueOrDefault(QueryOptionKeys.Filter) ?? dict.GetValueOrDefault($"${QueryOptionKeys.Filter}"),
+            Sort = dict.GetValueOrDefault(QueryOptionKeys.Sort) ?? dict.GetValueOrDefault(QueryOptionKeys.OrderBy) ?? dict.GetValueOrDefault($"${QueryOptionKeys.OrderBy}"),
+            Select = dict.GetValueOrDefault(QueryOptionKeys.Select) ?? dict.GetValueOrDefault($"${QueryOptionKeys.Select}"),
+            Include = dict.GetValueOrDefault(QueryOptionKeys.Include) ?? dict.GetValueOrDefault(QueryOptionKeys.Expand) ?? dict.GetValueOrDefault($"${QueryOptionKeys.Expand}"),
+            Page = dict.TryGetValue(QueryOptionKeys.Page, out var p) && int.TryParse(p, out var page) ? page : null,
+            PageSize = dict.TryGetValue(QueryOptionKeys.PageSize, out var ps) && int.TryParse(ps, out var pageSize) ? pageSize : null,
             RawParameters = dict
         };
 
@@ -116,42 +117,7 @@ public static class FlexQueryDapperExtensions
                 commandTimeout: execOptions.CommandTimeoutSeconds,
                 commandType: CommandType.Text);
 
-            var parentMap = new Dictionary<object, T>();
-            var pkProperty = mapping.GetProperties().FirstOrDefault(p => p.Equals("Id", StringComparison.OrdinalIgnoreCase)) ?? mapping.GetProperties().First();
-            var pkColumn = mapping.GetColumnName(pkProperty);
-
-            foreach (var row in dynamicItems)
-            {
-                var rowDict = (IDictionary<string, object>)row;
-                System.IO.File.AppendAllText("hydration_log.txt", $"ROW KEYS: {string.Join(", ", rowDict.Keys)}\n");
-                var rowKeys = rowDict.Keys.ToDictionary(k => k, k => k, StringComparer.OrdinalIgnoreCase);
-                
-                if (!rowKeys.TryGetValue(pkColumn, out var actualPkCol) || rowDict[actualPkCol] == null || rowDict[actualPkCol] == DBNull.Value) continue;
-                var pkValue = rowDict[actualPkCol];
-
-                if (!parentMap.TryGetValue(pkValue, out var parent))
-                {
-                    parent = MapRowToEntity<T>(rowDict, mapping, string.Empty);
-                    parentMap[pkValue] = parent;
-                }
-
-                foreach (var include in options.Includes)
-                {
-                    var joinInfo = mapping.GetJoinInfo(include);
-                    if (joinInfo == null) continue;
-
-                    var targetMapping = registry.GetMapping(joinInfo.TargetType);
-                    var childPkProperty = targetMapping.GetProperties().FirstOrDefault(p => p.Equals("Id", StringComparison.OrdinalIgnoreCase)) ?? targetMapping.GetProperties().First();
-                    var childPkColumn = joinInfo.NavigationProperty + "_" + targetMapping.GetColumnName(childPkProperty);
-
-                    if (rowKeys.TryGetValue(childPkColumn, out var actualChildPkCol) && rowDict[actualChildPkCol] != null && rowDict[actualChildPkCol] != DBNull.Value)
-                    {
-                        var child = MapRowToEntity(rowDict, targetMapping, joinInfo.NavigationProperty + "_");
-                        AddChildToParent(parent, joinInfo.NavigationProperty, child);
-                    }
-                }
-            }
-            items = parentMap.Values.ToList();
+            items = DapperRowHydrator.HydrateIncludes<T>(dynamicItems, mapping, registry, options.Includes);
         }
         else if (typeof(T) == typeof(object) || options.Aggregates.Count > 0)
         {
@@ -188,76 +154,6 @@ public static class FlexQueryDapperExtensions
             Page = options.Paging.Page,
             PageSize = options.Paging.PageSize
         };
-    }
-
-    private static T MapRowToEntity<T>(IDictionary<string, object> row, Mapping.IEntityMapping mapping, string prefix) where T : class
-    {
-        return (T)MapRowToEntity(row, mapping, prefix);
-    }
-
-    private static object MapRowToEntity(IDictionary<string, object> row, Mapping.IEntityMapping mapping, string prefix)
-    {
-        var entity = Activator.CreateInstance(mapping.Type)!;
-        var rowKeys = row.Keys.ToDictionary(k => k, k => k, StringComparer.OrdinalIgnoreCase);
-
-        foreach (var propName in mapping.GetProperties())
-        {
-            var colName = prefix + mapping.GetColumnName(propName);
-            if (rowKeys.TryGetValue(colName, out var actualKey) && row.TryGetValue(actualKey, out var val) && val != DBNull.Value)
-            {
-                var prop = mapping.Type.GetProperty(propName);
-                if (prop != null && prop.CanWrite)
-                {
-                    try
-                    {
-                        var targetType = Nullable.GetUnderlyingType(prop.PropertyType) ?? prop.PropertyType;
-                        prop.SetValue(entity, Convert.ChangeType(val, targetType));
-                    }
-                    catch { /* skip incompatible */ }
-                }
-            }
-        }
-        return entity;
-    }
-
-    private static void AddChildToParent(object parent, string navigationProperty, object child)
-    {
-        var prop = parent.GetType().GetProperty(navigationProperty, System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.IgnoreCase);
-        if (prop == null) return;
-
-        var value = prop.GetValue(parent);
-        if (value == null)
-        {
-            var propType = prop.PropertyType;
-            if (propType.IsGenericType && (propType.GetGenericTypeDefinition() == typeof(List<>) || propType.GetGenericTypeDefinition() == typeof(ICollection<>) || propType.GetGenericTypeDefinition() == typeof(IEnumerable<>)))
-            {
-                var itemType = propType.GetGenericArguments()[0];
-                value = Activator.CreateInstance(typeof(List<>).MakeGenericType(itemType));
-                prop.SetValue(parent, value);
-            }
-            else
-            {
-                prop.SetValue(parent, child);
-                return;
-            }
-        }
-
-        if (value is System.Collections.IList list)
-        {
-            var childPkProp = child.GetType().GetProperties().FirstOrDefault(p => p.Name.Equals("Id", StringComparison.OrdinalIgnoreCase));
-            var childPk = childPkProp?.GetValue(child);
-            
-            if (childPk != null)
-            {
-                foreach (var item in list)
-                {
-                    var itemPk = item.GetType().GetProperty(childPkProp.Name)?.GetValue(item);
-                    if (childPk.Equals(itemPk))
-                        return;
-                }
-            }
-            list.Add(child);
-        }
     }
 
     private static string ExtractCountSql(string sql)

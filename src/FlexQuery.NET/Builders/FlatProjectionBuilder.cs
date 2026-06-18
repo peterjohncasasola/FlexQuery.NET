@@ -4,6 +4,7 @@ using FlexQuery.NET.Models;
 using FlexQuery.NET.Security;
 using FlexQuery.NET.Helpers;
 using FlexQuery.NET.Constants;
+using FlexQuery.NET.Metadata;
 
 namespace FlexQuery.NET.Builders;
 
@@ -338,12 +339,12 @@ internal static class FlatProjectionBuilder
 
             if (pi != null)
             {
-                bool isNav = IsCollectionType(pi.PropertyType, out var elemType)
-                             || (!IsScalarType(pi.PropertyType) && node.HasChildren);
+                bool isNav = TypeClassification.IsCollectionType(pi.PropertyType, out var elemType)
+                             || (!TypeClassification.IsScalarType(pi.PropertyType) && node.HasChildren);
 
                 if (isNav)
                     navChildren.Add((propName, node, pi, elemType ?? pi.PropertyType));
-                else if (IsScalarType(pi.PropertyType))
+                else if (TypeClassification.IsScalarType(pi.PropertyType))
                     leafChildren.Add((propName, node, pi));
             }
         }
@@ -395,7 +396,7 @@ internal static class FlatProjectionBuilder
                 // No children specified → project all scalars of the element type
                 foreach (var p in elemType.GetProperties(BindingFlags.Public | BindingFlags.Instance))
                 {
-                    if (IsScalarType(p.PropertyType))
+                    if (TypeClassification.IsScalarType(p.PropertyType))
                         fields.Add(new FieldSpec(nextLevel, p.Name, p.Name, p.PropertyType));
                 }
             }
@@ -413,23 +414,5 @@ internal static class FlatProjectionBuilder
         for (int i = 0; i < levelTypes.Count; i++)
             d[$"L{i}"] = levelTypes[i];
         return d;
-    }
-
-    private static bool IsCollectionType(Type type, out Type itemType)
-        => SafePropertyResolver.TryGetCollectionElementType(type, out itemType);
-
-    private static bool IsScalarType(Type type)
-    {
-        var unwrapped = Nullable.GetUnderlyingType(type) ?? type;
-        return unwrapped.IsPrimitive
-            || unwrapped.IsEnum
-            || unwrapped == typeof(string)
-            || unwrapped == typeof(decimal)
-            || unwrapped == typeof(DateTime)
-            || unwrapped == typeof(DateTimeOffset)
-            || unwrapped == typeof(Guid)
-            || unwrapped == typeof(TimeSpan)
-            || unwrapped == typeof(DateOnly)
-            || unwrapped == typeof(TimeOnly);
     }
 }
