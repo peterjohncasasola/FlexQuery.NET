@@ -14,6 +14,7 @@ public static class QueryOptionsParser
     private static readonly List<IQueryParser> _parsers = new()
     {
         new JqlQueryParser(),
+        new JsonQueryParser(),
         new DslQueryParser()
     };
 

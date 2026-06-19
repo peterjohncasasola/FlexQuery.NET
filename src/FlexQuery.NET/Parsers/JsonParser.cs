@@ -9,6 +9,19 @@ internal static class JsonParser
     // ── JSON Filter Format ───────────────────────────────────────────────
     //  ?filter={"logic":"and","filters":[{"field":"Name","operator":"contains","value":"john"}]}
 
+    internal static bool IsJsonFilter(string? filter)
+    {
+        if (string.IsNullOrWhiteSpace(filter)) return false;
+
+        var span = filter.AsSpan();
+        while (span.Length > 0 && char.IsWhiteSpace(span[0]))
+        {
+            span = span[1..];
+        }
+
+        return span.Length > 0 && span[0] == '{';
+    }
+
     internal static QueryOptions Parse(QueryOptions options, string json)
     {
         try

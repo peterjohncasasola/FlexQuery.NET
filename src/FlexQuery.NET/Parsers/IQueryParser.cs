@@ -41,13 +41,12 @@ public enum QuerySyntax
     NativeDsl,
     
     /// <summary>
-    /// Uses the native FlexQuery DSL (e.g., filter=name:eq:john).
+    /// Uses JSON filter payloads (e.g. filter={"logic":"and","filters":[...]}).
     /// </summary>
     Json,
     
-    
     /// <summary>
-    /// Uses the native FlexQuery DSL (e.g., filter=name:eq:john).
+    /// Uses the generic indexed query-string syntax (e.g. filter[0].field=name).
     /// </summary>
     Generic,
 

@@ -38,10 +38,7 @@ public sealed class DslQueryParser : IQueryParser
 
     private static void ApplyFilter(FlexQueryParameters parameters, QueryOptions options)
     {
-        if (string.IsNullOrWhiteSpace(parameters.Filter))
-        {
-            return;
-        }
+        if (string.IsNullOrWhiteSpace(parameters.Filter)) return;
 
         var filterVal = parameters.Filter.TrimStart();
         if (filterVal.StartsWith('{'))

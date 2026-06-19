@@ -284,6 +284,39 @@ public class ParserTests
         opts.Filter.Should().BeNull();
     }
 
+    [Fact]
+    public void JsonFilter_ExplicitJsonSyntax_ParsedCorrectly()
+    {
+        var opts = QueryOptionsParser.Parse(
+            new FlexQueryParameters
+            {
+                Filter = """{"logic":"or","filters":[{"field":"City","operator":"eq","value":"London"},{"field":"Age","operator":"gt","value":"30"}]}"""
+            },
+            QuerySyntax.Json);
+
+        opts.Filter.Should().NotBeNull();
+        opts.Filter!.Logic.Should().Be(LogicOperator.Or);
+        opts.Filter.Filters.Should().HaveCount(2);
+        opts.Filter.Filters.Should().Contain(f => f.Field == "City" && f.Operator == FilterOperators.Equal && f.Value == "London");
+        opts.Filter.Filters.Should().Contain(f => f.Field == "Age" && f.Operator == FilterOperators.GreaterThan && f.Value == "30");
+    }
+
+    [Fact]
+    public void JsonFilter_ExplicitDslSyntax_StillParsesJsonPayload()
+    {
+        var opts = QueryOptionsParser.Parse(
+            new FlexQueryParameters
+            {
+                Filter = """{"logic":"and","filters":[{"field":"Name","operator":"contains","value":"john"}]}"""
+            },
+            QuerySyntax.NativeDsl);
+
+        opts.Filter.Should().NotBeNull();
+        opts.Filter!.Logic.Should().Be(LogicOperator.And);
+        opts.Filter.Filters.Should().ContainSingle(f =>
+            f.Field == "Name" && f.Operator == FilterOperators.Contains && f.Value == "john");
+    }
+
     // ════════════════════════════════════════════════════════════════════
     // 3. Syncfusion Format
     // ════════════════════════════════════════════════════════════════════
