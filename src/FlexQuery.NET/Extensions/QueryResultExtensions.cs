@@ -18,6 +18,7 @@ public static class QueryResultExtensions
             TotalCount = queryResult.TotalCount,
             Page       = queryResult.Page,
             PageSize   = queryResult.PageSize,
+            Aggregates = queryResult.Aggregates,
             Data       = queryResult.Data.Cast<TProjected>().ToList()
         };
     }
@@ -42,6 +43,7 @@ public static class QueryResultExtensions
             TotalCount = result.TotalCount,
             Page       = result.Page,
             PageSize   = result.PageSize,
+            Aggregates = result.Aggregates,
             Data       = result.Data?.Cast<object>().ToList() ?? new List<object>()
         };
     }
@@ -65,6 +67,7 @@ public static class QueryResultExtensions
             TotalCount = result.TotalCount,
             Page       = result.Page,
             PageSize   = result.PageSize,
+            Aggregates = result.Aggregates,
             Data       = result.Data?.Cast<dynamic>().ToList() ?? new List<dynamic>()
         };
     }

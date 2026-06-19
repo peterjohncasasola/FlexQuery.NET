@@ -117,15 +117,30 @@ public static class QueryableExtensions
     {
         var filtered = ApplyFilterAndSort(query, options);
         var total = filtered.TryGetTotalCount(options);
+
+        Dictionary<string, Dictionary<string, object>>? grandTotals = null;
+
+        if (options.Aggregates.Count > 0 &&
+            (options.GroupBy == null || options.GroupBy.Count == 0))
+        {
+            var aggregateQuery = GroupByBuilder.Apply(filtered, options);
+
+            var aggRow = aggregateQuery.FirstOrDefault();
+
+            grandTotals = AggregateResultBuilder.Build(
+                aggRow,
+                options.Aggregates);
+        }
+
         filtered = QueryBuilder.ApplyPaging(filtered, options);
 
         if (hasProjection)
         {
             var data = QueryBuilder.ApplySelect(filtered, options).ToList();
-            return options.BuildQueryResult(data, total); // QueryResult<object>
+            return options.BuildQueryResult(data, total, grandTotals); // QueryResult<object>
         }
 
         //convert from QueryResult<T> to QueryResult<object> by treating each T as an object (no projection)
-        return options.BuildQueryResult(filtered.ToList(), total).ToObjectResult();
+        return options.BuildQueryResult(filtered.ToList(), total, grandTotals).ToObjectResult();
     }
 }

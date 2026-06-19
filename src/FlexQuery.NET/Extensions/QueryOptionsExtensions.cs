@@ -92,13 +92,14 @@ public static class QueryOptionsExtensions
     /// <param name="data">The collection of result items.</param>
     /// <param name="totalCount">Optional total count of all items before paging.</param>
     /// <returns>A <see cref="QueryResult{T}"/> containing the data and pagination metadata.</returns>
-    public static QueryResult<T> BuildQueryResult<T>(this QueryOptions options, IEnumerable<T> data, int? totalCount = null)
+    public static QueryResult<T> BuildQueryResult<T>(this QueryOptions options, IEnumerable<T> data, int? totalCount = null, Dictionary<string, Dictionary<string, object>>? aggregates = null)
     {
         return new QueryResult<T>
         {
             TotalCount = totalCount,
             Page       = options.Paging.Page,
             PageSize   = options.Paging.PageSize,
+            Aggregates = aggregates,
             Data       = data.ToList()
         };
     }
