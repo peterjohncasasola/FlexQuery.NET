@@ -421,8 +421,10 @@ public class AgGridQueryParserTests
         // Let's also verify that we can manually parse it or just check mapped options since we can't inspect the private deserialized object directly from Parse(JsonElement) output.
         // But wait! We can write a test that verifies the manual deserialization if we expose/make it testable, or since AgGridQueryOptionsParser.Parse(JsonElement) calls it,
         // we can see that it parsed correctly because request had paging and grouping.
-        // Let's also verify that Pivot/Value/GroupKeys do not pollute QueryOptions.
-        request.Aggregates.Should().BeEmpty();
+        // Let's also verify that Pivot/GroupKeys do not pollute QueryOptions.
+        request.Aggregates.Should().ContainSingle();
+        request.Aggregates[0].Field.Should().Be("gold");
+        request.Aggregates[0].Function.Should().Be("sum");
     }
 
     [Fact]
@@ -443,10 +445,12 @@ public class AgGridQueryParserTests
         }
         """;
 
-        // Let's deserialize using the public Parse(string) but verify we don't map to QueryOptions
+        // Let's deserialize using the public Parse(string) but verify we map to QueryOptions
         var options = AgGridQueryOptionsParser.Parse(json);
         options.GroupBy.Should().BeNull();
-        options.Aggregates.Should().BeEmpty();
+        options.Aggregates.Should().ContainSingle();
+        options.Aggregates[0].Field.Should().Be("gold");
+        options.Aggregates[0].Function.Should().Be("sum");
 
         // Let's test that we can parse the JsonElement to check that it parses successfully without throwing any FormatException.
         var act = () => AgGridQueryOptionsParser.Parse(json);

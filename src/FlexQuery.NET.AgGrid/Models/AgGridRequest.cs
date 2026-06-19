@@ -13,4 +13,6 @@ public sealed class AgGridRequest
     public List<AgGridSortItem> SortModel { get; set; } = [];
 
     public List<AgGridGroupColumn>? RowGroupCols { get; set; }
+
+    public List<AgGridValueColumn>? ValueCols { get; set; }
 }

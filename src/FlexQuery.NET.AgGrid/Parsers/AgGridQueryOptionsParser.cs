@@ -2,6 +2,7 @@ using System.Text.Json;
 using System.Linq;
 using FlexQuery.NET.AgGrid.Models;
 using FlexQuery.NET.Models;
+using FlexQuery.NET.Parsers;
 
 namespace FlexQuery.NET.AgGrid.Parsers;
 
@@ -42,6 +43,26 @@ public static class AgGridQueryOptionsParser
             if (groupByFields.Count > 0)
             {
                 result.GroupBy = groupByFields!;
+            }
+        }
+
+        // 3. Value Columns / Aggregates Support
+        if (request.ValueCols is { Count: > 0 })
+        {
+            foreach (var col in request.ValueCols)
+            {
+                if (string.IsNullOrEmpty(col.Field) || string.IsNullOrEmpty(col.AggFunc)) continue;
+
+                var fn = col.AggFunc.ToLowerInvariant();
+                if (fn == "average") fn = "avg"; // Normalize to canonical
+
+                var alias = ParserUtilities.BuildAggregateAlias(fn, col.Field);
+                result.Aggregates.Add(new AggregateModel
+                {
+                    Field = col.Field,
+                    Function = fn,
+                    Alias = alias
+                });
             }
         }
 
@@ -103,6 +124,19 @@ public static class AgGridQueryOptionsParser
             foreach (var item in rowGroupCols.EnumerateArray())
             {
                 request.RowGroupCols.Add(new AgGridGroupColumn { Field = GetString(item, "field") });
+            }
+        }
+
+        if (root.TryGetProperty("valueCols", out var valueCols) && valueCols.ValueKind == JsonValueKind.Array)
+        {
+            request.ValueCols = new List<AgGridValueColumn>();
+            foreach (var item in valueCols.EnumerateArray())
+            {
+                request.ValueCols.Add(new AgGridValueColumn
+                {
+                    Field = GetString(item, "field"),
+                    AggFunc = GetString(item, "aggFunc")
+                });
             }
         }
         
