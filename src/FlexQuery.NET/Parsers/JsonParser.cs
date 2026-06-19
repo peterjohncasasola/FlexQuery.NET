@@ -14,7 +14,7 @@ internal static class JsonParser
         try
         {
             using var doc = JsonDocument.Parse(json);
-            
+
             if (doc.RootElement.TryGetProperty(QueryOptionKeys.Select, out var selectEl))
             {
                 options.SelectTree = SelectTreeBuilder.ParseJsonSelect(selectEl);
@@ -33,42 +33,7 @@ internal static class JsonParser
 
         return options;
     }
-    
 
-    internal static QueryOptions Parse(IDictionary<string, string> d)
-    {
-        var options = QueryOptionsFactory.CreateBase(d);
-        if (d.TryGetValue(QueryOptionKeys.Select, out var sel))
-            options.Select = ParserUtilities.SplitCsv(sel);
-
-        // Sort (generic format + sort string)
-        options.Sort.AddRange(SortParser.Parse(d));
-
-        if (!d.TryGetValue(QueryOptionKeys.Filter, out var json)) return options;
-
-        try
-        {
-            using var doc = JsonDocument.Parse(json);
-            
-            if (doc.RootElement.TryGetProperty(QueryOptionKeys.Select, out var selectEl))
-            {
-                options.SelectTree = SelectTreeBuilder.ParseJsonSelect(selectEl);
-            }
-
-            if (doc.RootElement.TryGetProperty(QueryOptionKeys.Filters, out _) || doc.RootElement.TryGetProperty(QueryOptionKeys.Logic, out _))
-            {
-                options.Filter = ParseJsonGroup(doc.RootElement);
-            }
-            else if (doc.RootElement.TryGetProperty(QueryOptionKeys.Filter, out var filterEl))
-            {
-                options.Filter = ParseJsonGroup(filterEl);
-            }
-        }
-        catch { /* malformed JSON — ignore */ }
-
-        return options;
-    }
-    
     private static FilterGroupNode ParseJsonGroup(JsonElement root)
     {
         var group = new FilterGroupNode();

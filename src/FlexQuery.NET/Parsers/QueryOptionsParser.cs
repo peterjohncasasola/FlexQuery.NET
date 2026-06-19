@@ -66,6 +66,13 @@ public static class QueryOptionsParser
             return cached!;
         }
 
+        if (ShouldParseGeneric(parameters, syntax))
+        {
+            var options = IndexedFilterParser.Parse(parameters);
+            ParserCache.Set(cacheKey, options);
+            return options;
+        }
+
         IQueryParser? parser = null;
 
         if (syntax != QuerySyntax.AutoDetect)
@@ -75,10 +82,10 @@ public static class QueryOptionsParser
 
         parser ??= _parsers.FirstOrDefault(p => p.CanParse(parameters)) ?? _parsers.Last();
 
-        var options = parser.Parse(parameters);
-        ParserCache.Set(cacheKey, options);
+        var parsedOptions = parser.Parse(parameters);
+        ParserCache.Set(cacheKey, parsedOptions);
 
-        return options;
+        return parsedOptions;
     }
 
     /// <summary>
@@ -89,7 +96,7 @@ public static class QueryOptionsParser
     {
         var grouped = queryString.GroupBy(kv => kv.Key, StringComparer.OrdinalIgnoreCase)
             .ToDictionary(g => g.Key, g => g.Last().Value.ToString(), StringComparer.OrdinalIgnoreCase);
-        
+
         string? TryGet(string key) => grouped.GetValueOrDefault(key);
         var parameters = new FlexQueryParameters
         {
@@ -109,5 +116,22 @@ public static class QueryOptionsParser
         };
 
         return Parse(parameters);
+    }
+
+    private static bool ShouldParseGeneric(FlexQueryParameters parameters, QuerySyntax syntax)
+    {
+        if (syntax != QuerySyntax.AutoDetect && syntax != QuerySyntax.Generic)
+        {
+            return false;
+        }
+
+        if (IndexedFilterParser.HasIndexFilters(parameters.RawParameters))
+        {
+            return true;
+        }   
+
+        return string.IsNullOrWhiteSpace(parameters.Query)
+            && string.IsNullOrWhiteSpace(parameters.Filter)
+            && IndexedFilterParser.HasIndexedSort(parameters.RawParameters);
     }
 }

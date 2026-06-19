@@ -1,5 +1,4 @@
 using FlexQuery.NET.Models;
-using FlexQuery.NET.Constants;
 
 namespace FlexQuery.NET.Parsers;
 
@@ -12,26 +11,9 @@ internal static class QueryOptionsFactory
     /// <summary>
     /// Creates a base QueryOptions populated with paging, mode, select, include, group, and having options.
     /// </summary>
-    public static QueryOptions CreateBase(IDictionary<string, string> source)
+    public static QueryOptions Create(FlexQueryParameters parameters)
     {
-        return new QueryOptions
-        {
-            Paging = new PagingOptions
-            {
-                Page = ParserUtilities.ParseInt(source, QueryOptionKeys.Page, 1),
-                PageSize = ParserUtilities.ParseInt(source, QueryOptionKeys.PageSize, 20)
-            },
-            ProjectionMode = ParserUtilities.ParseProjectionMode(GetValueOrDefault(source, QueryOptionKeys.Mode)),
-            GroupBy = ParserUtilities.SplitCsv(GetValueOrDefault(source, QueryOptionKeys.Group)),
-            Having = HavingParser.Parse(GetValueOrDefault(source, QueryOptionKeys.Having)),
-            IncludeCount = ParserUtilities.ParseBool(GetValueOrDefault(source, QueryOptionKeys.IncludeCount), true),
-            Distinct = ParserUtilities.ParseBool(GetValueOrDefault(source, QueryOptionKeys.Distinct))
-        };
-    }
-
-    public static QueryOptions CreateBase(FlexQueryParameters parameters)
-    {
-        return new QueryOptions
+        var options = new QueryOptions
         {
             Paging = new PagingOptions
             {
@@ -39,15 +21,28 @@ internal static class QueryOptionsFactory
                 PageSize = parameters.PageSize ?? 20
             },
             ProjectionMode = ParserUtilities.ParseProjectionMode(parameters.Mode),
-            GroupBy = ParserUtilities.SplitCsv(parameters.GroupBy),
-            Having = HavingParser.Parse(parameters.Having),
             IncludeCount = parameters.IncludeCount ?? true,
             Distinct = parameters.Distinct ?? false
         };
-    }
 
-    private static string? GetValueOrDefault(IDictionary<string, string> source, string key)
-    {
-        return source.TryGetValue(key, out var value) ? value : null;
+        if (!string.IsNullOrWhiteSpace(parameters.Select))
+            SelectParser.Parse(options, parameters.Select);
+
+        if (!string.IsNullOrWhiteSpace(parameters.GroupBy))
+            options.GroupBy = ParserUtilities.SplitCsv(parameters.GroupBy);
+
+        if (!string.IsNullOrWhiteSpace(parameters.Having))
+            options.Having = HavingParser.Parse(parameters.Having);
+
+        if (!string.IsNullOrWhiteSpace(parameters.Include))
+        {
+            options.Includes = ParserUtilities.SplitCsv(parameters.Include.Split('(')[0]);
+            options.FilteredIncludes = FilteredIncludeParser.Parse(parameters.Include);
+        }
+
+        if (!string.IsNullOrWhiteSpace(parameters.Sort))
+            options.Sort.AddRange(SortParser.Parse(parameters.Sort));
+
+        return options;
     }
 }
