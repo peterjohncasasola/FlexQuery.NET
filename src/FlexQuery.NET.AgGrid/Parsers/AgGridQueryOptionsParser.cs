@@ -33,12 +33,12 @@ public static class AgGridQueryOptionsParser
         return Parse(DeserializeRequest(json));
     }
 
-    public static FilterGroup ParseFilterModel(IReadOnlyDictionary<string, AgGridFilterNode> filterModel)
+    internal static FilterGroup ParseFilterModel(IReadOnlyDictionary<string, AgGridFilterNode> filterModel)
     {
         return AgGridFilterParser.Parse(filterModel);
     }
 
-    public static List<SortNode> ParseSortModel(IReadOnlyList<AgGridSortItem> sortModel)
+    internal static List<SortNode> ParseSortModel(IReadOnlyList<AgGridSortItem> sortModel)
     {
         return AgGridSortParser.Parse(sortModel);
     }

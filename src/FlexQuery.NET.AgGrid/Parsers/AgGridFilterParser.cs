@@ -6,7 +6,7 @@ using FlexQuery.NET.Models;
 
 namespace FlexQuery.NET.AgGrid.Parsers;
 
-public static class AgGridFilterParser
+internal static class AgGridFilterParser
 {
     public static FilterGroup Parse(IReadOnlyDictionary<string, AgGridFilterNode> filterModel)
     {

@@ -2,7 +2,7 @@ using FlexQuery.NET.Constants;
 
 namespace FlexQuery.NET.AgGrid.Mapping;
 
-public static class AgGridOperatorMapper
+internal static class AgGridOperatorMapper
 {
     private static readonly Dictionary<string, string> Operators = new(StringComparer.OrdinalIgnoreCase)
     {

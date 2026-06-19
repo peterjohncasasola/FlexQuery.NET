@@ -3,7 +3,7 @@ using FlexQuery.NET.Models;
 
 namespace FlexQuery.NET.AgGrid.Parsers;
 
-public static class AgGridSortParser
+internal static class AgGridSortParser
 {
     public static List<SortNode> Parse(IReadOnlyList<AgGridSortItem>? sortModel)
     {
