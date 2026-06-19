@@ -170,10 +170,22 @@ public static class QueryableEfCoreExtensions
         filtered = QueryBuilder.ApplySort(filtered, options);
 
         var total = options.IncludeCount == true ? await filtered.CountAsync(cancellationToken) : (int?)null;
+        
+        Dictionary<string, Dictionary<string, object>>? grandTotals = null;
+
+        if (options.Aggregates.Count > 0 &&
+            (options.GroupBy == null || options.GroupBy.Count == 0))
+        {
+            var aggregateQuery = GroupByBuilder.Apply(filtered, options);
+
+            var aggRow = await aggregateQuery.FirstOrDefaultAsync(cancellationToken);
+
+            grandTotals = AggregateResultBuilder.Build(
+                aggRow,
+                options.Aggregates);
+        }
 
         filtered = QueryBuilder.ApplyPaging(filtered, options);
-
-
 
         // Note: ApplySelect already incorporates FilteredIncludes filters into the projection tree,
         // so calling ApplyFilteredIncludes here is technically redundant but ensures consistency
@@ -183,14 +195,13 @@ public static class QueryableEfCoreExtensions
         if (hasProjection)
         {
             var projectedData = await filtered.ApplySelect(options).ToListAsync(cancellationToken);
-            return options.BuildQueryResult(projectedData, total); // QueryResult<object>
+            return options.BuildQueryResult(projectedData, total, grandTotals); // QueryResult<object>
         }
 
-        
         var filteredData = await filtered.ToListAsync(cancellationToken);
 
         //convert from QueryResult<T> to QueryResult<object> by treating each T as an object (no projection)
-        return options.BuildQueryResult(filteredData, total).ToObjectResult();
+        return options.BuildQueryResult(filteredData, total, grandTotals).ToObjectResult();
     }
 
 }

@@ -171,7 +171,7 @@ public static class FlexQueryDapperExtensions
 
             items = DapperRowHydrator.HydrateIncludes<T>(dynamicItems, mapping, registry, options.Includes);
         }
-        else if (typeof(T) == typeof(object) || options.Aggregates.Count > 0)
+        else if (typeof(T) == typeof(object) || (options.Aggregates.Count > 0 && options.GroupBy?.Count > 0))
         {
             var dynamicItems = await connection.QueryAsync(
                 command.Sql,
@@ -199,12 +199,51 @@ public static class FlexQueryDapperExtensions
             totalCount = (int)await connection.QuerySingleAsync<long>(countSql, parameters, commandTimeout: execOptions.CommandTimeoutSeconds, commandType: CommandType.Text);
         }
 
+        Dictionary<string, Dictionary<string, object>>? grandTotals = null;
+        if (options.Aggregates?.Count > 0 && (options.GroupBy == null || options.GroupBy.Count == 0))
+        {
+            var aggCommand = translator.TranslateAggregates(options);
+            var aggParams = new DynamicParameters();
+            foreach (var param in aggCommand.Parameters)
+            {
+                var cleanName = param.Key.TrimStart('@', ':', '?');
+                aggParams.Add(cleanName, param.Value);
+            }
+
+            var aggResult = await connection.QueryFirstOrDefaultAsync(
+                aggCommand.Sql,
+                aggParams,
+                commandTimeout: execOptions.CommandTimeoutSeconds,
+                commandType: CommandType.Text);
+
+            if (aggResult != null)
+            {
+                grandTotals = new Dictionary<string, Dictionary<string, object>>(StringComparer.OrdinalIgnoreCase);
+                var rowDict = (IDictionary<string, object>)aggResult;
+                foreach (var agg in options.Aggregates)
+                {
+                    if (rowDict.TryGetValue(agg.Alias, out var val))
+                    {
+                        var fieldName = agg.Field ?? "all";
+                        var fnName = agg.Function;
+                        if (!grandTotals.TryGetValue(fieldName, out var fnDict))
+                        {
+                            fnDict = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase);
+                            grandTotals[fieldName] = fnDict;
+                        }
+                        fnDict[fnName] = val ?? 0;
+                    }
+                }
+            }
+        }
+
         return new QueryResult<T>
         {
             Data = items,
             TotalCount = totalCount,
             Page = options.Paging.Page,
-            PageSize = options.Paging.PageSize
+            PageSize = options.Paging.PageSize,
+            Aggregates = grandTotals
         };
     }
 

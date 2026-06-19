@@ -16,6 +16,9 @@ public interface ISqlTranslator
 {
     /// <summary>Translates QueryOptions into fully parameterized SQL.</summary>
     SqlCommand Translate(QueryOptions options);
+
+    /// <summary>Translates QueryOptions aggregates list into parameterized SQL.</summary>
+    SqlCommand TranslateAggregates(QueryOptions options);
 }
 
 /// <summary>
@@ -79,6 +82,55 @@ public sealed class SqlTranslator : ISqlTranslator
         };
     }
 
+    /// <summary>Translates aggregates list into parameterized SQL.</summary>
+    public SqlCommand TranslateAggregates(QueryOptions options)
+    {
+        _parameterIndex = 0;
+        var parameters = new Dictionary<string, object?>();
+
+        var entityType = options.Items.TryGetValue(ContextKeys.EntityType, out var type) ? (Type)type : typeof(object);
+        var mapping = _mappingRegistry.GetMapping(entityType);
+        var selectTree = Helpers.SelectTreeBuilder.Build(options);
+
+        if (options.Includes?.Count > 0 || options.FilteredIncludes?.Count > 0 || selectTree.HasChildren)
+        {
+            mapping.TableAlias = mapping.TableName;
+        }
+
+        var selectParts = new List<string>();
+        foreach (var agg in options.Aggregates)
+        {
+            var column = mapping.GetColumnName(agg.Field ?? "*");
+            var quoted = QuoteColumn(column, mapping);
+
+            if (agg.Function.Equals("count", StringComparison.OrdinalIgnoreCase) && (string.IsNullOrEmpty(agg.Field) || agg.Field == "*"))
+            {
+                selectParts.Add($"COUNT(1) AS {_dialect.QuoteIdentifier(agg.Alias)}");
+            }
+            else
+            {
+                selectParts.Add($"{agg.Function.ToUpperInvariant()}({quoted}) AS {_dialect.QuoteIdentifier(agg.Alias)}");
+            }
+        }
+        var selectClause = $"SELECT {string.Join(", ", selectParts)}";
+
+        var fromClause = string.IsNullOrEmpty(mapping.TableAlias)
+            ? $"FROM {_dialect.QuoteIdentifier(mapping.TableName)}"
+            : $"FROM {_dialect.QuoteIdentifier(mapping.TableName)} AS {_dialect.QuoteIdentifier(mapping.TableAlias)}";
+        var joinClause = BuildJoinClause(options, mapping, parameters, selectTree);
+        var whereClause = BuildWhereClause(options.Filter, mapping, parameters);
+
+        var clauses = new List<string> { selectClause, fromClause, joinClause, whereClause };
+        var sql = string.Join(" ", clauses.Where(c => !string.IsNullOrEmpty(c)));
+        sql = System.Text.RegularExpressions.Regex.Replace(sql, @"\s+", " ");
+
+        return new SqlCommand
+        {
+            Sql = sql,
+            Parameters = parameters
+        };
+    }
+
     private string NextParam() => _dialect.CreateParameterName($"p{_parameterIndex++}");
 
     /// <summary>Builds the SELECT clause by recursively walking the SelectionNode AST.</summary>
@@ -86,7 +138,7 @@ public sealed class SqlTranslator : ISqlTranslator
     {
         var distinctPrefix = !string.IsNullOrEmpty(distinctClause) ? $"{distinctClause} " : string.Empty;
         var selectParts = new List<string>();
-        if (options.Aggregates?.Count > 0)
+        if (options.Aggregates?.Count > 0 && options.GroupBy?.Count > 0)
         {
             if (options.GroupBy?.Count > 0)
             {
@@ -101,7 +153,7 @@ public sealed class SqlTranslator : ISqlTranslator
                 var column = mapping.GetColumnName(agg.Field ?? "*");
                 var quoted = QuoteColumn(column, mapping);
 
-                if (agg.Function.Equals("count", StringComparison.OrdinalIgnoreCase) && string.IsNullOrEmpty(agg.Field))
+                if (agg.Function.Equals("count", StringComparison.OrdinalIgnoreCase) && (string.IsNullOrEmpty(agg.Field) || agg.Field == "*"))
                 {
                     selectParts.Add($"COUNT(1) AS {_dialect.QuoteIdentifier(agg.Alias)}");
                 }
