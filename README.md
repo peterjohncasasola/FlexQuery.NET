@@ -64,7 +64,9 @@ using FlexQuery.NET.AgGrid.Models;
 [HttpPost]
 public async Task<IActionResult> GetUsers([FromBody] AgGridRequest request)
 {
-    var result = await _context.Users.FlexQueryAsync(request, options =>
+    var queryOptions = AgGridQueryOptionsParser.Parse(request);
+
+    var result = await _context.Users.FlexQueryAsync(queryOptions, options =>
     {
         options.AllowedFields = ["Id", "Name", "Email", "Status", "CreatedAt"];
         options.AllowOperators("Status", FilterOperators.Eq, FilterOperators.In);

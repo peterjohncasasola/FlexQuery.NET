@@ -3,6 +3,48 @@
 All notable changes to this project will be documented in this file.
 
 ---
+## [3.0.0] - 2026-06-20
+
+### Added
+- **FlexQuery.NET.AgGrid Package**:
+  - New lightweight adapter package for AG Grid integration.
+  - Automatically maps AG Grid request payloads (`AgGridRequest`) to canonical `QueryOptions`.
+  - Full support for AG Grid features including filtering, sorting, pagination, and row grouping/aggregation.
+- **Aggregate & Having Support**:
+  - Added support for Grand Total Aggregations to calculate global dataset metrics (e.g., sum, count, min, max, avg) via `AggregateResultBuilder`.
+  - Introduced `having` parser and `HavingParser` to filter grouped records or global aggregates.
+  - Enhanced `QueryResult` and `QueryOptions` to expose `Aggregates` dictionaries.
+- **JsonQueryParser**:
+  - Introduced explicit `JsonQueryParser` for robust JSON syntax detection and structured query parsing.
+- **Non-Strict Validation Mode**:
+  - Added `ValidationMode.NonStrict` to allow silent removal of invalid fields or includes, preventing hard exceptions during query execution.
+- **DTO Field Mapping**:
+  - Implemented explicit DTO field mapping support for advanced query translation.
+- **Caching Engine Upgrade**:
+  - Replaced the unbounded expression caching system with a bounded LRU-style cache to prevent memory degradation in high-concurrency environments.
+- **Dapper Enhancements**:
+  - Deep-projection aware SQL generation, ensuring complex DTO hierarchies map efficiently.
+  - Added row hydration support for advanced Dapper query scenarios.
+- **FlexQueryAsync Overloads**:
+  - Added new `FlexQueryAsync` overloads that accept pre-parsed `QueryOptions` objects.
+- **ServiceCollection Extensions**:
+  - Added streamlined DI registration (`ServiceCollectionExtensions`) for Dapper integration and AgGrid parsers.
+
+### Changed
+- **Magic Strings Elimination**:
+  - Systematically replaced magic strings throughout the library with strongly typed constants for context keys, parser tokens, and validation error codes.
+- **Parser Orchestration**:
+  - Decomposed `QueryOptionsParser` into specialized parsers and introduced a factory pattern for cleaner orchestration.
+  - Introduced an operator alias map for streamlined parsing of logical operators.
+  - Removed redundant `QueryParameterParser`.
+- **Expression Extraction**:
+  - Extracted reusable expression methods and shared type classifications to reduce duplication.
+
+### Fixed
+- **EF Core Collection Translation**:
+  - Fixed an issue with translating `any` collection filters in EF Core.
+
+---
 ## [3.0.0] - 2026-05-15
 
 ### Added
