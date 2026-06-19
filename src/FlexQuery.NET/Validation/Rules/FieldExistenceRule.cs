@@ -1,5 +1,6 @@
 using FlexQuery.NET.Models;
 using FlexQuery.NET.Security;
+using FlexQuery.NET.Constants;
 
 namespace FlexQuery.NET.Validation.Rules;
 
@@ -25,7 +26,7 @@ public sealed class FieldExistenceRule : IValidationRule
             {
                 result.Errors.Add(new ValidationError(
                     $"Field '{sort.Field}' does not exist on type '{context.TargetType.Name}'.", 
-                    "FIELD_NOT_FOUND", 
+                    ValidationErrorCodes.FieldNotFound, 
                     sort.Field));
             }
         }
@@ -41,7 +42,7 @@ public sealed class FieldExistenceRule : IValidationRule
             {
                 result.Errors.Add(new ValidationError(
                     $"Field '{filter.Field}' does not exist on type '{entityType.Name}'.", 
-                    "FIELD_NOT_FOUND", 
+                    ValidationErrorCodes.FieldNotFound, 
                     filter.Field));
                 continue;
             }
@@ -56,7 +57,7 @@ public sealed class FieldExistenceRule : IValidationRule
                 {
                     result.Errors.Add(new ValidationError(
                         $"Field '{filter.Field}' is not a collection. Scoped filters can only be applied to collections.", 
-                        "NOT_A_COLLECTION", 
+                        ValidationErrorCodes.NotACollection, 
                         filter.Field));
                 }
             }

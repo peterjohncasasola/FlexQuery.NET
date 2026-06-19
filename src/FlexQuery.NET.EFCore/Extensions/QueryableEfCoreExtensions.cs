@@ -13,58 +13,6 @@ namespace FlexQuery.NET.EFCore;
 /// </summary>
 public static class QueryableEfCoreExtensions
 {
-    /// <summary>
-    /// Async variant of <c>ToQueryResult</c> for EF Core query providers.
-    /// </summary>
-    [Obsolete("ToQueryResultAsync is deprecated and will be removed in v3. " +
-    "Use FlexQuery(...) for the unified query pipeline (filtering, sorting,paging and filterincludes).")]
-    [EditorBrowsable(EditorBrowsableState.Never)]
-    public static async Task<QueryResult<T>> ToQueryResultAsync<T>(
-        this IQueryable<T> query,
-        QueryOptions options,
-        CancellationToken cancellationToken = default)
-        where T : class
-    {
-        QueryOptionsEfCoreExtensions.EnsureEfCoreOperatorsRegistered();
-
-        var filtered = QueryBuilder.ApplyFilter(query, options);
-        filtered = QueryBuilder.ApplySort(filtered, options);
-
-        var total = options.IncludeCount == true ? await filtered.CountAsync(cancellationToken) : (int?)null;
-
-        var paged = QueryBuilder.ApplyPaging(filtered, options);
-        var data = await paged.ApplyFilteredIncludes(options).ToListAsync(cancellationToken);
-
-        return options.BuildQueryResult(data, total);
-    }
-
-    /// <summary>
-    /// Async projected result variant using options-driven selection.
-    /// </summary>
-    [Obsolete("ToProjectedQueryResultAsync is deprecated and will be removed in v3. " +
-    "Use FlexQuery(...) for the unified query pipeline (filtering, sorting, projection, paging and filterincludes).")]
-    [EditorBrowsable(EditorBrowsableState.Never)]
-    public static async Task<QueryResult<object>> ToProjectedQueryResultAsync<T>(
-        this IQueryable<T> query,
-        QueryOptions options,
-        CancellationToken cancellationToken = default)
-        where T : class
-    {
-        QueryOptionsEfCoreExtensions.EnsureEfCoreOperatorsRegistered();
-
-        var filtered = QueryBuilder.ApplyFilter(query, options);
-        filtered = QueryBuilder.ApplySort(filtered, options);
-
-        var total = options.IncludeCount == true ? await filtered.CountAsync(cancellationToken) : (int?)null;
-
-        var paged = QueryBuilder.ApplyPaging(filtered, options);
-        // Note: ApplySelect already incorporates FilteredIncludes filters into the projection tree,
-        // so calling ApplyFilteredIncludes here is technically redundant but ensures consistency
-        // if the projection engine behavior changes.
-        var data = await paged.ApplyFilteredIncludes(options).ApplySelect(options).ToListAsync(cancellationToken);
-
-        return options.BuildQueryResult(data, total);
-    }
 
     // ── Include Pipeline ─────────────────────────────────────────────────
 

@@ -30,4 +30,10 @@ public sealed class QueryValidationException : Exception
         Result = new ValidationResult();
         Result.Errors.Add(new ValidationError(message, "VALIDATION_ERROR"));
     }
+
+    public QueryValidationException(string message, ValidationResult result)
+        : base(message)
+    {
+        Result = result;
+    }
 }

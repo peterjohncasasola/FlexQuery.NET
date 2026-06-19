@@ -1,4 +1,5 @@
 using FlexQuery.NET.Models;
+using FlexQuery.NET.Constants;
 using Microsoft.AspNetCore.Http;
 
 namespace FlexQuery.NET.AspNetCore.Extensions;
@@ -21,9 +22,18 @@ public static class HttpContextExtensions
         if (context == null)
             return new QueryExecutionOptions();
 
-        if (context.Items.TryGetValue(ExecutionOptionsKey, out var optionsObj) && optionsObj is QueryExecutionOptions options)
+        if (context.Items.TryGetValue(ContextKeys.ExecutionOptions, out var optionsObj)
+            && optionsObj is QueryExecutionOptions options)
         {
             return options;
+        }
+
+        // Backward-compatible fallback for callers that used the original
+        // ASP.NET Core integration key directly.
+        if (context.Items.TryGetValue(ExecutionOptionsKey, out optionsObj)
+            && optionsObj is QueryExecutionOptions legacyOptions)
+        {
+            return legacyOptions;
         }
 
         return new QueryExecutionOptions();

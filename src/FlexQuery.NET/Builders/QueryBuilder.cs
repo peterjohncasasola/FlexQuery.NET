@@ -2,6 +2,7 @@ using System.Linq.Expressions;
 using System.Reflection;
 using FlexQuery.NET.Models;
 using FlexQuery.NET.Security;
+using FlexQuery.NET.Expressions;
 
 namespace FlexQuery.NET.Builders;
 
@@ -262,10 +263,7 @@ public static class QueryBuilder
 
     private static Expression BuildCountExpression(Expression collectionAccess, Type elementType)
     {
-        var countMethod = typeof(Enumerable).GetMethods(BindingFlags.Public | BindingFlags.Static)
-            .Single(m => m.Name == nameof(Enumerable.Count)
-                         && m.GetParameters().Length == 1)
-            .MakeGenericMethod(elementType);
+        var countMethod = ExpressionMethodCache.EnumerableCount(elementType);
 
         return Expression.Call(countMethod, collectionAccess);
     }

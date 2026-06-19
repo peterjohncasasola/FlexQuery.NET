@@ -154,4 +154,67 @@ public class IncludeSecurityTests
         var ex = Assert.Throws<Exceptions.QueryValidationException>(() => validator.Validate(options, context, result));
         Assert.Contains("SecretData", ex.Message);
     }
+
+    [Fact]
+    public void NonStrictValidation_RemovesUnauthorizedIncludes()
+    {
+        var options = new QueryOptions
+        {
+            Includes = new List<string> { "Orders", "SecretData", "Profile" }
+        };
+
+        var exec = new QueryExecutionOptions
+        {
+            AllowedIncludes = new HashSet<string> { "Orders", "Profile" },
+            StrictFieldValidation = false
+        };
+        var context = new QueryContext { ExecutionOptions = exec };
+        
+        var validator = new IncludeAccessValidator();
+        var result = new ValidationResult();
+
+        validator.Validate(options, context, result);
+
+        // Non-strict mode should record error but remove unauthorized field
+        Assert.False(result.IsValid);
+        Assert.Contains(result.Errors, e => e.Field == "SecretData");
+        Assert.Equal(2, options.Includes!.Count);
+        Assert.Contains("Orders", options.Includes);
+        Assert.Contains("Profile", options.Includes);
+        Assert.DoesNotContain("SecretData", options.Includes);
+    }
+
+    [Fact]
+    public void NonStrictValidation_RemovesUnauthorizedNestedFilteredIncludes()
+    {
+        var options = new QueryOptions
+        {
+            FilteredIncludes = new List<IncludeNode>
+            {
+                new IncludeNode 
+                { 
+                    Path = "Orders", 
+                    Children = { new IncludeNode { Path = "SecretItems" } } 
+                }
+            }
+        };
+
+        var exec = new QueryExecutionOptions
+        {
+            AllowedIncludes = ["Orders"], // Missing Orders.SecretItems
+            StrictFieldValidation = false
+        };
+        var context = new QueryContext { ExecutionOptions = exec };
+        
+        var validator = new IncludeAccessValidator();
+        var result = new ValidationResult();
+
+        validator.Validate(options, context, result);
+
+        // Non-strict mode should record error but remove the unauthorized nested include
+        Assert.False(result.IsValid);
+        Assert.Contains(result.Errors, e => e.Field == "Orders.SecretItems");
+        Assert.Single(options.FilteredIncludes!);
+        Assert.Empty(options.FilteredIncludes[0].Children); // SecretItems removed
+    }
 }

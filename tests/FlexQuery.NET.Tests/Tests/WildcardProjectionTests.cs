@@ -43,7 +43,7 @@ public class WildcardProjectionTests : IDisposable
         // Should have all scalars of SqlOrder
         order.GetType().GetProperty("Number").Should().NotBeNull();
         order.GetType().GetProperty("Total").Should().NotBeNull();
-        order.GetType().GetProperty("CreatedAtUtc").Should().NotBeNull();
+        order.GetType().GetProperty("OrderDate").Should().NotBeNull();
         
         // Should NOT have navigations (unless specified)
         order.GetType().GetProperty("Items").Should().BeNull();

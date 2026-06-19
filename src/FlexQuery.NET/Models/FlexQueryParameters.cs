@@ -19,7 +19,11 @@ public sealed class FlexQueryParameters
     public string? Select { get; set; }
 
     /// <summary>The comma-separated list of fields to include.</summary>
-    public string? Includes { get; set; }
+    public string? Include { get; set; }
+
+    /// <summary>Alias for Include (backward compatibility).</summary>
+    [Obsolete("Use Include instead.")]
+    public string? Includes { get => Include; set => Include = value; }
 
     /// <summary>The comma-separated list of fields to group by.</summary>
     public string? GroupBy { get; set; }
@@ -41,4 +45,10 @@ public sealed class FlexQueryParameters
 
     /// <summary>The projection mode (Flat, FlatMixed, Nested).</summary>
     public string? Mode { get; set; }
+
+    /// <summary>
+    /// Optional raw dictionary of query parameters.
+    /// Used by parsers for syntax auto-detection (e.g., detecting OData $ prefix).
+    /// </summary>
+    public IDictionary<string, string>? RawParameters { get; set; }
 }

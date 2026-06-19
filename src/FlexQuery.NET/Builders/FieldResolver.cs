@@ -5,6 +5,7 @@ using System.Linq.Expressions;
 using FlexQuery.NET.Models;
 using FlexQuery.NET.Security;
 using FlexQuery.NET.Helpers;
+using FlexQuery.NET.Constants;
 
 namespace FlexQuery.NET.Builders;
 
@@ -62,7 +63,7 @@ internal static class FieldResolver
 
     private static IReadOnlyDictionary<string, LambdaExpression>? GetMappings(QueryOptions options)
     {
-        if (options.Items.TryGetValue("ExpressionMappings", out var mappingsObj) && mappingsObj is IReadOnlyDictionary<string, LambdaExpression> mappings)
+        if (options.Items.TryGetValue(ContextKeys.ExpressionMappings, out var mappingsObj) && mappingsObj is IReadOnlyDictionary<string, LambdaExpression> mappings)
         {
             return mappings;
         }

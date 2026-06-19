@@ -30,7 +30,7 @@ public sealed class OperatorValidityRule : IValidationRule
                 {
                     result.Errors.Add(new ValidationError(
                         $"Operator '{filter.Operator}' is not supported.", 
-                        "INVALID_OPERATOR", 
+                        ValidationErrorCodes.InvalidOperator, 
                         filter.Field));
                 }
                 else if (execOptions?.AllowedOperators != null && 
@@ -40,7 +40,7 @@ public sealed class OperatorValidityRule : IValidationRule
                     {
                         result.Errors.Add(new ValidationError(
                             $"Operator '{filter.Operator}' is not allowed for field '{filter.Field}'.", 
-                            "OPERATOR_NOT_ALLOWED", 
+                            ValidationErrorCodes.OperatorNotAllowed, 
                             filter.Field));
                     }
                 }

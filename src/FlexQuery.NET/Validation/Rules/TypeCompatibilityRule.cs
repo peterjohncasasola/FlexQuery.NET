@@ -36,20 +36,20 @@ public sealed class TypeCompatibilityRule : IValidationRule
                     {
                         result.Errors.Add(new ValidationError(
                             $"Operator '{op}' is only compatible with string fields, but '{filter.Field}' is '{propertyType.Name}'.",
-                            "TYPE_MISMATCH",
+                            ValidationErrorCodes.TypeMismatch,
                             filter.Field));
                         continue;
                     }
                 }
 
                 // 2. Check Value Compatibility (Simple types)
-                if (filter.Value != null)
+                if (filter.Value != null && op != FilterOperators.Any && op != FilterOperators.All && op != FilterOperators.Count)
                 {
                     if (!CanConvert(filter.Value, propertyType))
                     {
                         result.Errors.Add(new ValidationError(
                             $"Value '{filter.Value}' cannot be converted to type '{propertyType.Name}' for field '{filter.Field}'.",
-                            "TYPE_MISMATCH",
+                            ValidationErrorCodes.TypeMismatch,
                             filter.Field));
                     }
                 }

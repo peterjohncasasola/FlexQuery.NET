@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc.Filters;
 using Microsoft.AspNetCore.Mvc.Controllers;
 using FlexQuery.NET.Models;
 using FlexQuery.NET.AspNetCore.Attributes;
+using FlexQuery.NET.Constants;
 
 namespace FlexQuery.NET.AspNetCore.Filters;
 
@@ -12,6 +13,8 @@ namespace FlexQuery.NET.AspNetCore.Filters;
 /// </summary>
 public class FieldAccessFilter : IActionFilter
 {
+    private const string LegacyExecutionOptionsKey = "FlexQueryExecutionOptions";
+
     /// <inheritdoc />
     public void OnActionExecuting(ActionExecutingContext context)
     {
@@ -25,7 +28,8 @@ public class FieldAccessFilter : IActionFilter
         if (attribute == null) return;
 
         // 2. Retrieve or create QueryExecutionOptions
-        var execOptions = context.HttpContext.Items["FlexQueryExecutionOptions"] as QueryExecutionOptions 
+        var execOptions = context.HttpContext.Items[ContextKeys.ExecutionOptions] as QueryExecutionOptions
+                          ?? context.HttpContext.Items[LegacyExecutionOptionsKey] as QueryExecutionOptions
                           ?? new QueryExecutionOptions();
 
         // 3. Apply settings
@@ -41,7 +45,7 @@ public class FieldAccessFilter : IActionFilter
         }
 
         // 4. Store in HttpContext
-        context.HttpContext.Items["FlexQueryExecutionOptions"] = execOptions;
+        context.HttpContext.Items[ContextKeys.ExecutionOptions] = execOptions;
     }
 
     private HashSet<string>? Merge(string[]? source, HashSet<string>? target)

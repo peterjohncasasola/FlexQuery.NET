@@ -2,6 +2,7 @@ using FlexQuery.NET.Models;
 using FlexQuery.NET.Security;
 using FlexQuery.NET.Exceptions;
 using System.Collections.Concurrent;
+using FlexQuery.NET.Constants;
 
 namespace FlexQuery.NET.Validation.Rules;
 
@@ -9,6 +10,11 @@ namespace FlexQuery.NET.Validation.Rules;
 /// A comprehensive security validator that enforces field-level access control 
 /// across filters, sorts, and projections using server-side execution rules.
 /// </summary>
+/// <remarks>
+/// In non-strict mode (StrictFieldValidation = false), unauthorized fields are
+/// silently removed from the query. In strict mode (default), validation errors
+/// cause exceptions to be thrown.
+/// </remarks>
 public sealed class FieldAccessValidator : IValidationRule
 {
     private static readonly ConcurrentDictionary<string, string> _normalizationCache = new();
@@ -28,46 +34,48 @@ public sealed class FieldAccessValidator : IValidationRule
         // Validator self-skips if no security configuration is provided
         if (!IsSecurityActive(execOptions)) return;
 
-        try
+        // 2. Process Filters - remove unauthorized in non-strict mode
+        if (options.Filter != null)
         {
-            // 2. Process Filters
-            if (options.Filter != null)
-            {
-                ValidateFilterGroup(options.Filter!, options, context);
-            }
+            ValidateFilterGroup(options.Filter, options, context, result, execOptions);
+        }
 
-            // 3. Process Sorts
-            if (options.Sort != null)
+        // 3. Process Sorts - remove unauthorized in non-strict mode
+        if (options.Sort != null)
+        {
+            for (int i = options.Sort.Count - 1; i >= 0; i--)
             {
-                foreach (var sort in options.Sort)
+                var sort = options.Sort[i];
+                if (!string.IsNullOrWhiteSpace(sort.Field))
                 {
-                    CheckAccess(sort.Field, QueryOperation.Sort, options, context);
-                }
-            }
-
-            // 4. Process Selection
-            if (options.Select != null)
-            {
-                foreach (var field in options.Select)
-                {
-                    CheckAccess(field, QueryOperation.Select, options, context);
+                    if (!CheckAccess(sort.Field, QueryOperation.Sort, context, result))
+                    {
+                        if (!execOptions.StrictFieldValidation)
+                        {
+                            options.Sort.RemoveAt(i);
+                        }
+                    }
                 }
             }
         }
-        catch (QueryValidationException ex)
+
+        // 4. Process Selection - remove unauthorized in non-strict mode
+        if (options.Select != null)
         {
-            // If strict validation is enabled, let the exception bubble up.
-            if (execOptions.StrictFieldValidation)
+            for (int i = options.Select.Count - 1; i >= 0; i--)
             {
-                throw;
+                var field = options.Select[i];
+                if (!string.IsNullOrWhiteSpace(field))
+                {
+                    if (!CheckAccess(field, QueryOperation.Select, context, result))
+                    {
+                        if (!execOptions.StrictFieldValidation)
+                        {
+                            options.Select.RemoveAt(i);
+                        }
+                    }
+                }
             }
-
-            // Extract field name from message if possible
-            var field = "unknown";
-            var parts = ex.Message.Split('\'');
-            if (parts.Length >= 2) field = parts[1];
-
-            result.Errors.Add(new ValidationError(ex.Message, "FIELD_ACCESS_DENIED", field));
         }
     }
 
@@ -83,32 +91,50 @@ public sealed class FieldAccessValidator : IValidationRule
                options.FieldAccessResolver != null;
     }
 
-    private void ValidateFilterGroup(FilterGroupNode group, QueryOptions options, QueryContext context, string? prefix = null)
+    private void ValidateFilterGroup(
+        FilterGroup group,
+        QueryOptions options,
+        QueryContext context,
+        ValidationResult result,
+        QueryExecutionOptions execOptions,
+        string? prefix = null)
     {
-        foreach (var child in group.Children)
+        // Iterate backwards to allow removal during enumeration
+        for (int i = group.Filters.Count - 1; i >= 0; i--)
         {
-            if (child is FilterConditionNode filter)
+            var filter = group.Filters[i];
+            var fieldPath = string.IsNullOrEmpty(prefix) ? filter.Field : $"{prefix}.{filter.Field}";
+
+            if (!string.IsNullOrWhiteSpace(filter.Field))
             {
-                var fieldPath = string.IsNullOrEmpty(prefix) ? filter.Field : $"{prefix}.{filter.Field}";
-
-                if (!string.IsNullOrWhiteSpace(filter.Field))
+                if (!CheckAccess(fieldPath, QueryOperation.Filter, context, result))
                 {
-                    CheckAccess(fieldPath, QueryOperation.Filter, options, context);
-                }
-
-                if (filter.ScopedFilter != null)
-                {
-                    ValidateFilterGroup(filter.ScopedFilter, options, context, fieldPath);
+                    if (!execOptions.StrictFieldValidation)
+                    {
+                        group.Filters.RemoveAt(i);
+                    }
+                    continue; // Skip scoped filter validation for removed condition
                 }
             }
-            else if (child is FilterGroupNode subGroup)
+
+            if (filter.ScopedFilter != null)
             {
-                ValidateFilterGroup(subGroup, options, context, prefix);
+                ValidateFilterGroup(filter.ScopedFilter, options, context, result, execOptions, fieldPath);
             }
+        }
+
+        // Process nested groups (backwards to allow removal)
+        for (int i = group.Groups.Count - 1; i >= 0; i--)
+        {
+            ValidateFilterGroup(group.Groups[i], options, context, result, execOptions, prefix);
         }
     }
 
-    private void CheckAccess(string rawField, QueryOperation operation, QueryOptions options, QueryContext context)
+    private bool CheckAccess(
+        string rawField, 
+        QueryOperation operation, 
+        QueryContext context, 
+        ValidationResult result)
     {
         var execOptions = context.ExecutionOptions!;
         
@@ -121,7 +147,8 @@ public sealed class FieldAccessValidator : IValidationRule
             var depth = field.Split('.', StringSplitOptions.RemoveEmptyEntries).Length;
             if (depth > execOptions.MaxFieldDepth.Value)
             {
-                throw new QueryValidationException($"Field path '{field}' exceeds maximum allowed depth of {execOptions.MaxFieldDepth}.");
+                AddDenied(result, execOptions, field, $"Field path '{field}' exceeds maximum allowed depth of {execOptions.MaxFieldDepth}.");
+                return false;
             }
         }
 
@@ -130,14 +157,16 @@ public sealed class FieldAccessValidator : IValidationRule
         {
             if (!execOptions.FieldAccessResolver.IsAllowed(field, operation, context))
             {
-                throw new QueryValidationException($"Field '{field}' is not allowed for {operation} by custom resolver.");
+                AddDenied(result, execOptions, field, $"Field '{field}' is not allowed for {operation} by custom resolver.");
+                return false;
             }
         }
 
         // Step 4: BlockedFields
         if (execOptions.BlockedFields != null && WildcardMatcher.IsMatch(field, execOptions.BlockedFields))
         {
-            throw new QueryValidationException($"Field '{field}' is explicitly blocked.");
+            AddDenied(result, execOptions, field, $"Field '{field}' is explicitly blocked.");
+            return false;
         }
 
         // Step 5: Role-Based
@@ -147,7 +176,8 @@ public sealed class FieldAccessValidator : IValidationRule
             {
                 if (!WildcardMatcher.IsMatch(field, allowedForRole))
                 {
-                    throw new QueryValidationException($"Field '{field}' is not allowed for role '{execOptions.CurrentRole}'.");
+                    AddDenied(result, execOptions, field, $"Field '{field}' is not allowed for role '{execOptions.CurrentRole}'.");
+                    return false;
                 }
             }
         }
@@ -165,7 +195,8 @@ public sealed class FieldAccessValidator : IValidationRule
         {
             if (!WildcardMatcher.IsMatch(field, opList))
             {
-                throw new QueryValidationException($"Field '{field}' is not allowed for {operation} operation.");
+                AddDenied(result, execOptions, field, $"Field '{field}' is not allowed for {operation} operation.");
+                return false;
             }
         }
 
@@ -174,9 +205,26 @@ public sealed class FieldAccessValidator : IValidationRule
         {
             if (!WildcardMatcher.IsMatch(field, execOptions.AllowedFields))
             {
-                throw new QueryValidationException($"Field '{field}' is not in the global allowed list.");
+                AddDenied(result, execOptions, field, $"Field '{field}' is not in the global allowed list.");
+                return false;
             }
         }
+
+        return true;
+    }
+
+    private static void AddDenied(
+        ValidationResult result,
+        QueryExecutionOptions options,
+        string field,
+        string message)
+    {
+        if (options.StrictFieldValidation)
+        {
+            throw new QueryValidationException(message);
+        }
+
+        result.Errors.Add(new ValidationError(message, ValidationErrorCodes.FieldAccessDenied, field));
     }
 
     private string NormalizeField(string rawField, QueryExecutionOptions options)

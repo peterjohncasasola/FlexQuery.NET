@@ -75,7 +75,7 @@ internal static class GroupByBuilder
 
         if (options.Having is not null)
         {
-            var havingAlias = QueryOptionsParser.BuildAggregateAlias(options.Having.Function, options.Having.Field);
+            var havingAlias = ParserUtilities.BuildAggregateAlias(options.Having.Function, options.Having.Field);
             var havingLambda = HavingExpressionBuilder.Build(projectionType, options.Having, havingAlias, options.CaseInsensitive);
             if (havingLambda is not null)
             {

@@ -1,11 +1,11 @@
 using FlexQuery.NET.Builders;
-using FlexQuery.NET.Models;
-using FlexQuery.NET.Parsers;
+using FlexQuery.NET.Caching;
+using FlexQuery.NET.Constants;
 using FlexQuery.NET.Exceptions;
+using FlexQuery.NET.Models;
 using FlexQuery.NET.Validation;
-using System.Collections.Generic;
 
-namespace FlexQuery.NET.Extensions;
+namespace FlexQuery.NET;
 
 /// <summary>
 /// Extensions for <see cref="QueryOptions"/>.
@@ -23,10 +23,35 @@ public static class QueryOptionsExtensions
         this QueryOptions options,
         QueryExecutionOptions? execOptions = null)
     {
-        var result = ValidateInternal<T>(options, execOptions);
+        options.ValidateOrThrow(typeof(T), execOptions);
+    }
+
+    /// <summary>
+    /// Validates the query options or throws a <see cref="QueryValidationException"/>.
+    /// </summary>
+    /// <param name="options">The query options to validate.</param>
+    /// <param name="entityType">The entity type that the query targets.</param>
+    /// <param name="execOptions">Optional execution options that define server-side constraints.</param>
+    /// <exception cref="QueryValidationException">Thrown when validation fails.</exception>
+    public static void ValidateOrThrow(
+        this QueryOptions options,
+        Type entityType,
+        QueryExecutionOptions? execOptions = null)
+    {
+        execOptions ??= new QueryExecutionOptions();
+
+        if (execOptions.ExpressionMappings != null)
+        {
+            options.Items[ContextKeys.ExpressionMappings] = execOptions.ExpressionMappings;
+        }
+
+        var result = options.Validate(entityType, execOptions);
 
         if (!result.IsValid)
-            throw new QueryValidationException(result);
+        {
+            var errors = string.Join("; ", result.Errors.Select(e => e.Message));
+            throw new QueryValidationException($"Query validation failed: {errors}", result);
+        }
     }
 
     /// <summary>
@@ -51,7 +76,7 @@ public static class QueryOptionsExtensions
 
         if (execOptions.ExpressionMappings != null)
         {
-            options.Items["ExpressionMappings"] = execOptions.ExpressionMappings;
+            options.Items[ContextKeys.ExpressionMappings] = execOptions.ExpressionMappings;
         }
 
         var result = options.Validate(typeof(T), execOptions);
@@ -85,7 +110,12 @@ public static class QueryOptionsExtensions
     /// <returns><c>true</c> if the options specify a projection; otherwise, <c>false</c>.</returns>
     public static bool HasProjection(this QueryOptions options)
     {
-        return options.Select != null && options.Select.Count > 0;
+        return (options.Select?.Count ?? 0) > 0
+               || options.SelectTree is not null
+               || (options.Includes?.Count ?? 0) > 0
+               || (options.FilteredIncludes?.Count ?? 0) > 0
+               || (options.GroupBy?.Count ?? 0) > 0
+               || options.Aggregates.Count > 0;
     }
 
     /// <summary>
@@ -123,18 +153,7 @@ public static class QueryOptionsExtensions
         Type entityType,
         string operation)
     {
-        var normalized = FilterNormalizer.Normalize(options.Filter);
-
-        var filterKey = FilterNormalizer.GenerateCacheKey(normalized);
-
-        return string.Join("|",
-            entityType.FullName,
-            operation,
-            filterKey,
-            options.Skip,
-            options.Top,
-            options.Sort != null ? string.Join(",", options.Sort.Select(s => s.Field + (s.Descending ? "_desc" : "_asc"))) : string.Empty,
-            options.Select != null ? string.Join(",", options.Select) : string.Empty);
+        return QueryCacheKeyBuilder.Build(options, entityType, operation);
     }
 
     /// <summary>
