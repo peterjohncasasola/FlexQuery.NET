@@ -1,6 +1,5 @@
 using FlexQuery.NET.Models;
 using FlexQuery.NET.Parsers.Dsl;
-using FlexQuery.NET.Parsers.Jql;
 using FlexQuery.NET.Builders;
 
 namespace FlexQuery.NET.Parsers;
@@ -8,7 +7,7 @@ namespace FlexQuery.NET.Parsers;
 /// <summary>
 /// Default implementation of <see cref="IQueryParser"/> that handles the native FlexQuery DSL.
 /// </summary>
-public sealed class FlexQueryDslParser : IQueryParser
+public sealed class DslQueryParser : IQueryParser
 {
     /// <inheritdoc />
     public QuerySyntax Syntax => QuerySyntax.NativeDsl;
@@ -33,49 +32,48 @@ public sealed class FlexQueryDslParser : IQueryParser
     {
         if (parameters.RawParameters != null && parameters.RawParameters.Count > 0)
         {
-            return QueryOptionsParser.InternalParseDictionary(parameters.RawParameters);
+            return QueryParameterParser.Parse(parameters.RawParameters);
         }
 
-        var options = new QueryOptions();
-
-        // Paging
-        options.Paging.Page = parameters.Page ?? 1;
-        options.Paging.PageSize = parameters.PageSize ?? 20;
+        var options = new QueryOptions
+        {
+            Paging =
+            {
+                // Paging
+                Page = parameters.Page ?? 1,
+                PageSize = parameters.PageSize ?? 20
+            }
+        };
 
         // Mode
         if (!string.IsNullOrWhiteSpace(parameters.Mode))
         {
-            options.ProjectionMode = parameters.Mode.Trim().ToLowerInvariant() switch
-            {
-                "flat" => ProjectionMode.Flat,
-                "flat-mixed" => ProjectionMode.FlatMixed,
-                _ => ProjectionMode.Nested
-            };
+            options.ProjectionMode = ParserUtilities.ParseProjectionMode(parameters.Mode);
         }
 
         // Select
         if (!string.IsNullOrWhiteSpace(parameters.Select))
         {
             // Note: We use the helper from QueryOptionsParser which we'll make internal/accessible
-            QueryOptionsParser.InternalParseSelectWithAggregates(options, parameters.Select);
+            SelectParser.Parse(options, parameters.Select);
         }
 
         // Grouping
         if (!string.IsNullOrWhiteSpace(parameters.GroupBy))
         {
-            options.GroupBy = QueryOptionsParser.InternalSplitCsv(parameters.GroupBy);
+            options.GroupBy = ParserUtilities.SplitCsv(parameters.GroupBy);
         }
 
         // Having
         if (!string.IsNullOrWhiteSpace(parameters.Having))
         {
-            options.Having = QueryOptionsParser.InternalParseHaving(parameters.Having);
+            options.Having = HavingParser.Parse(parameters.Having);
         }
 
         // Includes
         if (!string.IsNullOrWhiteSpace(parameters.Include))
         {
-            options.Includes = QueryOptionsParser.InternalSplitCsv(parameters.Include.Split('(')[0]);
+            options.Includes = ParserUtilities.SplitCsv(parameters.Include.Split('(')[0]);
             options.FilteredIncludes = FilteredIncludeParser.Parse(parameters.Include);
         }
 
@@ -86,7 +84,7 @@ public sealed class FlexQueryDslParser : IQueryParser
         // Sorting
         if (!string.IsNullOrWhiteSpace(parameters.Sort))
         {
-            options.Sort.AddRange(QueryOptionsParser.InternalParseSort(parameters.Sort));
+            options.Sort.AddRange(SortParser.Parse(parameters.Sort));
         }
 
         // Filters
@@ -96,13 +94,13 @@ public sealed class FlexQueryDslParser : IQueryParser
             if (filterVal.StartsWith('{'))
             {
                 // JSON parsing logic remains in QueryOptionsParser for now or moved here
-                QueryOptionsParser.InternalParseJsonFilter(options, filterVal);
+                JsonParser.Parse(options, filterVal);
             }
             else
             {
                 try
                 {
-                    var ast = DslParser.Parse(filterVal);
+                    var ast = DslAstParser.Parse(filterVal);
                     options.Filter = DslFilterConverter.ToFilterGroup(ast);
                     options.Ast = ast;
                     options.Filter = FilterNormalizer.NormalizeOrder(options.Filter);

@@ -1,4 +1,4 @@
-namespace FlexQuery.NET.Parsers.Jql;
+namespace FlexQuery.NET.Parsers.Jql.Ast;
 
 /// <summary>Thrown when a JQL-lite query string cannot be parsed.</summary>
 public sealed class JqlParseException : Exception

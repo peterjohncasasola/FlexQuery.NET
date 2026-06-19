@@ -2,7 +2,7 @@ using FlexQuery.NET.Constants;
 using FlexQuery.NET.Models;
 using FlexQuery.NET.Parsers;
 using FlexQuery.NET.Parsers.Jql;
-using JqlParser = FlexQuery.NET.Parsers.Jql.JqlParser;
+using FlexQuery.NET.Parsers.Jql.Ast;
 using FluentAssertions;
 using Microsoft.Extensions.Primitives;
 
@@ -784,7 +784,7 @@ public class ParserTests
     public void Jql_ScopedAny_DotSyntax_ParsedToCollectionNode()
     {
         // orders.any(status = "Cancelled")
-        var ast = JqlParser.Parse("orders.any(status = \"Cancelled\")");
+        var ast = JqlAstParser.Parse("orders.any(status = \"Cancelled\")");
 
         var coll = ast.Should().BeOfType<JqlCollectionNode>().Subject;
         coll.CollectionPath.Should().Be("orders");
@@ -797,7 +797,7 @@ public class ParserTests
     public void Jql_ScopedAll_DotSyntax_ParsedToCollectionNode()
     {
         // orders.all(status = "Active")
-        var ast = JqlParser.Parse("orders.all(status = \"Active\")");
+        var ast = JqlAstParser.Parse("orders.all(status = \"Active\")");
 
         var coll = ast.Should().BeOfType<JqlCollectionNode>().Subject;
         coll.CollectionPath.Should().Be("orders");
@@ -810,7 +810,7 @@ public class ParserTests
     public void Jql_ScopedBracket_ParsedAsAnyCollectionNode()
     {
         // orders[status = "Cancelled"]  shorthand for orders.any(...)
-        var ast = JqlParser.Parse("orders[status = \"Cancelled\"]");
+        var ast = JqlAstParser.Parse("orders[status = \"Cancelled\"]");
 
         var coll = ast.Should().BeOfType<JqlCollectionNode>().Subject;
         coll.CollectionPath.Should().Be("orders");
@@ -823,7 +823,7 @@ public class ParserTests
     public void Jql_ScopedAny_MultipleConditions_ParsedAsAndLogicalInsideCollection()
     {
         // orders.any(status = "Cancelled" AND total > 500)
-        var ast = JqlParser.Parse("orders.any(status = \"Cancelled\" AND total > 500)");
+        var ast = JqlAstParser.Parse("orders.any(status = \"Cancelled\" AND total > 500)");
 
         var coll = ast.Should().BeOfType<JqlCollectionNode>().Subject;
         coll.CollectionPath.Should().Be("orders");
@@ -842,7 +842,7 @@ public class ParserTests
     public void Jql_ScopedAny_WithOrInsideGroup_ParsedCorrectly()
     {
         // orders.any(status = "Cancelled" OR status = "Refunded")
-        var ast = JqlParser.Parse("orders.any(status = \"Cancelled\" OR status = \"Refunded\")");
+        var ast = JqlAstParser.Parse("orders.any(status = \"Cancelled\" OR status = \"Refunded\")");
 
         var coll = ast.Should().BeOfType<JqlCollectionNode>().Subject;
         var inner = coll.Filter.Should().BeOfType<JqlLogicalNode>().Subject;
@@ -854,7 +854,7 @@ public class ParserTests
     public void Jql_NestedScopedCollections_ParsedRecursively()
     {
         // orders.any(status = "Cancelled" AND orderItems.any(id = 101))
-        var ast = JqlParser.Parse(
+        var ast = JqlAstParser.Parse(
             "orders.any(status = \"Cancelled\" AND orderItems.any(id = 101))");
 
         var outer = ast.Should().BeOfType<JqlCollectionNode>().Subject;
@@ -879,7 +879,7 @@ public class ParserTests
     public void Jql_ScopedAny_CombinedWithFlatCondition_ParsedToAndLogical()
     {
         // name = "Alice" AND orders.any(total > 1000)
-        var ast = JqlParser.Parse("name = \"Alice\" AND orders.any(total > 1000)");
+        var ast = JqlAstParser.Parse("name = \"Alice\" AND orders.any(total > 1000)");
 
         var root = ast.Should().BeOfType<JqlLogicalNode>().Subject;
         root.Logic.Should().Be("and");
@@ -897,7 +897,7 @@ public class ParserTests
     public void Jql_ScopedAny_ConvertsToFilterConditionWithScopedFilter()
     {
         // Converter path: orders.any(status = "Cancelled" AND total > 500)
-        var ast = JqlParser.Parse("orders.any(status = \"Cancelled\" AND total > 500)");
+        var ast = JqlAstParser.Parse("orders.any(status = \"Cancelled\" AND total > 500)");
         var group = JqlFilterConverter.ToFilterGroup(ast);
 
         group.Logic.Should().Be(LogicOperator.And);
@@ -920,7 +920,7 @@ public class ParserTests
     public void Jql_BracketSyntax_ConvertsToFilterConditionWithScopedFilter()
     {
         // Bracket shorthand: orders[status = "Cancelled"]
-        var ast = JqlParser.Parse("orders[status = \"Cancelled\"]");
+        var ast = JqlAstParser.Parse("orders[status = \"Cancelled\"]");
         var group = JqlFilterConverter.ToFilterGroup(ast);
 
         group.Filters.Should().ContainSingle();
@@ -935,7 +935,7 @@ public class ParserTests
     public void Jql_NestedScopedCollections_ConvertsToNestedScopedFilters()
     {
         // orders.any(status = "Cancelled" AND orderItems.any(id = 101))
-        var ast = JqlParser.Parse(
+        var ast = JqlAstParser.Parse(
             "orders.any(status = \"Cancelled\" AND orderItems.any(id = 101))");
         var group = JqlFilterConverter.ToFilterGroup(ast);
 

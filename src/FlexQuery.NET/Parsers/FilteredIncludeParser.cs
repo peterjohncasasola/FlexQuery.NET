@@ -2,6 +2,7 @@ using System.Text.RegularExpressions;
 using FlexQuery.NET.Models;
 using FlexQuery.NET.Parsers.Dsl;
 using FlexQuery.NET.Parsers.Jql;
+using FlexQuery.NET.Parsers.Jql.Ast;
 
 namespace FlexQuery.NET.Parsers;
 
@@ -130,13 +131,13 @@ public static class FilteredIncludeParser
         {
             try
             {
-                var dslAst = DslParser.Parse(raw);
+                var dslAst = Dsl.DslAstParser.Parse(raw);
                 return DslFilterConverter.ToFilterGroup(dslAst);
             }
             catch { /* fallback to JQL */ }
         }
 
-        var jqlAst = Jql.JqlParser.Parse(raw);
+        var jqlAst = JqlAstParser.Parse(raw);
         return JqlFilterConverter.ToFilterGroup(jqlAst);
     }
 

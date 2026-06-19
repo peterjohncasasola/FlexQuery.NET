@@ -273,7 +273,7 @@ public class ODataDslEquivalenceTests
 
     private static FilterGroup ParseDsl(string dsl)
     {
-        var ast = DslParser.Parse(dsl);
+        var ast = DslAstParser.Parse(dsl);
         return DslFilterConverter.ToFilterGroup(ast);
     }
 

@@ -1,13 +1,13 @@
 namespace FlexQuery.NET.Parsers.Dsl;
 
 /// <summary>Parses DSL tokens into an AST using AND precedence over OR.</summary>
-public sealed class DslParser
+public sealed class DslAstParser
 {
     private readonly IReadOnlyList<DslToken> _tokens;
     private int _position;
 
     /// <summary>Creates a parser over pre-tokenized DSL input.</summary>
-    public DslParser(IReadOnlyList<DslToken> tokens)
+    public DslAstParser(IReadOnlyList<DslToken> tokens)
     {
         _tokens = tokens;
     }
@@ -24,7 +24,7 @@ public sealed class DslParser
     public static DslAstNode Parse(string source)
     {
         DslSafetyValidator.ValidateSyntax(source);
-        return new DslParser(new DslTokenizer(source).Tokenize()).Parse();
+        return new DslAstParser(new DslTokenizer(source).Tokenize()).Parse();
     }
 
     private DslAstNode ParseOr()

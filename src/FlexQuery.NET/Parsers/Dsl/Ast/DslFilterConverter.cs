@@ -39,7 +39,7 @@ public static class DslFilterConverter
     {
         var group = new FilterGroup
         {
-            Logic = ParseLogic(node.Logic)
+            Logic = ParserUtilities.ParseLogic(node.Logic)
         };
 
         foreach (var child in node.Children)
@@ -86,9 +86,4 @@ public static class DslFilterConverter
             Operator = FilterOperators.Normalize(node.Operator),
             Value = node.Value
         };
-
-    private static LogicOperator ParseLogic(string logic)
-        => logic.Equals("or", StringComparison.OrdinalIgnoreCase)
-            ? LogicOperator.Or
-            : LogicOperator.And;
 }

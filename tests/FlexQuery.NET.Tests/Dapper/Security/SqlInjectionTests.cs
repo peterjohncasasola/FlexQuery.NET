@@ -487,7 +487,7 @@ public class SqlInjectionTests
     {
         // DSL parser validates characters; semicolons are not explicitly forbidden but field name pattern rejects them
         // if embedded within field name. But semicolon as value is fine (parameterized)
-        Action act = () => DslParser.Parse("name:eq:test;DROP TABLE Users");
+        Action act = () => DslAstParser.Parse("name:eq:test;DROP TABLE Users");
         // Value parsing stops after "test", extra "DROP..." becomes extra token causing error
         act.Should().Throw<DslParseException>();
     }

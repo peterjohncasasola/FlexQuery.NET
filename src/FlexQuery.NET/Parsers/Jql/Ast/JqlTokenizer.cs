@@ -1,4 +1,4 @@
-namespace FlexQuery.NET.Parsers.Jql;
+namespace FlexQuery.NET.Parsers.Jql.Ast;
 
 /// <summary>Tokenizes a JQL-lite query string into parser-friendly tokens.</summary>
 public sealed class JqlTokenizer

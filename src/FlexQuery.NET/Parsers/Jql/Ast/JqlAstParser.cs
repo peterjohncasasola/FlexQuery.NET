@@ -1,4 +1,4 @@
-namespace FlexQuery.NET.Parsers.Jql;
+namespace FlexQuery.NET.Parsers.Jql.Ast;
 
 /// <summary>
 /// Parses JQL-lite tokens into an AST using AND precedence over OR.
@@ -10,13 +10,13 @@ namespace FlexQuery.NET.Parsers.Jql;
 ///   <item><c>orders[status = Cancelled AND total &gt; 500]</c> (shorthand for <c>any</c>)</item>
 /// </list>
 /// </summary>
-public sealed class JqlParser
+public sealed class JqlAstParser
 {
     private readonly IReadOnlyList<JqlToken> _tokens;
     private int _position;
 
     /// <summary>Creates a new parser with the provided tokens.</summary>
-    public JqlParser(IReadOnlyList<JqlToken> tokens)
+    public JqlAstParser(IReadOnlyList<JqlToken> tokens)
     {
         _tokens = tokens;
     }
@@ -33,7 +33,7 @@ public sealed class JqlParser
     public static JqlAstNode Parse(string source)
     {
         JqlSafetyValidator.ValidateSyntax(source);
-        return new JqlParser(new JqlTokenizer(source).Tokenize()).Parse();
+        return new JqlAstParser(new JqlTokenizer(source).Tokenize()).Parse();
     }
 
     // ── Expression grammar (OR > AND > Factor) ───────────────────────────

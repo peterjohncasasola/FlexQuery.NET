@@ -1,6 +1,7 @@
 using FlexQuery.NET;
 using FlexQuery.NET.EFCore;
 using FlexQuery.NET.Parsers;
+using FlexQuery.NET.Parsers.Jql.Ast;
 using FlexQuery.NET.Tests.Fixtures;
 using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
@@ -30,7 +31,7 @@ public class SecurityTests : IDisposable
             var result = _db.Entities.ApplyFilter(options).ToList();
             result.Should().BeEmpty();
         }
-        catch (FlexQuery.NET.Parsers.Jql.JqlParseException)
+        catch (JqlParseException)
         {
             // Valid: it rejected the dangerous token
         }
@@ -49,7 +50,7 @@ public class SecurityTests : IDisposable
             var result = _db.Entities.ApplyFilter(options).ToList();
             result.Should().BeEmpty();
         }
-        catch (FlexQuery.NET.Parsers.Jql.JqlParseException)
+        catch (JqlParseException)
         {
             // Valid
         }

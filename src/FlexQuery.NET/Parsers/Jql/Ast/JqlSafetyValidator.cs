@@ -1,7 +1,7 @@
 using System.Text.RegularExpressions;
 using FlexQuery.NET.Security;
 
-namespace FlexQuery.NET.Parsers.Jql;
+namespace FlexQuery.NET.Parsers.Jql.Ast;
 
 internal static class JqlSafetyValidator
 {

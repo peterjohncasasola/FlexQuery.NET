@@ -1,4 +1,4 @@
-namespace FlexQuery.NET.Parsers.Jql;
+namespace FlexQuery.NET.Parsers.Jql.Ast;
 
 /// <summary>Token kinds used by the JQL-lite parser.</summary>
 public enum JqlTokenKind

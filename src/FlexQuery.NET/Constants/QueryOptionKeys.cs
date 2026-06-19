@@ -25,4 +25,8 @@ internal static class QueryOptionKeys
     public const string Desc = "desc";
     public const string Expand = "expand";
     public const string OrderBy = "orderby";
+    public const string Asc = "asc";
+    public const string Fn = "fn";
+    public const string Collection = "collection";
+    public const string Field2 = "field2";
 }

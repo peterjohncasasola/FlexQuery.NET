@@ -39,6 +39,17 @@ public enum QuerySyntax
     /// Uses the native FlexQuery DSL (e.g., filter=name:eq:john).
     /// </summary>
     NativeDsl,
+    
+    /// <summary>
+    /// Uses the native FlexQuery DSL (e.g., filter=name:eq:john).
+    /// </summary>
+    Json,
+    
+    
+    /// <summary>
+    /// Uses the native FlexQuery DSL (e.g., filter=name:eq:john).
+    /// </summary>
+    Generic,
 
     /// <summary>
     /// Uses the Mini OData compatibility syntax (e.g., $filter=name eq 'john').

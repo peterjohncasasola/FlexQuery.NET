@@ -2,7 +2,7 @@ using FlexQuery.NET.Constants;
 using FlexQuery.NET.Models;
 using FlexQuery.NET.Security;
 
-namespace FlexQuery.NET.Parsers.Jql;
+namespace FlexQuery.NET.Parsers.Jql.Ast;
 
 /// <summary>Converts JQL-lite AST nodes into the package's unified filter model.</summary>
 public static class JqlFilterConverter
@@ -37,7 +37,7 @@ public static class JqlFilterConverter
     {
         var group = new FilterGroup
         {
-            Logic = ParseLogic(node.Logic)
+            Logic = ParserUtilities.ParseLogic(node.Logic)
         };
 
         foreach (var child in node.Children)
@@ -94,9 +94,4 @@ public static class JqlFilterConverter
             Value    = value
         };
     }
-
-    private static LogicOperator ParseLogic(string raw)
-        => raw.Equals("or", StringComparison.OrdinalIgnoreCase)
-            ? LogicOperator.Or
-            : LogicOperator.And;
 }

@@ -1,4 +1,4 @@
-namespace FlexQuery.NET.Parsers.Jql;
+namespace FlexQuery.NET.Parsers.Jql.Ast;
 
 /// <summary>Base type for JQL-lite AST nodes.</summary>
 public abstract class JqlAstNode
