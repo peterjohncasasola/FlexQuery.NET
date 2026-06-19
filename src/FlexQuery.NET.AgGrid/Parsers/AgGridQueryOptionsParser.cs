@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.Linq;
 using FlexQuery.NET.AgGrid.Models;
 using FlexQuery.NET.Models;
 
@@ -18,6 +19,31 @@ public static class AgGridQueryOptionsParser
         }
 
         result.Sort = AgGridSortParser.Parse(request.SortModel);
+
+        // 1. Pagination Support
+        if (request.EndRow > request.StartRow && request.StartRow >= 0)
+        {
+            int pageSize = request.EndRow - request.StartRow;
+            if (pageSize > 0)
+            {
+                result.Paging.PageSize = pageSize;
+                result.Paging.Page = (request.StartRow / pageSize) + 1;
+            }
+        }
+
+        // 2. Row Group Support
+        if (request.RowGroupCols is { Count: > 0 })
+        {
+            var groupByFields = request.RowGroupCols
+                .Select(c => c.Field?.Trim())
+                .Where(f => !string.IsNullOrEmpty(f))
+                .ToList();
+
+            if (groupByFields.Count > 0)
+            {
+                result.GroupBy = groupByFields!;
+            }
+        }
 
         return result;
     }
@@ -52,6 +78,9 @@ public static class AgGridQueryOptionsParser
 
         var request = new AgGridRequest();
 
+        request.StartRow = GetInt(root, "startRow", 0);
+        request.EndRow = GetInt(root, "endRow", 0);
+
         if (root.TryGetProperty("filterModel", out var filterModel) && filterModel.ValueKind == JsonValueKind.Object)
         {
             foreach (var property in filterModel.EnumerateObject())
@@ -68,6 +97,15 @@ public static class AgGridQueryOptionsParser
             }
         }
 
+        if (root.TryGetProperty("rowGroupCols", out var rowGroupCols) && rowGroupCols.ValueKind == JsonValueKind.Array)
+        {
+            request.RowGroupCols = new List<AgGridGroupColumn>();
+            foreach (var item in rowGroupCols.EnumerateArray())
+            {
+                request.RowGroupCols.Add(new AgGridGroupColumn { Field = GetString(item, "field") });
+            }
+        }
+        
         return request;
     }
 
@@ -117,6 +155,20 @@ public static class AgGridQueryOptionsParser
         return element.TryGetProperty(propertyName, out var property)
             ? property.GetString()
             : null;
+    }
+
+    private static int GetInt(JsonElement element, string propertyName, int defaultValue = 0)
+    {
+        return element.TryGetProperty(propertyName, out var property) && property.ValueKind == JsonValueKind.Number
+            ? (property.TryGetInt32(out var val) ? val : defaultValue)
+            : defaultValue;
+    }
+
+    private static bool GetBool(JsonElement element, string propertyName, bool defaultValue = false)
+    {
+        return element.TryGetProperty(propertyName, out var property) && (property.ValueKind == JsonValueKind.True || property.ValueKind == JsonValueKind.False)
+            ? property.GetBoolean()
+            : defaultValue;
     }
 
     private static JsonElement? GetElement(JsonElement element, string propertyName)
