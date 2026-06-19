@@ -106,7 +106,7 @@ public static class QueryBuilder
     public static IQueryable<object> ApplySelect<T>(
         IQueryable<T> query, QueryOptions options)
     {
-        if ((options.GroupBy?.Count ?? 0) > 0 || options.Aggregates.Count > 0)
+        if ((options.GroupBy?.Count ?? 0) > 0)
         {
             return GroupByBuilder.Apply(query, options);
         }

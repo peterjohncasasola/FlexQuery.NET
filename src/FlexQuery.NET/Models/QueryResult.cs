@@ -26,6 +26,9 @@ public sealed class QueryResult<T>
     /// <summary>Whether a previous page exists.</summary>
     public bool HasPreviousPage => Page > 1;
 
+    /// <summary>Grand total aggregate results (e.g. Salary -> sum -> 1000).</summary>
+    public Dictionary<string, Dictionary<string, object>>? Aggregates { get; init; }
+
     /// <summary>The page of data items.</summary>
     public IReadOnlyList<T> Data { get; init; } = [];
 }

@@ -219,23 +219,38 @@ internal static class GroupByBuilder
 
         var selector = Expression.Lambda(selectorBody, item);
 
-        if (fn is not ("sum" or "avg")) return null;
+        if (fn is "min" or "max")
+        {
+            var aggregateMethod = typeof(Enumerable).GetMethods(BindingFlags.Public | BindingFlags.Static)
+                .Single(m => m.Name.Equals(fn, StringComparison.OrdinalIgnoreCase)
+                             && m.IsGenericMethodDefinition
+                             && m.GetGenericArguments().Length == 2
+                             && m.GetParameters().Length == 2);
+            var genericMethod = aggregateMethod.MakeGenericMethod(sourceType, selectorBody.Type);
+            return Expression.Call(genericMethod, grouping, selector);
+        }
 
-        var aggregateMethod = typeof(Enumerable).GetMethods()
-            .Where(m => m.Name.Equals(fn, StringComparison.OrdinalIgnoreCase)
-                        && m.GetParameters().Length == 2)
-            .FirstOrDefault(m =>
-            {
-                if (!m.IsGenericMethodDefinition) return false;
-                var paramType = m.GetParameters()[1].ParameterType;
-                if (!paramType.IsGenericType) return false;
-                var args = paramType.GetGenericArguments();
-                return args.Length == 2 && args[1] == selectorBody.Type;
-            });
+        if (fn is "sum" or "avg" or "average")
+        {
+            var targetName = (fn == "avg" || fn == "average") ? "Average" : "Sum";
+            var aggregateMethod = typeof(Enumerable).GetMethods()
+                .Where(m => m.Name.Equals(targetName, StringComparison.OrdinalIgnoreCase)
+                            && m.GetParameters().Length == 2)
+                .FirstOrDefault(m =>
+                {
+                    if (!m.IsGenericMethodDefinition) return false;
+                    var paramType = m.GetParameters()[1].ParameterType;
+                    if (!paramType.IsGenericType) return false;
+                    var args = paramType.GetGenericArguments();
+                    return args.Length == 2 && args[1] == selectorBody.Type;
+                });
 
-        if (aggregateMethod is null) return null;
-        var genericMethod = aggregateMethod.MakeGenericMethod(sourceType);
-        return Expression.Call(genericMethod, grouping, selector);
+            if (aggregateMethod is null) return null;
+            var genericMethod = aggregateMethod.MakeGenericMethod(sourceType);
+            return Expression.Call(genericMethod, grouping, selector);
+        }
+
+        return null;
     }
 
     private static bool TryBuildMemberAccess(Expression root, Type rootType, string path, QueryOptions options, out Expression access)
