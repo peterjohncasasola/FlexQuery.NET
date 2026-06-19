@@ -36,13 +36,11 @@ public class OrderAggregationTests : DapperApiTestBase
         response.EnsureSuccessStatusCode();
         var json = await response.Content.ReadFromJsonAsync<JsonElement>();
         var items = json.GetProperty("Data").EnumerateArray().ToList();
-        items.Should().HaveCount(1);
+        items.Should().HaveCount(4); // Returns all orders since GroupBy is empty
         
-        var first = items[0];
-        var keys = string.Join(", ", first.EnumerateObject().Select(p => p.Name));
-        first.TryGetProperty("SUM_total", out _).Should().BeTrue($"Keys found: {keys}");
-        first.GetProperty("SUM_total").GetDecimal().Should().BeGreaterThan(0);
-        first.GetProperty("COUNT_id").GetInt32().Should().BeGreaterThan(0);
+        var aggregates = json.GetProperty("Aggregates");
+        aggregates.GetProperty("total").GetProperty("sum").GetDecimal().Should().BeGreaterThan(0);
+        aggregates.GetProperty("id").GetProperty("count").GetInt32().Should().BeGreaterThan(0);
     }
 
     [Fact]

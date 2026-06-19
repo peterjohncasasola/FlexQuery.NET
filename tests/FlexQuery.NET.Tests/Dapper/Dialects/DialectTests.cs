@@ -649,6 +649,30 @@ public class DialectTests
         oracleCmd.Sql.Should().Contain("\"TotalCount\"");
     }
 
+    [Fact]
+    public void All_Dialects_Generate_Grand_Total_Aggregates_Select()
+    {
+        var options = new QueryOptions
+        {
+            Aggregates = [new AggregateModel { Function = "count", Alias = "TotalCount", Field = "*" }]
+        };
+        options.Items[ContextKeys.EntityType] = typeof(TestEntity);
+
+        var sqlServerCmd = new SqlTranslator(_registry, new SqlServerDialect()).TranslateAggregates(options);
+        var pgCmd = new SqlTranslator(_registry, new PostgreSqlDialect()).TranslateAggregates(options);
+        var mySqlCmd = new SqlTranslator(_registry, new MySqlDialect()).TranslateAggregates(options);
+        var mariadbCmd = new SqlTranslator(_registry, new MariaDbDialect()).TranslateAggregates(options);
+        var sqliteCmd = new SqlTranslator(_registry, new SqliteDialect()).TranslateAggregates(options);
+        var oracleCmd = new SqlTranslator(_registry, new OracleDialect()).TranslateAggregates(options);
+
+        sqlServerCmd.Sql.Should().Contain("COUNT(1) AS [TotalCount]");
+        pgCmd.Sql.Should().Contain("COUNT(1) AS \"TotalCount\"");
+        mySqlCmd.Sql.Should().Contain("COUNT(1) AS `TotalCount`");
+        mariadbCmd.Sql.Should().Contain("COUNT(1) AS `TotalCount`");
+        sqliteCmd.Sql.Should().Contain("COUNT(1) AS \"TotalCount\"");
+        oracleCmd.Sql.Should().Contain("COUNT(1) AS \"TotalCount\"");
+    }
+
     // ========================
     // OrderBy SQL Generation Tests
     // ========================
@@ -995,6 +1019,7 @@ public class DialectTests
     {
         var options = new QueryOptions
         {
+            GroupBy = ["Status"],
             Aggregates = [new AggregateModel { Function = "count", Alias = "TotalCount", Field = "*" }]
         };
         options.Items[ContextKeys.EntityType] = typeof(TestEntity);

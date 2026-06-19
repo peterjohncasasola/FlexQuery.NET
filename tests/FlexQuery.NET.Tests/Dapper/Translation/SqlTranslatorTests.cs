@@ -159,7 +159,7 @@ public class SqlTranslatorTests
         options.Items[ContextKeys.EntityType] = typeof(TestEntity);
 
         var translator = new SqlTranslator(_registry, new SqlServerDialect());
-        var command = translator.Translate(options);
+        var command = translator.TranslateAggregates(options);
 
         command.Sql.Should().Contain("COUNT(1) AS [TotalCount]");
     }
