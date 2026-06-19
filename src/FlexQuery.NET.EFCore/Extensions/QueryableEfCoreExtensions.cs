@@ -95,6 +95,66 @@ public static class QueryableEfCoreExtensions
         return await query.ApplyFlexQueryAsync(options, hasProjection, execOptions, cancellationToken);
     }
 
+    /// <summary>
+    /// Executes a pre-parsed <see cref="QueryOptions"/> against an EF Core queryable
+    /// and returns a paged result set asynchronously.
+    /// </summary>
+    /// <remarks>
+    /// Use this overload when composing with adapter packages (e.g. FlexQuery.NET.AgGrid,
+    /// FlexQuery.NET.MiniOData) that parse external formats into <see cref="QueryOptions"/>.
+    /// <code>
+    /// // Step 1: Parse (adapter package)
+    /// var options = AgGridQueryOptionsParser.Parse(agGridRequest);
+    ///
+    /// // Step 2: Execute (EF Core package)
+    /// var result = await dbContext.Entities.FlexQueryAsync(options);
+    /// </code>
+    /// </remarks>
+    /// <param name="query">The source queryable.</param>
+    /// <param name="options">Pre-parsed query options from any adapter or manual construction.</param>
+    /// <param name="configure">Optional configuration for server-side security and execution rules.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    public static async Task<QueryResult<object>> FlexQueryAsync<T>(
+        this IQueryable<T> query,
+        QueryOptions options,
+        Action<QueryExecutionOptions>? configure = null,
+        CancellationToken cancellationToken = default)
+        where T : class
+    {
+        var execOptions = new QueryExecutionOptions();
+        configure?.Invoke(execOptions);
+
+        return await query.FlexQueryAsync(options, execOptions, cancellationToken);
+    }
+
+    /// <summary>
+    /// Executes a pre-parsed <see cref="QueryOptions"/> against an EF Core queryable
+    /// and returns a paged result set asynchronously.
+    /// </summary>
+    /// <param name="query">The source queryable.</param>
+    /// <param name="options">Pre-parsed query options from any adapter or manual construction.</param>
+    /// <param name="execOptions">Server-side security and execution rules.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    public static async Task<QueryResult<object>> FlexQueryAsync<T>(
+        this IQueryable<T> query,
+        QueryOptions options,
+        QueryExecutionOptions execOptions,
+        CancellationToken cancellationToken = default)
+        where T : class
+    {
+        ArgumentNullException.ThrowIfNull(query);
+        ArgumentNullException.ThrowIfNull(options);
+        ArgumentNullException.ThrowIfNull(execOptions);
+
+        QueryOptionsEfCoreExtensions.EnsureEfCoreOperatorsRegistered();
+
+        options.ValidateOrThrow<T>(execOptions);
+
+        var hasProjection = options.HasProjection();
+
+        return await query.ApplyFlexQueryAsync(options, hasProjection, execOptions, cancellationToken);
+    }
+
     private static async Task<QueryResult<object>> ApplyFlexQueryAsync<T>(this IQueryable<T> query, 
         QueryOptions options, bool hasProjection, QueryExecutionOptions? execOptions = null, CancellationToken cancellationToken = default)
         where T : class

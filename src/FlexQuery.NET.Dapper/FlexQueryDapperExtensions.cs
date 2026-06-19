@@ -82,6 +82,58 @@ public static class FlexQueryDapperExtensions
         return await FlexQueryAsync<T>(connection, flexParams, configureDapper);
     }
 
+    /// <summary>
+    /// Executes a pre-parsed <see cref="QueryOptions"/> using Dapper with validation.
+    /// </summary>
+    /// <remarks>
+    /// Use this overload when composing with adapter packages (e.g. FlexQuery.NET.AgGrid,
+    /// FlexQuery.NET.MiniOData) that parse external formats into <see cref="QueryOptions"/>.
+    /// <code>
+    /// // Step 1: Parse (adapter package)
+    /// var options = AgGridQueryOptionsParser.Parse(agGridRequest);
+    ///
+    /// // Step 2: Execute (Dapper package)
+    /// var result = await connection.FlexQueryAsync&lt;User&gt;(options);
+    /// </code>
+    /// </remarks>
+    /// <param name="connection">The database connection.</param>
+    /// <param name="options">Pre-parsed query options from any adapter or manual construction.</param>
+    /// <param name="configureDapper">Optional configuration for Dapper-specific execution options.</param>
+    public static async Task<QueryResult<T>> FlexQueryAsync<T>(
+        this DbConnection connection,
+        QueryOptions options,
+        Action<DapperQueryOptions>? configureDapper = null) where T : class
+    {
+        var dapperOptions = new DapperQueryOptions();
+        configureDapper?.Invoke(dapperOptions);
+
+        return await connection.FlexQueryAsync<T>(options, dapperOptions);
+    }
+
+    /// <summary>
+    /// Executes a pre-parsed <see cref="QueryOptions"/> using Dapper with full options.
+    /// </summary>
+    /// <param name="connection">The database connection.</param>
+    /// <param name="options">Pre-parsed query options from any adapter or manual construction.</param>
+    /// <param name="dapperQueryOptions">Dapper-specific execution options.</param>
+    public static async Task<QueryResult<T>> FlexQueryAsync<T>(
+        this DbConnection connection,
+        QueryOptions options,
+        DapperQueryOptions? dapperQueryOptions = null) where T : class
+    {
+        ArgumentNullException.ThrowIfNull(connection);
+        ArgumentNullException.ThrowIfNull(options);
+
+        var dapperOptions = dapperQueryOptions ?? new DapperQueryOptions();
+        options.Items[ContextKeys.EntityType] = dapperOptions.EntityType ?? typeof(T);
+
+        var execOptions = dapperOptions.ToQueryExecutionOptions();
+
+        options.ValidateOrThrow(dapperOptions.EntityType ?? typeof(T), execOptions);
+
+        return await ExecuteQueryAsync<T>(connection, options, dapperOptions);
+    }
+
     private static async Task<QueryResult<T>> ExecuteQueryAsync<T>(
         DbConnection connection,
         QueryOptions options,
