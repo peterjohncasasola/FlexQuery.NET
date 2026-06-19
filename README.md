@@ -31,6 +31,7 @@ dotnet add package FlexQuery.NET
 dotnet add package FlexQuery.NET.EFCore
 dotnet add package FlexQuery.NET.Dapper
 dotnet add package FlexQuery.NET.AspNetCore
+dotnet add package FlexQuery.NET.AgGrid
 ```
 
 ### 2. Simple Usage
@@ -52,13 +53,50 @@ public async Task<IActionResult> GetUsers([FromQuery] FlexQueryParameters parame
 }
 ```
 
-### 3. Example Request
+### 3. AG Grid Adapter
+
+`FlexQuery.NET.AgGrid` translates AG Grid `filterModel` and `sortModel` payloads into canonical `QueryOptions`, then validates and executes them through the same pipeline as the standard FlexQuery APIs.
+
+```csharp
+using FlexQuery.NET.AgGrid;
+using FlexQuery.NET.AgGrid.Models;
+
+[HttpPost]
+public async Task<IActionResult> GetUsers([FromBody] AgGridRequest request)
+{
+    var result = await _context.Users.FlexQueryAsync(request, options =>
+    {
+        options.AllowedFields = ["Id", "Name", "Email", "Status", "CreatedAt"];
+        options.AllowOperators("Status", FilterOperators.Eq, FilterOperators.In);
+    });
+
+    return Ok(result);
+}
+```
+
+For advanced scenarios where you need to parse before executing, the adapter parser is public and mirrors the documented manual pipeline used by `QueryOptionsParser`:
+
+```csharp
+using FlexQuery.NET.AgGrid.Parsers;
+
+var options = AgGridQueryOptionsParser.Parse(request);
+
+options.ValidateOrThrow<User>(execOptions);
+
+query = query.ApplyFilter(options);
+query = query.ApplySort(options);
+query = query.ApplyPaging(options);
+
+var data = await query.ApplySelect(options).ToListAsync();
+```
+
+### 4. Example Request
 
 ```http
 GET /api/users?filter=age:gt:18&sort=createdAt:desc&page=1&pageSize=20&select=id,name,email
 ```
 
-### 4. Dapper Integration & Database Dialects
+### 5. Dapper Integration & Database Dialects
 
 FlexQuery.NET provides a robust Dapper extension (`FlexQuery.NET.Dapper`) that compiles queries into secure, parameterized, and database-specific SQL.
 
