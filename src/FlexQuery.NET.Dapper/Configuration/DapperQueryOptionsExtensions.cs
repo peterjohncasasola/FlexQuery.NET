@@ -1,10 +1,6 @@
-using Microsoft.Extensions.DependencyInjection;
-using FlexQuery.NET.Dapper.Sql;
-using FlexQuery.NET.Dapper.Dialects;
-
 namespace FlexQuery.NET.Dapper.Configuration;
 
-public static class FlexQueryDapperExtensions
+public static class DapperQueryOptionsExtensions
 {
     /// <summary>
     /// Configures the SQL Server dialect.
