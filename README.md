@@ -1,7 +1,3 @@
-<p align="center">
-  <img src="https://raw.githubusercontent.com/peterjohncasasola/FlexQuery.NET/main/assets/logo-dark.png" alt="FlexQuery.NET Logo" width="400">
-</p>
-
 # FlexQuery.NET
 
 **Dynamic filtering, sorting, paging, and projection for IQueryable in .NET.**
