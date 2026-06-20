@@ -1,0 +1,305 @@
+using FlexQuery.NET.Models;
+using FlexQuery.NET.Dapper.Mapping;
+using FlexQuery.NET.Dapper.Mapping.Metadata;
+using FlexQuery.NET.Dapper.Dialects;
+using FlexQuery.NET.Dapper.Sql.Helpers;
+using FlexQuery.NET.Metadata;
+using System.Reflection;
+
+namespace FlexQuery.NET.Dapper.Sql.Builders;
+
+/// <summary>
+/// Builds the SELECT clause for all three projection shapes: the default tree-shaped
+/// projection (<see cref="BuildSelectClause"/>, walking a <see cref="SelectionNode"/>),
+/// the flat/flat-mixed projection (<see cref="BuildFlatSelectClause"/>, which also emits
+/// its own JOINs since flat mode needs a specific linear join order), and aggregate-only
+/// projections (<see cref="BuildAggregateSelectParts"/>, shared with GROUP BY queries and
+/// the dedicated aggregates endpoint). Has no dependency on filtering — selection shape and
+/// filtering are independent concerns, which is why this builder has no need of
+/// <c>SqlWhereBuilder</c> or <c>SqlJoinBuilder</c>.
+/// </summary>
+internal sealed class SqlSelectBuilder(IMappingRegistry mappingRegistry, ISqlDialect dialect)
+{
+    /// <summary>
+    /// Renders the SELECT parts for an aggregates list, special-casing COUNT(*)/COUNT(field-less)
+    /// as COUNT(1) and otherwise emitting FUNC(column) AS alias.
+    /// </summary>
+    public List<string> BuildAggregateSelectParts(QueryOptions options, IEntityMapping mapping)
+    {
+        var selectParts = new List<string>();
+        foreach (var agg in options.Aggregates)
+        {
+            var column = mapping.GetColumnName(agg.Field ?? "*");
+            var quoted = SqlDialectHelper.QuoteColumn(dialect, column, mapping);
+
+            if (agg.Function.Equals("count", StringComparison.OrdinalIgnoreCase) && (string.IsNullOrEmpty(agg.Field) || agg.Field == "*"))
+            {
+                selectParts.Add($"COUNT(1) AS {dialect.QuoteIdentifier(agg.Alias)}");
+            }
+            else
+            {
+                selectParts.Add($"{agg.Function.ToUpperInvariant()}({quoted}) AS {dialect.QuoteIdentifier(agg.Alias)}");
+            }
+        }
+        return selectParts;
+    }
+
+    /// <summary>Builds the SELECT clause by recursively walking the SelectionNode AST.</summary>
+    public string BuildSelectClause(QueryOptions options, IEntityMapping mapping, string distinctClause, SelectionNode selectTree)
+    {
+        var distinctPrefix = !string.IsNullOrEmpty(distinctClause) ? $"{distinctClause} " : string.Empty;
+        var selectParts = new List<string>();
+
+        if (options.Aggregates?.Count > 0 && options.GroupBy?.Count > 0)
+        {
+            foreach (var g in options.GroupBy)
+            {
+                selectParts.Add(SqlDialectHelper.QuoteColumn(dialect, mapping.GetColumnName(g), mapping));
+            }
+
+            selectParts.AddRange(BuildAggregateSelectParts(options, mapping));
+            return $"SELECT {distinctPrefix}{string.Join(", ", selectParts)}";
+        }
+
+        if (options.GroupBy?.Count > 0)
+        {
+            foreach (var g in options.GroupBy)
+            {
+                selectParts.Add(SqlDialectHelper.QuoteColumn(dialect, mapping.GetColumnName(g), mapping));
+            }
+            return $"SELECT {distinctPrefix}{string.Join(", ", selectParts)}";
+        }
+
+        TraverseSelectTree(selectTree, mapping, mapping.TableAlias, string.Empty, selectParts);
+
+        if (selectParts.Count == 0)
+        {
+            // Fallback if AST is totally empty
+            foreach (var p in mapping.GetProperties())
+            {
+                selectParts.Add(SqlDialectHelper.QuoteColumn(dialect, mapping.GetColumnName(p), mapping));
+            }
+        }
+
+        return $"SELECT {distinctPrefix}{string.Join(", ", selectParts)}";
+    }
+
+    private void TraverseSelectTree(SelectionNode node, IEntityMapping currentMapping, string? currentAlias, string prefix, List<string> selectParts)
+    {
+        bool hasSpecificFields = false;
+
+        foreach (var child in node.EnumerateChildren())
+        {
+            var rel = currentMapping.GetRelationship(child.Key);
+            if (rel != null)
+            {
+                // It's a navigation property
+                var targetMapping = mappingRegistry.GetMapping(rel.TargetType);
+                var nextPrefix = prefix + rel.NavigationPropertyName + "_";
+                var nextAlias = rel.NavigationPropertyName; // Dapper extensions use this
+
+                TraverseSelectTree(child.Value, targetMapping, nextAlias, nextPrefix, selectParts);
+            }
+            else
+            {
+                // It's a regular property
+                hasSpecificFields = true;
+                var col = currentMapping.GetColumnName(child.Key);
+                var outputName = child.Value.Alias ?? (prefix + col);
+
+                var quotedAlias = string.IsNullOrEmpty(currentAlias) ? "" : dialect.QuoteIdentifier(currentAlias) + ".";
+                var quotedCol = dialect.QuoteIdentifier(col);
+                var quotedOutput = dialect.QuoteIdentifier(outputName);
+
+                selectParts.Add($"{quotedAlias}{quotedCol} AS {quotedOutput}");
+            }
+        }
+
+        if (node.IncludeAllScalars || (!hasSpecificFields && !node.HasChildren))
+        {
+            foreach (var prop in currentMapping.GetProperties())
+            {
+                var col = currentMapping.GetColumnName(prop);
+                var outputName = prefix + col;
+
+                var quotedAlias = string.IsNullOrEmpty(currentAlias) ? "" : dialect.QuoteIdentifier(currentAlias) + ".";
+                var quotedCol = dialect.QuoteIdentifier(col);
+                var quotedOutput = dialect.QuoteIdentifier(outputName);
+
+                selectParts.Add($"{quotedAlias}{quotedCol} AS {quotedOutput}");
+            }
+        }
+    }
+
+    /// <summary>
+    /// Builds the SELECT clause and accompanying JOINs for flat/flat-mixed projection mode.
+    /// Unlike the tree-shaped SELECT, flat mode requires a single linear navigation path and
+    /// emits its own joins in that path's order, so join-building stays alongside selection here
+    /// rather than being shared with <c>SqlJoinBuilder</c> (which handles tree-shaped, possibly
+    /// branching navigation instead).
+    /// </summary>
+    public (string selectClause, string joinClause, List<string> flatJoins) BuildFlatSelectClause(
+        QueryOptions options, IEntityMapping mapping, string distinctClause, SelectionNode selectTree)
+    {
+        var allowRootScalars = options.ProjectionMode == ProjectionMode.FlatMixed;
+        var (navPath, fields) = DecomposeFlatSelection(selectTree, mapping, allowRootScalars);
+
+        var distinctPrefix = !string.IsNullOrEmpty(distinctClause) ? $"{distinctClause} " : string.Empty;
+        var selectParts = new List<string>();
+        var flatJoins = new List<string>();
+        var joins = new List<string>();
+
+        if (navPath.Count == 0)
+        {
+            var dialectTable = dialect.QuoteIdentifier(mapping.TableName);
+
+            foreach (var f in fields)
+            {
+                var col = f.Mapping.GetColumnName(f.PropName);
+                selectParts.Add($"{dialectTable}.{dialect.QuoteIdentifier(col)} AS {dialect.QuoteIdentifier(f.OutputName)}");
+            }
+
+            if (selectParts.Count == 0)
+            {
+                foreach (var propName in mapping.GetProperties())
+                {
+                    var col = mapping.GetColumnName(propName);
+                    selectParts.Add($"{dialectTable}.{dialect.QuoteIdentifier(col)}");
+                }
+            }
+
+            return ($"SELECT {distinctPrefix}{string.Join(", ", selectParts)}", string.Empty, flatJoins);
+        }
+
+        var currentAlias = mapping.TableAlias ?? mapping.TableName;
+        var currentMapping = mapping;
+        var rootTable = dialect.QuoteIdentifier(mapping.TableName);
+
+        // Project root scalars (level -1) for FlatMixed mode
+        if (allowRootScalars)
+        {
+            foreach (var f in fields.Where(f => f.Level == -1))
+            {
+                var col = f.Mapping.GetColumnName(f.PropName);
+                selectParts.Add($"{rootTable}.{dialect.QuoteIdentifier(col)} AS {dialect.QuoteIdentifier(f.OutputName)}");
+            }
+        }
+
+        for (var i = 0; i < navPath.Count; i++)
+        {
+            var navName = navPath[i];
+            var rel = currentMapping.GetRelationship(navName);
+            if (rel == null) continue;
+
+            var targetMapping = mappingRegistry.GetMapping(rel.TargetType);
+            var navAlias = rel.NavigationPropertyName;
+
+            var joinCondition = SqlDialectHelper.BuildJoinCondition(dialect, rel, currentMapping, currentAlias, targetMapping, navAlias);
+
+            joins.Add($"LEFT JOIN {dialect.QuoteIdentifier(targetMapping.TableName)} AS {dialect.QuoteIdentifier(navAlias)} ON {joinCondition}");
+            flatJoins.Add(navAlias);
+
+            if (allowRootScalars)
+            {
+                foreach (var f in fields.Where(f => f.Level == i))
+                {
+                    var col = f.Mapping.GetColumnName(f.PropName);
+                    selectParts.Add($"{dialect.QuoteIdentifier(navAlias)}.{dialect.QuoteIdentifier(col)} AS {dialect.QuoteIdentifier(f.OutputName)}");
+                }
+            }
+
+            currentMapping = targetMapping;
+            currentAlias = navAlias;
+        }
+
+        foreach (var f in fields.Where(f => f.Level == navPath.Count))
+        {
+            var col = f.Mapping.GetColumnName(f.PropName);
+            selectParts.Add($"{dialect.QuoteIdentifier(currentAlias)}.{dialect.QuoteIdentifier(col)} AS {dialect.QuoteIdentifier(f.OutputName)}");
+        }
+
+        if (selectParts.Count == 0)
+        {
+            foreach (var propName in currentMapping.GetProperties())
+            {
+                var col = currentMapping.GetColumnName(propName);
+                selectParts.Add($"{dialect.QuoteIdentifier(currentAlias)}.{dialect.QuoteIdentifier(col)}");
+            }
+        }
+
+        var joinClause = string.Join(" ", joins);
+        return ($"SELECT {distinctPrefix}{string.Join(", ", selectParts)}", joinClause, flatJoins);
+    }
+
+    private record FlatField(int Level, string OutputName, string PropName, IEntityMapping Mapping);
+
+    private (List<string> navPath, List<FlatField> fields) DecomposeFlatSelection(
+        SelectionNode node, IEntityMapping mapping, bool allowRootScalars, int level = 0)
+    {
+        var navPath = new List<string>();
+        var fields = new List<FlatField>();
+
+        var navChildren = new List<(string name, SelectionNode child, RelationshipMapping rel)>();
+        var scalarChildren = new List<(string name, SelectionNode child)>();
+
+        foreach (var child in node.EnumerateChildren())
+        {
+            var rel = mapping.GetRelationship(child.Key);
+            if (rel != null)
+            {
+                navChildren.Add((child.Key, child.Value, rel));
+            }
+            else
+            {
+                scalarChildren.Add((child.Key, child.Value));
+            }
+        }
+
+        if (!allowRootScalars && navChildren.Count > 1)
+            throw new InvalidOperationException(
+                "Flat mode does not support branching multiple navigation paths. Select a single linear path.");
+
+        if (navChildren.Count == 0)
+        {
+            foreach (var (propName, childNode) in scalarChildren)
+            {
+                var outputName = childNode.Alias ?? propName;
+                fields.Add(new FlatField(level, outputName, propName, mapping));
+            }
+
+            if (node.IncludeAllScalars || node.HasChildren == false)
+            {
+                foreach (var propName in mapping.GetProperties())
+                {
+                    var prop = mapping.Type.GetProperty(propName, BindingFlags.Public | BindingFlags.Instance | BindingFlags.IgnoreCase);
+                    if (prop != null && TypeClassification.IsScalarType(prop.PropertyType))
+                    {
+                        var outputName = propName;
+                        fields.Add(new FlatField(level, outputName, propName, mapping));
+                    }
+                }
+            }
+        }
+
+        foreach (var (navName, navNode, rel) in navChildren)
+        {
+            var targetMapping = mappingRegistry.GetMapping(rel.TargetType);
+            navPath.Add(rel.NavigationPropertyName);
+
+            var (subPath, subFields) = DecomposeFlatSelection(navNode, targetMapping, allowRootScalars, level + 1);
+            navPath.AddRange(subPath);
+            fields.AddRange(subFields);
+
+            if (allowRootScalars)
+            {
+                foreach (var (propName, childNode) in scalarChildren)
+                {
+                    var outputName = childNode.Alias ?? propName;
+                    fields.Add(new FlatField(-1, outputName, propName, mapping));
+                }
+            }
+        }
+
+        return (navPath, fields);
+    }
+}

@@ -1,0 +1,117 @@
+using FlexQuery.NET.Models;
+using FlexQuery.NET.Dapper.Mapping;
+using FlexQuery.NET.Dapper.Dialects;
+using FlexQuery.NET.Dapper.Sql.Helpers;
+using FlexQuery.NET.Dapper.Sql.Models;
+using FlexQuery.NET.Dapper.Sql.Translators;
+
+namespace FlexQuery.NET.Dapper.Sql.Builders;
+
+/// <summary>
+/// Builds the JOIN clause: joins inferred from a deep projection tree, plus explicit
+/// <c>Includes</c> and <c>FilteredIncludes</c>. Depends on <see cref="SqlWhereBuilder"/>
+/// to render the boolean fragment for filtered navigations/includes, mirroring the
+/// existing callback-injection pattern already used with <c>SqlIncludeTranslator</c>.
+/// </summary>
+internal sealed class SqlJoinBuilder
+{
+    private readonly IMappingRegistry _mappingRegistry;
+    private readonly ISqlDialect _dialect;
+    private readonly SqlIncludeTranslator _includeTranslator;
+    private readonly SqlWhereBuilder _whereBuilder;
+
+    public SqlJoinBuilder(
+        IMappingRegistry mappingRegistry,
+        ISqlDialect dialect,
+        SqlIncludeTranslator includeTranslator,
+        SqlWhereBuilder whereBuilder)
+    {
+        _mappingRegistry = mappingRegistry;
+        _dialect = dialect;
+        _includeTranslator = includeTranslator;
+        _whereBuilder = whereBuilder;
+    }
+
+    public string BuildJoinClause(QueryOptions options, IEntityMapping mapping, SqlParameterContext parameters, SelectionNode selectTree)
+    {
+        var joins = new List<string>();
+        var joinedPaths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        // 1. Infer joins from deep projection tree
+        TraverseJoinTree(selectTree, mapping, mapping.TableAlias, joins, joinedPaths, parameters);
+
+        // 2. Explicit Includes and Filtered Includes
+        if (options.FilteredIncludes != null)
+        {
+            foreach (var filteredInclude in options.FilteredIncludes)
+            {
+                if (!joinedPaths.Add(filteredInclude.Path)) continue;
+
+                var rel = mapping.GetRelationship(filteredInclude.Path);
+                if (rel == null) continue;
+
+                var node = new Ast.IncludeNode
+                {
+                    NavigationProperty = rel.NavigationPropertyName,
+                    Filter = filteredInclude.Filter
+                };
+
+                var sql = _includeTranslator.Translate(node, mapping, filterGroup =>
+                {
+                    var targetMapping = _mappingRegistry.GetMapping(rel.TargetType!);
+                    return _whereBuilder.BuildFilterGroupExpression(filterGroup, targetMapping, parameters);
+                }, _mappingRegistry);
+
+                if (!string.IsNullOrEmpty(sql)) joins.Add(sql);
+            }
+        }
+
+        // Handle regular Includes
+        if (options.Includes != null)
+        {
+            foreach (var include in options.Includes)
+            {
+                if (!joinedPaths.Add(include)) continue;
+
+                var node = new Ast.IncludeNode { NavigationProperty = include };
+                var sql = _includeTranslator.Translate(node, mapping, _ => string.Empty, _mappingRegistry);
+                if (!string.IsNullOrEmpty(sql)) joins.Add(sql);
+            }
+        }
+
+        return string.Join(" ", joins);
+    }
+
+    private void TraverseJoinTree(SelectionNode node, IEntityMapping currentMapping, string? parentAlias, List<string> joins, HashSet<string> joinedPaths, SqlParameterContext parameters)
+    {
+        foreach (var child in node.EnumerateChildren())
+        {
+            var rel = currentMapping.GetRelationship(child.Key);
+            if (rel == null) continue;
+
+            var childAlias = rel.NavigationPropertyName;
+            var targetMapping = _mappingRegistry.GetMapping(rel.TargetType);
+
+            if (joinedPaths.Add(childAlias))
+            {
+                var parentRef = string.IsNullOrEmpty(parentAlias) ? currentMapping.TableName : parentAlias;
+                var joinCondition = SqlDialectHelper.BuildJoinCondition(_dialect, rel, currentMapping, parentRef, targetMapping, childAlias);
+                var sql = $"LEFT JOIN {_dialect.QuoteIdentifier(targetMapping.TableName)} AS {_dialect.QuoteIdentifier(childAlias)} ON {joinCondition}";
+
+                if (child.Value.Filter != null)
+                {
+                    var filterSql = _whereBuilder.BuildFilterGroupExpression(child.Value.Filter, targetMapping, parameters);
+                    if (!string.IsNullOrEmpty(filterSql))
+                        sql += $" AND ({filterSql})";
+                }
+
+                joins.Add(sql);
+            }
+
+            // Recurse exactly once regardless of whether this alias was newly joined or already
+            // visited via another path — matches the original behavior of recursing in both the
+            // "new join" and "already joined" branches with identical arguments.
+            TraverseJoinTree(child.Value, targetMapping, childAlias, joins, joinedPaths, parameters);
+        }
+    }
+}
