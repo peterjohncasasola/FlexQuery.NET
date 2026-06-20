@@ -9,30 +9,12 @@ using FlexQuery.NET.Metadata;
 
 namespace FlexQuery.NET.Builders;
 
-/// <summary>
-/// Builds dynamic flat / flat-mixed projections using SelectMany expression chains.
-/// <list type="bullet">
-///   <item><term>Flat</term>       – single linear nav path, leaf-only rows.</item>
-///   <item><term>FlatMixed</term>  – correlated SelectMany, all levels (root + intermediate + leaf) in one flat row.</item>
-/// </list>
-///
-/// For FlatMixed with N navigation hops, the expression tree becomes:
-/// <code>
-///   query
-///     .SelectMany(c => c.Orders,    (c, o)  => new { L0 = c, L1 = o })
-///     .SelectMany(x => x.L1.Items,  (x, oi) => new { customerId = x.L0.Id, orderStatus = x.L1.Status, product = oi.ProductName })
-/// </code>
-/// </summary>
 internal static class FlatProjectionBuilder
 {
-    // ── Reflected Queryable methods ──────────────────────────────────────
-
-    private static readonly MethodInfo SelectManyMethod = ExpressionMethodCache.QueryableSelectMany();
-
-    // 3-param overload: SelectMany(source, collectionSelector, resultSelector)
-    private static readonly MethodInfo SelectManyWithResultMethod = ExpressionMethodCache.QueryableSelectManyWithResult();
-
+    private static readonly MethodInfo QueryableSelectManyWithResult = ExpressionMethodCache.QueryableSelectManyWithResult();
+    private static readonly MethodInfo QueryableSelectManySimple = ExpressionMethodCache.QueryableSelectMany();
     private static readonly MethodInfo SelectMethod = ExpressionMethodCache.QueryableSelectSimple();
+    
 
     // ── Data structures ─────────────────────────────────────────────────
 
@@ -84,7 +66,7 @@ internal static class FlatProjectionBuilder
             var funcType = typeof(Func<,>).MakeGenericType(hop.SourceType, enumType);
             var lambda = Expression.Lambda(funcType, propAccess, param);
 
-            var method = SelectManyMethod.MakeGenericMethod(hop.SourceType, hop.ElementType);
+            var method = QueryableSelectManySimple.MakeGenericMethod(hop.SourceType, hop.ElementType);
             source = (IQueryable)method.Invoke(null, [source, lambda])!;
             currentType = hop.ElementType;
         }
@@ -104,28 +86,13 @@ internal static class FlatProjectionBuilder
     {
         if (hops.Count == 0)
         {
-            // No navigation — just project root scalars
             return ProjectToFlatRow(source, rootType, fields, options, levelAccessors: null);
         }
-
-        // We use the 3-param SelectMany to carry a context object through the chain.
-        // After N hops, the current element type is a flat context carrying
-        // all entities at all levels: { L0: Customer, L1: Order, L2: OrderItem, ... }
-
-        // Build level-name mapping: level -1 → root, level 0 → L0, level 1 → L1, ...
-        // We'll build a context type that holds all levels seen so far.
-        // At each step: ctx = new { L0 = prevCtx.L0, L1 = prevCtx.L1, ..., Ln = item }
-
-        // Step 1: build contextual type progressively
-        // After the first hop:  contextType = { L0: rootType, L1: hop0.ElementType }
-        // After the second hop: contextType = { L0: rootType, L1: hop0.Element, L2: hop1.Element }
 
         IQueryable currentQuery = source;
         Type currentType = rootType;
 
-        // Track: (parameterExpression, type) at each level for building context accesses
-        // We simulate a growing flat context type.
-        var levelTypes = new List<Type> { rootType }; // levelTypes[0] = rootType
+        var levelTypes = new List<Type> { rootType };
         Type? contextType = null;
 
         for (int i = 0; i < hops.Count; i++)
@@ -135,9 +102,8 @@ internal static class FlatProjectionBuilder
 
             if (i == 0)
             {
-                // First hop: collectionSelector = root => root.NavProp
-                // resultSelector = (root, item) => new { L0 = root, L1 = item }
                 var rootParam = Expression.Parameter(rootType, "root");
+                var indexParam = Expression.Parameter(typeof(int), "idx");
                 var itemParam = Expression.Parameter(hop.ElementType, "item0");
 
                 var propAccess = Expression.Property(rootParam, prop);
@@ -145,8 +111,7 @@ internal static class FlatProjectionBuilder
                 var collFuncType = typeof(Func<,>).MakeGenericType(rootType, enumType);
                 var collSelector = Expression.Lambda(collFuncType, propAccess, rootParam);
 
-                // Build context type: { L0: rootType, L1: hop.ElementType }
-                levelTypes.Add(hop.ElementType); // levelTypes[1] = hop.ElementType
+                levelTypes.Add(hop.ElementType);
                 var ctxFields = BuildLevelTypeFields(levelTypes);
                 contextType = DynamicTypeBuilder.GetDynamicType(ctxFields);
 
@@ -157,22 +122,20 @@ internal static class FlatProjectionBuilder
                     Expression.Bind(contextType.GetProperty("L1")!, itemParam)
                 };
                 var ctxInit = Expression.MemberInit(ctxNew, ctxBindings);
+                // EF Core non-indexed result selector: Func<TSource, TCollection, TResult>
                 var resFuncType = typeof(Func<,,>).MakeGenericType(rootType, hop.ElementType, contextType);
                 var resSelector = Expression.Lambda(resFuncType, ctxInit, rootParam, itemParam);
 
-                var method = SelectManyWithResultMethod.MakeGenericMethod(rootType, hop.ElementType, contextType);
+                var method = QueryableSelectManyWithResult.MakeGenericMethod(rootType, hop.ElementType, contextType);
                 currentQuery = (IQueryable)method.Invoke(null, [currentQuery, collSelector, resSelector])!;
                 currentType = contextType;
             }
             else
             {
-                // Subsequent hops: contextType is the accumulator
-                // collectionSelector = ctx => ctx.L{i}.NavProp
-                // resultSelector = (ctx, item) => new { L0 = ctx.L0, L1 = ctx.L1, ..., L{i+1} = item }
                 var ctxParam = Expression.Parameter(currentType, $"ctx{i}");
+                var indexParam = Expression.Parameter(typeof(int), "idx");
                 var itemParam = Expression.Parameter(hop.ElementType, $"item{i}");
 
-                // Navigate: ctx.Li (previous item)
                 var prevLevelProp = currentType.GetProperty($"L{i}")!;
                 var prevLevelAccess = Expression.Property(ctxParam, prevLevelProp);
                 var navProp = hop.SourceType.GetProperty(hop.PropName, BindingFlags.Public | BindingFlags.Instance | BindingFlags.IgnoreCase)!;
@@ -182,12 +145,10 @@ internal static class FlatProjectionBuilder
                 var collFuncType = typeof(Func<,>).MakeGenericType(currentType, enumType);
                 var collSelector = Expression.Lambda(collFuncType, propAccess, ctxParam);
 
-                // Build new expanded context type: add L{i+1}
                 levelTypes.Add(hop.ElementType);
                 var ctxFields = BuildLevelTypeFields(levelTypes);
                 var newContextType = DynamicTypeBuilder.GetDynamicType(ctxFields);
 
-                // Build result: new { L0 = ctx.L0, L1 = ctx.L1, ..., Li = ctx.Li, L{i+1} = item }
                 var ctxNew = Expression.New(newContextType);
                 var ctxBindings = new List<MemberBinding>();
                 for (int lvl = 0; lvl <= i; lvl++)
@@ -202,15 +163,13 @@ internal static class FlatProjectionBuilder
                 var resFuncType = typeof(Func<,,>).MakeGenericType(currentType, hop.ElementType, newContextType);
                 var resSelector = Expression.Lambda(resFuncType, ctxInit, ctxParam, itemParam);
 
-                var method = SelectManyWithResultMethod.MakeGenericMethod(currentType, hop.ElementType, newContextType);
+                var method = QueryableSelectManyWithResult.MakeGenericMethod(currentType, hop.ElementType, newContextType);
                 currentQuery = (IQueryable)method.Invoke(null, [currentQuery, collSelector, resSelector])!;
                 currentType = newContextType;
                 contextType = newContextType;
             }
         }
 
-        // Build a lookup from level index to the context property expression
-        // Level -1 → L0 (root), Level 0 → L1 (first hop), Level 1 → L2, ...
         var ctxFinalParam = Expression.Parameter(currentType, "ctx");
         var levelAccessors = new Dictionary<int, Expression>();
         for (int lvl = 0; lvl < levelTypes.Count; lvl++)

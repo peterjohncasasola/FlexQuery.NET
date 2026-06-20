@@ -13,11 +13,11 @@ internal static class ExpressionMethodCache
 
     private static readonly MethodInfo QueryableSelectMethod = FindQueryableMethod(
         nameof(Queryable.Select), genericArgsCount: 2, parametersCount: 2,
-        additionalFilter: m => GetFuncArity(m.GetParameters()[1].ParameterType) == 3);
+        additionalFilter: SelectorArityFilter(arity: 3));
 
     private static readonly MethodInfo QueryableWhereMethod = FindQueryableMethod(
         nameof(Queryable.Where), genericArgsCount: 1, parametersCount: 2,
-        additionalFilter: m => GetFuncArity(m.GetParameters()[1].ParameterType) == 3);
+        additionalFilter: SelectorArityFilter(arity: 3));
 
     private static readonly MethodInfo QueryableOrderByMethod = FindQueryableMethod(
         nameof(Queryable.OrderBy), genericArgsCount: 2, parametersCount: 2);
@@ -36,18 +36,23 @@ internal static class ExpressionMethodCache
 
     private static readonly MethodInfo QueryableSelectSimpleMethod = FindQueryableMethod(
         nameof(Queryable.Select), genericArgsCount: 2, parametersCount: 2,
-        additionalFilter: m => GetFuncArity(m.GetParameters()[1].ParameterType) == 2);
+        additionalFilter: SelectorArityFilter(arity: 2));
 
     private static readonly MethodInfo QueryableWhereSimpleMethod = FindQueryableMethod(
         nameof(Queryable.Where), genericArgsCount: 1, parametersCount: 2,
-        additionalFilter: m => GetFuncArity(m.GetParameters()[1].ParameterType) == 2);
+        additionalFilter: SelectorArityFilter(arity: 2));
 
     private static readonly MethodInfo QueryableSelectManyMethod = FindQueryableMethod(
         nameof(Queryable.SelectMany), genericArgsCount: 2, parametersCount: 2);
-
+    
+    private static readonly MethodInfo QueryableSelectManyWithIndexMethod = FindQueryableMethod(
+        nameof(Queryable.SelectMany), genericArgsCount: 3, parametersCount: 3, additionalFilter: SelectorArityFilter(arity: 3));
+    
     private static readonly MethodInfo QueryableSelectManyWithResultMethod = FindQueryableMethod(
-        nameof(Queryable.SelectMany), genericArgsCount: 3, parametersCount: 3);
-
+        nameof(Queryable.SelectMany), genericArgsCount: 3, parametersCount: 3,
+        additionalFilter: m => GetFuncArity(m.GetParameters()[1].ParameterType) == 2 // collection selector has NO index (Func<TSource, IEnumerable<TCollection>>)
+                               && GetFuncArity(m.GetParameters()[2].ParameterType) == 3); // result selector has no index (Func<TSource, TCollection, TResult>)
+    
     private static readonly MethodInfo EnumerableToListMethod = FindEnumerableGenericDefinition(
         nameof(Enumerable.ToList), parameters: 1);
 
@@ -136,6 +141,12 @@ internal static class ExpressionMethodCache
     /// Expression&lt;Func&lt;TSource, IEnumerable&lt;TResult&gt;&gt;&gt;)</c> (2-parameter, no result selector).
     /// </summary>
     public static MethodInfo QueryableSelectMany() => QueryableSelectManyMethod;
+    
+    /// <summary>
+    /// Gets the open generic definition of <c>Queryable.SelectMany&lt;TSource, TResult&gt;(IQueryable&lt;TSource&gt;,
+    /// Expression&lt;Func&lt;TSource, IEnumerable&lt;TResult&gt;&gt;&gt;)</c> (3-parameter, no result selector).
+    /// </summary>
+    public static MethodInfo QueryableSelectManyWithIndex() => QueryableSelectManyWithIndexMethod;
 
     /// <summary>
     /// Gets the open generic definition of <c>Queryable.SelectMany&lt;TSource, TCollection, TResult&gt;</c>
@@ -231,6 +242,7 @@ internal static class ExpressionMethodCache
 
             return match.MakeGenericMethod(key.SourceType);
         });
+    
 
     private static MethodInfo FindQueryableMethod(
         string methodName,
@@ -246,12 +258,20 @@ internal static class ExpressionMethodCache
                 && m.GetParameters().Length == parametersCount
                 && (additionalFilter is null || additionalFilter(m)));
     }
+    
 
     private static MethodInfo FindEnumerableGenericDefinition(string methodName, int parameters)
         => typeof(Enumerable).GetMethods()
             .Single(m => m.Name == methodName
                          && m.IsGenericMethodDefinition
                          && m.GetParameters().Length == parameters);
+
+    /// <summary>
+    /// Builds a filter matching methods whose second parameter is a selector
+    /// (<c>Expression&lt;Func&lt;...&gt;&gt;</c> or <c>Func&lt;...&gt;</c>) with the given arity.
+    /// </summary>
+    private static Func<MethodInfo, bool> SelectorArityFilter(int arity, int parameterIndex = 1)
+        => method => GetFuncArity(method.GetParameters()[parameterIndex].ParameterType) == arity;
 
     private static int GetFuncArity(Type expressionType)
     {
