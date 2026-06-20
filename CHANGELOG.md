@@ -10,39 +10,67 @@ All notable changes to this project will be documented in this file.
   - New lightweight adapter package for AG Grid integration.
   - Automatically maps AG Grid request payloads (`AgGridRequest`) to canonical `QueryOptions`.
   - Full support for AG Grid features including filtering, sorting, pagination, and row grouping/aggregation.
+  - AG Grid value column aggregation support with `sum`, `count`, `min`, `max`, and `avg` (normalized from `average`) functions.
 - **Aggregate & Having Support**:
   - Added support for Grand Total Aggregations to calculate global dataset metrics (e.g., sum, count, min, max, avg) via `AggregateResultBuilder`.
   - Introduced `having` parser and `HavingParser` to filter grouped records or global aggregates.
+  - Added `TranslateAggregates` method in `SqlTranslator` for dedicated aggregate SQL generation.
   - Enhanced `QueryResult` and `QueryOptions` to expose `Aggregates` dictionaries.
+  - Grand totals require `Aggregates.Count > 0 && GroupBy.Count == 0`; grouped aggregates require `GroupBy.Count > 0`.
 - **JsonQueryParser**:
-  - Introduced explicit `JsonQueryParser` for robust JSON syntax detection and structured query parsing.
+  - Introduced explicit `JsonQueryParser` implementing `IQueryParser` for robust JSON syntax detection and structured query parsing.
 - **Non-Strict Validation Mode**:
-  - Added `ValidationMode.NonStrict` to allow silent removal of invalid fields or includes, preventing hard exceptions during query execution.
+  - `StrictFieldValidation = false` allows silent removal of invalid fields or includes, preventing hard exceptions during query execution.
 - **DTO Field Mapping**:
-  - Implemented explicit DTO field mapping support for advanced query translation.
-- **Caching Engine Upgrade**:
-  - Replaced the unbounded expression caching system with a bounded LRU-style cache to prevent memory degradation in high-concurrency environments.
-- **Dapper Enhancements**:
-  - Deep-projection aware SQL generation, ensuring complex DTO hierarchies map efficiently.
-  - Added row hydration support for advanced Dapper query scenarios.
+  - Implemented explicit DTO field mapping support via `QueryExecutionOptions.MapField()` using lambda expressions for advanced query translation.
+- **Flat Projection System**:
+  - New `FlatProjectionBuilder` for deep-projection aware EF Core expression building with `mode=flat` and `mode=flat-mixed`.
+  - Uses dynamic type construction to materialize flat rowsets with proper field aliasing.
+  - Supports multi-level nested collection flattening (`Orders.Items.Sku,Orders.Items.Id`).
+- **Projection Infrastructure Models**:
+  - `ProjectionExecutionPlan`: Metadata model for projected fields, SQL preview, and optimization notes.
+  - `ProjectedField`: Field metadata capturing source path, output name, type, navigation level, and alias.
+  - `ProjectionOptimizer`: Navigation-aware optimization with duplicate field elimination.
+  - `ProjectionExpressionCache`: Caching for compiled projection expressions to reduce allocation overhead.
+- **Expression Method Cache**:
+  - Centralized `ExpressionMethodCache` for cached resolution of `Queryable.Select`, `Queryable.Where`, `Queryable.SelectMany`, and aggregate methods (Min, Max, Sum, Average).
+  - Eliminates repeated reflection calls for method info lookup.
+- **Dapper Flat SQL Generation**:
+  - `SqlTranslator.BuildFlatSelectClause` handles `mode=flat` and `mode=flat-mixed` with LEFT JOIN support.
+  - Added `FlatJoins` property to `SqlCommand` for hydrator coordination.
 - **FlexQueryAsync Overloads**:
-  - Added new `FlexQueryAsync` overloads that accept pre-parsed `QueryOptions` objects.
+  - Added new `FlexQueryAsync<T>` overloads accepting pre-parsed `QueryOptions` objects.
+  - Enables adapter package composition (e.g., AgGrid → QueryOptions → Dapper execution).
 - **ServiceCollection Extensions**:
-  - Added streamlined DI registration (`ServiceCollectionExtensions`) for Dapper integration and AgGrid parsers.
+  - Added `AddFlexQueryDapper` with dialect options (`AddFlexQueryDapperSqlServer`, `AddFlexQueryDapperPostgreSql`, `AddFlexQueryDapperSqlite`).
+  - Registers `DapperQueryOptions` and `ISqlDialect` as singletons.
 
 ### Changed
-- **Magic Strings Elimination**:
-  - Systematically replaced magic strings throughout the library with strongly typed constants for context keys, parser tokens, and validation error codes.
 - **Parser Orchestration**:
-  - Decomposed `QueryOptionsParser` into specialized parsers and introduced a factory pattern for cleaner orchestration.
-  - Introduced an operator alias map for streamlined parsing of logical operators.
-  - Removed redundant `QueryParameterParser`.
-- **Expression Extraction**:
-  - Extracted reusable expression methods and shared type classifications to reduce duplication.
+  - Introduced `QueryOptionsFactory.Create()` for centralized base QueryOptions construction (pagings, mode, includeCount, distinct, select, groupBy, having, include, sort).
+  - Added dedicated `JsonQueryParser` implementing `IQueryParser` interface.
+  - Removed redundant `QueryParameterParser` (consolidated into `IndexedFilterParser`).
+  - Added operator alias map (`FilterOperators.AliasMap`) for normalized operator parsing (supports `eq`, `equal`, `==`, `=`, etc.).
+  - `SelectTreeBuilder` and `SelectionNode` changed from `internal` to `public` visibility for adapter consumption.
+- **Dapper Enhancements**:
+  - Deep-projection aware SQL generation with `mode=flat` and `mode=flat-mixed` support.
+  - Added `ISqlTranslator` interface with `Translate` and `TranslateAggregates` methods.
+  - Implemented `DapperRowHydrator.HydrateIncludes` for include materialization with dynamic row mapping.
+  - Simplified parameter naming in `FlexQueryDapperExtensions` using clean name trimming.
+- **Expression Caching Infrastructure**:
+  - Added caching layer for flat projection expression trees.
+  - `ProjectionExpressionCache` caches compiled expressions by entity type, projection mode, and selection fields.
+- **AgGrid Aggregate Normalization**:
+  - `AgGridQueryOptionsParser` normalizes `average` to `avg` for canonical aggregate function naming.
+- **SqlTranslator Modular Refactoring**:
+  - Extracted SQL generation into dedicated builders: `SqlSelectBuilder`, `SqlJoinBuilder`, `SqlWhereBuilder`.
+  - Introduced `SqlParameterContext` for centralized parameter management.
+  - Added `SqlDialectHelper` and `SqlValueConverter` for shared SQL dialect utilities.
 
 ### Fixed
 - **EF Core Collection Translation**:
   - Fixed an issue with translating `any` collection filters in EF Core.
+  - Removed null-check guards around collection navigation expressions that caused SQLite translation failures (e.g., `MaterializeCollectionNavigation(...) != null && ...Any(...)`).
 
 ---
 ## [3.0.0] - 2026-05-15
