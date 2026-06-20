@@ -4,6 +4,7 @@ using FlexQuery.NET.Models;
 using FlexQuery.NET.Security;
 using FlexQuery.NET.Helpers;
 using FlexQuery.NET.Constants;
+using FlexQuery.NET.Expressions;
 using FlexQuery.NET.Metadata;
 
 namespace FlexQuery.NET.Builders;
@@ -26,27 +27,12 @@ internal static class FlatProjectionBuilder
 {
     // ── Reflected Queryable methods ──────────────────────────────────────
 
-    private static readonly MethodInfo SelectManyMethod = typeof(Queryable).GetMethods()
-        .First(m => m.Name == nameof(Queryable.SelectMany)
-                    && m.GetParameters().Length == 2
-                    && m.GetParameters()[1].ParameterType.IsGenericType
-                    && m.GetParameters()[1].ParameterType.GetGenericTypeDefinition() == typeof(Expression<>)
-                    && m.GetParameters()[1].ParameterType.GetGenericArguments()[0].GetGenericArguments().Length == 2);
+    private static readonly MethodInfo SelectManyMethod = ExpressionMethodCache.QueryableSelectMany();
 
     // 3-param overload: SelectMany(source, collectionSelector, resultSelector)
-    private static readonly MethodInfo SelectManyWithResultMethod = typeof(Queryable).GetMethods()
-        .First(m => m.Name == nameof(Queryable.SelectMany)
-                    && m.GetParameters().Length == 3
-                    && m.GetParameters()[1].ParameterType.IsGenericType
-                    && m.GetParameters()[1].ParameterType.GetGenericTypeDefinition() == typeof(Expression<>)
-                    && m.GetParameters()[1].ParameterType.GetGenericArguments()[0].GetGenericArguments().Length == 2);
+    private static readonly MethodInfo SelectManyWithResultMethod = ExpressionMethodCache.QueryableSelectManyWithResult();
 
-    private static readonly MethodInfo SelectMethod = typeof(Queryable).GetMethods()
-        .First(m => m.Name == nameof(Queryable.Select)
-                    && m.GetParameters().Length == 2
-                    && m.GetParameters()[1].ParameterType.IsGenericType
-                    && m.GetParameters()[1].ParameterType.GetGenericTypeDefinition() == typeof(Expression<>)
-                    && m.GetParameters()[1].ParameterType.GetGenericArguments()[0].GetGenericArguments().Length == 2);
+    private static readonly MethodInfo SelectMethod = ExpressionMethodCache.QueryableSelectSimple();
 
     // ── Data structures ─────────────────────────────────────────────────
 
