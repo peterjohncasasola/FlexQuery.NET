@@ -12,9 +12,9 @@ internal static class GroupByBuilder
 {
     private static readonly MethodInfo QueryableGroupBy = ExpressionMethodCache.QueryableGroupBy();
 
-    private static readonly MethodInfo QueryableSelect = ExpressionMethodCache.QueryableSelect();
+    private static readonly MethodInfo QueryableSelect = ExpressionMethodCache.QueryableSelectSimple();
 
-    private static readonly MethodInfo QueryableWhere = ExpressionMethodCache.QueryableWhere();
+    private static readonly MethodInfo QueryableWhere = ExpressionMethodCache.QueryableWhereSimple();
 
     public static IQueryable<object> Apply<T>(IQueryable<T> query, QueryOptions options)
     {

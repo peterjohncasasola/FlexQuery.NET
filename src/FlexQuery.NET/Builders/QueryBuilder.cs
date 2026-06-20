@@ -15,7 +15,7 @@ public static class QueryBuilder
     private static readonly MethodInfo OrderByMethod = ExpressionMethodCache.QueryableOrderBy();
     private static readonly MethodInfo OrderByDescendingMethod = ExpressionMethodCache.QueryableOrderByDescending();
     private static readonly MethodInfo ThenByMethod = ExpressionMethodCache.QueryableThenBy();
-    private static readonly MethodInfo ThenByDescendingMethod = ExpressionMethodCache.QueryableOrderByDescending();
+    private static readonly MethodInfo ThenByDescendingMethod = ExpressionMethodCache.QueryableThenByDescending();
 
     // ── Filter ───────────────────────────────────────────────────────────
 

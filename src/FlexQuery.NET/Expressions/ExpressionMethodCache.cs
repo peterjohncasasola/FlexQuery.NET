@@ -9,44 +9,44 @@ internal static class ExpressionMethodCache
     private static readonly ConcurrentDictionary<(string Name, Type SourceType, Type ResultType), MethodInfo> AggregateMethods = new();
 
     private static readonly MethodInfo QueryableGroupByMethod = FindQueryableMethod(
-        nameof(Queryable.GroupBy), genericArgs: 2, parameters: 2);
+        nameof(Queryable.GroupBy), genericArgsCount: 2, parametersCount: 2);
 
     private static readonly MethodInfo QueryableSelectMethod = FindQueryableMethod(
-        nameof(Queryable.Select), genericArgs: 2, parameters: 2,
-        additionalFilter: m => GetFuncArity(m.GetParameters()[1].ParameterType) == 2);
+        nameof(Queryable.Select), genericArgsCount: 2, parametersCount: 2,
+        additionalFilter: m => GetFuncArity(m.GetParameters()[1].ParameterType) == 3);
 
     private static readonly MethodInfo QueryableWhereMethod = FindQueryableMethod(
-        nameof(Queryable.Where), genericArgs: 1, parameters: 2,
-        additionalFilter: m => GetFuncArity(m.GetParameters()[1].ParameterType) == 2);
+        nameof(Queryable.Where), genericArgsCount: 1, parametersCount: 2,
+        additionalFilter: m => GetFuncArity(m.GetParameters()[1].ParameterType) == 3);
 
     private static readonly MethodInfo QueryableOrderByMethod = FindQueryableMethod(
-        nameof(Queryable.OrderBy), genericArgs: 2, parameters: 2);
+        nameof(Queryable.OrderBy), genericArgsCount: 2, parametersCount: 2);
 
     private static readonly MethodInfo QueryableOrderByDescendingMethod = FindQueryableMethod(
-        nameof(Queryable.OrderByDescending), genericArgs: 2, parameters: 2);
+        nameof(Queryable.OrderByDescending), genericArgsCount: 2, parametersCount: 2);
 
     private static readonly MethodInfo QueryableThenByMethod = FindQueryableMethod(
-        nameof(Queryable.ThenBy), genericArgs: 2, parameters: 2);
+        nameof(Queryable.ThenBy), genericArgsCount: 2, parametersCount: 2);
 
     private static readonly MethodInfo QueryableThenByDescendingMethod = FindQueryableMethod(
-        nameof(Queryable.ThenByDescending), genericArgs: 2, parameters: 2);
+        nameof(Queryable.ThenByDescending), genericArgsCount: 2, parametersCount: 2);
 
     private static readonly MethodInfo QueryableAsQueryableMethod = FindQueryableMethod(
-        nameof(Queryable.AsQueryable), genericArgs: 1, parameters: 1);
+        nameof(Queryable.AsQueryable), genericArgsCount: 1, parametersCount: 1);
 
     private static readonly MethodInfo QueryableSelectSimpleMethod = FindQueryableMethod(
-        nameof(Queryable.Select), genericArgs: 2, parameters: 2,
-        additionalFilter: m => GetFuncArity(m.GetParameters()[1].ParameterType) == 1);
+        nameof(Queryable.Select), genericArgsCount: 2, parametersCount: 2,
+        additionalFilter: m => GetFuncArity(m.GetParameters()[1].ParameterType) == 2);
 
     private static readonly MethodInfo QueryableWhereSimpleMethod = FindQueryableMethod(
-        nameof(Queryable.Where), genericArgs: 1, parameters: 2,
-        additionalFilter: m => GetFuncArity(m.GetParameters()[1].ParameterType) == 1);
+        nameof(Queryable.Where), genericArgsCount: 1, parametersCount: 2,
+        additionalFilter: m => GetFuncArity(m.GetParameters()[1].ParameterType) == 2);
 
     private static readonly MethodInfo QueryableSelectManyMethod = FindQueryableMethod(
-        nameof(Queryable.SelectMany), genericArgs: 2, parameters: 2);
+        nameof(Queryable.SelectMany), genericArgsCount: 2, parametersCount: 2);
 
     private static readonly MethodInfo QueryableSelectManyWithResultMethod = FindQueryableMethod(
-        nameof(Queryable.SelectMany), genericArgs: 3, parameters: 3);
+        nameof(Queryable.SelectMany), genericArgsCount: 3, parametersCount: 3);
 
     private static readonly MethodInfo EnumerableToListMethod = FindEnumerableGenericDefinition(
         nameof(Enumerable.ToList), parameters: 1);
@@ -234,16 +234,17 @@ internal static class ExpressionMethodCache
 
     private static MethodInfo FindQueryableMethod(
         string methodName,
-        int genericArgs,
-        int parameters,
+        int genericArgsCount,
+        int parametersCount,
         Func<MethodInfo, bool>? additionalFilter = null)
     {
         return typeof(Queryable).GetMethods()
-            .Single(m => m.Name == methodName
-                         && m.IsGenericMethodDefinition
-                         && m.GetGenericArguments().Length == genericArgs
-                         && m.GetParameters().Length == parameters
-                         && (additionalFilter is null || additionalFilter(m)));
+            .First(m =>
+                m.Name == methodName
+                && m.IsGenericMethodDefinition
+                && m.GetGenericArguments().Length == genericArgsCount
+                && m.GetParameters().Length == parametersCount
+                && (additionalFilter is null || additionalFilter(m)));
     }
 
     private static MethodInfo FindEnumerableGenericDefinition(string methodName, int parameters)
