@@ -1,8 +1,6 @@
 using System.Text.RegularExpressions;
 using FlexQuery.NET.Models;
 using FlexQuery.NET.Parsers.Dsl;
-using FlexQuery.NET.Parsers.Jql;
-using FlexQuery.NET.Parsers.Jql.Ast;
 
 namespace FlexQuery.NET.Parsers;
 
@@ -120,25 +118,23 @@ public static class FilteredIncludeParser
         return new IncludeNode { Path = name, Filter = filter };
     }
 
-    // ── Filter parsing (delegates to JQL) ────────────────────────────────
+    // ── Filter parsing (DSL only) ────────────────────────────────────────
 
     private static FilterGroup? TryParseFilter(string raw)
     {
         if (string.IsNullOrWhiteSpace(raw)) return null;
 
-        // Auto-detect format: if it contains a colon, try DSL first.
-        if (raw.Contains(':'))
-        {
-            try
-            {
-                var dslAst = Dsl.DslAstParser.Parse(raw);
-                return DslFilterConverter.ToFilterGroup(dslAst);
-            }
-            catch { /* fallback to JQL */ }
-        }
+        if (!raw.Contains(':')) return null;
 
-        var jqlAst = JqlAstParser.Parse(raw);
-        return JqlFilterConverter.ToFilterGroup(jqlAst);
+        try
+        {
+            var dslAst = Dsl.DslAstParser.Parse(raw);
+            return DslFilterConverter.ToFilterGroup(dslAst);
+        }
+        catch
+        {
+            return null;
+        }
     }
 
     // ── Utility: split on delimiter ignoring depth ────────────────────────

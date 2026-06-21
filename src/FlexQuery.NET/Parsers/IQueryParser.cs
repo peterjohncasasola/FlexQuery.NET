@@ -53,10 +53,5 @@ public enum QuerySyntax
     /// <summary>
     /// Uses the Mini OData compatibility syntax (e.g., $filter=name eq 'john').
     /// </summary>
-    MiniOData,
-
-    /// <summary>
-    /// Uses the legacy JQL syntax (e.g., query=name = "john").
-    /// </summary>
-    Jql
+    MiniOData
 }

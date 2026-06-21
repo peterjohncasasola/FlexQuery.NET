@@ -7,13 +7,12 @@ namespace FlexQuery.NET.Parsers;
 
 /// <summary>
 /// Entry point for parsing query-string parameters into unified <see cref="QueryOptions"/>.
-/// Supports multiple formats: Generic, JSON, DSL, and JQL.
+/// Supports multiple formats: Generic, JSON, and DSL.
 /// </summary>
 public static class QueryOptionsParser
 {
     private static readonly List<IQueryParser> _parsers = new()
     {
-        new JqlQueryParser(),
         new JsonQueryParser(),
         new DslQueryParser()
     };
