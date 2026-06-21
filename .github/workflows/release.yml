@@ -29,9 +29,6 @@ jobs:
     - name: 🔨 Build
       run: dotnet build FlexQuery.NET.slnx --configuration Release --no-restore
 
-    - name: 📦 Pack NuGet
-      run: dotnet pack --configuration Release --no-build -o ./nupkg
-
     - name: 🔍 Resolve Release Notes
       id: resolve-notes
       shell: bash
@@ -48,6 +45,31 @@ jobs:
           echo "Falling back to CHANGELOG.md."
           echo "notes_file=CHANGELOG.md" >> "$GITHUB_OUTPUT"
         fi
+
+    - name: 📦 Pack NuGet
+      shell: bash
+      run: |
+        # Extract version without 'v' prefix (e.g. v3.0.0 -> 3.0.0)
+        VERSION="${{ github.ref_name }}"
+        VERSION="${VERSION#v}"
+        
+        # Read the resolved release notes file
+        NOTES_CONTENT=$(cat "${{ steps.resolve-notes.outputs.notes_file }}")
+        
+        # Escape newlines (%0a) and carriage returns (%0d) for MSBuild
+        NOTES_CONTENT="${NOTES_CONTENT//$'\r'/'%0d'}"
+        FORMATTED_NOTES="${NOTES_CONTENT//$'\n'/'%0a'}"
+        
+        # Escape double quotes (%22) and semicolons (%3b) to prevent parsing issues
+        FORMATTED_NOTES="${FORMATTED_NOTES//\"/'%22'}"
+        FORMATTED_NOTES="${FORMATTED_NOTES//;/'%3b'}"
+        
+        dotnet pack FlexQuery.NET.slnx \
+          --configuration Release \
+          --no-build \
+          -o ./nupkg \
+          /p:PackageVersion="$VERSION" \
+          /p:PackageReleaseNotes="$FORMATTED_NOTES"
 
     - name: 🚀 Create GitHub Release
       uses: softprops/action-gh-release@v2
