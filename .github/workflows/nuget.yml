@@ -75,11 +75,17 @@ jobs:
 
       - name: Pack
         run: |
+          # Escape newlines, quotes, and semicolons in RELEASE_NOTES for MSBuild
+          FORMATTED_NOTES="${RELEASE_NOTES//$'\r'/'%0d'}"
+          FORMATTED_NOTES="${FORMATTED_NOTES//$'\n'/'%0a'}"
+          FORMATTED_NOTES="${FORMATTED_NOTES//\"/'%22'}"
+          FORMATTED_NOTES="${FORMATTED_NOTES//;/'%3b'}"
+
           dotnet pack ${{ env.SOLUTION_PATH }} \
             -c Release \
             -o ./nupkgs \
             /p:PackageVersion=${{ steps.version.outputs.VERSION }} \
-            /p:PackageReleaseNotes="$RELEASE_NOTES"
+            /p:PackageReleaseNotes="$FORMATTED_NOTES"
 
       - name: Publish to NuGet
         run: |
