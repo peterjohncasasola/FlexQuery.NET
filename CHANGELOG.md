@@ -6,131 +6,33 @@ All notable changes to this project will be documented in this file.
 ## [3.0.0] - 2026-06-20
 
 ### Added
-- **FlexQuery.NET.AgGrid Package**:
-  - New lightweight adapter package for AG Grid integration.
-  - Automatically maps AG Grid request payloads (`AgGridRequest`) to canonical `QueryOptions`.
-  - Full support for AG Grid features including filtering, sorting, pagination, and row grouping/aggregation.
-  - AG Grid value column aggregation support with `sum`, `count`, `min`, `max`, and `avg` (normalized from `average`) functions.
-- **Aggregate & Having Support**:
-  - Added support for Grand Total Aggregations to calculate global dataset metrics (e.g., sum, count, min, max, avg) via `AggregateResultBuilder`.
-  - Introduced `having` parser and `HavingParser` to filter grouped records or global aggregates.
-  - Added `TranslateAggregates` method in `SqlTranslator` for dedicated aggregate SQL generation.
-  - Enhanced `QueryResult` and `QueryOptions` to expose `Aggregates` dictionaries.
-  - Grand totals require `Aggregates.Count > 0 && GroupBy.Count == 0`; grouped aggregates require `GroupBy.Count > 0`.
-- **JsonQueryParser**:
-  - Introduced explicit `JsonQueryParser` implementing `IQueryParser` for robust JSON syntax detection and structured query parsing.
-- **Non-Strict Validation Mode**:
-  - `StrictFieldValidation = false` allows silent removal of invalid fields or includes, preventing hard exceptions during query execution.
-- **DTO Field Mapping**:
-  - Implemented explicit DTO field mapping support via `QueryExecutionOptions.MapField()` using lambda expressions for advanced query translation.
-- **Flat Projection System**:
-  - New `FlatProjectionBuilder` for deep-projection aware EF Core expression building with `mode=flat` and `mode=flat-mixed`.
-  - Uses dynamic type construction to materialize flat rowsets with proper field aliasing.
-  - Supports multi-level nested collection flattening (`Orders.Items.Sku,Orders.Items.Id`).
-- **Projection Infrastructure Models**:
-  - `ProjectionExecutionPlan`: Metadata model for projected fields, SQL preview, and optimization notes.
-  - `ProjectedField`: Field metadata capturing source path, output name, type, navigation level, and alias.
-  - `ProjectionOptimizer`: Navigation-aware optimization with duplicate field elimination.
-  - `ProjectionExpressionCache`: Caching for compiled projection expressions to reduce allocation overhead.
-- **Expression Method Cache**:
-  - Centralized `ExpressionMethodCache` for cached resolution of `Queryable.Select`, `Queryable.Where`, `Queryable.SelectMany`, and aggregate methods (Min, Max, Sum, Average).
-  - Eliminates repeated reflection calls for method info lookup.
-- **Dapper Flat SQL Generation**:
-  - `SqlTranslator.BuildFlatSelectClause` handles `mode=flat` and `mode=flat-mixed` with LEFT JOIN support.
-  - Added `FlatJoins` property to `SqlCommand` for hydrator coordination.
-- **FlexQueryAsync Overloads**:
-  - Added new `FlexQueryAsync<T>` overloads accepting pre-parsed `QueryOptions` objects.
-  - Enables adapter package composition (e.g., AgGrid → QueryOptions → Dapper execution).
-- **ServiceCollection Extensions**:
-  - Added `AddFlexQueryDapper` with dialect options (`AddFlexQueryDapperSqlServer`, `AddFlexQueryDapperPostgreSql`, `AddFlexQueryDapperSqlite`).
-  - Registers `DapperQueryOptions` and `ISqlDialect` as singletons.
+
+- **FlexQuery.NET.Dapper package**
+- **FlexQuery.NET.AgGrid package**
+- **FlexQuery.NET.MiniOData package**
+- **Grand Total Aggregations and Having support**
+- **Non-strict validation mode** (`StrictFieldValidation`)
+- **Flat projection support** (`mode=flat`, `mode=flat-mixed`)
+- **DTO field mapping** via `MapField()`
+- **.NET 10 support**
 
 ### Changed
-- **Parser Orchestration**:
-  - Introduced `QueryOptionsFactory.Create()` for centralized base QueryOptions construction (pagings, mode, includeCount, distinct, select, groupBy, having, include, sort).
-  - Added dedicated `JsonQueryParser` implementing `IQueryParser` interface.
-  - Removed redundant `QueryParameterParser` (consolidated into `IndexedFilterParser`).
-  - Added operator alias map (`FilterOperators.AliasMap`) for normalized operator parsing (supports `eq`, `equal`, `==`, `=`, etc.).
-  - `SelectTreeBuilder` and `SelectionNode` changed from `internal` to `public` visibility for adapter consumption.
-- **Dapper Enhancements**:
-  - Deep-projection aware SQL generation with `mode=flat` and `mode=flat-mixed` support.
-  - Added `ISqlTranslator` interface with `Translate` and `TranslateAggregates` methods.
-  - Implemented `DapperRowHydrator.HydrateIncludes` for include materialization with dynamic row mapping.
-  - Simplified parameter naming in `FlexQueryDapperExtensions` using clean name trimming.
-- **Expression Caching Infrastructure**:
-  - Added caching layer for flat projection expression trees.
-  - `ProjectionExpressionCache` caches compiled expressions by entity type, projection mode, and selection fields.
-- **AgGrid Aggregate Normalization**:
-  - `AgGridQueryOptionsParser` normalizes `average` to `avg` for canonical aggregate function naming.
-- **SqlTranslator Modular Refactoring**:
-  - Extracted SQL generation into dedicated builders: `SqlSelectBuilder`, `SqlJoinBuilder`, `SqlWhereBuilder`.
-  - Introduced `SqlParameterContext` for centralized parameter management.
-  - Added `SqlDialectHelper` and `SqlValueConverter` for shared SQL dialect utilities.
+
+- **Provider-agnostic architecture**
+- **Parser pipeline refactoring**
+- **Query caching and expression generation optimizations**
 
 ### Fixed
-- **EF Core Collection Translation**:
-  - Fixed an issue with translating `any` collection filters in EF Core.
-  - Removed null-check guards around collection navigation expressions that caused SQLite translation failures (e.g., `MaterializeCollectionNavigation(...) != null && ...Any(...)`).
 
----
-## [3.0.0] - 2026-05-15
+- **EF Core collection translation issues**
+- **SQLite translation issues for collection navigation filters**
 
-### Added
-- **.NET 10.0 Support**: Added support for `.NET 10.0` (`net10.0`) across all packages (`FlexQuery.NET`, `FlexQuery.NET.EFCore`, `FlexQuery.NET.Dapper`, `FlexQuery.NET.AspNetCore`, `FlexQuery.NET.MiniOData`).
-- **Internal Options Base Class**: Introduced `BaseQueryExecutionOptions` to clean up and consolidate core options and security configuration fields.
-- **Automatic OData Parser Discovery**: Implemented automatic reflection-based detection and registration of `MiniODataParser` within `QueryOptionsParser` to enable zero-configuration OData query parsing.
-- **FlexQuery.NET.Dapper Package**:
-  - Full support for Dapper as a high-performance query engine.
-  - Polymorphic `ISqlDialect` system supporting SQL Server, PostgreSQL, MySQL, MariaDB, SQLite, and Oracle.
-  - Automatic dialect resolution via `ISqlDialectResolver` based on `DbConnection` types.
-  - Secure SQL translation engine with parameterization and identifier quoting.
-- **Relationship Query Semantics for Dapper**:
-  - Implemented `any()`, `all()`, and `count()` semantics using efficient `EXISTS` and correlated subqueries.
-  - Support for `include` and Filtered Includes using `LEFT JOIN` syntax.
-  - Semantic parity with EF Core relationship queries.
-- **Dapper AST & Translators**:
-  - Dedicated AST nodes for relationship queries, decoupled from core models.
-  - Specialized translators for Includes, Existence checks, and Counts.
-- **Dapper Query Engine Stabilization**:
-  - Reimplemented `SqlCountTranslator` to use convention‑based `RelationshipMapping` via `IMappingRegistry`.
-  - Added missing `using FlexQuery.NET.Dapper.Mapping.Metadata` to `SqlExistsTranslator` and `SqlIncludeTranslator`.
-  - Fixed string interpolation issues and removed redundant `Metadata.` prefixes.
-  - Refactored Dapper mapping system to convention‑over‑configuration using `IMappingRegistry`.
-- **Test Suite Integrity**:
-  - Updated `SqlTranslatorTests` to register `TestRole` (`ToTable("roles")`) and adjusted assertions for proper quoted SQL (`[roles].[UserId] = [users].[Id]`).
-  - Fixed navigation‑property test to expect table name `[TestEntities]`.
-  - Resolved CS1022 / CS1519 syntax errors in translation files.
-- **FlexQuery.NET.MiniOData Package**:
-  - Lightweight OData-compatible query syntax adapter — completely optional, zero core dependencies.
-  - Parses `$filter`, `$orderby`, `$select`, `$top`, `$skip`, `$expand`, and `$count` into the unified FlexQuery AST.
-  - OData filter parser supporting binary comparisons (`eq`, `ne`, `gt`, `ge`, `lt`, `le`), function calls (`contains`, `startswith`, `endswith`), logical operators (`and`, `or`, `not`), grouping, null checks, `in` lists, and lambda navigation (`any`/`all`).
-  - Automatic OData path separator (`/`) to dot-notation conversion.
-  - `$` prefix stripping for seamless compatibility with both `$filter` and `filter` key formats.
-  - Lambda variable stripping for `any(o: o/status eq 'active')` expressions.
-  - DI registration via `services.AddFlexQueryMiniOData()`.
-  - Multi-targeting support for .NET 6, 8, and 10.
-- **Mini OData ↔ Native DSL Equivalence**:
-  - 63 comprehensive tests verifying AST equivalence between Native DSL and Mini OData syntaxes.
-  - Proven semantic parity: both parsers produce identical `FilterGroup`, `SortNode`, and `QueryOptions` structures.
-  - Full solution test suite: 431 tests passing.
+### Removed
 
-### Changed
-- **JQL Status Promotion**: Removed obsolete/deprecation attributes from JQL parser components (`JqlParser`, `FlexQueryParameters.Query`, and `QuerySyntax.Jql`), reinstating JQL as a first-class supported query syntax option alongside DSL and OData.
-- **Mini OData Cleanups**: Streamlined the dynamic registration calls and brought in namespaces natively in `ServiceCollectionExtensions`.
-- **Dapper Parameter Binding**: Simplified and optimized clean parameter naming iteration in `FlexQueryDapperExtensions`.
-- **Documentation Refactoring**: Reorganized the main `README.md` with new .NET 10.0 badges, dark-mode logo assets, and streamlined links.
-- **Mapping Registry Evolution**: Updated `JoinInfo` to support `TargetType`, enabling deep property resolution for related entity filters in Dapper.
-- **Dapper Multi-Targeting**: Updated support to target `.net6.0`, `.net8.0`, and `.net10.0` in the Dapper package (dropping EOL `.net7.0`).
-- **Internal Reorganization**: Moved SQL translators to a dedicated `Translators` folder and namespace for better maintainability.
-
-### Removed (Breaking Changes)
-- **.NET 7.0 EOL Drop**: Dropped support for `.NET 7.0` (reached end-of-life on May 14, 2024) across all projects.
-- **Obsolete APIs Cleanup**: Fully removed deprecated and legacy methods that were scheduled for removal:
-  - `ToQueryResultAsync` and `ToProjectedQueryResultAsync` from `QueryableEfCoreExtensions`.
-  - `ToQueryResult`, `ToProjectedQueryResult`, and `ApplyQueryOptions` from `QueryableExtensions`.
-  - `Validate` and `ApplyValidatedQueryOptions` overloads from `ValidationExtensions`.
-  - `QueryOptionsParser.Parse(QueryRequest)` helper from `QueryOptionsParser`.
-  - `SortOption` alias in favor of the unified `SortNode` class.
+- **.NET 7 support**
+- **Deprecated `QueryRequest`**
+- **Deprecated `FlexQueryRequest`**
+- **Legacy APIs previously marked obsolete**
 
 ---
 ## [2.5.0] - 2026-05-10
