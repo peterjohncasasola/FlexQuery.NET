@@ -32,7 +32,7 @@
       <ProjectReference Include="..\..\src\FlexQuery.NET.EFCore\FlexQuery.NET.EFCore.csproj" />
       <ProjectReference Include="..\..\src\FlexQuery.NET.AspNetCore\FlexQuery.NET.AspNetCore.csproj" />
        <ProjectReference Include="..\..\src\FlexQuery.NET.Parsers.Jql\FlexQuery.NET.Parsers.Jql.csproj" />
-       <ProjectReference Include="..\..\src\FlexQuery.NET.MiniOData\FlexQuery.NET.MiniOData.csproj" />
+       <ProjectReference Include="..\..\src\FlexQuery.NET.Parsers.MiniOData\FlexQuery.NET.Parsers.MiniOData.csproj" />
       <ProjectReference Include="..\..\src\FlexQuery.NET.AgGrid\FlexQuery.NET.AgGrid.csproj" />
     </ItemGroup>
 

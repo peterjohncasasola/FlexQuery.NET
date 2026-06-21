@@ -21,12 +21,10 @@ public static class QueryOptionsParser
     {
         try
         {
-            var odataParserType = Type.GetType("FlexQuery.NET.MiniOData.Parsers.MiniODataParser, FlexQuery.NET.MiniOData");
-            if (odataParserType != null)
-            {
-                var parser = (IQueryParser)Activator.CreateInstance(odataParserType)!;
-                RegisterParser(parser);
-            }
+            TryRegisterParser(
+                "FlexQuery.NET.MiniOData.Parsers.MiniODataParser, FlexQuery.NET.MiniOData");
+            TryRegisterParser(
+                "FlexQuery.NET.Parsers.Jql.JqlQueryParser, FlexQuery.NET.Parsers.Jql");
         }
         catch
         {
@@ -133,5 +131,25 @@ public static class QueryOptionsParser
         return string.IsNullOrWhiteSpace(parameters.Query)
             && string.IsNullOrWhiteSpace(parameters.Filter)
             && IndexedFilterParser.HasIndexedSort(parameters.RawParameters);
+    }
+    
+    private static void TryRegisterParser(string typeName)
+    {
+        try
+        {
+            var type = Type.GetType(typeName);
+
+            if (type == null)
+                return;
+
+            if (Activator.CreateInstance(type) is IQueryParser parser)
+            {
+                RegisterParser(parser);
+            }
+        }
+        catch
+        {
+            // optional package not installed
+        }
     }
 }

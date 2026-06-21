@@ -49,6 +49,11 @@ public enum QuerySyntax
     /// Uses the generic indexed query-string syntax (e.g. filter[0].field=name).
     /// </summary>
     Generic,
+    
+    /// <summary>
+    /// Uses the JQL syntax (e.g. $filter=name = 'john').
+    /// </summary>
+    Jql,
 
     /// <summary>
     /// Uses the Mini OData compatibility syntax (e.g., $filter=name eq 'john').
