@@ -87,7 +87,7 @@ public static class FlexQueryDapperExtensions
     /// </summary>
     /// <remarks>
     /// Use this overload when composing with adapter packages (e.g. FlexQuery.NET.AgGrid,
-    /// FlexQuery.NET.MiniOData) that parse external formats into <see cref="QueryOptions"/>.
+    /// FlexQuery.NET.Parsers.MiniOData) that parse external formats into <see cref="QueryOptions"/>.
     /// <code>
     /// // Step 1: Parse (adapter package)
     /// var options = AgGridQueryOptionsParser.Parse(agGridRequest);
