@@ -23,7 +23,7 @@ public class SecurityTests : IDisposable
     {
         var act = () =>
         {
-            var filter = new JqlParser().Parse($"name = \"{injectedValue}\"");
+            var filter = new JqlQueryParser().Parse($"name = \"{injectedValue}\"");
             var options = new QueryOptions { Filter = filter };
             return _db.Entities.ApplyFilter(options).ToList();
         };
@@ -45,7 +45,7 @@ public class SecurityTests : IDisposable
     {
         var act = () =>
         {
-            var filter = new JqlParser().Parse($"orders.any(status = \"{injectedValue}\")");
+            var filter = new JqlQueryParser().Parse($"orders.any(status = \"{injectedValue}\")");
             var options = new QueryOptions { Filter = filter };
             return _db.Entities.ApplyFilter(options).ToList();
         };

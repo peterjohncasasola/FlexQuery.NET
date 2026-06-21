@@ -23,7 +23,7 @@ public class ParserTests
     }
 
     private static FilterGroup JqlParse(string jql) =>
-        new JqlParser().Parse(jql);
+        new JqlQueryParser().Parse(jql);
 
     // ════════════════════════════════════════════════════════════════════
     // 1. Generic Format

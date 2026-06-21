@@ -76,7 +76,7 @@ public class StressTests : IDisposable
         var tasks = new List<Task>();
         var dict = new Dictionary<string, Microsoft.Extensions.Primitives.StringValues> 
         { 
-            { "query", "orders.any(orderItems.any(quantity > 5))" },
+            { "filter", "orders.any(orderItems.any(quantity > 5))" },
             { "select", "id,name,orders.total" } 
         };
         var options = QueryOptionsParser.Parse(dict);
