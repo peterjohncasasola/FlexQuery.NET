@@ -1,6 +1,6 @@
 using System.Text.Json;
-using FlexQuery.NET.AgGrid.Models;
-using FlexQuery.NET.AgGrid.Parsers;
+using FlexQuery.NET.Adapters.AgGrid.Models;
+using FlexQuery.NET.Adapters.AgGrid.Parsers;
 using FlexQuery.NET.EFCore;
 using FlexQuery.NET.Exceptions;
 using FlexQuery.NET.Tests.Fixtures;

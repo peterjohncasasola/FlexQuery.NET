@@ -100,7 +100,7 @@ public static class QueryableEfCoreExtensions
     /// and returns a paged result set asynchronously.
     /// </summary>
     /// <remarks>
-    /// Use this overload when composing with adapter packages (e.g. FlexQuery.NET.AgGrid,
+    /// Use this overload when composing with adapter packages (e.g. FlexQuery.NET.Adapters.AgGrid,
     /// FlexQuery.NET.Parsers.MiniOData) that parse external formats into <see cref="QueryOptions"/>.
     /// <code>
     /// // Step 1: Parse (adapter package)

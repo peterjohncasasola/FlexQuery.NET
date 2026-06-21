@@ -1,7 +1,7 @@
-using FlexQuery.NET.AgGrid.Models;
+using FlexQuery.NET.Adapters.AgGrid.Models;
 using FlexQuery.NET.Models;
 
-namespace FlexQuery.NET.AgGrid.Parsers;
+namespace FlexQuery.NET.Adapters.AgGrid.Parsers;
 
 internal static class AgGridSortParser
 {

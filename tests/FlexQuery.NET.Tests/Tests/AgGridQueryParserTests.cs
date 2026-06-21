@@ -1,6 +1,6 @@
 using System.Text.Json;
-using FlexQuery.NET.AgGrid.Models;
-using FlexQuery.NET.AgGrid.Parsers;
+using FlexQuery.NET.Adapters.AgGrid.Models;
+using FlexQuery.NET.Adapters.AgGrid.Parsers;
 using FlexQuery.NET.Models;
 using FluentAssertions;
 

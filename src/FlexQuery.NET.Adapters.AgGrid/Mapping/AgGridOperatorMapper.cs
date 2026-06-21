@@ -1,6 +1,6 @@
 using FlexQuery.NET.Constants;
 
-namespace FlexQuery.NET.AgGrid.Mapping;
+namespace FlexQuery.NET.Adapters.AgGrid.Mapping;
 
 internal static class AgGridOperatorMapper
 {

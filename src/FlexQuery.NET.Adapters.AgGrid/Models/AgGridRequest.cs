@@ -1,6 +1,6 @@
 using System.Collections.Generic;
 
-namespace FlexQuery.NET.AgGrid.Models;
+namespace FlexQuery.NET.Adapters.AgGrid.Models;
 
 public sealed class AgGridRequest
 {

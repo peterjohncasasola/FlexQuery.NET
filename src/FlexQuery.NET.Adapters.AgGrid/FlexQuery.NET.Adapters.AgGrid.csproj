@@ -8,10 +8,10 @@
     <LangVersion>latest</LangVersion>
     <SuppressTfmSupportBuildWarnings>true</SuppressTfmSupportBuildWarnings>
 
-    <PackageId>FlexQuery.NET.AgGrid</PackageId>
+    <PackageId>FlexQuery.NET.Adapters.AgGrid</PackageId>
     <Authors>Peter John Casasola</Authors>
     <Company>Peter John Casasola</Company>
-    <Product>FlexQuery.NET.AgGrid</Product>
+    <Product>FlexQuery.NET.Adapters.AgGrid</Product>
     <Description>AG Grid filter and sorting payload adapter for FlexQuery.NET — translates AG Grid filterModel and sortModel into canonical FlexQuery.NET query models.</Description>
     <PackageTags>flexquery;ag-grid;grid;filter;sorting;adapter;compatibility</PackageTags>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>

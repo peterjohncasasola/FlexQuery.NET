@@ -1,10 +1,10 @@
 using System.Text.Json;
-using FlexQuery.NET.AgGrid.Mapping;
-using FlexQuery.NET.AgGrid.Models;
+using FlexQuery.NET.Adapters.AgGrid.Mapping;
+using FlexQuery.NET.Adapters.AgGrid.Models;
 using FlexQuery.NET.Constants;
 using FlexQuery.NET.Models;
 
-namespace FlexQuery.NET.AgGrid.Parsers;
+namespace FlexQuery.NET.Adapters.AgGrid.Parsers;
 
 internal static class AgGridFilterParser
 {
