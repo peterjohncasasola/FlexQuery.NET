@@ -59,33 +59,46 @@ jobs:
           VERSION=${GITHUB_REF#refs/tags/v}
           echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
 
-      - name: Generate Release Notes
+      - name: Resolve Release Notes
         id: notes
+        shell: bash
         run: |
-          PREV_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "")
-          if [ -z "$PREV_TAG" ]; then
-            NOTES=$(git log --pretty=format:"- %s")
+          # Try version-specific release notes first, fall back to git log
+          NOTES_FILE="docs/release-notes/${{ github.ref_name }}.md"
+
+          if [ -f "$NOTES_FILE" ]; then
+            echo "Using version-specific release notes: $NOTES_FILE"
+            cp "$NOTES_FILE" release-notes.txt
           else
-            NOTES=$(git log $PREV_TAG..HEAD --pretty=format:"- %s")
+            echo "No version-specific notes found. Generating from git log."
+            PREV_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "")
+            if [ -z "$PREV_TAG" ]; then
+              git log --pretty=format:"- %s" > release-notes.txt
+            else
+              git log "$PREV_TAG..HEAD" --pretty=format:"- %s" > release-notes.txt
+            fi
           fi
-          # Use GITHUB_ENV to pass multiline content safely to subsequent steps
-          echo "RELEASE_NOTES<<EOF" >> $GITHUB_ENV
-          echo "$NOTES" >> $GITHUB_ENV
-          echo "EOF" >> $GITHUB_ENV
 
       - name: Pack
+        shell: bash
         run: |
-          # Escape newlines, quotes, and semicolons in RELEASE_NOTES for MSBuild
-          FORMATTED_NOTES="${RELEASE_NOTES//$'\r'/'%0d'}"
-          FORMATTED_NOTES="${FORMATTED_NOTES//$'\n'/'%0a'}"
-          FORMATTED_NOTES="${FORMATTED_NOTES//\"/'%22'}"
-          FORMATTED_NOTES="${FORMATTED_NOTES//;/'%3b'}"
+          # Inject release notes via a temporary .props file to avoid
+          # shell escaping issues with MSBuild command-line properties.
+          # MSBuild's $([System.IO.File]::ReadAllText()) reads the file
+          # at evaluation time, bypassing all argument parsing problems.
+          cat > release-notes.props <<'PROPS'
+          <Project>
+            <PropertyGroup>
+              <PackageReleaseNotes>$([System.IO.File]::ReadAllText("$(MSBuildThisFileDirectory)release-notes.txt"))</PackageReleaseNotes>
+            </PropertyGroup>
+          </Project>
+          PROPS
 
           dotnet pack ${{ env.SOLUTION_PATH }} \
             -c Release \
             -o ./nupkgs \
             /p:PackageVersion=${{ steps.version.outputs.VERSION }} \
-            /p:PackageReleaseNotes="$FORMATTED_NOTES"
+            /p:CustomBeforeMicrosoftCommonProps="$(pwd)/release-notes.props"
 
       - name: Publish to NuGet
         run: |
