@@ -1,7 +1,8 @@
 using FlexQuery.NET;
 using FlexQuery.NET.EFCore;
+using FlexQuery.NET.Models;
 using FlexQuery.NET.Parsers;
-using FlexQuery.NET.Parsers.Jql.Ast;
+using FlexQuery.NET.Parsers.Jql;
 using FlexQuery.NET.Tests.Fixtures;
 using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
@@ -20,15 +21,16 @@ public class SecurityTests : IDisposable
     [InlineData("' UNION SELECT * FROM Users --")]
     public void QueryInjection_IsTreatedAsLiteralValue_Or_ThrowsException(string injectedValue)
     {
-        var dict = new Dictionary<string, Microsoft.Extensions.Primitives.StringValues> { { "query", $"name = \"{injectedValue}\"" } };
-        
-        var act = () => QueryOptionsParser.Parse(dict);
-        
-        // It either parses safely and parameterizes, or fails fast due to syntax validation
+        var act = () =>
+        {
+            var filter = new JqlParser().Parse($"name = \"{injectedValue}\"");
+            var options = new QueryOptions { Filter = filter };
+            return _db.Entities.ApplyFilter(options).ToList();
+        };
+
         try
         {
-            var options = act();
-            var result = _db.Entities.ApplyFilter(options).ToList();
+            var result = act();
             result.Should().BeEmpty();
         }
         catch (JqlParseException)
@@ -41,13 +43,16 @@ public class SecurityTests : IDisposable
     [InlineData("Cancelled' OR 1=1 --")]
     public void NestedInjection_IsTreatedAsLiteralValue_Or_ThrowsException(string injectedValue)
     {
-        var dict = new Dictionary<string, Microsoft.Extensions.Primitives.StringValues> { { "query", $"orders.any(status = \"{injectedValue}\")" } };
-        var act = () => QueryOptionsParser.Parse(dict);
+        var act = () =>
+        {
+            var filter = new JqlParser().Parse($"orders.any(status = \"{injectedValue}\")");
+            var options = new QueryOptions { Filter = filter };
+            return _db.Entities.ApplyFilter(options).ToList();
+        };
 
         try
         {
-            var options = act();
-            var result = _db.Entities.ApplyFilter(options).ToList();
+            var result = act();
             result.Should().BeEmpty();
         }
         catch (JqlParseException)
@@ -64,7 +69,6 @@ public class SecurityTests : IDisposable
         var act = () => QueryOptionsParser.Parse(dict);
         var options = act();
         var actBuild = () => Helpers.SelectTreeBuilder.Build(options);
-        actBuild.Should().NotThrow(); 
+        actBuild.Should().NotThrow();
     }
-
 }

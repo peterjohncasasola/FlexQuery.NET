@@ -2,14 +2,14 @@ using FlexQuery.NET.Constants;
 using FlexQuery.NET.Models;
 using FlexQuery.NET.Parsers;
 using FlexQuery.NET.Parsers.Jql;
-using FlexQuery.NET.Parsers.Jql.Ast;
 using FluentAssertions;
 using Microsoft.Extensions.Primitives;
 
 namespace FlexQuery.NET.Tests.Tests;
 
 /// <summary>
-/// Tests for QueryOptionsParser covering all 4 query-string formats.
+/// Tests for QueryOptionsParser covering all query-string formats
+/// and JqlParser for JQL-lite syntax.
 /// </summary>
 public class ParserTests
 {
@@ -21,6 +21,9 @@ public class ParserTests
             new KeyValuePair<string, StringValues>(kv.Key, new StringValues(kv.Value)));
         return QueryOptionsParser.Parse(kvps);
     }
+
+    private static FilterGroup JqlParse(string jql) =>
+        new JqlParser().Parse(jql);
 
     // ════════════════════════════════════════════════════════════════════
     // 1. Generic Format
@@ -593,350 +596,285 @@ public class ParserTests
     }
 
     // ════════════════════════════════════════════════════════════════════
-    // 5. JQL-lite Format (?query=...)
+    // 5. JQL-lite Format (via JqlParser from FlexQuery.NET.Parsers.Jql)
     // ════════════════════════════════════════════════════════════════════
 
     [Fact]
     public void Jql_SimpleCondition_ParsedCorrectly()
     {
-        var opts = Parse(new()
-        {
-            ["query"] = "name = \"john\""
-        });
+        var filter = JqlParse("name = \"john\"");
 
-        opts.Filter.Should().NotBeNull();
-        opts.Filter!.Logic.Should().Be(LogicOperator.And);
-        opts.Filter.Filters.Should().ContainSingle();
-        opts.Filter.Filters[0].Field.Should().Be("name");
-        opts.Filter.Filters[0].Operator.Should().Be(FilterOperators.Equal);
-        opts.Filter.Filters[0].Value.Should().Be("john");
+        filter.Logic.Should().Be(LogicOperator.And);
+        filter.Filters.Should().ContainSingle();
+        filter.Filters[0].Field.Should().Be("name");
+        filter.Filters[0].Operator.Should().Be(FilterOperators.Equal);
+        filter.Filters[0].Value.Should().Be("john");
     }
 
     [Fact]
     public void Jql_AndCondition_ParsedCorrectly()
     {
-        var opts = Parse(new()
-        {
-            ["query"] = "name = \"john\" AND age >= 20"
-        });
+        var filter = JqlParse("name = \"john\" AND age >= 20");
 
-        opts.Filter.Should().NotBeNull();
-        opts.Filter!.Logic.Should().Be(LogicOperator.And);
-        opts.Filter.Filters.Should().HaveCount(2);
-        opts.Filter.Filters.Should().Contain(f => f.Field == "name" && f.Operator == FilterOperators.Equal && f.Value == "john");
-        opts.Filter.Filters.Should().Contain(f => f.Field == "age" && f.Operator == FilterOperators.GreaterThanOrEq && f.Value == "20");
+        filter.Logic.Should().Be(LogicOperator.And);
+        filter.Filters.Should().HaveCount(2);
+        filter.Filters.Should().Contain(f => f.Field == "name" && f.Operator == FilterOperators.Equal && f.Value == "john");
+        filter.Filters.Should().Contain(f => f.Field == "age" && f.Operator == FilterOperators.GreaterThanOrEq && f.Value == "20");
     }
 
     [Fact]
     public void Jql_OrCondition_ParsedCorrectly()
     {
-        var opts = Parse(new()
-        {
-            ["query"] = "name = \"john\" OR name = \"doe\""
-        });
+        var filter = JqlParse("name = \"john\" OR name = \"doe\"");
 
-        opts.Filter.Should().NotBeNull();
-        opts.Filter!.Logic.Should().Be(LogicOperator.Or);
-        opts.Filter.Filters.Should().HaveCount(2);
-        opts.Filter.Filters.Should().Contain(f => f.Field == "name" && f.Value == "john");
-        opts.Filter.Filters.Should().Contain(f => f.Field == "name" && f.Value == "doe");
+        filter.Logic.Should().Be(LogicOperator.Or);
+        filter.Filters.Should().HaveCount(2);
+        filter.Filters.Should().Contain(f => f.Field == "name" && f.Value == "john");
+        filter.Filters.Should().Contain(f => f.Field == "name" && f.Value == "doe");
     }
 
     [Fact]
     public void Jql_NestedParentheses_ParsedCorrectly()
     {
-        var opts = Parse(new()
-        {
-            ["query"] = "(name = \"john\" OR name = \"doe\") AND age > 18"
-        });
+        var filter = JqlParse("(name = \"john\" OR name = \"doe\") AND age > 18");
 
-        opts.Filter.Should().NotBeNull();
-        opts.Filter!.Logic.Should().Be(LogicOperator.And);
-        opts.Filter.Filters.Should().ContainSingle(f => f.Field == "age" && f.Operator == FilterOperators.GreaterThan && f.Value == "18");
-        opts.Filter.Groups.Should().ContainSingle();
-        opts.Filter.Groups[0].Logic.Should().Be(LogicOperator.Or);
-        opts.Filter.Groups[0].Filters.Should().HaveCount(2);
+        filter.Logic.Should().Be(LogicOperator.And);
+        filter.Filters.Should().ContainSingle(f => f.Field == "age" && f.Operator == FilterOperators.GreaterThan && f.Value == "18");
+        filter.Groups.Should().ContainSingle();
+        filter.Groups[0].Logic.Should().Be(LogicOperator.Or);
+        filter.Groups[0].Filters.Should().HaveCount(2);
     }
 
     [Fact]
     public void Jql_InOperator_ParsedCorrectly()
     {
-        var opts = Parse(new()
-        {
-            ["query"] = "status IN (\"active\",\"pending\")"
-        });
+        var filter = JqlParse("status IN (\"active\",\"pending\")");
 
-        opts.Filter.Should().NotBeNull();
-        opts.Filter!.Filters.Should().ContainSingle();
-        opts.Filter.Filters[0].Field.Should().Be("status");
-        opts.Filter.Filters[0].Operator.Should().Be(FilterOperators.In);
-        opts.Filter.Filters[0].Value.Should().Be("active,pending");
+        filter.Filters.Should().ContainSingle();
+        filter.Filters[0].Field.Should().Be("status");
+        filter.Filters[0].Operator.Should().Be(FilterOperators.In);
+        filter.Filters[0].Value.Should().Be("active,pending");
     }
 
     [Fact]
     public void Jql_NestedPropertyPath_ParsedCorrectly()
     {
-        var opts = Parse(new()
-        {
-            ["query"] = "orders.customer.name CONTAINS \"john\""
-        });
+        var filter = JqlParse("orders.customer.name CONTAINS \"john\"");
 
-        opts.Filter.Should().NotBeNull();
-        opts.Filter!.Filters.Should().ContainSingle();
-        opts.Filter.Filters[0].Field.Should().Be("orders.customer.name");
-        opts.Filter.Filters[0].Operator.Should().Be(FilterOperators.Contains);
-        opts.Filter.Filters[0].Value.Should().Be("john");
+        filter.Filters.Should().ContainSingle();
+        filter.Filters[0].Field.Should().Be("orders.customer.name");
+        filter.Filters[0].Operator.Should().Be(FilterOperators.Contains);
+        filter.Filters[0].Value.Should().Be("john");
     }
 
     [Fact]
     public void Jql_EmailAndNestedNumericCondition_ParsedCorrectly()
     {
-        var opts = Parse(new()
-        {
-            ["query"] = "email = \"ops@acmeretail.com\" AND orders.number = \"ORD-2026-0002\" AND orders.items.quantity > 2"
-        });
+        var filter = JqlParse("email = \"ops@acmeretail.com\" AND orders.number = \"ORD-2026-0002\" AND orders.items.quantity > 2");
 
-        opts.Filter.Should().NotBeNull();
-        opts.Filter!.Logic.Should().Be(LogicOperator.And);
-        opts.Filter.Filters.Should().HaveCount(3);
-        opts.Filter.Filters.Should().Contain(f => f.Field == "email" && f.Operator == FilterOperators.Equal && f.Value == "ops@acmeretail.com");
-        opts.Filter.Filters.Should().Contain(f => f.Field == "orders.number" && f.Operator == FilterOperators.Equal && f.Value == "ORD-2026-0002");
-        opts.Filter.Filters.Should().Contain(f => f.Field == "orders.items.quantity" && f.Operator == FilterOperators.GreaterThan && f.Value == "2");
+        filter.Logic.Should().Be(LogicOperator.And);
+        filter.Filters.Should().HaveCount(3);
+        filter.Filters.Should().Contain(f => f.Field == "email" && f.Operator == FilterOperators.Equal && f.Value == "ops@acmeretail.com");
+        filter.Filters.Should().Contain(f => f.Field == "orders.number" && f.Operator == FilterOperators.Equal && f.Value == "ORD-2026-0002");
+        filter.Filters.Should().Contain(f => f.Field == "orders.items.quantity" && f.Operator == FilterOperators.GreaterThan && f.Value == "2");
     }
 
     [Fact]
     public void Jql_BetweenOperator_ParsedCorrectly()
     {
-        var opts = Parse(new()
-        {
-            ["query"] = "age BETWEEN 18 AND 60"
-        });
+        var filter = JqlParse("age BETWEEN 18 AND 60");
 
-        opts.Filter.Should().NotBeNull();
-        opts.Filter!.Filters.Should().ContainSingle();
-        opts.Filter.Filters[0].Field.Should().Be("age");
-        opts.Filter.Filters[0].Operator.Should().Be(FilterOperators.Between);
-        opts.Filter.Filters[0].Value.Should().Be("18,60");
+        filter.Filters.Should().ContainSingle();
+        filter.Filters[0].Field.Should().Be("age");
+        filter.Filters[0].Operator.Should().Be(FilterOperators.Between);
+        filter.Filters[0].Value.Should().Be("18,60");
     }
 
     [Fact]
     public void Jql_IsNullOperator_ParsedCorrectly()
     {
-        var opts = Parse(new()
-        {
-            ["query"] = "deletedAt IS NULL"
-        });
+        var filter = JqlParse("deletedAt IS NULL");
 
-        opts.Filter.Should().NotBeNull();
-        opts.Filter!.Filters.Should().ContainSingle();
-        opts.Filter.Filters[0].Field.Should().Be("deletedAt");
-        opts.Filter.Filters[0].Operator.Should().Be(FilterOperators.IsNull);
-        opts.Filter.Filters[0].Value.Should().BeNull();
+        filter.Filters.Should().ContainSingle();
+        filter.Filters[0].Field.Should().Be("deletedAt");
+        filter.Filters[0].Operator.Should().Be(FilterOperators.IsNull);
+        filter.Filters[0].Value.Should().BeNull();
     }
 
     [Fact]
     public void Jql_IsNotNullOperator_ParsedCorrectly()
     {
-        var opts = Parse(new()
-        {
-            ["query"] = "deletedAt IS NOT NULL"
-        });
+        var filter = JqlParse("deletedAt IS NOT NULL");
 
-        opts.Filter.Should().NotBeNull();
-        opts.Filter!.Filters.Should().ContainSingle();
-        opts.Filter.Filters[0].Field.Should().Be("deletedAt");
-        opts.Filter.Filters[0].Operator.Should().Be(FilterOperators.IsNotNull);
-        opts.Filter.Filters[0].Value.Should().BeNull();
+        filter.Filters.Should().ContainSingle();
+        filter.Filters[0].Field.Should().Be("deletedAt");
+        filter.Filters[0].Operator.Should().Be(FilterOperators.IsNotNull);
+        filter.Filters[0].Value.Should().BeNull();
     }
 
     [Fact]
     public void Jql_LikeOperator_ParsedCorrectly()
     {
-        var opts = Parse(new()
-        {
-            ["query"] = "name LIKE \"%john%\""
-        });
+        var filter = JqlParse("name LIKE \"%john%\"");
 
-        opts.Filter.Should().NotBeNull();
-        opts.Filter!.Filters.Should().ContainSingle();
-        opts.Filter.Filters[0].Field.Should().Be("name");
-        opts.Filter.Filters[0].Operator.Should().Be(FilterOperators.Like);
-        opts.Filter.Filters[0].Value.Should().Be("%john%");
+        filter.Filters.Should().ContainSingle();
+        filter.Filters[0].Field.Should().Be("name");
+        filter.Filters[0].Operator.Should().Be(FilterOperators.Like);
+        filter.Filters[0].Value.Should().Be("%john%");
     }
 
     [Fact]
     public void Jql_AnyOperator_ParsedCorrectly()
     {
-        var opts = Parse(new()
-        {
-            ["query"] = "orders ANY total > 1000"
-        });
+        var filter = JqlParse("orders ANY total > 1000");
 
-        opts.Filter.Should().NotBeNull();
-        opts.Filter!.Filters.Should().ContainSingle();
-        opts.Filter.Filters[0].Field.Should().Be("orders");
-        opts.Filter.Filters[0].Operator.Should().Be(FilterOperators.Any);
-        opts.Filter.Filters[0].Value.Should().Be("total:gt:1000");
+        filter.Filters.Should().ContainSingle();
+        filter.Filters[0].Field.Should().Be("orders");
+        filter.Filters[0].Operator.Should().Be(FilterOperators.Any);
+        filter.Filters[0].Value.Should().Be("total:gt:1000");
     }
 
     [Fact]
     public void Jql_AllOperator_ParsedCorrectly()
     {
-        var opts = Parse(new()
-        {
-            ["query"] = "orders ALL status = \"completed\""
-        });
+        var filter = JqlParse("orders ALL status = \"completed\"");
 
-        opts.Filter.Should().NotBeNull();
-        opts.Filter!.Filters.Should().ContainSingle();
-        opts.Filter.Filters[0].Field.Should().Be("orders");
-        opts.Filter.Filters[0].Operator.Should().Be(FilterOperators.All);
-        opts.Filter.Filters[0].Value.Should().Be("status:eq:completed");
+        filter.Filters.Should().ContainSingle();
+        filter.Filters[0].Field.Should().Be("orders");
+        filter.Filters[0].Operator.Should().Be(FilterOperators.All);
+        filter.Filters[0].Value.Should().Be("status:eq:completed");
     }
 
     [Fact]
     public void Jql_CountOperator_ParsedCorrectly()
     {
-        var opts = Parse(new()
-        {
-            ["query"] = "orders COUNT > 5"
-        });
+        var filter = JqlParse("orders COUNT > 5");
 
-        opts.Filter.Should().NotBeNull();
-        opts.Filter!.Filters.Should().ContainSingle();
-        opts.Filter.Filters[0].Field.Should().Be("orders");
-        opts.Filter.Filters[0].Operator.Should().Be(FilterOperators.Count);
-        opts.Filter.Filters[0].Value.Should().Be("gt:5");
+        filter.Filters.Should().ContainSingle();
+        filter.Filters[0].Field.Should().Be("orders");
+        filter.Filters[0].Operator.Should().Be(FilterOperators.Count);
+        filter.Filters[0].Value.Should().Be("gt:5");
     }
 
     // ════════════════════════════════════════════════════════════════════
-    // 6. Scoped Collection Filters
+    // 6. Scoped Collection Filters (via JqlParser)
     // ════════════════════════════════════════════════════════════════════
 
     [Fact]
-    public void Jql_ScopedAny_DotSyntax_ParsedToCollectionNode()
+    public void Jql_ScopedAny_DotSyntax_ParsedToScopedFilter()
     {
-        // orders.any(status = "Cancelled")
-        var ast = JqlAstParser.Parse("orders.any(status = \"Cancelled\")");
+        var filter = JqlParse("orders.any(status = \"Cancelled\")");
 
-        var coll = ast.Should().BeOfType<JqlCollectionNode>().Subject;
-        coll.CollectionPath.Should().Be("orders");
-        coll.Quantifier.Should().Be("any");
-        coll.Filter.Should().BeOfType<JqlConditionNode>()
-            .Which.Field.Should().Be("status");
+        filter.Filters.Should().ContainSingle();
+        var cond = filter.Filters[0];
+        cond.Field.Should().Be("orders");
+        cond.Operator.Should().Be(FilterOperators.Any);
+        cond.ScopedFilter.Should().NotBeNull();
+        cond.ScopedFilter!.Filters.Should().ContainSingle(f => f.Field == "status" && f.Value == "Cancelled");
     }
 
     [Fact]
-    public void Jql_ScopedAll_DotSyntax_ParsedToCollectionNode()
+    public void Jql_ScopedAll_DotSyntax_ParsedToScopedFilter()
     {
-        // orders.all(status = "Active")
-        var ast = JqlAstParser.Parse("orders.all(status = \"Active\")");
+        var filter = JqlParse("orders.all(status = \"Active\")");
 
-        var coll = ast.Should().BeOfType<JqlCollectionNode>().Subject;
-        coll.CollectionPath.Should().Be("orders");
-        coll.Quantifier.Should().Be("all");
-        coll.Filter.Should().BeOfType<JqlConditionNode>()
-            .Which.Field.Should().Be("status");
+        filter.Filters.Should().ContainSingle();
+        var cond = filter.Filters[0];
+        cond.Field.Should().Be("orders");
+        cond.Operator.Should().Be(FilterOperators.All);
+        cond.ScopedFilter.Should().NotBeNull();
+        cond.ScopedFilter!.Filters.Should().ContainSingle(f => f.Field == "status" && f.Value == "Active");
     }
 
     [Fact]
     public void Jql_ScopedBracket_ParsedAsAnyCollectionNode()
     {
-        // orders[status = "Cancelled"]  shorthand for orders.any(...)
-        var ast = JqlAstParser.Parse("orders[status = \"Cancelled\"]");
+        var filter = JqlParse("orders[status = \"Cancelled\"]");
 
-        var coll = ast.Should().BeOfType<JqlCollectionNode>().Subject;
-        coll.CollectionPath.Should().Be("orders");
-        coll.Quantifier.Should().Be("any");
-        coll.Filter.Should().BeOfType<JqlConditionNode>()
-            .Which.Field.Should().Be("status");
+        filter.Filters.Should().ContainSingle();
+        var cond = filter.Filters[0];
+        cond.Field.Should().Be("orders");
+        cond.Operator.Should().Be(FilterOperators.Any);
+        cond.ScopedFilter.Should().NotBeNull();
+        cond.ScopedFilter!.Filters.Should().ContainSingle(f => f.Field == "status" && f.Value == "Cancelled");
     }
 
     [Fact]
     public void Jql_ScopedAny_MultipleConditions_ParsedAsAndLogicalInsideCollection()
     {
-        // orders.any(status = "Cancelled" AND total > 500)
-        var ast = JqlAstParser.Parse("orders.any(status = \"Cancelled\" AND total > 500)");
+        var filter = JqlParse("orders.any(status = \"Cancelled\" AND total > 500)");
 
-        var coll = ast.Should().BeOfType<JqlCollectionNode>().Subject;
-        coll.CollectionPath.Should().Be("orders");
-        coll.Quantifier.Should().Be("any");
+        filter.Filters.Should().ContainSingle();
+        var cond = filter.Filters[0];
+        cond.Field.Should().Be("orders");
+        cond.Operator.Should().Be(FilterOperators.Any);
+        cond.ScopedFilter.Should().NotBeNull();
 
-        var inner = coll.Filter.Should().BeOfType<JqlLogicalNode>().Subject;
-        inner.Logic.Should().Be("and");
-        inner.Children.Should().HaveCount(2);
-        inner.Children[0].Should().BeOfType<JqlConditionNode>()
-            .Which.Field.Should().Be("status");
-        inner.Children[1].Should().BeOfType<JqlConditionNode>()
-            .Which.Field.Should().Be("total");
+        var inner = cond.ScopedFilter!;
+        inner.Logic.Should().Be(LogicOperator.And);
+        inner.Filters.Should().HaveCount(2);
+        inner.Filters.Should().Contain(f => f.Field == "status" && f.Value == "Cancelled");
+        inner.Filters.Should().Contain(f => f.Field == "total" && f.Operator == FilterOperators.GreaterThan);
     }
 
     [Fact]
     public void Jql_ScopedAny_WithOrInsideGroup_ParsedCorrectly()
     {
-        // orders.any(status = "Cancelled" OR status = "Refunded")
-        var ast = JqlAstParser.Parse("orders.any(status = \"Cancelled\" OR status = \"Refunded\")");
+        var filter = JqlParse("orders.any(status = \"Cancelled\" OR status = \"Refunded\")");
 
-        var coll = ast.Should().BeOfType<JqlCollectionNode>().Subject;
-        var inner = coll.Filter.Should().BeOfType<JqlLogicalNode>().Subject;
-        inner.Logic.Should().Be("or");
-        inner.Children.Should().HaveCount(2);
+        filter.Filters.Should().ContainSingle();
+        var cond = filter.Filters[0];
+        cond.ScopedFilter.Should().NotBeNull();
+        cond.ScopedFilter!.Logic.Should().Be(LogicOperator.Or);
+        cond.ScopedFilter.Filters.Should().HaveCount(2);
     }
 
     [Fact]
     public void Jql_NestedScopedCollections_ParsedRecursively()
     {
-        // orders.any(status = "Cancelled" AND orderItems.any(id = 101))
-        var ast = JqlAstParser.Parse(
-            "orders.any(status = \"Cancelled\" AND orderItems.any(id = 101))");
+        var filter = JqlParse("orders.any(status = \"Cancelled\" AND orderItems.any(id = 101))");
 
-        var outer = ast.Should().BeOfType<JqlCollectionNode>().Subject;
-        outer.CollectionPath.Should().Be("orders");
-        outer.Quantifier.Should().Be("any");
+        filter.Filters.Should().ContainSingle();
+        var outer = filter.Filters[0];
+        outer.Field.Should().Be("orders");
+        outer.Operator.Should().Be(FilterOperators.Any);
+        outer.ScopedFilter.Should().NotBeNull();
 
-        var outerLogic = outer.Filter.Should().BeOfType<JqlLogicalNode>().Subject;
-        outerLogic.Logic.Should().Be("and");
-        outerLogic.Children.Should().HaveCount(2);
+        var innerGroup = outer.ScopedFilter!;
+        innerGroup.Logic.Should().Be(LogicOperator.And);
+        innerGroup.Filters.Should().HaveCount(2);
 
-        outerLogic.Children[0].Should().BeOfType<JqlConditionNode>()
-            .Which.Field.Should().Be("status");
+        innerGroup.Filters.Should().Contain(f => f.Field == "status").Subject.Value.Should().Be("Cancelled");
 
-        var inner = outerLogic.Children[1].Should().BeOfType<JqlCollectionNode>().Subject;
-        inner.CollectionPath.Should().Be("orderItems");
-        inner.Quantifier.Should().Be("any");
-        inner.Filter.Should().BeOfType<JqlConditionNode>()
-            .Which.Field.Should().Be("id");
+        var nested = innerGroup.Filters.Should().Contain(f => f.Field == "orderItems").Subject;
+        nested.Operator.Should().Be(FilterOperators.Any);
+        nested.ScopedFilter.Should().NotBeNull();
+        nested.ScopedFilter!.Filters.Should().ContainSingle(f => f.Field == "id" && f.Value == "101");
     }
 
     [Fact]
     public void Jql_ScopedAny_CombinedWithFlatCondition_ParsedToAndLogical()
     {
-        // name = "Alice" AND orders.any(total > 1000)
-        var ast = JqlAstParser.Parse("name = \"Alice\" AND orders.any(total > 1000)");
+        var filter = JqlParse("name = \"Alice\" AND orders.any(total > 1000)");
 
-        var root = ast.Should().BeOfType<JqlLogicalNode>().Subject;
-        root.Logic.Should().Be("and");
-        root.Children.Should().HaveCount(2);
+        filter.Logic.Should().Be(LogicOperator.And);
+        filter.Filters.Should().HaveCount(2);
+        filter.Filters.Should().Contain(f => f.Field == "name" && f.Operator == FilterOperators.Equal && f.Value == "Alice");
 
-        root.Children[0].Should().BeOfType<JqlConditionNode>()
-            .Which.Field.Should().Be("name");
-
-        var coll = root.Children[1].Should().BeOfType<JqlCollectionNode>().Subject;
-        coll.CollectionPath.Should().Be("orders");
-        coll.Quantifier.Should().Be("any");
+        var coll = filter.Filters.Should().Contain(f => f.Field == "orders").Subject;
+        coll.Operator.Should().Be(FilterOperators.Any);
+        coll.ScopedFilter.Should().NotBeNull();
     }
 
     [Fact]
     public void Jql_ScopedAny_ConvertsToFilterConditionWithScopedFilter()
     {
-        // Converter path: orders.any(status = "Cancelled" AND total > 500)
-        var ast = JqlAstParser.Parse("orders.any(status = \"Cancelled\" AND total > 500)");
-        var group = JqlFilterConverter.ToFilterGroup(ast);
+        var filter = JqlParse("orders.any(status = \"Cancelled\" AND total > 500)");
 
-        group.Logic.Should().Be(LogicOperator.And);
-        group.Filters.Should().ContainSingle();
+        filter.Logic.Should().Be(LogicOperator.And);
+        filter.Filters.Should().ContainSingle();
 
-        var cond = group.Filters[0];
+        var cond = filter.Filters[0];
         cond.Field.Should().Be("orders");
         cond.Operator.Should().Be(FilterOperators.Any);
         cond.Value.Should().BeNull();
@@ -946,20 +884,18 @@ public class ParserTests
         inner.Logic.Should().Be(LogicOperator.And);
         inner.Filters.Should().HaveCount(2);
         inner.Filters.Should().Contain(f => f.Field == "status" && f.Value == "Cancelled");
-        inner.Filters.Should().Contain(f => f.Field == "total"  && f.Operator == FilterOperators.GreaterThan);
+        inner.Filters.Should().Contain(f => f.Field == "total" && f.Operator == FilterOperators.GreaterThan);
     }
 
     [Fact]
     public void Jql_BracketSyntax_ConvertsToFilterConditionWithScopedFilter()
     {
-        // Bracket shorthand: orders[status = "Cancelled"]
-        var ast = JqlAstParser.Parse("orders[status = \"Cancelled\"]");
-        var group = JqlFilterConverter.ToFilterGroup(ast);
+        var filter = JqlParse("orders[status = \"Cancelled\"]");
 
-        group.Filters.Should().ContainSingle();
-        var cond = group.Filters[0];
+        filter.Filters.Should().ContainSingle();
+        var cond = filter.Filters[0];
         cond.Field.Should().Be("orders");
-        cond.Operator.Should().Be(FilterOperators.Any);   // bracket => any
+        cond.Operator.Should().Be(FilterOperators.Any);
         cond.ScopedFilter.Should().NotBeNull();
         cond.ScopedFilter!.Filters.Should().ContainSingle(f => f.Field == "status");
     }
@@ -967,17 +903,13 @@ public class ParserTests
     [Fact]
     public void Jql_NestedScopedCollections_ConvertsToNestedScopedFilters()
     {
-        // orders.any(status = "Cancelled" AND orderItems.any(id = 101))
-        var ast = JqlAstParser.Parse(
-            "orders.any(status = \"Cancelled\" AND orderItems.any(id = 101))");
-        var group = JqlFilterConverter.ToFilterGroup(ast);
+        var filter = JqlParse("orders.any(status = \"Cancelled\" AND orderItems.any(id = 101))");
 
-        group.Filters.Should().ContainSingle();
-        var outer = group.Filters[0];
+        filter.Filters.Should().ContainSingle();
+        var outer = filter.Filters[0];
         outer.Field.Should().Be("orders");
         outer.ScopedFilter.Should().NotBeNull();
 
-        // The inner scoped group should contain status AND an orderItems scoped filter.
         var innerGroup = outer.ScopedFilter!;
         innerGroup.Logic.Should().Be(LogicOperator.And);
         innerGroup.Filters.Should().HaveCount(2);
@@ -996,17 +928,12 @@ public class ParserTests
     [Fact]
     public void Jql_FlatConditions_StillWorkAfterScopedSupport()
     {
-        // Backward-compat: plain dot-path conditions unchanged
-        var opts = Parse(new()
-        {
-            ["query"] = "orders.customer.name CONTAINS \"john\""
-        });
+        var filter = JqlParse("orders.customer.name CONTAINS \"john\"");
 
-        opts.Filter.Should().NotBeNull();
-        opts.Filter!.Filters.Should().ContainSingle();
-        opts.Filter.Filters[0].Field.Should().Be("orders.customer.name");
-        opts.Filter.Filters[0].Operator.Should().Be(FilterOperators.Contains);
-        opts.Filter.Filters[0].Value.Should().Be("john");
-        opts.Filter.Filters[0].ScopedFilter.Should().BeNull();
+        filter.Filters.Should().ContainSingle();
+        filter.Filters[0].Field.Should().Be("orders.customer.name");
+        filter.Filters[0].Operator.Should().Be(FilterOperators.Contains);
+        filter.Filters[0].Value.Should().Be("john");
+        filter.Filters[0].ScopedFilter.Should().BeNull();
     }
 }

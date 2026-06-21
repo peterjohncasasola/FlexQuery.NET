@@ -55,7 +55,7 @@ public class IncludeParserTests
     [Fact]
     public void Parse_FilteredIncludes_ParsesFiltersAtEachLevel()
     {
-        var result = FilteredIncludeParser.Parse("orders(status = 'Cancelled').orderItems(id = 101)");
+        var result = FilteredIncludeParser.Parse("orders(status:eq:Cancelled).orderItems(id:eq:101)");
 
         result.Should().HaveCount(1);
         
@@ -79,7 +79,7 @@ public class IncludeParserTests
     [Fact]
     public void Parse_ComplexFilterWithParentheses_IgnoresInnerParenthesesForSplit()
     {
-        var result = FilteredIncludeParser.Parse("orders(status = 'Cancelled' AND (total > 100 OR type = 'VIP')),profile");
+        var result = FilteredIncludeParser.Parse("orders(status:eq:Cancelled&(total:gt:100|type:eq:VIP)),profile");
 
         result.Should().HaveCount(2);
         

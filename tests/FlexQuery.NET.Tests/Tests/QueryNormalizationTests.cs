@@ -21,15 +21,21 @@ public class QueryNormalizationTests
     [Fact]
     public void QueryOptionsParser_NormalizesEquivalentAndQueriesIntoCanonicalOrder()
     {
-        var first = Parse(new Dictionary<string, string>
+        var first = new QueryOptions
         {
-            ["query"] = "name = \"John\" AND age > 18"
-        });
+            Filter = new FilterGroup
+            {
+                Filters = [new FilterCondition { Field = "name", Operator = "eq", Value = "John" }, new FilterCondition { Field = "age", Operator = "gt", Value = "18" }]
+            }
+        }.Normalize();
 
-        var second = Parse(new Dictionary<string, string>
+        var second = new QueryOptions
         {
-            ["query"] = "age > 18 AND name = \"John\""
-        });
+            Filter = new FilterGroup
+            {
+                Filters = [new FilterCondition { Field = "age", Operator = "gt", Value = "18" }, new FilterCondition { Field = "name", Operator = "eq", Value = "John" }]
+            }
+        }.Normalize();
 
         first.Filter.Should().NotBeNull();
         second.Filter.Should().NotBeNull();

@@ -1,5 +1,6 @@
 using FlexQuery.NET.Models;
 using FlexQuery.NET.Parsers;
+using FlexQuery.NET.Parsers.Jql;
 using FlexQuery.NET.Validation;
 using FlexQuery.NET.Exceptions;
 using FlexQuery.NET.Extensions;
@@ -64,7 +65,8 @@ public class FieldSecurityTests
     [Fact]
     public void Should_Fail_When_Nested_Field_Is_Blacklisted()
     {
-        var options = QueryOptionsParser.Parse(new Dictionary<string, StringValues> { { "query", "orders.any(Status = 'Cancelled')" } });
+        var filter = new JqlParser().Parse("orders.any(Status = 'Cancelled')");
+        var options = new QueryOptions { Filter = filter };
         var execOptions = new QueryExecutionOptions
         {
             BlockedFields = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "Orders.Status" }
@@ -131,7 +133,8 @@ public class FieldSecurityTests
     [Fact]
     public void Should_Allow_Wildcards_In_Whitelist()
     {
-        var options = QueryOptionsParser.Parse(new Dictionary<string, StringValues> { { "query", "Orders.any(Status = 'Cancelled' AND Total > 0)" } });
+        var filter = new JqlParser().Parse("Orders.any(Status = 'Cancelled' AND Total > 0)");
+        var options = new QueryOptions { Filter = filter };
         var execOptions = new QueryExecutionOptions
         {
             AllowedFields = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "Id", "Orders", "Orders.*" }

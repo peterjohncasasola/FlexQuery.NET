@@ -27,7 +27,7 @@ public class FilteredIncludeTests : IDisposable
             // - SO-001 (Total = 125.50) with Items: SKU-AAA, SKU-BBB
             // - SO-002 (Total = 45.00) with Items: SKU-CCC
             // We'll filter include to only include orders > 100, and their items with SKU-BBB
-            ["include"] = "Orders(Total > 100).Items(Sku = 'SKU-BBB')"
+            ["include"] = "Orders(Total:gt:100).Items(Sku:eq:SKU-BBB)"
         });
 
         // Use the dual pipeline:
@@ -61,7 +61,7 @@ public class FilteredIncludeTests : IDisposable
         var options = QueryOptionsParser.Parse(new Dictionary<string, Microsoft.Extensions.Primitives.StringValues>
         {
             ["filter"] = "Id:eq:1",
-            ["include"] = "Orders(Total > 100)",
+            ["include"] = "Orders(Total:gt:100)",
             ["select"] = "Id,Name,Orders.Number,Orders.Total"
         });
 
@@ -101,7 +101,7 @@ public class FilteredIncludeTests : IDisposable
         var options = QueryOptionsParser.Parse(new Dictionary<string, Microsoft.Extensions.Primitives.StringValues>
         {
             ["filter"] = "Id:eq:1",
-            ["include"] = "Orders.Items(Sku = 'SKU-AAA')",  // exact case to match SQLite in-memory
+            ["include"] = "Orders.Items(Sku:eq:SKU-AAA)",  // exact case to match SQLite in-memory
             ["select"] = "Id,Orders.Number,Orders.Items.Sku"
         });
 
@@ -141,7 +141,7 @@ public class FilteredIncludeTests : IDisposable
         var parameters = new FlexQueryParameters
         {
             Filter = "Id:eq:1",
-            Includes = "Orders(Total > 100)",
+            Includes = "Orders(Total:gt:100)",
             Select = "Id,Name,Orders.Number,Orders.Total"
         };
 
@@ -172,7 +172,7 @@ public class FilteredIncludeTests : IDisposable
         var parameters = new FlexQueryParameters
         {
             Filter = "Id:eq:1",
-            Includes = "Orders(Total > 100)",
+            Includes = "Orders(Total:gt:100)",
             Select = "Id,Orders.Number" // We ONLY want Number, not Total!
         };
 
@@ -230,7 +230,7 @@ public class FilteredIncludeTests : IDisposable
         var parameters = new FlexQueryParameters
         {
             Filter = "Id:eq:1",
-            Includes = "Orders(Total:gt:100).items(Sku = 'SKU-AAA')",
+            Includes = "Orders(Total:gt:100).items(Sku:eq:SKU-AAA)",
             Select = "Id,Orders.Number,Orders.Items.Sku"
         };
 
@@ -264,7 +264,7 @@ public class FilteredIncludeTests : IDisposable
         var parameters = new FlexQueryParameters
         {
             Filter = "Id:eq:1",
-            Includes = "Orders(Total:gt:100) . items(Sku = 'SKU-AAA')",
+            Includes = "Orders(Total:gt:100) . items(Sku:eq:SKU-AAA)",
             Select = "Id,Orders.Number,Orders.Items.Sku"
         };
 

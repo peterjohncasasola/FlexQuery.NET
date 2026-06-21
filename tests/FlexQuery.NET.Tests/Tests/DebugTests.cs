@@ -31,7 +31,7 @@ public class DebugTests
     {
         var options = QueryOptionsParser.Parse(new Dictionary<string, Microsoft.Extensions.Primitives.StringValues>
         {
-            { "query", "id = 101" }
+            { "filter", "id:eq:101" }
         });
 
         IQueryable<Customer> query = new List<Customer>().AsQueryable();
@@ -42,26 +42,11 @@ public class DebugTests
     }
 
     [Fact]
-    public void ToFlexQueryDebug_Should_Preserve_Ast()
-    {
-        var options = QueryOptionsParser.Parse(new Dictionary<string, Microsoft.Extensions.Primitives.StringValues>
-        {
-            { "query", "id = 1" }
-        });
-
-        IQueryable<Customer> query = new List<Customer>().AsQueryable();
-        var debug = query.ToFlexQueryDebug(options);
-
-        debug.Ast.Should().NotBeNull();
-        debug.Ast!.ToString().Should().Contain("id eq [1]");
-    }
-
-    [Fact]
     public void ToFlexQueryDebug_Should_Generate_Expression_Tree_Visualization()
     {
         var options = QueryOptionsParser.Parse(new Dictionary<string, Microsoft.Extensions.Primitives.StringValues>
         {
-            { "query", "id = 1" }
+            { "filter", "id:eq:1" }
         });
 
         IQueryable<Customer> query = new List<Customer>().AsQueryable();
