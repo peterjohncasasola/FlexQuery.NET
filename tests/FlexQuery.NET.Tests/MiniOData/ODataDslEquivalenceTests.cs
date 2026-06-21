@@ -1,5 +1,5 @@
 using FlexQuery.NET.Constants;
-using FlexQuery.NET.MiniOData.Parsers;
+using FlexQuery.NET.Parsers.MiniOData;
 using FlexQuery.NET.Models;
 using FlexQuery.NET.Parsers;
 using FlexQuery.NET.Parsers.Dsl;
@@ -199,7 +199,7 @@ public class ODataDslEquivalenceTests
 
         // Mini OData: $orderby=createdAt desc
         var odataParams = new Dictionary<string, string> { ["$orderby"] = "createdAt desc" };
-        var odataOptions = MiniODataQueryParser.Parse(odataParams);
+        var odataOptions = ODataQueryParameterParser.Parse(odataParams);
 
         nativeOptions.Sort.Should().HaveCount(1);
         odataOptions.Sort.Should().HaveCount(1);
@@ -221,7 +221,7 @@ public class ODataDslEquivalenceTests
 
         // Mini OData: $select=id,name,email
         var odataParams = new Dictionary<string, string> { ["$select"] = "id,name,email" };
-        var odataOptions = MiniODataQueryParser.Parse(odataParams);
+        var odataOptions = ODataQueryParameterParser.Parse(odataParams);
 
         nativeOptions.Select.Should().BeEquivalentTo(odataOptions.Select);
     }
@@ -243,7 +243,7 @@ public class ODataDslEquivalenceTests
             ["$top"] = "10",
             ["$skip"] = "20"
         };
-        var odataOptions = MiniODataQueryParser.Parse(odataParams);
+        var odataOptions = ODataQueryParameterParser.Parse(odataParams);
 
         nativeOptions.Paging.PageSize.Should().Be(odataOptions.Paging.PageSize);
         nativeOptions.Paging.Page.Should().Be(odataOptions.Paging.Page);
@@ -262,7 +262,7 @@ public class ODataDslEquivalenceTests
 
         // Mini OData: $expand=orders,profile
         var odataParams = new Dictionary<string, string> { ["$expand"] = "orders,profile" };
-        var odataOptions = MiniODataQueryParser.Parse(odataParams);
+        var odataOptions = ODataQueryParameterParser.Parse(odataParams);
 
         nativeOptions.Includes.Should().BeEquivalentTo(odataOptions.Includes);
     }

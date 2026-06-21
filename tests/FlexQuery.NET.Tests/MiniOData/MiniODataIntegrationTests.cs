@@ -1,9 +1,9 @@
 using FlexQuery.NET.Models;
 using FlexQuery.NET.Parsers;
-using FlexQuery.NET.MiniOData.Parsers;
+using FlexQuery.NET.Parsers.MiniOData;
 using FluentAssertions;
 using Microsoft.Extensions.DependencyInjection;
-using FlexQuery.NET.MiniOData.Extensions;
+using FlexQuery.NET.Parsers.MiniOData.Extensions;
 
 namespace FlexQuery.NET.Tests.MiniOData;
 
@@ -13,7 +13,7 @@ public class MiniODataIntegrationTests
     {
         // Ensure MiniOData parser is registered for integration tests.
         // This is normally handled by services.AddMiniOData() in a real app.
-        QueryOptionsParser.RegisterParser(new MiniODataParser());
+        QueryOptionsParser.RegisterParser(new MiniODataQueryParser());
     }
 
     [Fact]

@@ -1,5 +1,5 @@
 using FlexQuery.NET.Constants;
-using FlexQuery.NET.MiniOData.Parsers;
+using FlexQuery.NET.Parsers.MiniOData;
 using FluentAssertions;
 
 namespace FlexQuery.NET.Tests.MiniOData;

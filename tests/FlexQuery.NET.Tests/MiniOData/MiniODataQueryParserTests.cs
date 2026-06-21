@@ -1,11 +1,11 @@
-using FlexQuery.NET.MiniOData.Parsers;
+using FlexQuery.NET.Parsers.MiniOData;
 using FlexQuery.NET.Models;
 using FluentAssertions;
 
 namespace FlexQuery.NET.Tests.MiniOData;
 
 /// <summary>
-/// Tests for the MiniODataQueryParser — the main entry point that parses
+/// Tests for the ODataQueryParameterParser — the main entry point that parses
 /// all OData query parameters ($filter, $orderby, $select, $top, $skip, $expand, $count).
 /// </summary>
 public class MiniODataQueryParserTests
@@ -22,7 +22,7 @@ public class MiniODataQueryParserTests
             ["$filter"] = "name eq 'john'"
         };
 
-        var result = MiniODataQueryParser.Parse(queryParams);
+        var result = ODataQueryParameterParser.Parse(queryParams);
 
         result.Filter.Should().NotBeNull();
         result.Filter!.Filters.Should().HaveCount(1);
@@ -37,7 +37,7 @@ public class MiniODataQueryParserTests
             ["filter"] = "status eq 'active'"
         };
 
-        var result = MiniODataQueryParser.Parse(queryParams);
+        var result = ODataQueryParameterParser.Parse(queryParams);
 
         result.Filter.Should().NotBeNull();
         result.Filter!.Filters[0].Field.Should().Be("status");
@@ -55,7 +55,7 @@ public class MiniODataQueryParserTests
             ["$orderby"] = "name"
         };
 
-        var result = MiniODataQueryParser.Parse(queryParams);
+        var result = ODataQueryParameterParser.Parse(queryParams);
 
         result.Sort.Should().HaveCount(1);
         result.Sort[0].Field.Should().Be("name");
@@ -70,7 +70,7 @@ public class MiniODataQueryParserTests
             ["$orderby"] = "createdAt desc"
         };
 
-        var result = MiniODataQueryParser.Parse(queryParams);
+        var result = ODataQueryParameterParser.Parse(queryParams);
 
         result.Sort.Should().HaveCount(1);
         result.Sort[0].Field.Should().Be("createdAt");
@@ -85,7 +85,7 @@ public class MiniODataQueryParserTests
             ["$orderby"] = "lastName asc, createdAt desc"
         };
 
-        var result = MiniODataQueryParser.Parse(queryParams);
+        var result = ODataQueryParameterParser.Parse(queryParams);
 
         result.Sort.Should().HaveCount(2);
         result.Sort[0].Field.Should().Be("lastName");
@@ -102,7 +102,7 @@ public class MiniODataQueryParserTests
             ["$orderby"] = "address/city desc"
         };
 
-        var result = MiniODataQueryParser.Parse(queryParams);
+        var result = ODataQueryParameterParser.Parse(queryParams);
 
         result.Sort[0].Field.Should().Be("address.city");
     }
@@ -119,7 +119,7 @@ public class MiniODataQueryParserTests
             ["$select"] = "id,name,email"
         };
 
-        var result = MiniODataQueryParser.Parse(queryParams);
+        var result = ODataQueryParameterParser.Parse(queryParams);
 
         result.Select.Should().BeEquivalentTo(new[] { "id", "name", "email" });
     }
@@ -132,7 +132,7 @@ public class MiniODataQueryParserTests
             ["$select"] = "id,profile/name,address/city"
         };
 
-        var result = MiniODataQueryParser.Parse(queryParams);
+        var result = ODataQueryParameterParser.Parse(queryParams);
 
         result.Select.Should().Contain("profile.name");
         result.Select.Should().Contain("address.city");
@@ -150,7 +150,7 @@ public class MiniODataQueryParserTests
             ["$top"] = "10"
         };
 
-        var result = MiniODataQueryParser.Parse(queryParams);
+        var result = ODataQueryParameterParser.Parse(queryParams);
 
         result.Paging.PageSize.Should().Be(10);
         result.Top.Should().Be(10);
@@ -168,7 +168,7 @@ public class MiniODataQueryParserTests
             ["$skip"] = "20"
         };
 
-        var result = MiniODataQueryParser.Parse(queryParams);
+        var result = ODataQueryParameterParser.Parse(queryParams);
 
         result.Skip.Should().Be(20);
     }
@@ -182,7 +182,7 @@ public class MiniODataQueryParserTests
             ["$skip"] = "20"
         };
 
-        var result = MiniODataQueryParser.Parse(queryParams);
+        var result = ODataQueryParameterParser.Parse(queryParams);
 
         result.Paging.Page.Should().Be(3); // skip 20 / top 10 + 1 = page 3
         result.Paging.PageSize.Should().Be(10);
@@ -200,7 +200,7 @@ public class MiniODataQueryParserTests
             ["$expand"] = "orders"
         };
 
-        var result = MiniODataQueryParser.Parse(queryParams);
+        var result = ODataQueryParameterParser.Parse(queryParams);
 
         result.Includes.Should().BeEquivalentTo(new[] { "orders" });
     }
@@ -213,7 +213,7 @@ public class MiniODataQueryParserTests
             ["$expand"] = "orders,profile,addresses"
         };
 
-        var result = MiniODataQueryParser.Parse(queryParams);
+        var result = ODataQueryParameterParser.Parse(queryParams);
 
         result.Includes.Should().HaveCount(3);
         result.Includes.Should().Contain("orders");
@@ -233,7 +233,7 @@ public class MiniODataQueryParserTests
             ["$count"] = "true"
         };
 
-        var result = MiniODataQueryParser.Parse(queryParams);
+        var result = ODataQueryParameterParser.Parse(queryParams);
 
         result.IncludeCount.Should().BeTrue();
     }
@@ -246,7 +246,7 @@ public class MiniODataQueryParserTests
             ["$count"] = "false"
         };
 
-        var result = MiniODataQueryParser.Parse(queryParams);
+        var result = ODataQueryParameterParser.Parse(queryParams);
 
         result.IncludeCount.Should().BeFalse();
     }
@@ -269,7 +269,7 @@ public class MiniODataQueryParserTests
             ["$count"] = "true"
         };
 
-        var result = MiniODataQueryParser.Parse(queryParams);
+        var result = ODataQueryParameterParser.Parse(queryParams);
 
         result.Filter.Should().NotBeNull();
         result.Filter!.Filters.Should().HaveCount(2);
@@ -290,7 +290,7 @@ public class MiniODataQueryParserTests
     {
         var queryParams = new Dictionary<string, string>();
 
-        var result = MiniODataQueryParser.Parse(queryParams);
+        var result = ODataQueryParameterParser.Parse(queryParams);
 
         result.Filter.Should().BeNull();
         result.Sort.Should().BeEmpty();
@@ -307,7 +307,7 @@ public class MiniODataQueryParserTests
             ["$OrderBy"] = "id desc"
         };
 
-        var result = MiniODataQueryParser.Parse(queryParams);
+        var result = ODataQueryParameterParser.Parse(queryParams);
 
         result.Filter.Should().NotBeNull();
         result.Sort.Should().HaveCount(1);
@@ -321,7 +321,7 @@ public class MiniODataQueryParserTests
             ["$top"] = "not_a_number"
         };
 
-        var result = MiniODataQueryParser.Parse(queryParams);
+        var result = ODataQueryParameterParser.Parse(queryParams);
 
         result.Top.Should().BeNull();
     }
