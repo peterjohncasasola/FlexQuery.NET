@@ -1,0 +1,35 @@
+namespace FlexQuery.NET.Parsers.Jql;
+
+internal enum JqlTokenType
+{
+    Identifier,
+    String,
+    Number,
+    And,
+    Or,
+    In,
+    Not,
+    Contains,
+    Eq,
+    Neq,
+    Gt,
+    Gte,
+    Lt,
+    Lte,
+    OpenParen,
+    CloseParen,
+    OpenBracket,
+    CloseBracket,
+    Comma,
+    Dot,
+    End,
+    Is,
+    Null,
+    Between,
+    Like,
+    StartsWith,
+    EndsWith,
+    Any,
+    All,
+    Count
+}
