@@ -82,6 +82,58 @@ public static class FlexQueryDapperExtensions
         return await FlexQueryAsync<T>(connection, flexParams, configureDapper);
     }
 
+    /// <summary>
+    /// Executes a pre-parsed <see cref="QueryOptions"/> using Dapper with validation.
+    /// </summary>
+    /// <remarks>
+    /// Use this overload when composing with adapter packages (e.g. FlexQuery.NET.AgGrid,
+    /// FlexQuery.NET.MiniOData) that parse external formats into <see cref="QueryOptions"/>.
+    /// <code>
+    /// // Step 1: Parse (adapter package)
+    /// var options = AgGridQueryOptionsParser.Parse(agGridRequest);
+    ///
+    /// // Step 2: Execute (Dapper package)
+    /// var result = await connection.FlexQueryAsync&lt;User&gt;(options);
+    /// </code>
+    /// </remarks>
+    /// <param name="connection">The database connection.</param>
+    /// <param name="options">Pre-parsed query options from any adapter or manual construction.</param>
+    /// <param name="configureDapper">Optional configuration for Dapper-specific execution options.</param>
+    public static async Task<QueryResult<T>> FlexQueryAsync<T>(
+        this DbConnection connection,
+        QueryOptions options,
+        Action<DapperQueryOptions>? configureDapper = null) where T : class
+    {
+        var dapperOptions = new DapperQueryOptions();
+        configureDapper?.Invoke(dapperOptions);
+
+        return await connection.FlexQueryAsync<T>(options, dapperOptions);
+    }
+
+    /// <summary>
+    /// Executes a pre-parsed <see cref="QueryOptions"/> using Dapper with full options.
+    /// </summary>
+    /// <param name="connection">The database connection.</param>
+    /// <param name="options">Pre-parsed query options from any adapter or manual construction.</param>
+    /// <param name="dapperQueryOptions">Dapper-specific execution options.</param>
+    public static async Task<QueryResult<T>> FlexQueryAsync<T>(
+        this DbConnection connection,
+        QueryOptions options,
+        DapperQueryOptions? dapperQueryOptions = null) where T : class
+    {
+        ArgumentNullException.ThrowIfNull(connection);
+        ArgumentNullException.ThrowIfNull(options);
+
+        var dapperOptions = dapperQueryOptions ?? new DapperQueryOptions();
+        options.Items[ContextKeys.EntityType] = dapperOptions.EntityType ?? typeof(T);
+
+        var execOptions = dapperOptions.ToQueryExecutionOptions();
+
+        options.ValidateOrThrow(dapperOptions.EntityType ?? typeof(T), execOptions);
+
+        return await ExecuteQueryAsync<T>(connection, options, dapperOptions);
+    }
+
     private static async Task<QueryResult<T>> ExecuteQueryAsync<T>(
         DbConnection connection,
         QueryOptions options,
@@ -119,7 +171,7 @@ public static class FlexQueryDapperExtensions
 
             items = DapperRowHydrator.HydrateIncludes<T>(dynamicItems, mapping, registry, options.Includes);
         }
-        else if (typeof(T) == typeof(object) || options.Aggregates.Count > 0)
+        else if (typeof(T) == typeof(object) || (options.Aggregates.Count > 0 && options.GroupBy?.Count > 0))
         {
             var dynamicItems = await connection.QueryAsync(
                 command.Sql,
@@ -147,12 +199,51 @@ public static class FlexQueryDapperExtensions
             totalCount = (int)await connection.QuerySingleAsync<long>(countSql, parameters, commandTimeout: execOptions.CommandTimeoutSeconds, commandType: CommandType.Text);
         }
 
+        Dictionary<string, Dictionary<string, object>>? grandTotals = null;
+        if (options.Aggregates?.Count > 0 && (options.GroupBy == null || options.GroupBy.Count == 0))
+        {
+            var aggCommand = translator.TranslateAggregates(options);
+            var aggParams = new DynamicParameters();
+            foreach (var param in aggCommand.Parameters)
+            {
+                var cleanName = param.Key.TrimStart('@', ':', '?');
+                aggParams.Add(cleanName, param.Value);
+            }
+
+            var aggResult = await connection.QueryFirstOrDefaultAsync(
+                aggCommand.Sql,
+                aggParams,
+                commandTimeout: execOptions.CommandTimeoutSeconds,
+                commandType: CommandType.Text);
+
+            if (aggResult != null)
+            {
+                grandTotals = new Dictionary<string, Dictionary<string, object>>(StringComparer.OrdinalIgnoreCase);
+                var rowDict = (IDictionary<string, object>)aggResult;
+                foreach (var agg in options.Aggregates)
+                {
+                    if (rowDict.TryGetValue(agg.Alias, out var val))
+                    {
+                        var fieldName = agg.Field ?? "all";
+                        var fnName = agg.Function;
+                        if (!grandTotals.TryGetValue(fieldName, out var fnDict))
+                        {
+                            fnDict = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase);
+                            grandTotals[fieldName] = fnDict;
+                        }
+                        fnDict[fnName] = val ?? 0;
+                    }
+                }
+            }
+        }
+
         return new QueryResult<T>
         {
             Data = items,
             TotalCount = totalCount,
             Page = options.Paging.Page,
-            PageSize = options.Paging.PageSize
+            PageSize = options.Paging.PageSize,
+            Aggregates = grandTotals
         };
     }
 

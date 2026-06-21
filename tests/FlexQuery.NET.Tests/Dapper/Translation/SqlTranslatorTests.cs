@@ -159,7 +159,7 @@ public class SqlTranslatorTests
         options.Items[ContextKeys.EntityType] = typeof(TestEntity);
 
         var translator = new SqlTranslator(_registry, new SqlServerDialect());
-        var command = translator.Translate(options);
+        var command = translator.TranslateAggregates(options);
 
         command.Sql.Should().Contain("COUNT(1) AS [TotalCount]");
     }
@@ -432,5 +432,84 @@ public class SqlTranslatorTests
         public int Id { get; set; }
         public string Name { get; set; } = string.Empty;
         public ICollection<TestRole> Roles { get; set; } = new List<TestRole>();
+    }
+
+    [Fact]
+    public void Translate_FlatMode_GeneratesFlatJoins()
+    {
+        var registry = new MappingRegistry();
+        registry.Entity<SqlCustomer>()
+            .ToTable("Customers")
+            .HasMany(c => c.Orders).WithForeignKey("CustomerId");
+
+        var options = new QueryOptions
+        {
+            ProjectionMode = ProjectionMode.Flat,
+            Select = ["Orders.Total"],
+            Paging = { Disabled = true }
+        };
+        options.Items[ContextKeys.EntityType] = typeof(SqlCustomer);
+
+        var translator = new SqlTranslator(registry, new SqliteDialect());
+        var command = translator.Translate(options);
+
+        command.Sql.Should().Contain("LEFT JOIN");
+        command.Sql.Should().Contain("\"Orders\"");
+        command.FlatJoins.Should().Contain("Orders");
+    }
+
+    [Fact]
+    public void Translate_FlatMixedMode_IncludesRootScalars()
+    {
+        var registry = new MappingRegistry();
+        registry.Entity<SqlCustomer>()
+            .ToTable("Customers")
+            .HasMany(c => c.Orders).WithForeignKey("CustomerId");
+
+        var options = new QueryOptions
+        {
+            ProjectionMode = ProjectionMode.FlatMixed,
+            Select = ["Name", "Orders.Total"],
+            Paging = { Disabled = true }
+        };
+        options.Items[ContextKeys.EntityType] = typeof(SqlCustomer);
+
+        var translator = new SqlTranslator(registry, new SqliteDialect());
+        var command = translator.Translate(options);
+
+        command.Sql.Should().Contain("\"Customers\".\"Name\"");
+        command.Sql.Should().Contain("\"Orders\".\"Total\"");
+        command.FlatJoins.Should().Contain("Orders");
+    }
+
+    [Fact]
+    public void Translate_FlatMode_MultiLevel_NestedCollection()
+    {
+        var registry = new MappingRegistry();
+        registry.Entity<SqlCustomer>()
+            .ToTable("Customers")
+            .HasMany(c => c.Orders).WithForeignKey("CustomerId");
+        registry.Entity<SqlOrder>()
+            .ToTable("Orders")
+            .HasMany(o => o.Items).WithForeignKey("OrderId");
+
+        var options = new QueryOptions
+        {
+            ProjectionMode = ProjectionMode.Flat,
+            Select = ["Orders.Items.Sku", "Orders.Items.Id"],
+            Paging = { Disabled = true }
+        };
+        options.Items[ContextKeys.EntityType] = typeof(SqlCustomer);
+
+        var translator = new SqlTranslator(registry, new SqliteDialect());
+        var command = translator.Translate(options);
+
+        command.Sql.Should().Contain("LEFT JOIN");
+        command.Sql.Should().Contain("\"Orders\"");
+        command.Sql.Should().Contain("\"Items\"");
+        command.Sql.Should().Contain("\"Items\".\"Sku\"");
+        command.Sql.Should().Contain("\"Items\".\"Id\"");
+        command.FlatJoins.Should().Contain("Orders");
+        command.FlatJoins.Should().Contain("Items");
     }
 }

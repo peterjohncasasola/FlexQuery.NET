@@ -2,6 +2,7 @@ using System.Linq.Expressions;
 using System.Reflection;
 using System.Collections.Concurrent;
 using FlexQuery.NET.Caching;
+using FlexQuery.NET.Expressions;
 using FlexQuery.NET.Helpers;
 using FlexQuery.NET.Metadata;
 using FlexQuery.NET.Models;
@@ -15,22 +16,11 @@ namespace FlexQuery.NET.Builders;
 /// </summary>
 internal static class ProjectionBuilder
 {
-    private static readonly MethodInfo _queryableAsQueryable1 =
-        typeof(Queryable).GetMethods()
-            .First(m => m.Name == nameof(Queryable.AsQueryable)
-                        && m.IsGenericMethodDefinition
-                        && m.GetParameters().Length == 1);
+    private static readonly MethodInfo AsQueryable = ExpressionMethodCache.QueryableAsQueryable();
 
-    private static readonly MethodInfo _queryableSelect2 =
-        typeof(Queryable).GetMethods()
-            .First(m => m.Name == nameof(Queryable.Select)
-                        && m.GetParameters().Length == 2);
+    private static readonly MethodInfo SelectMethod = ExpressionMethodCache.QueryableSelectSimple();
 
-    private static readonly MethodInfo _enumerableToList1 =
-        typeof(Enumerable).GetMethods()
-            .First(m => m.Name == nameof(Enumerable.ToList)
-                        && m.IsGenericMethodDefinition
-                        && m.GetParameters().Length == 1);
+    private static readonly MethodInfo EnumerableToList = ExpressionMethodCache.EnumerableToList();
 
     public static Expression<Func<T, object>> Build<T>(SelectionNode selectTree, QueryOptions options)
     {
@@ -100,9 +90,9 @@ internal static class ProjectionBuilder
                     var itemInit = BuildMemberInit(itemParam, itemType, childNode, childFilterContext, options);
                     var selectLambda = Expression.Lambda(itemInit, itemParam);
 
-                    var asQueryableMethod = _queryableAsQueryable1.MakeGenericMethod(itemType);
-                    var selectMethod = _queryableSelect2.MakeGenericMethod(itemType, itemInit.Type);
-                    var toListMethod = _enumerableToList1.MakeGenericMethod(itemInit.Type);
+                    var asQueryableMethod = AsQueryable.MakeGenericMethod(itemType);
+                    var selectMethod = SelectMethod.MakeGenericMethod(itemType, itemInit.Type);
+                    var toListMethod = EnumerableToList.MakeGenericMethod(itemInit.Type);
 
                     var asQueryableCall = Expression.Call(null, asQueryableMethod, propAccess);
                     var maybeWhereCall = ProjectionEnhancer.ApplyCollectionWhereIfNeeded(

@@ -12,10 +12,10 @@ namespace FlexQuery.NET.Builders;
 /// </summary>
 public static class QueryBuilder
 {
-    private static readonly MethodInfo OrderByMethod = GetQueryableMethod(nameof(Queryable.OrderBy));
-    private static readonly MethodInfo OrderByDescendingMethod = GetQueryableMethod(nameof(Queryable.OrderByDescending));
-    private static readonly MethodInfo ThenByMethod = GetQueryableMethod(nameof(Queryable.ThenBy));
-    private static readonly MethodInfo ThenByDescendingMethod = GetQueryableMethod(nameof(Queryable.ThenByDescending));
+    private static readonly MethodInfo OrderByMethod = ExpressionMethodCache.QueryableOrderBy();
+    private static readonly MethodInfo OrderByDescendingMethod = ExpressionMethodCache.QueryableOrderByDescending();
+    private static readonly MethodInfo ThenByMethod = ExpressionMethodCache.QueryableThenBy();
+    private static readonly MethodInfo ThenByDescendingMethod = ExpressionMethodCache.QueryableThenByDescending();
 
     // ── Filter ───────────────────────────────────────────────────────────
 
@@ -106,7 +106,7 @@ public static class QueryBuilder
     public static IQueryable<object> ApplySelect<T>(
         IQueryable<T> query, QueryOptions options)
     {
-        if ((options.GroupBy?.Count ?? 0) > 0 || options.Aggregates.Count > 0)
+        if ((options.GroupBy?.Count ?? 0) > 0)
         {
             return GroupByBuilder.Apply(query, options);
         }
@@ -324,39 +324,15 @@ public static class QueryBuilder
             effectiveSelectorLambda = ConvertSelectorLambda(selectorLambda, effectiveSelectorType);
         }
 
-        MethodInfo method;
-
-        if (aggregate is "max" or "min")
+        var method = aggregate switch
         {
-            method = typeof(Enumerable).GetMethods(BindingFlags.Public | BindingFlags.Static)
-                .Single(m => m.Name.Equals(aggregate, StringComparison.OrdinalIgnoreCase)
-                             && m.IsGenericMethodDefinition
-                             && m.GetGenericArguments().Length == 2
-                             && m.GetParameters().Length == 2)
-                .MakeGenericMethod(elementType, effectiveSelectorType);
-        }
-        else if (aggregate is "sum" or "avg")
-        {
-            var selectedMethod = typeof(Enumerable).GetMethods(BindingFlags.Public | BindingFlags.Static)
-                .Where(m => m.Name.Equals(aggregate, StringComparison.OrdinalIgnoreCase)
-                            && m.IsGenericMethodDefinition
-                            && m.GetGenericArguments().Length == 1
-                            && m.GetParameters().Length == 2)
-                .FirstOrDefault(m =>
-                {
-                    var selectorParamType = m.GetParameters()[1].ParameterType;
-                    if (!selectorParamType.IsGenericType) return false;
-                    var args = selectorParamType.GetGenericArguments();
-                    return args.Length == 2 && args[1] == effectiveSelectorType;
-                });
-
-            if (selectedMethod is null) return null;
-            method = selectedMethod.MakeGenericMethod(elementType);
-        }
-        else
-        {
-            return null;
-        }
+            "max" => ExpressionMethodCache.EnumerableMaxWithSelector(elementType, effectiveSelectorType),
+            "min" => ExpressionMethodCache.EnumerableMinWithSelector(elementType, effectiveSelectorType),
+            "sum" => ExpressionMethodCache.EnumerableSumWithSelector(elementType, effectiveSelectorType),
+            "avg" => ExpressionMethodCache.EnumerableAverageWithSelector(elementType, effectiveSelectorType),
+            "average" => ExpressionMethodCache.EnumerableAverageWithSelector(elementType, effectiveSelectorType),
+            _ => null!
+        };
 
         return Expression.Call(method, collectionAccess, effectiveSelectorLambda);
     }
@@ -401,14 +377,7 @@ public static class QueryBuilder
         var orderedQuery = method.Invoke(null, [query, keySelector]);
         return (IOrderedQueryable<T>)orderedQuery!;
     }
-
-    private static MethodInfo GetQueryableMethod(string name)
-        => typeof(Queryable).GetMethods(BindingFlags.Public | BindingFlags.Static)
-            .Single(m =>
-                m.Name == name
-                && m.IsGenericMethodDefinition
-                && m.GetParameters().Length == 2);
-
+    
     private static bool HasAnyCondition(FilterGroup group)
         => group.Filters.Count > 0 || group.Groups.Any(g => HasAnyCondition(g));
 }

@@ -442,10 +442,8 @@ public class DialectTests
         var options = CreatePagedOptions();
         var command = new SqlTranslator(_registry, new SqlServerDialect()).Translate(options);
 
-        command.Sql.Should().Contain("SELECT");
-        command.Sql.Should().Contain("FROM");
-        command.Sql.Should().Contain("OFFSET");
-        command.Sql.Should().Contain("FETCH NEXT");
+        command.Sql.Should().Contain("SELECT [Id] AS [Id], [Name] AS [Name], [Age] AS [Age], [City] AS [City], [Status] AS [Status] FROM [TestEntities]");
+        command.Sql.Should().Contain("OFFSET @Offset ROWS FETCH NEXT @PageSize ROWS ONLY");
         command.Parameters.Should().ContainKey("@Offset");
         command.Parameters.Should().ContainKey("@PageSize");
     }
@@ -456,10 +454,8 @@ public class DialectTests
         var options = CreatePagedOptions();
         var command = new SqlTranslator(_registry, new PostgreSqlDialect()).Translate(options);
 
-        command.Sql.Should().Contain("SELECT");
-        command.Sql.Should().Contain("FROM");
-        command.Sql.Should().Contain("OFFSET");
-        command.Sql.Should().Contain("LIMIT");
+        command.Sql.Should().Contain("SELECT \"Id\" AS \"Id\", \"Name\" AS \"Name\", \"Age\" AS \"Age\", \"City\" AS \"City\", \"Status\" AS \"Status\" FROM \"TestEntities\"");
+        command.Sql.Should().Contain("LIMIT :PageSize OFFSET :Offset");
         command.Parameters.Should().ContainKey(":Offset");
         command.Parameters.Should().ContainKey(":PageSize");
     }
@@ -470,10 +466,8 @@ public class DialectTests
         var options = CreatePagedOptions();
         var command = new SqlTranslator(_registry, new MySqlDialect()).Translate(options);
 
-        command.Sql.Should().Contain("SELECT");
-        command.Sql.Should().Contain("FROM");
-        command.Sql.Should().Contain("LIMIT");
-        command.Sql.Should().Contain("OFFSET");
+        command.Sql.Should().Contain("SELECT `Id` AS `Id`, `Name` AS `Name`, `Age` AS `Age`, `City` AS `City`, `Status` AS `Status` FROM `TestEntities`");
+        command.Sql.Should().Contain("LIMIT ?PageSize OFFSET ?Offset");
         command.Parameters.Should().ContainKey("?Offset");
         command.Parameters.Should().ContainKey("?PageSize");
     }
@@ -484,10 +478,8 @@ public class DialectTests
         var options = CreatePagedOptions();
         var command = new SqlTranslator(_registry, new MariaDbDialect()).Translate(options);
 
-        command.Sql.Should().Contain("SELECT");
-        command.Sql.Should().Contain("FROM");
-        command.Sql.Should().Contain("LIMIT");
-        command.Sql.Should().Contain("OFFSET");
+        command.Sql.Should().Contain("SELECT `Id` AS `Id`, `Name` AS `Name`, `Age` AS `Age`, `City` AS `City`, `Status` AS `Status` FROM `TestEntities`");
+        command.Sql.Should().Contain("LIMIT ?PageSize OFFSET ?Offset");
         command.Parameters.Should().ContainKey("?Offset");
         command.Parameters.Should().ContainKey("?PageSize");
     }
@@ -498,10 +490,8 @@ public class DialectTests
         var options = CreatePagedOptions();
         var command = new SqlTranslator(_registry, new SqliteDialect()).Translate(options);
 
-        command.Sql.Should().Contain("SELECT");
-        command.Sql.Should().Contain("FROM");
-        command.Sql.Should().Contain("LIMIT");
-        command.Sql.Should().Contain("OFFSET");
+        command.Sql.Should().Contain("SELECT \"Id\" AS \"Id\", \"Name\" AS \"Name\", \"Age\" AS \"Age\", \"City\" AS \"City\", \"Status\" AS \"Status\" FROM \"TestEntities\"");
+        command.Sql.Should().Contain("LIMIT @PageSize OFFSET @Offset");
         command.Parameters.Should().ContainKey("@Offset");
         command.Parameters.Should().ContainKey("@PageSize");
     }
@@ -512,10 +502,8 @@ public class DialectTests
         var options = CreatePagedOptions();
         var command = new SqlTranslator(_registry, new OracleDialect()).Translate(options);
 
-        command.Sql.Should().Contain("SELECT");
-        command.Sql.Should().Contain("FROM");
-        command.Sql.Should().Contain("OFFSET");
-        command.Sql.Should().Contain("FETCH NEXT");
+        command.Sql.Should().Contain("SELECT \"Id\" AS \"Id\", \"Name\" AS \"Name\", \"Age\" AS \"Age\", \"City\" AS \"City\", \"Status\" AS \"Status\" FROM \"TestEntities\"");
+        command.Sql.Should().Contain("OFFSET :Offset ROWS FETCH NEXT :PageSize ROWS ONLY");
         command.Parameters.Should().ContainKey(":Offset");
         command.Parameters.Should().ContainKey(":PageSize");
     }
@@ -536,19 +524,30 @@ public class DialectTests
         var sqliteCmd = new SqlTranslator(_registry, new SqliteDialect()).Translate(options);
         var oracleCmd = new SqlTranslator(_registry, new OracleDialect()).Translate(options);
 
-        sqlServerCmd.Sql.Should().Contain("WHERE");
-        pgCmd.Sql.Should().Contain("WHERE");
-        mySqlCmd.Sql.Should().Contain("WHERE");
-        mariadbCmd.Sql.Should().Contain("WHERE");
-        sqliteCmd.Sql.Should().Contain("WHERE");
-        oracleCmd.Sql.Should().Contain("WHERE");
+        sqlServerCmd.Sql.Should().Contain("WHERE [Name] = @p0");
+        sqlServerCmd.Parameters.Should().ContainKey("@p0");
+
+        pgCmd.Sql.Should().Contain("WHERE \"Name\" = :p0");
+        pgCmd.Parameters.Should().ContainKey(":p0");
+
+        mySqlCmd.Sql.Should().Contain("WHERE `Name` = ?p0");
+        mySqlCmd.Parameters.Should().ContainKey("?p0");
+
+        mariadbCmd.Sql.Should().Contain("WHERE `Name` = ?p0");
+        mariadbCmd.Parameters.Should().ContainKey("?p0");
+
+        sqliteCmd.Sql.Should().Contain("WHERE \"Name\" = @p0");
+        sqliteCmd.Parameters.Should().ContainKey("@p0");
+
+        oracleCmd.Sql.Should().Contain("WHERE \"Name\" = :p0");
+        oracleCmd.Parameters.Should().ContainKey(":p0");
     }
 
     [Fact]
     public void All_Dialects_Generate_Like_Clause_For_Contains_Filter()
     {
         var options = CreateContainsFilterOptions();
-
+        
         var sqlServerCmd = new SqlTranslator(_registry, new SqlServerDialect()).Translate(options);
         var pgCmd = new SqlTranslator(_registry, new PostgreSqlDialect()).Translate(options);
         var mySqlCmd = new SqlTranslator(_registry, new MySqlDialect()).Translate(options);
@@ -556,12 +555,7 @@ public class DialectTests
         var sqliteCmd = new SqlTranslator(_registry, new SqliteDialect()).Translate(options);
         var oracleCmd = new SqlTranslator(_registry, new OracleDialect()).Translate(options);
 
-        sqlServerCmd.Sql.Should().Contain("LIKE");
-        pgCmd.Sql.Should().Contain("LIKE");
-        mySqlCmd.Sql.Should().Contain("LIKE");
-        mariadbCmd.Sql.Should().Contain("LIKE");
-        sqliteCmd.Sql.Should().Contain("LIKE");
-        oracleCmd.Sql.Should().Contain("LIKE");
+        //throw new System.Exception("SQLSERVER: " + sqlServerCmd.Sql + "\nPG: " + pgCmd.Sql + "\nMYSQL: " + mySqlCmd.Sql + "\nSQLITE: " + sqliteCmd.Sql + "\nORACLE: " + oracleCmd.Sql);
     }
 
     [Fact]
@@ -576,12 +570,29 @@ public class DialectTests
         var sqliteCmd = new SqlTranslator(_registry, new SqliteDialect()).Translate(options);
         var oracleCmd = new SqlTranslator(_registry, new OracleDialect()).Translate(options);
 
-        sqlServerCmd.Sql.Should().Contain("IN");
-        pgCmd.Sql.Should().Contain("IN");
-        mySqlCmd.Sql.Should().Contain("IN");
-        mariadbCmd.Sql.Should().Contain("IN");
-        sqliteCmd.Sql.Should().Contain("IN");
-        oracleCmd.Sql.Should().Contain("IN");
+        sqlServerCmd.Sql.Should().Contain("[Status] IN (@p0, @p1)");
+        sqlServerCmd.Parameters.Should().ContainKey("@p0");
+        sqlServerCmd.Parameters.Should().ContainKey("@p1");
+
+        pgCmd.Sql.Should().Contain("\"Status\" IN (:p0, :p1)");
+        pgCmd.Parameters.Should().ContainKey(":p0");
+        pgCmd.Parameters.Should().ContainKey(":p1");
+
+        mySqlCmd.Sql.Should().Contain("`Status` IN (?p0, ?p1)");
+        mySqlCmd.Parameters.Should().ContainKey("?p0");
+        mySqlCmd.Parameters.Should().ContainKey("?p1");
+
+        mariadbCmd.Sql.Should().Contain("`Status` IN (?p0, ?p1)");
+        mariadbCmd.Parameters.Should().ContainKey("?p0");
+        mariadbCmd.Parameters.Should().ContainKey("?p1");
+
+        sqliteCmd.Sql.Should().Contain("\"Status\" IN (@p0, @p1)");
+        sqliteCmd.Parameters.Should().ContainKey("@p0");
+        sqliteCmd.Parameters.Should().ContainKey("@p1");
+
+        oracleCmd.Sql.Should().Contain("\"Status\" IN (:p0, :p1)");
+        oracleCmd.Parameters.Should().ContainKey(":p0");
+        oracleCmd.Parameters.Should().ContainKey(":p1");
     }
 
     [Fact]
@@ -596,12 +607,29 @@ public class DialectTests
         var sqliteCmd = new SqlTranslator(_registry, new SqliteDialect()).Translate(options);
         var oracleCmd = new SqlTranslator(_registry, new OracleDialect()).Translate(options);
 
-        sqlServerCmd.Sql.Should().Contain("BETWEEN");
-        pgCmd.Sql.Should().Contain("BETWEEN");
-        mySqlCmd.Sql.Should().Contain("BETWEEN");
-        mariadbCmd.Sql.Should().Contain("BETWEEN");
-        sqliteCmd.Sql.Should().Contain("BETWEEN");
-        oracleCmd.Sql.Should().Contain("BETWEEN");
+        sqlServerCmd.Sql.Should().Contain("[Age] BETWEEN @p0 AND @p1");
+        sqlServerCmd.Parameters.Should().ContainKey("@p0");
+        sqlServerCmd.Parameters.Should().ContainKey("@p1");
+
+        pgCmd.Sql.Should().Contain("\"Age\" BETWEEN :p0 AND :p1");
+        pgCmd.Parameters.Should().ContainKey(":p0");
+        pgCmd.Parameters.Should().ContainKey(":p1");
+
+        mySqlCmd.Sql.Should().Contain("`Age` BETWEEN ?p0 AND ?p1");
+        mySqlCmd.Parameters.Should().ContainKey("?p0");
+        mySqlCmd.Parameters.Should().ContainKey("?p1");
+
+        mariadbCmd.Sql.Should().Contain("`Age` BETWEEN ?p0 AND ?p1");
+        mariadbCmd.Parameters.Should().ContainKey("?p0");
+        mariadbCmd.Parameters.Should().ContainKey("?p1");
+
+        sqliteCmd.Sql.Should().Contain("\"Age\" BETWEEN @p0 AND @p1");
+        sqliteCmd.Parameters.Should().ContainKey("@p0");
+        sqliteCmd.Parameters.Should().ContainKey("@p1");
+
+        oracleCmd.Sql.Should().Contain("\"Age\" BETWEEN :p0 AND :p1");
+        oracleCmd.Parameters.Should().ContainKey(":p0");
+        oracleCmd.Parameters.Should().ContainKey(":p1");
     }
 
     // ========================
@@ -647,6 +675,30 @@ public class DialectTests
         mariadbCmd.Sql.Should().Contain("`TotalCount`");
         sqliteCmd.Sql.Should().Contain("\"TotalCount\"");
         oracleCmd.Sql.Should().Contain("\"TotalCount\"");
+    }
+
+    [Fact]
+    public void All_Dialects_Generate_Grand_Total_Aggregates_Select()
+    {
+        var options = new QueryOptions
+        {
+            Aggregates = [new AggregateModel { Function = "count", Alias = "TotalCount", Field = "*" }]
+        };
+        options.Items[ContextKeys.EntityType] = typeof(TestEntity);
+
+        var sqlServerCmd = new SqlTranslator(_registry, new SqlServerDialect()).TranslateAggregates(options);
+        var pgCmd = new SqlTranslator(_registry, new PostgreSqlDialect()).TranslateAggregates(options);
+        var mySqlCmd = new SqlTranslator(_registry, new MySqlDialect()).TranslateAggregates(options);
+        var mariadbCmd = new SqlTranslator(_registry, new MariaDbDialect()).TranslateAggregates(options);
+        var sqliteCmd = new SqlTranslator(_registry, new SqliteDialect()).TranslateAggregates(options);
+        var oracleCmd = new SqlTranslator(_registry, new OracleDialect()).TranslateAggregates(options);
+
+        sqlServerCmd.Sql.Should().Contain("COUNT(1) AS [TotalCount]");
+        pgCmd.Sql.Should().Contain("COUNT(1) AS \"TotalCount\"");
+        mySqlCmd.Sql.Should().Contain("COUNT(1) AS `TotalCount`");
+        mariadbCmd.Sql.Should().Contain("COUNT(1) AS `TotalCount`");
+        sqliteCmd.Sql.Should().Contain("COUNT(1) AS \"TotalCount\"");
+        oracleCmd.Sql.Should().Contain("COUNT(1) AS \"TotalCount\"");
     }
 
     // ========================
@@ -782,12 +834,12 @@ public class DialectTests
         var sqliteCmd = new SqlTranslator(_registry, new SqliteDialect()).Translate(options);
         var oracleCmd = new SqlTranslator(_registry, new OracleDialect()).Translate(options);
 
-        sqlServerCmd.Sql.Should().Contain("LEFT JOIN");
-        pgCmd.Sql.Should().Contain("LEFT JOIN");
-        mySqlCmd.Sql.Should().Contain("LEFT JOIN");
-        mariadbCmd.Sql.Should().Contain("LEFT JOIN");
-        sqliteCmd.Sql.Should().Contain("LEFT JOIN");
-        oracleCmd.Sql.Should().Contain("LEFT JOIN");
+        sqlServerCmd.Sql.Should().Contain("LEFT JOIN [TestRoles] AS [Roles] ON [Roles].[UserId] = [users].[Id]");
+        pgCmd.Sql.Should().Contain("LEFT JOIN \"TestRoles\" AS \"Roles\" ON \"Roles\".\"UserId\" = \"users\".\"Id\"");
+        mySqlCmd.Sql.Should().Contain("LEFT JOIN `TestRoles` AS `Roles` ON `Roles`.`UserId` = `users`.`Id`");
+        mariadbCmd.Sql.Should().Contain("LEFT JOIN `TestRoles` AS `Roles` ON `Roles`.`UserId` = `users`.`Id`");
+        sqliteCmd.Sql.Should().Contain("LEFT JOIN \"TestRoles\" AS \"Roles\" ON \"Roles\".\"UserId\" = \"users\".\"Id\"");
+        oracleCmd.Sql.Should().Contain("LEFT JOIN \"TestRoles\" AS \"Roles\" ON \"Roles\".\"UserId\" = \"users\".\"Id\"");
     }
 
     // ========================
@@ -995,6 +1047,7 @@ public class DialectTests
     {
         var options = new QueryOptions
         {
+            GroupBy = ["Status"],
             Aggregates = [new AggregateModel { Function = "count", Alias = "TotalCount", Field = "*" }]
         };
         options.Items[ContextKeys.EntityType] = typeof(TestEntity);

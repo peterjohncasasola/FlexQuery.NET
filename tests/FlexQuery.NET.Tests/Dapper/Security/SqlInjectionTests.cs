@@ -266,6 +266,7 @@ public class SqlInjectionTests
     {
         var options = new QueryOptions
         {
+            GroupBy = ["Id"],
             Aggregates = { new AggregateModel { Function = "sum", Field = "Price", Alias = "Total" } },
             Paging = { Disabled = true }
         };
@@ -282,6 +283,7 @@ public class SqlInjectionTests
     {
         var options = new QueryOptions
         {
+            GroupBy = ["Id"],
             Aggregates = { new AggregateModel { Function = "count", Field = "Id", Alias = "Cnt); DROP TABLE Users;--" } },
             Paging = { Disabled = true }
         };
@@ -291,6 +293,21 @@ public class SqlInjectionTests
 
         command.Sql.Should().Contain("AS [Cnt); DROP TABLE Users;--]");
         // Properly quoted - the entire alias is treated as identifier, not SQL
+    }
+
+    [Fact]
+    public void Should_Quote_Aggregate_Fields_In_TranslateAggregates()
+    {
+        var options = new QueryOptions
+        {
+            Aggregates = { new AggregateModel { Function = "sum", Field = "Price", Alias = "Total" } },
+            Paging = { Disabled = true }
+        };
+        options.Items[ContextKeys.EntityType] = typeof(TestEntity);
+
+        var command = _translator.TranslateAggregates(options);
+
+        command.Sql.Should().Contain("SUM([Price]) AS [Total]");
     }
 
     // ==================== NAVIGATION/INCLUDE INJECTION ====================

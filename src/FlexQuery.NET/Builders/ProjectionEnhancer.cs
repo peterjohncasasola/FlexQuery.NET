@@ -1,5 +1,6 @@
 using System.Linq.Expressions;
 using System.Reflection;
+using FlexQuery.NET.Expressions;
 using FlexQuery.NET.Models;
 
 namespace FlexQuery.NET.Builders;
@@ -9,10 +10,7 @@ namespace FlexQuery.NET.Builders;
 /// </summary>
 internal static class ProjectionEnhancer
 {
-    private static readonly MethodInfo _queryableWhere2 =
-        typeof(Queryable).GetMethods()
-            .First(m => m.Name == nameof(Queryable.Where)
-                        && m.GetParameters().Length == 2);
+    private static readonly MethodInfo QueryableWhere = ExpressionMethodCache.QueryableWhereSimple();
 
     /// <summary>
     /// If <paramref name="collectionFilter"/> can be translated into an element predicate,
@@ -30,7 +28,7 @@ internal static class ProjectionEnhancer
         var predicate = BuildPredicateLambda(elementType, options.CloneWithFilter(collectionFilter));
         if (predicate is null) return sourceQueryable;
 
-        var whereMethod = _queryableWhere2.MakeGenericMethod(elementType);
+        var whereMethod = QueryableWhere.MakeGenericMethod(elementType);
 
         return Expression.Call(null, whereMethod, sourceQueryable, predicate);
     }

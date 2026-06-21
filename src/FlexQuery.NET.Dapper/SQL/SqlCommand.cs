@@ -11,6 +11,9 @@ public sealed class SqlCommand
     /// <summary>The parameters for the SQL command.</summary>
     public IReadOnlyDictionary<string, object?> Parameters { get; init; } = new Dictionary<string, object?>();
 
+    /// <summary>List of navigation paths used for flat projection (Flat/FlatMixed mode).</summary>
+    public List<string>? FlatJoins { get; init; }
+
     /// <summary>Creates an empty SQL command.</summary>
     public static SqlCommand Empty { get; } = new() { Sql = string.Empty };
 }

@@ -32,17 +32,28 @@ jobs:
     - name: 📦 Pack NuGet
       run: dotnet pack --configuration Release --no-build -o ./nupkg
 
-    - name: 📝 Generate Release Notes
-      id: git-cliff
-      uses: orhun/git-cliff-action@v4
-      with:
-        config: cliff.toml
-        args: --latest --tag ${{ github.ref_name }}
+    - name: 🔍 Resolve Release Notes
+      id: resolve-notes
+      shell: bash
+      run: |
+        # Define the expected path for version-specific release notes based on the tag
+        NOTES_FILE="docs/release-notes/${{ github.ref_name }}.md"
+        
+        # Check if the specific release notes file exists
+        if [ -f "$NOTES_FILE" ]; then
+          echo "Found version-specific release notes: $NOTES_FILE"
+          echo "notes_file=$NOTES_FILE" >> "$GITHUB_OUTPUT"
+        else
+          echo "Version-specific release notes not found at $NOTES_FILE."
+          echo "Falling back to CHANGELOG.md."
+          echo "notes_file=CHANGELOG.md" >> "$GITHUB_OUTPUT"
+        fi
 
     - name: 🚀 Create GitHub Release
       uses: softprops/action-gh-release@v2
       with:
-        body: ${{ steps.git-cliff.outputs.content }}
+        # Use body_path to read the release description from the resolved file
+        body_path: ${{ steps.resolve-notes.outputs.notes_file }}
         files: ./nupkg/*.nupkg
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

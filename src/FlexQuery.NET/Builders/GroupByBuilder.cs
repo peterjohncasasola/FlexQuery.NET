@@ -1,5 +1,6 @@
 using System.Linq.Expressions;
 using System.Reflection;
+using FlexQuery.NET.Expressions;
 using FlexQuery.NET.Helpers;
 using FlexQuery.NET.Models;
 using FlexQuery.NET.Parsers;
@@ -9,25 +10,11 @@ namespace FlexQuery.NET.Builders;
 
 internal static class GroupByBuilder
 {
-    private static readonly MethodInfo QueryableGroupBy = typeof(Queryable).GetMethods()
-        .Single(m => m.Name == nameof(Queryable.GroupBy)
-                     && m.IsGenericMethodDefinition
-                     && m.GetGenericArguments().Length == 2
-                     && m.GetParameters().Length == 2);
+    private static readonly MethodInfo QueryableGroupBy = ExpressionMethodCache.QueryableGroupBy();
 
-    private static readonly MethodInfo QueryableSelect = typeof(Queryable).GetMethods()
-        .Single(m => m.Name == nameof(Queryable.Select)
-                     && m.IsGenericMethodDefinition
-                     && m.GetGenericArguments().Length == 2
-                     && m.GetParameters().Length == 2
-                     && GetFuncArity(m.GetParameters()[1].ParameterType) == 2);
+    private static readonly MethodInfo QueryableSelect = ExpressionMethodCache.QueryableSelectSimple();
 
-    private static readonly MethodInfo QueryableWhere = typeof(Queryable).GetMethods()
-        .Single(m => m.Name == nameof(Queryable.Where)
-                     && m.IsGenericMethodDefinition
-                     && m.GetGenericArguments().Length == 1
-                     && m.GetParameters().Length == 2
-                     && GetFuncArity(m.GetParameters()[1].ParameterType) == 2);
+    private static readonly MethodInfo QueryableWhere = ExpressionMethodCache.QueryableWhereSimple();
 
     public static IQueryable<object> Apply<T>(IQueryable<T> query, QueryOptions options)
     {
@@ -197,9 +184,7 @@ internal static class GroupByBuilder
 
         if (fn == "count")
         {
-            var countMethod = typeof(Enumerable).GetMethods()
-                .Single(m => m.Name == nameof(Enumerable.Count) && m.GetParameters().Length == 1)
-                .MakeGenericMethod(sourceType);
+            var countMethod = ExpressionMethodCache.EnumerableCount(sourceType);
             return Expression.Call(countMethod, grouping);
         }
 
@@ -219,23 +204,23 @@ internal static class GroupByBuilder
 
         var selector = Expression.Lambda(selectorBody, item);
 
-        if (fn is not ("sum" or "avg")) return null;
+        if (fn is "min" or "max")
+        {
+            var genericMethod = fn == "min"
+                ? ExpressionMethodCache.EnumerableMinWithSelector(sourceType, selectorBody.Type)
+                : ExpressionMethodCache.EnumerableMaxWithSelector(sourceType, selectorBody.Type);
+            return Expression.Call(genericMethod, grouping, selector);
+        }
 
-        var aggregateMethod = typeof(Enumerable).GetMethods()
-            .Where(m => m.Name.Equals(fn, StringComparison.OrdinalIgnoreCase)
-                        && m.GetParameters().Length == 2)
-            .FirstOrDefault(m =>
-            {
-                if (!m.IsGenericMethodDefinition) return false;
-                var paramType = m.GetParameters()[1].ParameterType;
-                if (!paramType.IsGenericType) return false;
-                var args = paramType.GetGenericArguments();
-                return args.Length == 2 && args[1] == selectorBody.Type;
-            });
+        if (fn is "sum" or "avg" or "average")
+        {
+            var genericMethod = fn is "avg" or "average"
+                ? ExpressionMethodCache.EnumerableAverageWithSelector(sourceType, selectorBody.Type)
+                : ExpressionMethodCache.EnumerableSumWithSelector(sourceType, selectorBody.Type);
+            return Expression.Call(genericMethod, grouping, selector);
+        }
 
-        if (aggregateMethod is null) return null;
-        var genericMethod = aggregateMethod.MakeGenericMethod(sourceType);
-        return Expression.Call(genericMethod, grouping, selector);
+        return null;
     }
 
     private static bool TryBuildMemberAccess(Expression root, Type rootType, string path, QueryOptions options, out Expression access)
@@ -260,12 +245,5 @@ internal static class GroupByBuilder
         var last = path.Split('.', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).LastOrDefault() ?? path;
         return string.Concat(last.Where(ch => ch != '_'));
     }
-
-    private static int GetFuncArity(Type expressionType)
-    {
-        if (!expressionType.IsGenericType) return 0;
-        var wrapped = expressionType.GetGenericArguments().FirstOrDefault();
-        if (wrapped is null || !wrapped.IsGenericType) return 0;
-        return wrapped.GetGenericArguments().Length;
-    }
+    
 }

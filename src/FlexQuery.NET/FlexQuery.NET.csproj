@@ -53,6 +53,8 @@
   <ItemGroup>
     <InternalsVisibleTo Include="FlexQuery.NET.AspNetCore" />
     <InternalsVisibleTo Include="FlexQuery.NET.Dapper" />
+    <InternalsVisibleTo Include="FlexQuery.NET.AgGrid" />
+    <InternalsVisibleTo Include="FlexQuery.NET.EFCore" />
   </ItemGroup>
   
 </Project>

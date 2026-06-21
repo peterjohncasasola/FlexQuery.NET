@@ -90,19 +90,57 @@ public static class QueryableExtensions
 
     }
 
+    /// <summary>
+    /// Parses a <see cref="QueryOptions"/>, validates it against server rules,
+    /// and applies it to the query to return a paged result set.
+    /// </summary>
+    /// <param name="query">The source queryable.</param>
+    /// <param name="options">The query options.</param>
+    /// <param name="configure">Optional configuration for server-side security and execution rules.</param>
+    public static QueryResult<object> FlexQuery<T>(
+        this IQueryable<T> query,
+        QueryOptions options,
+        Action<QueryExecutionOptions>? configure = null)
+    {
+        var exec = new QueryExecutionOptions();
+        configure?.Invoke(exec);
+
+        options.ValidateOrThrow<T>(exec);
+
+        var hasProjection = options.HasProjection();
+
+        return query.ApplyFlexQuery(options, hasProjection);
+
+    }
+
     private static QueryResult<object> ApplyFlexQuery<T>(this IQueryable<T> query, QueryOptions options, bool hasProjection)
     {
         var filtered = ApplyFilterAndSort(query, options);
         var total = filtered.TryGetTotalCount(options);
+
+        Dictionary<string, Dictionary<string, object>>? grandTotals = null;
+
+        if (options.Aggregates.Count > 0 &&
+            (options.GroupBy == null || options.GroupBy.Count == 0))
+        {
+            var aggregateQuery = GroupByBuilder.Apply(filtered, options);
+
+            var aggRow = aggregateQuery.FirstOrDefault();
+
+            grandTotals = AggregateResultBuilder.Build(
+                aggRow,
+                options.Aggregates);
+        }
+
         filtered = QueryBuilder.ApplyPaging(filtered, options);
 
         if (hasProjection)
         {
             var data = QueryBuilder.ApplySelect(filtered, options).ToList();
-            return options.BuildQueryResult(data, total); // QueryResult<object>
+            return options.BuildQueryResult(data, total, grandTotals); // QueryResult<object>
         }
 
         //convert from QueryResult<T> to QueryResult<object> by treating each T as an object (no projection)
-        return options.BuildQueryResult(filtered.ToList(), total).ToObjectResult();
+        return options.BuildQueryResult(filtered.ToList(), total, grandTotals).ToObjectResult();
     }
 }

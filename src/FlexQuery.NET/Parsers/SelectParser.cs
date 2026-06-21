@@ -11,7 +11,7 @@ namespace FlexQuery.NET.Parsers;
 internal static class SelectParser
 {
     private static readonly Regex SelectAggregatePattern = new(
-        @"^(?:(?<fn>sum|count|avg)\((?<field>[A-Za-z_][A-Za-z0-9_\.]*)?\)|(?<field2>[A-Za-z_][A-Za-z0-9_\.]*)\.(?<fn2>sum|count|avg)\(\))$",
+        @"^(?:(?<fn>sum|count|avg|average|min|max)\((?<field>[A-Za-z_][A-Za-z0-9_\.]*)?\)|(?<field2>[A-Za-z_][A-Za-z0-9_\.]*)\.(?<fn2>sum|count|avg|average|min|max)\(\))$",
         RegexOptions.Compiled | RegexOptions.IgnoreCase);
 
     /// <summary>
@@ -41,6 +41,8 @@ internal static class SelectParser
             var fn = match.Groups[QueryOptionKeys.Fn].Success
                 ? match.Groups[QueryOptionKeys.Fn].Value.ToLowerInvariant()
                 : match.Groups["fn2"].Value.ToLowerInvariant();
+
+            if (fn == "average") fn = "avg";
 
             var aggregateField = match.Groups[QueryOptionKeys.Field].Success
                 ? match.Groups[QueryOptionKeys.Field].Value

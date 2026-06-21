@@ -2,6 +2,7 @@ using FlexQuery.NET.Dapper.Sql.Ast;
 using FlexQuery.NET.Dapper.Dialects;
 using FlexQuery.NET.Dapper.Mapping;
 using FlexQuery.NET.Dapper.Mapping.Metadata;
+using FlexQuery.NET.Models;
 
 namespace FlexQuery.NET.Dapper.Sql.Translators;
 
@@ -14,7 +15,7 @@ public class SqlExistsTranslator(ISqlDialect dialect)
     /// Translates an ANY condition into an EXISTS subquery.
     /// </summary>
     /// <summary>Translates an AnyExpressionNode into an EXISTS subquery fragment.</summary>
-    public string TranslateAny(AnyExpressionNode node, IEntityMapping mapping, Func<Models.FilterGroup, string> filterBuilder, IMappingRegistry registry)
+    public string TranslateAny(AnyExpressionNode node, IEntityMapping mapping, Func<FilterGroup, string> filterBuilder, IMappingRegistry registry)
     {
         var rel = mapping.GetRelationship(node.NavigationProperty);
         if (rel == null) return string.Empty;
@@ -34,7 +35,7 @@ public class SqlExistsTranslator(ISqlDialect dialect)
     /// Translates an ALL condition into a NOT EXISTS subquery.
     /// </summary>
     /// <summary>Translates an AllExpressionNode into a NOT EXISTS subquery fragment.</summary>
-    public string TranslateAll(AllExpressionNode node, IEntityMapping mapping, Func<Models.FilterGroup, string> filterBuilder, IMappingRegistry registry)
+    public string TranslateAll(AllExpressionNode node, IEntityMapping mapping, Func<FilterGroup, string> filterBuilder, IMappingRegistry registry)
     {
         var rel = mapping.GetRelationship(node.NavigationProperty);
         if (rel == null) return string.Empty;

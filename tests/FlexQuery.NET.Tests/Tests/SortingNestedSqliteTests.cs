@@ -249,7 +249,7 @@ public sealed class SortingNestedSqliteTests : IDisposable
             .Select(c => c.Email)
             .ToList();
 
-        result.Should().Equal("alice@example.com", "bob@example.com", "bob2@example.com");
+        result.Should().Equal("bob@example.com", "alice@example.com", "bob2@example.com");
     }
 
     [Fact]

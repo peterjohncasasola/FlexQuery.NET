@@ -11,7 +11,7 @@ namespace FlexQuery.NET.Parsers;
 internal static class HavingParser
 {
     private static readonly Regex HavingPattern = new(
-        @"^(?<fn>sum|count|avg)(?:\((?<field>[A-Za-z_][A-Za-z0-9_\.]*)?\)|:(?<field2>[A-Za-z_][A-Za-z0-9_\.]*)):(?<op>[A-Za-z_][A-Za-z0-9_]*):(?<value>.+)$",
+        @"^(?<fn>sum|count|avg|average|min|max)(?:\((?<field>[A-Za-z_][A-Za-z0-9_\.]*)?\)|:(?<field2>[A-Za-z_][A-Za-z0-9_\.]*)):(?<op>[A-Za-z_][A-Za-z0-9_]*):(?<value>.+)$",
         RegexOptions.Compiled | RegexOptions.IgnoreCase);
 
     /// <summary>
@@ -26,6 +26,7 @@ internal static class HavingParser
         if (!match.Success) return null;
 
         var fn = match.Groups[QueryOptionKeys.Fn].Value.ToLowerInvariant();
+        if (fn == "average") fn = "avg";
         var field = match.Groups[QueryOptionKeys.Field].Success 
             ? match.Groups[QueryOptionKeys.Field].Value 
             : (match.Groups[QueryOptionKeys.Field2].Success ? match.Groups[QueryOptionKeys.Field2].Value : null);
