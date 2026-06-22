@@ -187,10 +187,10 @@ public class SalesController : ControllerBase
     public SalesController(IDbConnection db) => _db = db;
 
     [HttpPost("grid")]
-    public async Task<IActionResult> GetSalesData([FromBody] JsonElement request)
+    public async Task<IActionResult> GetSalesData([FromBody] AgGridRequest request)
     {
         // 1. Parse the AG Grid payload
-        var options = AgGridQueryOptionsParser.Parse(request);
+        var options = request.ToQueryOptions();
 
         // 2. Execute with Dapper
         var result = await ((DbConnection)_db).FlexQueryAsync<SalesRecord>(options, opts =>

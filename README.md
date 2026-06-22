@@ -81,13 +81,11 @@ public async Task<IActionResult> GetUsersDapper([FromQuery] FlexQueryParameters 
 `FlexQuery.NET.Adapters.AgGrid` parses AG Grid's Enterprise Server-Side Row Model JSON payloads natively, translating pagination, filtering, sorting, row grouping, and aggregations into FlexQuery operations.
 
 ```csharp
-using FlexQuery.NET.Adapters.AgGrid.Parsers;
-
 [HttpPost("grid")]
-public async Task<IActionResult> GetGridData([FromBody] JsonElement agGridPayload)
+public async Task<IActionResult> GetGridData([FromBody] AgGridRequest request)
 {
     // 1. Parse AG Grid request into canonical QueryOptions
-    var options = AgGridQueryOptionsParser.Parse(agGridPayload);
+    var options = request.ToQueryOptions();
 
     // 2. Execute via EF Core or Dapper
     var result = await _context.Users.FlexQueryAsync<User>(options, opts =>
