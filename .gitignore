@@ -53,6 +53,11 @@ bld/
 # (https://github.com/github/gitignore/pull/3736)
 #!**/[Bb]in/*.refresh
 
+# Ignore all DLLs in build output directories
+**/[Bb]in/**/*.dll
+**/[Oo]bj/**/*.dll
+*.pdb
+
 # Visual Studio 2015/2017 cache/options directory
 .vs/
 # Uncomment if you have tasks that create the project's static files in wwwroot
@@ -427,3 +432,33 @@ FodyWeavers.xsd
 *.msix
 *.msm
 *.msp
+
+# Additional .NET specific patterns (enhanced coverage)
+**/bin/**/*.exe
+**/obj/**/*.exe
+
+# Test results
+TestResults/
+*.coverage
+*.coveragexml
+coverage.json
+coverage.xml
+
+# Rider IDE (already covered above with .idea/)
+*.sln.iml
+
+# macOS
+.DS_Store
+*.swp
+*.swo
+
+# Temporary files
+*.tmp
+*.temp
+*.log
+*.cache
+
+# Database files
+*.db
+*.sqlite
+*.sqlite3

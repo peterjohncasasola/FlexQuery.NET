@@ -12,7 +12,7 @@ env:
   DOTNET_VERSION: '8.0.x'
   SOLUTION_PATH: 'FlexQuery.NET.slnx'
   CORE_PROJECT_PATH: 'src/FlexQuery.NET/FlexQuery.NET.csproj'
-  EFCORE_PROJECT_PATH: 'src/FlexQuery.NET.EFCore/FlexQuery.NET.EFCore.csproj'
+  EFCORE_PROJECT_PATH: 'src/FlexQuery.NET.EntityFrameworkCore/FlexQuery.NET.EntityFrameworkCore.csproj'
   ASPNETCORE_PROJECT_PATH: 'src/FlexQuery.NET.AspNetCore/FlexQuery.NET.AspNetCore.csproj'
 
 jobs:
