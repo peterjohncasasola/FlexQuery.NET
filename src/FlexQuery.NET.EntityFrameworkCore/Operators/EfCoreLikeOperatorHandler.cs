@@ -3,7 +3,7 @@ using FlexQuery.NET.Constants;
 using FlexQuery.NET.Operators;
 using Microsoft.EntityFrameworkCore;
 
-namespace FlexQuery.NET.EFCore.Operators;
+namespace FlexQuery.NET.EntityFrameworkCore.Operators;
 
 /// <summary>
 /// EF Core LIKE implementation backed by EF.Functions.Like.

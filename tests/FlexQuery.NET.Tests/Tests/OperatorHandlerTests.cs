@@ -1,6 +1,6 @@
 using FlexQuery.NET.Constants;
 using FlexQuery.NET;
-using FlexQuery.NET.EFCore;
+using FlexQuery.NET.EntityFrameworkCore;
 using FlexQuery.NET.Models;
 using FlexQuery.NET.Operators;
 using FlexQuery.NET.Tests.Fixtures;

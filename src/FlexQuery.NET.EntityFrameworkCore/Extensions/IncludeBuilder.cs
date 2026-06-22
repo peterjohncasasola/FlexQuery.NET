@@ -5,7 +5,7 @@ using FlexQuery.NET.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Query;
 
-namespace FlexQuery.NET.EFCore;
+namespace FlexQuery.NET.EntityFrameworkCore;
 
 /// <summary>
 /// Translates a list of <see cref="IncludeNode"/> trees into EF Core

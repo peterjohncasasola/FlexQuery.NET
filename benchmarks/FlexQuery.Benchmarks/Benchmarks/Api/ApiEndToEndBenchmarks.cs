@@ -3,7 +3,7 @@ using FlexQuery.Benchmarks.Abstractions;
 using FlexQuery.Benchmarks.Models;
 using FlexQuery.NET.AspNetCore.Extensions;
 using FlexQuery.NET;
-using FlexQuery.NET.EFCore;
+using FlexQuery.NET.EntityFrameworkCore;
 using FlexQuery.Benchmarks.Infrastructure;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;

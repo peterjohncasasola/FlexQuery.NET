@@ -1,11 +1,13 @@
 <Solution>
   <Folder Name="/src/">
-    <Project Path="src/FlexQuery.NET.EFCore/FlexQuery.NET.EFCore.csproj" />
+    <Project Path="src/FlexQuery.NET.EntityFrameworkCore/FlexQuery.NET.EntityFrameworkCore.csproj" />
     <Project Path="src/FlexQuery.NET/FlexQuery.NET.csproj" />
     <Project Path="src/FlexQuery.NET.AspNetCore/FlexQuery.NET.AspNetCore.csproj" />
     <Project Path="src/FlexQuery.NET.Dapper/FlexQuery.NET.Dapper.csproj" />
-    <Project Path="src/FlexQuery.NET.MiniOData/FlexQuery.NET.MiniOData.csproj" />
-    <Project Path="src/FlexQuery.NET.AgGrid/FlexQuery.NET.AgGrid.csproj" />
+    <Project Path="src/FlexQuery.NET.Parsers.MiniOData/FlexQuery.NET.Parsers.MiniOData.csproj" />
+    <Project Path="src/FlexQuery.NET.Adapters.AgGrid/FlexQuery.NET.Adapters.AgGrid.csproj" />
+    <Project Path="src/FlexQuery.NET.Parsers.Jql/FlexQuery.NET.Parsers.Jql.csproj" />
+    <Project Path="src/FlexQuery.NET.Adapters.Kendo/FlexQuery.NET.Adapters.Kendo.csproj" />
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/FlexQuery.NET.Tests/FlexQuery.NET.Tests.csproj" />

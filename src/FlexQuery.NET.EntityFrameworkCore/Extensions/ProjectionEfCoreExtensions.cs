@@ -3,7 +3,7 @@ using FlexQuery.NET.Builders;
 using FlexQuery.NET.Models;
 using FlexQuery.NET.Parsers;
 
-namespace FlexQuery.NET.EFCore;
+namespace FlexQuery.NET.EntityFrameworkCore;
 
 /// <summary>
 /// EF Core extensions for SQL preview and projection explain functionality.

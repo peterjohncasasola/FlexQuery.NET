@@ -1,9 +1,9 @@
 using System.Threading;
-using FlexQuery.NET.EFCore.Operators;
+using FlexQuery.NET.EntityFrameworkCore.Operators;
 using FlexQuery.NET.Models;
 using FlexQuery.NET.Operators;
 
-namespace FlexQuery.NET.EFCore;
+namespace FlexQuery.NET.EntityFrameworkCore;
 
 /// <summary>
 /// Opt-in registration for EF Core operator handlers.

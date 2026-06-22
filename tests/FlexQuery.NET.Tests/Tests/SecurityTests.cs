@@ -1,5 +1,5 @@
 using FlexQuery.NET;
-using FlexQuery.NET.EFCore;
+using FlexQuery.NET.EntityFrameworkCore;
 using FlexQuery.NET.Models;
 using FlexQuery.NET.Parsers;
 using FlexQuery.NET.Parsers.Jql;

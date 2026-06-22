@@ -26,7 +26,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\FlexQuery.NET\FlexQuery.NET.csproj" />
-    <ProjectReference Include="..\..\src\FlexQuery.NET.EFCore\FlexQuery.NET.EFCore.csproj" />
+    <ProjectReference Include="..\..\src\FlexQuery.NET.EntityFrameworkCore\FlexQuery.NET.EntityFrameworkCore.csproj" />
     <ProjectReference Include="..\..\src\FlexQuery.NET.AspNetCore\FlexQuery.NET.AspNetCore.csproj" />
   </ItemGroup>
 

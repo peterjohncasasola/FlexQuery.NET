@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore;
 using System.ComponentModel;
 using System.Threading;
 
-namespace FlexQuery.NET.EFCore;
+namespace FlexQuery.NET.EntityFrameworkCore;
 
 /// <summary>
 /// EF Core-specific async extensions for materializing query results.

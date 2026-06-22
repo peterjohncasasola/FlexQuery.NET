@@ -31,7 +31,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\FlexQuery.NET\FlexQuery.NET.csproj" />
-    <ProjectReference Include="..\FlexQuery.NET.EFCore\FlexQuery.NET.EFCore.csproj" />
+    <ProjectReference Include="..\FlexQuery.NET.EntityFrameworkCore\FlexQuery.NET.EntityFrameworkCore.csproj" />
   </ItemGroup>
 
   <ItemGroup>

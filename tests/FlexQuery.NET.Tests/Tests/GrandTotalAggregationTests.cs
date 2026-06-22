@@ -1,7 +1,7 @@
 using FlexQuery.NET;
 using FlexQuery.NET.Parsers;
 using FlexQuery.NET.Tests.Fixtures;
-using FlexQuery.NET.EFCore;
+using FlexQuery.NET.EntityFrameworkCore;
 using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Primitives;

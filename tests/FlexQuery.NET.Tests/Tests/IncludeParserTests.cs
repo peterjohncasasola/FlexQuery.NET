@@ -1,3 +1,4 @@
+using System;
 using FlexQuery.NET.Parsers;
 using FluentAssertions;
 using Xunit;
@@ -91,5 +92,39 @@ public class IncludeParserTests
         var profile = result[1];
         profile.Path.Should().Be("profile");
         profile.Filter.Should().BeNull();
+    }
+
+    [Theory]
+    [InlineData("orders(Status = 'Cancelled')")]
+    [InlineData("orders(Amount > 1000)")]
+    [InlineData("orders(Status != 'Cancelled')")]
+    [InlineData("orders(Amount >= 100)")]
+    [InlineData("orders(Amount < 50)")]
+    [InlineData("orders(Amount <= 200)")]
+    [InlineData("orders(Status = 'Active' AND Amount > 100)")]
+    [InlineData("orders(Status = 'Active' OR Status = 'Pending')")]
+    [InlineData("orders(NOT Status = 'Cancelled')")]
+    [InlineData("orders(Status IN ('Active', 'Pending'))")]
+    [InlineData("orders(Status NOT IN ('Cancelled', 'Deleted'))")]
+    public void Parse_JqlSyntax_ThrowsInvalidOperationException(string input)
+    {
+        var act = () => FilteredIncludeParser.Parse(input);
+        act.Should().Throw<InvalidOperationException>()
+            .WithMessage("JQL syntax is no longer supported in filtered includes. *");
+    }
+
+    [Theory]
+    [InlineData("orders(Status:eq:Cancelled)")]
+    [InlineData("orders(Amount:gt:1000)")]
+    [InlineData("orders(Status:neq:Cancelled)")]
+    [InlineData("orders(Amount:gte:100)")]
+    [InlineData("orders(Amount:lt:50)")]
+    [InlineData("orders(Amount:lte:200)")]
+    [InlineData("orders(Status:eq:Active&Amount:gt:100)")]
+    [InlineData("orders(Status:eq:Active|Status:eq:Pending)")]
+    public void Parse_DslSyntax_DoesNotThrow(string input)
+    {
+        var act = () => FilteredIncludeParser.Parse(input);
+        act.Should().NotThrow();
     }
 }

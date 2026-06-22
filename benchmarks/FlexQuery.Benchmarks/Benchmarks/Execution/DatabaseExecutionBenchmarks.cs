@@ -1,7 +1,7 @@
 using BenchmarkDotNet.Attributes;
 using FlexQuery.Benchmarks.Infrastructure.Database;
 using FlexQuery.Benchmarks.Models;
-using FlexQuery.NET.EFCore;
+using FlexQuery.NET.EntityFrameworkCore;
 using FlexQuery.NET.Models;
 using Microsoft.EntityFrameworkCore;
 

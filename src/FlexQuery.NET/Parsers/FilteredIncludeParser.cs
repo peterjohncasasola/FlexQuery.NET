@@ -4,6 +4,40 @@ using FlexQuery.NET.Parsers.Dsl;
 
 namespace FlexQuery.NET.Parsers;
 
+internal static class JqlSyntaxDetector
+{
+    private static readonly string[] JqlPatterns =
+    [
+        @"\s*=\s*[^:=\s]",       // =  (but not := or ==)
+        @"\s*!=\s*",              // !=
+        @"\s*>\s*",               // >
+        @"\s*>=\s*",              // >=
+        @"\s*<\s*",               // <
+        @"\s*<=\s*",              // <=
+    ];
+
+    private static readonly string[] JqlKeywords =
+    [
+        " AND ", " OR ", " NOT ", " IN ",
+    ];
+
+    public static bool IsJql(string raw)
+    {
+        var upper = raw.ToUpperInvariant();
+        foreach (var kw in JqlKeywords)
+        {
+            if (upper.Contains(kw, StringComparison.Ordinal)) return true;
+        }
+
+        foreach (var pat in JqlPatterns)
+        {
+            if (Regex.IsMatch(raw, pat, RegexOptions.CultureInvariant)) return true;
+        }
+
+        return false;
+    }
+}
+
 /// <summary>
 /// Parses the <c>include</c> query-string parameter into a list of
 /// <see cref="IncludeNode"/> trees.
@@ -124,7 +158,17 @@ public static class FilteredIncludeParser
     {
         if (string.IsNullOrWhiteSpace(raw)) return null;
 
-        if (!raw.Contains(':')) return null;
+        if (!raw.Contains(':'))
+        {
+            if (JqlSyntaxDetector.IsJql(raw))
+            {
+                throw new InvalidOperationException(
+                    "JQL syntax is no longer supported in filtered includes. " +
+                    "Use FlexQuery DSL syntax instead. Example: orders(Status:eq:Cancelled)");
+            }
+
+            return null;
+        }
 
         try
         {

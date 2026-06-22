@@ -8,10 +8,10 @@
     <LangVersion>latest</LangVersion>
 
     <!-- NuGet Metadata -->
-    <PackageId>FlexQuery.NET.EFCore</PackageId>
+    <PackageId>FlexQuery.NET.EntityFrameworkCore</PackageId>
     <Authors>Peter John Casasola</Authors>
     <Company>Peter John Casasola</Company>
-    <Product>FlexQuery.NET.EFCore</Product>
+    <Product>FlexQuery.NET.EntityFrameworkCore</Product>
 
     <Description>EF Core integration for FlexQuery.NET — async execution, filtered includes, projection, and pagination helpers</Description>
     <PackageTags>flexquery;dynamic;linq;iqueryable;efcore;filtering;projection;pagination</PackageTags>

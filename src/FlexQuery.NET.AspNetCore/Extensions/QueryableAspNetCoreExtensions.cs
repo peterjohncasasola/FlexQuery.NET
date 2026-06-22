@@ -1,4 +1,4 @@
-using FlexQuery.NET.EFCore;
+using FlexQuery.NET.EntityFrameworkCore;
 using FlexQuery.NET.Models;
 using Microsoft.AspNetCore.Http;
 using System.Linq;
