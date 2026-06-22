@@ -28,131 +28,110 @@ FlexQuery.NET is a lightweight and powerful dynamic query engine for .NET. It al
 
 ```bash
 dotnet add package FlexQuery.NET
-dotnet add package FlexQuery.NET.EFCore
+dotnet add package FlexQuery.NET.EntityFrameworkCore
 dotnet add package FlexQuery.NET.Dapper
 dotnet add package FlexQuery.NET.AspNetCore
-dotnet add package FlexQuery.NET.AgGrid
+dotnet add package FlexQuery.NET.Adapters.AgGrid
 ```
 
-### 2. Simple Usage
+### 2. Entity Framework Core (Default)
 
-Securely execute a dynamic query directly from your controller:
+Securely execute a dynamic query directly from your controller against an EF Core `DbContext`. The provider handles translation, pagination, and async execution automatically.
 
 ```csharp
-[HttpGet]
+[HttpGet("users")]
 public async Task<IActionResult> GetUsers([FromQuery] FlexQueryParameters parameters)
 {
-    // One-stop shop: Parsing + Validation + Execution
     var result = await _context.Users.FlexQueryAsync(parameters, options => 
     {
-        options.AllowedFields = ["Id", "Name", "Email", "Status"];
-        options.AllowOperators("Status", FilterOperators.Eq, FilterOperators.In);
+        options.AllowedFields = new HashSet<string> { "Id", "Name", "Email", "Status" };
+        options.StrictFieldValidation = true;
+        options.UseNoTracking = true; // Optimization for read-only queries
     });
 
     return Ok(result);
 }
 ```
 
-### 3. AG Grid Adapter
+### 3. Dapper & Raw SQL Integration
 
-`FlexQuery.NET.AgGrid` translates AG Grid `filterModel` and `sortModel` payloads into canonical `QueryOptions`, then validates and executes them through the same pipeline as the standard FlexQuery APIs.
-
-```csharp
-using FlexQuery.NET.AgGrid;
-using FlexQuery.NET.AgGrid.Models;
-
-[HttpPost]
-public async Task<IActionResult> GetUsers([FromBody] AgGridRequest request)
-{
-    var queryOptions = AgGridQueryOptionsParser.Parse(request);
-
-    var result = await _context.Users.FlexQueryAsync(queryOptions, options =>
-    {
-        options.AllowedFields = ["Id", "Name", "Email", "Status", "CreatedAt"];
-        options.AllowOperators("Status", FilterOperators.Eq, FilterOperators.In);
-    });
-
-    return Ok(result);
-}
-```
-
-For advanced scenarios where you need to parse before executing, the adapter parser is public and mirrors the documented manual pipeline used by `QueryOptionsParser`:
+For high-performance API endpoints or non-EF Core projects, use the Dapper provider to generate secure, dialect-aware, fully parameterized SQL queries.
 
 ```csharp
-using FlexQuery.NET.AgGrid.Parsers;
-
-var options = AgGridQueryOptionsParser.Parse(request);
-
-options.ValidateOrThrow<User>(execOptions);
-
-query = query.ApplyFilter(options);
-query = query.ApplySort(options);
-query = query.ApplyPaging(options);
-
-var data = await query.ApplySelect(options).ToListAsync();
-```
-
-### 4. Example Request
-
-```http
-GET /api/users?filter=age:gt:18&sort=createdAt:desc&page=1&pageSize=20&select=id,name,email
-```
-
-### 5. Dapper Integration & Database Dialects
-
-FlexQuery.NET provides a robust Dapper extension (`FlexQuery.NET.Dapper`) that compiles queries into secure, parameterized, and database-specific SQL.
-
-#### Automatic Dialect Resolution
-
-By default, the SQL dialect is automatically resolved from your database connection (e.g., `SqlConnection` -> `SqlServerDialect`, `NpgsqlConnection` -> `PostgreSqlDialect`).
-
-```csharp
-[HttpGet]
-public async Task<IActionResult> GetUsersDapper([FromQuery] FlexQueryParameters parameters)
-{
-    // The dialect is automatically resolved based on the provided NpgsqlConnection
-    using var connection = new NpgsqlConnection("Host=localhost;Database=mydb;");
-    
-    var result = await connection.FlexQueryAsync<UserDto>(parameters, options => 
-    {
-        options.AllowedFields = ["Id", "Name", "Email"];
-        // Dapper specific options
-        options.CommandTimeoutSeconds = 60;
-    });
-
-    return Ok(result);
-}
-```
-
-#### Explicit Dialect Configuration
-
-If you need to force a specific SQL dialect for a single query, you can configure it directly:
-
-```csharp
-using FlexQuery.NET.Dapper.Dialects;
-
-var result = await connection.FlexQueryAsync<UserDto>(parameters, options => 
-{
-    // Explicitly configure the dialect for this specific query
-    options.Dialect = new MySqlDialect(); 
-    // Supported dialects: SqlServerDialect, PostgreSqlDialect, MySqlDialect, MariaDbDialect, SqliteDialect, OracleDialect
-});
-```
-
-#### Global Dialect Configuration (Optional)
-
-If your entire application uses a single database type and you want to bypass the automatic resolution entirely, you can configure a global default dialect once at startup:
-
-```csharp
-// Program.cs or Startup.cs
 using FlexQuery.NET.Dapper;
 using FlexQuery.NET.Dapper.Dialects;
 
-// Set the global dialect once for the entire application
-DapperQueryOptions.GlobalDefaultDialect = new PostgreSqlDialect();
+[HttpGet("users")]
+public async Task<IActionResult> GetUsersDapper([FromQuery] FlexQueryParameters parameters)
+{
+    using var connection = new SqlConnection("Server=...;");    
+    // Generates parameterized SQL, handles dialects (SQL Server, Postgres, MySQL, etc.)
+    var result = await connection.FlexQueryAsync<User>(parameters, options => 
+    {
+        options.Dialect = new SqlServerDialect(); 
+        options.AllowedFields = new HashSet<string> { "Id", "Name", "Email" };
+    });
 
-// Or, provide your own custom resolver logic:
-// DapperQueryOptions.GlobalDialectResolver = new MyCustomResolver();
+    return Ok(result);
+}
+```
+
+### 4. AG Grid Adapter
+
+`FlexQuery.NET.Adapters.AgGrid` parses AG Grid's Enterprise Server-Side Row Model JSON payloads natively, translating pagination, filtering, sorting, row grouping, and aggregations into FlexQuery operations.
+
+```csharp
+using FlexQuery.NET.Adapters.AgGrid.Parsers;
+
+[HttpPost("grid")]
+public async Task<IActionResult> GetGridData([FromBody] JsonElement agGridPayload)
+{
+    // 1. Parse AG Grid request into canonical QueryOptions
+    var options = AgGridQueryOptionsParser.Parse(agGridPayload);
+
+    // 2. Execute via EF Core or Dapper
+    var result = await _context.Users.FlexQueryAsync<User>(options, opts =>
+    {
+        opts.AllowedFields = new HashSet<string> { "Id", "Name", "Status", "CreatedAt" };
+    });
+
+    // 3. Return format expected by AG Grid
+    return Ok(new { rowData = result.Data, rowCount = result.TotalCount });
+}
+```
+
+### 5. MiniOData Parser
+
+Migrating from OData? `FlexQuery.NET.Parsers.MiniOData` acts as a drop-in bridge, automatically detecting and parsing OData syntax (`$filter`, `$orderby`, `$top`, `$skip`) on the same endpoint that handles JSON and JQL queries.
+
+```csharp
+// Program.cs
+builder.Services.AddFlexQueryMiniOData();
+
+// Controller
+[HttpGet("products")]
+public async Task<IActionResult> GetProducts([FromQuery] FlexQueryParameters parameters)
+{
+    // Auto-detects OData parameters like:
+    // ?$filter=Price gt 50 and Category eq 'Electronics'&$orderby=Name desc
+    var result = await _context.Products.FlexQueryAsync(parameters);
+    return Ok(result);
+}
+```
+
+### 6. Example Query Requests
+
+FlexQuery unifies multiple formats under the same API without configuration:
+
+```http
+# Native DSL
+GET /api/users?filter=age:gt:18&sort=createdAt:desc&page=1&pageSize=20
+
+# JQL Syntax
+GET /api/users?filter=Age > 18 AND Status = 'Active'
+
+# OData Syntax (requires MiniOData package)
+GET /api/users?$filter=Age gt 18 and Status eq 'Active'
 ```
 
 ## 📚 Documentation
@@ -164,9 +143,10 @@ For detailed guides, API references, and advanced scenarios, visit our documenta
 ### Quick Links
 - [Getting Started](https://flexquery.vercel.app/guide/getting-started)
 - [Query Composition](https://flexquery.vercel.app/guide/composition)
-- [Governance & Security](https://flexquery.vercel.app/guide/security)
-- [Performance Optimization](https://flexquery.vercel.app/guide/performance-tuning)
-- [Migration Guide (v1 → v2)](https://flexquery.vercel.app/migration/v1-to-v2)
+- [Security & Field Access](https://flexquery.vercel.app/guide/security-governance)
+- [Dapper Provider](https://flexquery.vercel.app/providers/dapper/getting-started)
+- [AG Grid Integration](https://flexquery.vercel.app/adapters/ag-grid)
+- [MiniOData Parser](https://flexquery.vercel.app/adapters/miniodata)
 
 ---
 

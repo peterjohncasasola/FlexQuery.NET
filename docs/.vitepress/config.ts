@@ -35,14 +35,7 @@ export default defineConfig({
     nav: [
       { text: 'Guide', link: '/guide/getting-started' },
       { text: 'Examples', link: '/examples/basic' },
-      { text: 'Migration v1→v2', link: '/migration' },
-      {
-        text: 'Version',
-        items: [
-          { text: 'v2.x (Latest)', link: '/guide/getting-started' },
-          { text: 'v1.x (Legacy)', link: '/v1/getting-started' }
-        ]
-      },
+      { text: 'Migration v2→v3', link: '/migration/v2-to-v3' },
       {
         text: 'Links',
         items: [
@@ -59,7 +52,7 @@ export default defineConfig({
     ],
 
     sidebar: {
-      '/guide/': [
+      '/': [
         {
           text: 'Introduction',
           items: [
@@ -79,7 +72,9 @@ export default defineConfig({
             { text: 'Flattening Modes', link: '/guide/flattening' },
             { text: 'Grouping & Aggregates', link: '/guide/grouping' },
             { text: 'Include Filtering', link: '/guide/include-filtering' },
-            { text: 'Query Composition', link: '/guide/query-composition' }
+            { text: 'Query Composition', link: '/guide/query-composition' },
+            { text: 'Query Syntax', link: '/guide/query-syntax' },
+            { text: 'Query Formats', link: '/guide/query-formats' }
           ]
         },
         {
@@ -87,7 +82,34 @@ export default defineConfig({
           items: [
             { text: 'Execution Pipeline', link: '/guide/execution-pipeline' },
             { text: 'Validation', link: '/guide/validation' },
-            { text: 'Security & Field Access', link: '/guide/security' }
+            { text: 'Security & Field Access', link: '/guide/security' },
+            { text: 'Security Governance', link: '/guide/security-governance' },
+            { text: 'Field Mapping', link: '/guide/field-mapping' }
+          ]
+        },
+        {
+          text: 'Providers',
+          items: [
+            { text: 'Entity Framework Core', link: '/providers/ef-core' },
+            {
+              text: 'Dapper & SQL',
+              collapsed: true,
+              items: [
+                { text: 'Getting Started', link: '/providers/dapper/getting-started' },
+                { text: 'SQL Generation', link: '/providers/dapper/sql-generation' },
+                { text: 'Dialects', link: '/providers/dapper/dialects' },
+                { text: 'Conventions', link: '/providers/dapper/conventions' },
+                { text: 'Relationship Queries', link: '/providers/dapper/relationship-queries' }
+              ]
+            }
+          ]
+        },
+        {
+          text: 'Adapters',
+          items: [
+            { text: 'AG Grid Integration', link: '/adapters/ag-grid' },
+            { text: 'MiniOData Parser', link: '/adapters/miniodata' },
+            { text: 'Kendo UI Integration', link: '/adapters/kendo' },
           ]
         },
         {
@@ -125,11 +147,18 @@ export default defineConfig({
           ]
         },
         {
+          text: 'Architecture',
+          items: [
+            { text: 'Provider Model', link: '/guide/architecture/provider-model' }
+          ]
+        },
+        {
           text: 'Reference',
           items: [
             { text: 'Query Language', link: '/shared/query-language' },
             { text: 'Operators', link: '/shared/operators' },
-            { text: 'Migration v1 → v2', link: '/migration' }
+            { text: 'Migration v1 → v2', link: '/migration' },
+            { text: 'Migration v2 → v3', link: '/migration/v2-to-v3' }
           ]
         }
       ],

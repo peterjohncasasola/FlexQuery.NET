@@ -158,7 +158,7 @@ FlexQuery.NET auto-detects the input format:
 | Package | Purpose |
 | :--- | :--- |
 | `FlexQuery.NET` | Core library — filtering, sorting, paging, projection, validation |
-| `FlexQuery.NET.EFCore` | EF Core async execution — `FlexQueryAsync`, `ApplyFilteredIncludes` |
+| `FlexQuery.NET.EntityFrameworkCore` | EF Core async execution — `FlexQueryAsync`, `ApplyFilteredIncludes` |
 | `FlexQuery.NET.AspNetCore` | ASP.NET Core integration — `FieldAccessFilter`, `[FieldAccess]` attribute |
 
 </div>

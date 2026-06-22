@@ -3,23 +3,90 @@
 All notable changes to this project will be documented in this file.
 
 ---
+
+## [3.0.1] - 2026-06-22
+
+### Breaking Changes
+
+- **JQL parser removed from FlexQuery.NET Core:** JQL support has been extracted into the dedicated `FlexQuery.NET.Parsers.Jql` package.
+  - Install `FlexQuery.NET.Parsers.Jql` to continue using JQL filter expressions.
+  - `JqlQueryParser` is no longer available from the Core package.
+  - `QuerySyntax.Jql` has been removed.
+
+- **`FlexQuery.NET.AgGrid` → `FlexQuery.NET.Adapters.AgGrid`:**
+  - Package renamed for consistent adapter naming.
+  - Update NuGet package references, namespaces, and `using` directives.
+
+- **`FlexQuery.NET.Kendo` → `FlexQuery.NET.Adapters.Kendo`:**
+  - Package renamed for consistent adapter naming.
+  - Update NuGet package references, namespaces, and `using` directives.
+
+- **`FlexQuery.NET.EFCore` → `FlexQuery.NET.EntityFrameworkCore`:**
+  - Package and namespace renamed for clarity.
+  - Update NuGet package references and `using` directives.
+
+- **JQL fallback removed from `FilteredIncludeParser`:**
+  - Inline include filters no longer support JQL-style expressions.
+  - The following syntax is no longer supported:
+
+    ```csharp
+    orders(Status = 'Cancelled')
+    ```
+
+  - Use FlexQuery DSL syntax instead:
+
+    ```csharp
+    orders(Status:eq:Cancelled)
+    ```
+
+  - Unsupported JQL syntax now throws `InvalidOperationException`.
+
+- **Removed deprecated APIs:**
+  - `QueryRequest`
+  - `FlexQueryRequest`
+  - `ApplyValidatedQueryOptions`
+  - `ToQueryResultAsync`
+  - `ToProjectedQueryResultAsync`
+  - Other APIs previously marked `[Obsolete]`
+
+- **`JqlParser.Parse(string query)` → `JqlParser.Parse(string filter)`:**
+  - Parameter renamed to align with DSL and MiniOData terminology.
+  - Callers using named arguments must update their code.
+
+> **Note:** Although this release contains several breaking changes, it is being released as **3.0.1** because the initial **3.0.0** release had near-zero adoption and no published migration guides.
+
+### Added
+
+- **FlexQuery.NET.Parsers.Jql package:** JQL filter parser extracted from FlexQuery.NET Core into a dedicated install-on-demand package.
+
+### Changed
+
+- **`FilteredIncludeParser` behavior:** Deprecated JQL-style include filters now throw `InvalidOperationException` with a descriptive migration message instead of silently returning `null`.
+
+### Fixed
+
+- No functional fixes in this release.
+
+---
+
 ## [3.0.0] - 2026-06-20
 
 ### Added
 
-- **FlexQuery.NET.Dapper package**
-- **FlexQuery.NET.AgGrid package**
-- **FlexQuery.NET.MiniOData package**
+- **FlexQuery.NET.Dapper package:** Dapper and raw SQL provider with dialect support for SQL Server, SQLite, MySQL, and PostgreSQL.
+- **FlexQuery.NET.AgGrid package:** AG Grid Enterprise Server-Side Row Model request adapter.
+- **FlexQuery.NET.Kendo package:** Kendo UI DataSource request adapter.
+- **FlexQuery.NET.Parsers.MiniOData package:** OData-style query parameter parser (`$filter`, `$orderby`, `$select`, `$top`, `$skip`, `$expand`).
 - **Grand Total Aggregations and Having support**
-- **Non-strict validation mode** (`StrictFieldValidation`)
+- **Non-strict validation mode** (`StrictFieldValidation`): Silently removes unauthorized fields instead of throwing.
 - **Flat projection support** (`mode=flat`, `mode=flat-mixed`)
 - **DTO field mapping** via `MapField()`
-- **.NET 10 support**
+- **.NET 10 target framework support**
 
 ### Changed
 
-- **Provider-agnostic architecture**
-- **Parser pipeline refactoring**
+- **Provider-agnostic architecture:** Query engine decoupled from Entity Framework to support multiple backends.
+- **Parser pipeline refactoring:** Monolithic parser decomposed into focused parser components.
 - **Query caching and expression generation optimizations**
 
 ### Fixed

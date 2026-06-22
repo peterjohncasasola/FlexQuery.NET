@@ -10,13 +10,13 @@ Install the packages that match your stack:
 
 ```bash
 # Core library (filtering, sorting, paging, projection, validation)
-dotnet add package FlexQuery.NET --version 2.4.0
+dotnet add package FlexQuery.NET
 
 # EF Core async execution (FlexQueryAsync, ApplyFilteredIncludes)
-dotnet add package FlexQuery.NET.EFCore --version 2.4.0
+dotnet add package FlexQuery.NET.EntityFrameworkCore
 
 # ASP.NET Core integration ([FieldAccess] attribute, FieldAccessFilter)
-dotnet add package FlexQuery.NET.AspNetCore --version 2.4.0
+dotnet add package FlexQuery.NET.AspNetCore
 ```
 
 ---
@@ -27,13 +27,13 @@ dotnet add package FlexQuery.NET.AspNetCore --version 2.4.0
 
 ```bash
 # Core library (filtering, sorting, paging, projection, validation)
-dotnet add package FlexQuery.NET --version 2.4.0
+dotnet add package FlexQuery.NET
 
 # EF Core async execution (FlexQueryAsync, ApplyFilteredIncludes)
-dotnet add package FlexQuery.NET.EFCore --version 2.4.0
+dotnet add package FlexQuery.NET.EntityFrameworkCore
 
 # ASP.NET Core integration ([FieldAccess] attribute, FieldAccessFilter)
-dotnet add package FlexQuery.NET.AspNetCore --version 2.4.0
+dotnet add package FlexQuery.NET.AspNetCore
 ```
 
 ### Step 2: Configure Services
@@ -128,7 +128,7 @@ public class User
 This is the recommended production pattern using `FlexQueryAsync`:
 
 ```csharp
-using FlexQuery.NET.EFCore;
+using FlexQuery.NET.EntityFrameworkCore;
 using FlexQuery.NET.Models;
 
 [ApiController]

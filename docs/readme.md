@@ -46,7 +46,7 @@ var result = await _context.Users.FlexQueryAsync(parameters, exec =>
 
 1. **Install**
    ```bash
-   dotnet add package FlexQuery.NET.EFCore
+   dotnet add package FlexQuery.NET.EntityFrameworkCore
    ```
 
 2. **Controller Integration**
