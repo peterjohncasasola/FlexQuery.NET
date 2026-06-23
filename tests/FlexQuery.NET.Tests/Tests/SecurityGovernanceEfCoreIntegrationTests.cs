@@ -410,6 +410,27 @@ public sealed class SecurityGovernanceEfCoreIntegrationTests : IDisposable
             .Which.Message.Should().Contain("SSN");
     }
 
+
+    [Fact]
+    public void SelectTree_Removes_BlockedField_NonStrict()
+    {
+        var options = new QueryOptions();
+        options.SelectTree = new SelectionNode();
+        options.SelectTree.GetOrAddChild("SSN");
+
+        var execOptions = new QueryExecutionOptions
+        {
+            BlockedFields = ["SSN"],
+            StrictFieldValidation = false
+        };
+
+        // Non-strict: validation passes, SSN is removed from the tree
+        var result = options.Validate(typeof(GovernanceCustomer), execOptions);
+
+        options.SelectTree.Should().BeNull(
+            "SelectTree should be nullified when all children are removed in non-strict mode");
+    }
+
     // ──────────────────────────────────────────────────────────────
     //  Helpers
     // ──────────────────────────────────────────────────────────────
