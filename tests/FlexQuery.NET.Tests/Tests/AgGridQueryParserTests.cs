@@ -1,4 +1,5 @@
 using System.Text.Json;
+using FlexQuery.NET.Adapters.AgGrid;
 using FlexQuery.NET.Adapters.AgGrid.Models;
 using FlexQuery.NET.Adapters.AgGrid.Parsers;
 using FlexQuery.NET.Models;
@@ -384,7 +385,185 @@ public class AgGridQueryParserTests
         });
 
         result.GroupBy.Should().NotBeNull();
-        result.GroupBy.Should().Equal("country", "city");
+        result.GroupBy.Should().Equal("country");
+    }
+
+    [Fact]
+    public void RowGroups_WithGroupKey_MapsToNextLevelGroupingAndPrefixFilter()
+    {
+        var result = AgGridQueryOptionsParser.Parse(new AgGridRequest
+        {
+            RowGroupCols =
+            [
+                new() { Field = "category" },
+                new() { Field = "brand" }
+            ],
+            GroupKeys = ["Automotive"]
+        });
+
+        result.GroupBy.Should().Equal("brand");
+        result.Filter.Should().NotBeNull();
+        result.Filter!.Filters.Should().ContainSingle();
+        result.Filter.Filters[0].Field.Should().Be("category");
+        result.Filter.Filters[0].Operator.Should().Be(FilterOperators.Equal);
+        result.Filter.Filters[0].Value.Should().Be("Automotive");
+    }
+
+    [Fact]
+    public void RowGroups_AtLeafLevel_DisablesGroupingAndAppliesAllGroupKeyFilters()
+    {
+        var result = AgGridQueryOptionsParser.Parse(new AgGridRequest
+        {
+            RowGroupCols =
+            [
+                new() { Field = "category" },
+                new() { Field = "brand" }
+            ],
+            GroupKeys = ["Automotive", "Globex"],
+            ValueCols =
+            [
+                new() { Field = "quantity", AggFunc = "sum" }
+            ]
+        });
+
+        result.GroupBy.Should().BeNull();
+        result.Aggregates.Should().BeEmpty();
+        result.Filter.Should().NotBeNull();
+        result.Filter!.Filters.Should().HaveCount(2);
+        result.Filter.Filters.Select(f => (f.Field, f.Value)).Should().Contain(new[]
+        {
+            ("category", "Automotive"),
+            ("brand", "Globex")
+        });
+    }
+
+    [Fact]
+    public void RowGroups_FollowsRootExpandedAndLeafSsrmFlow()
+    {
+        var rowGroupCols = new List<AgGridGroupColumn>
+        {
+            new() { Field = "Category" },
+            new() { Field = "Brand" }
+        };
+
+        var root = AgGridQueryOptionsParser.Parse(new AgGridRequest
+        {
+            RowGroupCols = rowGroupCols,
+            GroupKeys = []
+        });
+
+        root.GroupBy.Should().Equal("Category");
+        root.Filter.Should().BeNull();
+
+        var expandedCategory = AgGridQueryOptionsParser.Parse(new AgGridRequest
+        {
+            RowGroupCols = rowGroupCols,
+            GroupKeys = ["Electronics"]
+        });
+
+        expandedCategory.GroupBy.Should().Equal("Brand");
+        expandedCategory.Filter!.Filters.Should().ContainSingle()
+            .Which.Should().BeEquivalentTo(new
+            {
+                Field = "Category",
+                Operator = FilterOperators.Equal,
+                Value = "Electronics"
+            });
+
+        var leaf = AgGridQueryOptionsParser.Parse(new AgGridRequest
+        {
+            RowGroupCols = rowGroupCols,
+            GroupKeys = ["Electronics", "Acme"]
+        });
+
+        leaf.GroupBy.Should().BeNull();
+        leaf.Filter!.Filters.Select(filter => (filter.Field, filter.Value)).Should().Equal(
+            ("Category", "Electronics"),
+            ("Brand", "Acme"));
+    }
+
+    [Theory]
+    [InlineData("sum", "sum", "quantitySum")]
+    [InlineData("avg", "avg", "quantityAvg")]
+    [InlineData("average", "avg", "quantityAvg")]
+    [InlineData("min", "min", "quantityMin")]
+    [InlineData("max", "max", "quantityMax")]
+    [InlineData("count", "count", "quantityCount")]
+    public void Aggregates_PreserveCanonicalFunctionAndAlias(
+        string agGridFunction,
+        string expectedFunction,
+        string expectedAlias)
+    {
+        var result = AgGridQueryOptionsParser.Parse(new AgGridRequest
+        {
+            RowGroupCols = [new() { Field = "category" }],
+            ValueCols =
+            [
+                new() { Field = "quantity", AggFunc = agGridFunction }
+            ]
+        });
+
+        result.Aggregates.Should().ContainSingle();
+        result.Aggregates[0].Function.Should().Be(expectedFunction);
+        result.Aggregates[0].Alias.Should().Be(expectedAlias);
+    }
+
+    [Fact]
+    public void ApplyAgGridRequest_LeafRequestClearsStaleGroupingAndAggregates()
+    {
+        var existing = new QueryOptions
+        {
+            GroupBy = ["category"],
+            Aggregates =
+            [
+                new AggregateModel
+                {
+                    Field = "quantity",
+                    Function = "sum",
+                    Alias = "quantitySum"
+                }
+            ]
+        };
+
+        existing.ApplyAgGridRequest(new AgGridRequest
+        {
+            RowGroupCols =
+            [
+                new() { Field = "category" },
+                new() { Field = "brand" }
+            ],
+            GroupKeys = ["Electronics", "Acme"],
+            ValueCols =
+            [
+                new() { Field = "quantity", AggFunc = "sum" }
+            ]
+        });
+
+        existing.GroupBy.Should().BeNull();
+        existing.Aggregates.Should().BeEmpty();
+    }
+
+    [Fact]
+    public void ApplyAgGridRequest_ReplacesExistingGroupingAndAggregates()
+    {
+        var existing = new QueryOptions
+        {
+            GroupBy = ["oldGroup"],
+            Aggregates =
+            [
+                new AggregateModel { Field = "oldValue", Function = "max", Alias = "oldValueMax" }
+            ]
+        };
+
+        existing.ApplyAgGridRequest(new AgGridRequest
+        {
+            RowGroupCols = [new() { Field = "category" }],
+            ValueCols = [new() { Field = "quantity", AggFunc = "sum" }]
+        });
+
+        existing.GroupBy.Should().Equal("category");
+        existing.Aggregates.Should().ContainSingle();
+        existing.Aggregates[0].Alias.Should().Be("quantitySum");
     }
 
     [Fact]
@@ -404,7 +583,7 @@ public class AgGridQueryParserTests
             { "field": "year" }
           ],
           "pivotMode": true,
-          "groupKeys": ["USA", "California"]
+          "groupKeys": []
         }
         """;
 
@@ -421,7 +600,7 @@ public class AgGridQueryParserTests
         // Let's also verify that we can manually parse it or just check mapped options since we can't inspect the private deserialized object directly from Parse(JsonElement) output.
         // But wait! We can write a test that verifies the manual deserialization if we expose/make it testable, or since AgGridQueryOptionsParser.Parse(JsonElement) calls it,
         // we can see that it parsed correctly because request had paging and grouping.
-        // Let's also verify that Pivot/GroupKeys do not pollute QueryOptions.
+        // Pivot fields are out of scope and do not pollute QueryOptions.
         request.Aggregates.Should().ContainSingle();
         request.Aggregates[0].Field.Should().Be("gold");
         request.Aggregates[0].Function.Should().Be("sum");
@@ -448,13 +627,67 @@ public class AgGridQueryParserTests
         // Let's deserialize using the public Parse(string) but verify we map to QueryOptions
         var options = AgGridQueryOptionsParser.Parse(json);
         options.GroupBy.Should().BeNull();
-        options.Aggregates.Should().ContainSingle();
-        options.Aggregates[0].Field.Should().Be("gold");
-        options.Aggregates[0].Function.Should().Be("sum");
+        // No rowGroupCols means no grouping is active, so valueCols should be ignored
+        // (AG Grid always sends valueCols as column metadata regardless of grouping state)
+        options.Aggregates.Should().BeEmpty();
 
         // Let's test that we can parse the JsonElement to check that it parses successfully without throwing any FormatException.
         var act = () => AgGridQueryOptionsParser.Parse(json);
         act.Should().NotThrow();
+    }
+
+    [Fact]
+    public void AgGridRequest_WithValueColsButNoGrouping_DoesNotGenerateAggregates()
+    {
+        var result = AgGridQueryOptionsParser.Parse(new AgGridRequest
+        {
+            ValueCols =
+            [
+                new() { Field = "quantity", AggFunc = "sum" }
+            ]
+        });
+
+        result.Aggregates.Should().BeEmpty();
+        result.GroupBy.Should().BeNull();
+    }
+
+    [Fact]
+    public void AgGridRequest_WithValueColsAndEmptyRowGroupCols_DoesNotGenerateAggregates()
+    {
+        var result = AgGridQueryOptionsParser.Parse(new AgGridRequest
+        {
+            RowGroupCols = [],
+            GroupKeys = [],
+            ValueCols =
+            [
+                new() { Field = "quantity", AggFunc = "sum" },
+                new() { Field = "price", AggFunc = "avg" }
+            ]
+        });
+
+        result.Aggregates.Should().BeEmpty();
+        result.GroupBy.Should().BeNull();
+    }
+
+    [Fact]
+    public void AgGridRequest_GroupedRequest_GeneratesAggregates()
+    {
+        var result = AgGridQueryOptionsParser.Parse(new AgGridRequest
+        {
+            RowGroupCols = [new() { Field = "category" }],
+            ValueCols =
+            [
+                new() { Field = "quantity", AggFunc = "sum" },
+                new() { Field = "price", AggFunc = "avg" },
+                new() { Field = "price", AggFunc = "min" },
+                new() { Field = "price", AggFunc = "max" },
+                new() { Field = "id", AggFunc = "count" }
+            ]
+        });
+
+        result.Aggregates.Should().HaveCount(5);
+        result.Aggregates.Select(a => a.Alias).Should().Equal("quantitySum", "priceAvg", "priceMin", "priceMax", "idCount");
+        result.Aggregates.Select(a => a.Function).Should().Equal("sum", "avg", "min", "max", "count");
     }
 
     private static JsonElement Element(string json)
