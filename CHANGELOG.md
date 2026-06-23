@@ -13,16 +13,21 @@ All notable changes to this project will be documented in this file.
 - **Non-strict re-apply:** When `Select` is emptied by NonStrict field removal, the default projection is automatically re-injected.
 - **RoleAllowedFields auto-projection:** `RoleAllowedFields` now serves as a valid source for default projection injection.
 - **GovernanceValidator:** New `GovernanceValidator.ValidateConfiguration()` for startup-time validation of governance config consistency — detects `BlockedFields` ∩ `AllowedFields` overlap and subset violations for `SelectableFields`/`FilterableFields`/`SortableFields`/`GroupableFields`/`AggregatableFields` vs `AllowedFields`.
-- **New test coverage:** 24 FieldSecurityTests + 2 PagingTests covering default projection priority, wildcard expansion, non-strict re-apply, grouped query exclusion, no-governance fallthrough, config validation, and priority intersection.
+- **GroupedSortValidator:** New `GroupedSortValidator.Validate()` in Core that centralizes grouped sort validation. Removes invalid sort fields (non-group-key, non-aggregate), resolves aggregate field names to aliases, and injects a group-key fallback when all sorts are invalid — ensuring deterministic paging for grouped queries.
+- **New test coverage:** 24 FieldSecurityTests + 2 PagingTests covering default projection priority, wildcard expansion, non-strict re-apply, grouped query exclusion, no-governance fallthrough, config validation, and priority intersection. 6 new grouped query behavior tests across EF Core and Dapper providers (28 total grouped query tests).
 
 ### Changed
 
 - **Paging fallback sort respects governance:** `QueryBuilder.ApplyPaging` now uses `options.Select?.FirstOrDefault()` before falling back to `Id`/`Key`/first property, ensuring deterministic pagination uses a governed field.
-- **Documentation:** Security & Governance guide updated with default projection, wildcard expansion, and config validation sections.
+- **EF Core grouped sort resolution:** Replaced inline `BuildGroupedSorts<TShape>`/`ResolveGroupedSortField` with a shared call to `GroupedSortValidator.Validate`, removing the `TShape` generic parameter dependency and ensuring consistent sort validation.
+- **Dapper grouped sort resolution:** `SqlTranslator.Translate` now validates sorts through `GroupedSortValidator.Validate` when the query has `GroupBy`, removing invalid ORDER BY columns that would cause SQL errors and injecting fallback sorts for deterministic paging.
+- **Documentation:** Security & Governance guide updated with default projection, wildcard expansion, and config validation sections. New `docs/architecture/grouped-query-contract.md` documenting grouped query behavior across providers.
 
 ### Fixed
 
 - **Default response field leak:** When `QueryOptions.Select` was null, the projection builder returned all entity fields regardless of governance configuration. Now governed defaults are injected before validation, ensuring `AllowedFields`, `BlockedFields`, and `RoleAllowedFields` are respected even for unprojected queries.
+- **Dapper invalid SQL for grouped sorts:** Sort fields referencing entity columns not in GROUP BY (e.g., `ORDER BY [Id]` when grouping by `Category`) are now removed before SQL generation instead of producing invalid SQL.
+- **Dapper nondeterministic grouped paging:** Grouped queries with paging but no valid ORDER BY now receive a deterministic fallback sort by the first group key ascending.
 
 ## [3.0.3] - 2026-06-23
 

@@ -7,6 +7,7 @@ using FlexQuery.NET.Dapper.Sql.Builders;
 using FlexQuery.NET.Dapper.Sql.Helpers;
 using FlexQuery.NET.Dapper.Sql.Models;
 using FlexQuery.NET.Helpers;
+using FlexQuery.NET.Validation;
 
 namespace FlexQuery.NET.Dapper.Sql.Translators;
 
@@ -81,7 +82,11 @@ public sealed class SqlTranslator : ISqlTranslator
         var whereClause = _whereBuilder.BuildWhereClause(options.Filter, mapping, parameters);
         var groupByClause = BuildGroupByClause(options.GroupBy, mapping);
         var havingClause = BuildHavingClause(options.Having, mapping, parameters);
-        var orderByClause = BuildOrderByClause(options.Sort, mapping);
+
+        var sortForOrderBy = options.GroupBy?.Count > 0
+            ? GroupedSortValidator.Validate(options.Sort, options.GroupBy, options.Aggregates)
+            : options.Sort;
+        var orderByClause = BuildOrderByClause(sortForOrderBy, mapping);
         var pagingClause = BuildPagingClause(options.Paging, parameters);
 
         var clauses = new List<string> { selectClause, fromClause, joinClause, whereClause, groupByClause, havingClause, orderByClause, pagingClause };

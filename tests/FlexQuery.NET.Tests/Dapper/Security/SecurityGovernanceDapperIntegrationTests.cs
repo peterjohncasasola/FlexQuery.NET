@@ -162,15 +162,11 @@ public class SecurityGovernanceDapperIntegrationTests
         var translator = new SqlTranslator(_registry, Dialect);
         var command = translator.Translate(options);
 
-        // "Id" is not removed because neither SortableFields nor AllowedFields is set.
-        // Only GroupableFields/AggregatableFields are configured, which do not affect
-        // Sort-operation validation.
+        // Non-grouped sort "Id" is removed by GroupedSortValidator and replaced
+        // with a fallback sort by the first group key "Category".
         command.Sql.Should().Contain("ORDER BY");
-        command.Sql.Should().Contain("\"Id\"");
-        // Category appears only in GROUP BY, not ORDER BY — verifying there is no fallback.
-        var orderByIndex = command.Sql.IndexOf("ORDER BY", StringComparison.OrdinalIgnoreCase);
-        var afterOrderBy = command.Sql[orderByIndex..];
-        afterOrderBy.Should().NotContain("Category");
+        command.Sql.Should().Contain("\"Category\"");
+        command.Sql.Should().NotContain("\"Id\"");
     }
 
     // ──────────────────────────────────────────────────────────────

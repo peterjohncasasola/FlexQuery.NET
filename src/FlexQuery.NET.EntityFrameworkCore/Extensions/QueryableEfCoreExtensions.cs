@@ -2,6 +2,7 @@ using FlexQuery.NET.Builders;
 using FlexQuery.NET.Extensions;
 using FlexQuery.NET.Models;
 using FlexQuery.NET.Parsers;
+using FlexQuery.NET.Validation;
 using Microsoft.EntityFrameworkCore;
 using System.ComponentModel;
 using System.Reflection;
@@ -252,7 +253,7 @@ public static class QueryableEfCoreExtensions
         CancellationToken cancellationToken)
     {
         var typedQuery = (IQueryable<TShape>)groupedQuery;
-        var sorts = BuildGroupedSorts<TShape>(options);
+        var sorts = BuildGroupedSorts(options);
 
         typedQuery = QueryBuilder.ApplySort(typedQuery, sorts, options);
         typedQuery = QueryBuilder.ApplyPaging(typedQuery, options);
@@ -261,47 +262,12 @@ public static class QueryableEfCoreExtensions
         return rows.Cast<object>().ToList();
     }
 
-    private static List<SortNode> BuildGroupedSorts<TShape>(QueryOptions options)
+    private static List<SortNode> BuildGroupedSorts(QueryOptions options)
     {
-        if (options.Sort.Count == 0)
-        {
-            return (options.GroupBy ?? [])
-                .Select(field => new SortNode { Field = GroupByBuilder.GetProjectionName(field) })
-                .ToList();
-        }
-
-        var resultType = typeof(TShape);
-        return options.Sort
-            .Select(sort => new SortNode
-            {
-                Field = ResolveGroupedSortField(resultType, sort, options),
-                Descending = sort.Descending
-            })
-            .ToList();
-    }
-
-    private static string ResolveGroupedSortField(
-        Type resultType,
-        SortNode sort,
-        QueryOptions options)
-    {
-        var directProperty = resultType.GetProperty(
-            sort.Field,
-            BindingFlags.Public | BindingFlags.Instance | BindingFlags.IgnoreCase);
-        if (directProperty is not null)
-        {
-            return directProperty.Name;
-        }
-
-        var aggregate = options.Aggregates.FirstOrDefault(candidate =>
-            candidate.Alias.Equals(sort.Field, StringComparison.OrdinalIgnoreCase)
-            || candidate.Field?.Equals(sort.Field, StringComparison.OrdinalIgnoreCase) == true);
-        if (aggregate is not null)
-        {
-            return aggregate.Alias;
-        }
-
-        return GroupByBuilder.GetProjectionName(sort.Field);
+        return GroupedSortValidator.Validate(
+            options.Sort,
+            options.GroupBy ?? [],
+            options.Aggregates);
     }
 
 }
