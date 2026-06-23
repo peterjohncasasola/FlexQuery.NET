@@ -1,5 +1,6 @@
 using FlexQuery.NET.Adapters.AgGrid.Models;
 using FlexQuery.NET.Adapters.AgGrid.Parsers;
+using FlexQuery.NET.Adapters.AgGrid.Converters;
 using FlexQuery.NET.Models;
 
 namespace FlexQuery.NET.Adapters.AgGrid;
@@ -58,18 +59,22 @@ public static class AgGridExtensions
             queryOptions.Paging.Page = agGridOptions.Paging.Page;
         }
         
-        // Apply grouping
-        if (agGridOptions.GroupBy is { Count: > 0 })
-        {
-            queryOptions.GroupBy = agGridOptions.GroupBy;
-        }
-        
-        // Apply aggregates
-        if (agGridOptions.Aggregates.Count > 0)
-        {
-            queryOptions.Aggregates = agGridOptions.Aggregates;
-        }
+        // Grouping and aggregates describe the current SSRM store request. They must replace
+        // prior values so an expanded leaf request cannot inherit stale grouped-query state.
+        queryOptions.GroupBy = agGridOptions.GroupBy;
+        queryOptions.Aggregates = agGridOptions.Aggregates;
         
         return queryOptions;
+    }
+
+    /// <summary>
+    /// Converts a FlexQuery result into an AG Grid SSRM response payload.
+    /// </summary>
+    public static AgGridServerSideResponse ToAgGridServerSideResponse<T>(
+        this QueryResult<T> result,
+        AgGridRequest request,
+        AgGridResponseFieldOptions? options = null)
+    {
+        return AgGridResponseConverter.Convert(request, result, options);
     }
 }
