@@ -3,6 +3,7 @@ using System.Linq;
 using FlexQuery.NET.Adapters.AgGrid.Models;
 using FlexQuery.NET.Constants;
 using FlexQuery.NET.Models;
+using FlexQuery.NET.Builders;
 using FlexQuery.NET.Parsers;
 
 namespace FlexQuery.NET.Adapters.AgGrid.Parsers;
@@ -27,7 +28,13 @@ public static class AgGridQueryOptionsParser
             result.Filter = AgGridFilterParser.Parse(request.FilterModel);
         }
 
-        result.Sort = AgGridSortParser.Parse(request.SortModel);
+        result.Sort = ValidateGroupedSorts(
+            request.SortModel,
+            request.RowGroupCols,
+            request.ValueCols,
+            rowGroupFields,
+            groupKeyCount,
+            isGroupedLevelRequest);
 
         // 1. Pagination Support
         if (request.EndRow > request.StartRow && request.StartRow >= 0)
@@ -98,9 +105,82 @@ public static class AgGridQueryOptionsParser
         return AgGridFilterParser.Parse(filterModel);
     }
 
-    internal static List<SortNode> ParseSortModel(IReadOnlyList<AgGridSortItem> sortModel)
+    private static List<SortNode> ValidateGroupedSorts(
+        IReadOnlyList<AgGridSortItem> sortModel,
+        IReadOnlyList<AgGridGroupColumn>? rowGroupCols,
+        IReadOnlyList<AgGridValueColumn>? valueCols,
+        IReadOnlyList<string> rowGroupFields,
+        int groupKeyCount,
+        bool isGroupedLevelRequest)
     {
-        return AgGridSortParser.Parse(sortModel);
+        if (!isGroupedLevelRequest)
+        {
+            return AgGridSortParser.Parse(sortModel);
+        }
+
+        var aggregateLookup = BuildAggregateLookup(valueCols);
+        var currentGroupCol = GetCurrentGroupColumn(rowGroupCols, groupKeyCount);
+        var currentGroupProjection = currentGroupCol is not null
+            ? GroupByBuilder.GetProjectionName(currentGroupCol.Field!)
+            : null;
+
+        var resolved = new List<SortNode>(sortModel.Count);
+        foreach (var sortItem in sortModel)
+        {
+            if (sortItem is null || string.IsNullOrWhiteSpace(sortItem.ColId)) continue;
+
+            if (aggregateLookup.TryGetValue(sortItem.ColId, out var alias))
+            {
+                resolved.Add(new SortNode { Field = alias, Descending = IsDescending(sortItem.Sort) });
+            }
+            else if (currentGroupProjection is not null)
+            {
+                var colKey = currentGroupCol!.Id ?? currentGroupCol.Field;
+                if (string.Equals(sortItem.ColId, colKey, StringComparison.Ordinal))
+                {
+                    resolved.Add(new SortNode { Field = currentGroupProjection, Descending = IsDescending(sortItem.Sort) });
+                }
+            }
+        }
+
+        var effectiveFallback = currentGroupProjection ?? GroupByBuilder.GetProjectionName(rowGroupFields[groupKeyCount]);
+        if (resolved.Count == 0)
+        {
+            resolved.Add(new SortNode { Field = effectiveFallback });
+        }
+
+        return resolved;
+    }
+
+    private static AgGridGroupColumn? GetCurrentGroupColumn(IReadOnlyList<AgGridGroupColumn>? rowGroupCols, int groupKeyCount)
+    {
+        if (rowGroupCols is null || groupKeyCount >= rowGroupCols.Count) return null;
+        var col = rowGroupCols[groupKeyCount];
+        return string.IsNullOrWhiteSpace(col.Field) ? null : col;
+    }
+
+    private static Dictionary<string, string> BuildAggregateLookup(IReadOnlyList<AgGridValueColumn>? valueCols)
+    {
+        var lookup = new Dictionary<string, string>(StringComparer.Ordinal);
+        if (valueCols is null) return lookup;
+
+        foreach (var col in valueCols)
+        {
+            var key = col.Id ?? col.Field;
+            if (string.IsNullOrEmpty(key) || string.IsNullOrEmpty(col.Field) || string.IsNullOrEmpty(col.AggFunc)) continue;
+
+            var fn = col.AggFunc.ToLowerInvariant();
+            if (fn == "average") fn = "avg";
+            lookup[key] = ParserUtilities.BuildAggregateAlias(fn, col.Field);
+        }
+
+        return lookup;
+    }
+
+    private static bool IsDescending(string? sort)
+    {
+        if (string.IsNullOrWhiteSpace(sort)) return false;
+        return sort.Trim().Equals("desc", StringComparison.OrdinalIgnoreCase);
     }
 
     private static AgGridRequest DeserializeRequest(JsonElement root)
@@ -136,7 +216,7 @@ public static class AgGridQueryOptionsParser
             request.RowGroupCols = new List<AgGridGroupColumn>();
             foreach (var item in rowGroupCols.EnumerateArray())
             {
-                request.RowGroupCols.Add(new AgGridGroupColumn { Field = GetString(item, "field") });
+                request.RowGroupCols.Add(new AgGridGroupColumn { Id = GetString(item, "id"), Field = GetString(item, "field") });
             }
         }
 
@@ -157,6 +237,7 @@ public static class AgGridQueryOptionsParser
             {
                 request.ValueCols.Add(new AgGridValueColumn
                 {
+                    Id = GetString(item, "id"),
                     Field = GetString(item, "field"),
                     AggFunc = GetString(item, "aggFunc")
                 });

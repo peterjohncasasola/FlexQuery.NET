@@ -690,6 +690,303 @@ public class AgGridQueryParserTests
         result.Aggregates.Select(a => a.Function).Should().Equal("sum", "avg", "min", "max", "count");
     }
 
+    [Fact]
+    public void GroupedSort_AggregateSort_ResolvesToAggregateAlias()
+    {
+        var result = AgGridQueryOptionsParser.Parse(new AgGridRequest
+        {
+            RowGroupCols = [new() { Id = "category", Field = "category" }],
+            ValueCols = [new() { Id = "price", Field = "price", AggFunc = "AVG" }],
+            SortModel = [new() { ColId = "price", Sort = "desc" }]
+        });
+
+        result.Sort.Should().ContainSingle();
+        result.Sort[0].Field.Should().Be("priceAvg");
+        result.Sort[0].Descending.Should().BeTrue();
+    }
+
+    [Fact]
+    public void GroupedSort_InvalidDetailSort_IsRemovedAndFallbackInjected()
+    {
+        var result = AgGridQueryOptionsParser.Parse(new AgGridRequest
+        {
+            RowGroupCols = [new() { Id = "category", Field = "category" }],
+            ValueCols = [new() { Id = "price", Field = "price", AggFunc = "AVG" }],
+            SortModel = [new() { ColId = "id", Sort = "asc" }]
+        });
+
+        result.Sort.Should().ContainSingle();
+        result.Sort[0].Field.Should().Be("category");
+        result.Sort[0].Descending.Should().BeFalse();
+    }
+
+    [Fact]
+    public void GroupedSort_AllInvalidSorts_InjectsFallback()
+    {
+        var result = AgGridQueryOptionsParser.Parse(new AgGridRequest
+        {
+            RowGroupCols = [new() { Id = "category", Field = "category" }],
+            SortModel =
+            [
+                new() { ColId = "id", Sort = "asc" },
+                new() { ColId = "createdOn", Sort = "desc" }
+            ]
+        });
+
+        result.Sort.Should().ContainSingle();
+        result.Sort[0].Field.Should().Be("category");
+        result.Sort[0].Descending.Should().BeFalse();
+    }
+
+    [Fact]
+    public void GroupedSort_EmptySortModel_InjectsFallback()
+    {
+        var result = AgGridQueryOptionsParser.Parse(new AgGridRequest
+        {
+            RowGroupCols = [new() { Id = "category", Field = "category" }],
+            ValueCols = [new() { Id = "price", Field = "price", AggFunc = "AVG" }]
+        });
+
+        result.Sort.Should().ContainSingle();
+        result.Sort[0].Field.Should().Be("category");
+        result.Sort[0].Descending.Should().BeFalse();
+    }
+
+    [Fact]
+    public void GroupedSort_ColIdDiffersFromField_ResolvesCorrectly()
+    {
+        var result = AgGridQueryOptionsParser.Parse(new AgGridRequest
+        {
+            RowGroupCols = [new() { Id = "cat", Field = "category" }],
+            ValueCols = [new() { Id = "avg_price", Field = "price", AggFunc = "AVG" }],
+            SortModel =
+            [
+                new() { ColId = "avg_price", Sort = "desc" },
+                new() { ColId = "cat", Sort = "asc" }
+            ]
+        });
+
+        result.Sort.Should().HaveCount(2);
+        result.Sort[0].Field.Should().Be("priceAvg");
+        result.Sort[0].Descending.Should().BeTrue();
+        result.Sort[1].Field.Should().Be("category");
+        result.Sort[1].Descending.Should().BeFalse();
+    }
+
+    [Fact]
+    public void GroupedSort_NestedGrouping_ValidatesAgainstCurrentGroupAndAggregates()
+    {
+        var result = AgGridQueryOptionsParser.Parse(new AgGridRequest
+        {
+            RowGroupCols =
+            [
+                new() { Id = "category", Field = "category" },
+                new() { Id = "brand", Field = "brand" }
+            ],
+            GroupKeys = ["Electronics"],
+            ValueCols =
+            [
+                new() { Id = "price", Field = "price", AggFunc = "AVG" },
+                new() { Id = "quantity", Field = "quantity", AggFunc = "SUM" }
+            ],
+            SortModel = [new() { ColId = "price", Sort = "desc" }]
+        });
+
+        result.Sort.Should().ContainSingle();
+        result.Sort[0].Field.Should().Be("priceAvg");
+        result.Sort[0].Descending.Should().BeTrue();
+    }
+
+    [Fact]
+    public void GroupedSort_NestedGroupingWithInvalidSort_InjectsFallbackToCurrentGroup()
+    {
+        var result = AgGridQueryOptionsParser.Parse(new AgGridRequest
+        {
+            RowGroupCols =
+            [
+                new() { Id = "category", Field = "category" },
+                new() { Id = "brand", Field = "brand" }
+            ],
+            GroupKeys = ["Electronics"],
+            ValueCols = [new() { Id = "price", Field = "price", AggFunc = "AVG" }],
+            SortModel = [new() { ColId = "category", Sort = "asc" }]
+        });
+
+        // "category" is a parent group key, NOT in the current projection
+        // Fallback should be the current group field: "brand"
+        result.Sort.Should().ContainSingle();
+        result.Sort[0].Field.Should().Be("brand");
+        result.Sort[0].Descending.Should().BeFalse();
+    }
+
+    [Fact]
+    public void GroupedSort_GroupKeySort_ResolvesToProjectionName()
+    {
+        var result = AgGridQueryOptionsParser.Parse(new AgGridRequest
+        {
+            RowGroupCols = [new() { Id = "category", Field = "category" }],
+            ValueCols = [new() { Id = "price", Field = "price", AggFunc = "AVG" }],
+            SortModel = [new() { ColId = "category", Sort = "asc" }]
+        });
+
+        result.Sort.Should().ContainSingle();
+        result.Sort[0].Field.Should().Be("category");
+        result.Sort[0].Descending.Should().BeFalse();
+    }
+
+    [Fact]
+    public void GroupedSort_MixedValidAndInvalid_KeepsValidRemovesInvalid()
+    {
+        var result = AgGridQueryOptionsParser.Parse(new AgGridRequest
+        {
+            RowGroupCols = [new() { Id = "category", Field = "category" }],
+            ValueCols = [new() { Id = "price", Field = "price", AggFunc = "AVG" }],
+            SortModel =
+            [
+                new() { ColId = "price", Sort = "desc" },
+                new() { ColId = "id", Sort = "asc" },
+                new() { ColId = "createdOn", Sort = "desc" }
+            ]
+        });
+
+        result.Sort.Should().ContainSingle();
+        result.Sort[0].Field.Should().Be("priceAvg");
+        result.Sort[0].Descending.Should().BeTrue();
+    }
+
+    [Fact]
+    public void UngroupedSort_WithoutRowGroupCols_PassesSortThroughUnchanged()
+    {
+        var result = AgGridQueryOptionsParser.Parse(new AgGridRequest
+        {
+            SortModel =
+            [
+                new() { ColId = "name", Sort = "asc" },
+                new() { ColId = "id", Sort = "desc" }
+            ]
+        });
+
+        result.Sort.Should().HaveCount(2);
+        result.Sort[0].Field.Should().Be("name");
+        result.Sort[0].Descending.Should().BeFalse();
+        result.Sort[1].Field.Should().Be("id");
+        result.Sort[1].Descending.Should().BeTrue();
+    }
+
+    [Fact]
+    public void GroupedSort_AverageFunction_NormalizesToAvgAlias()
+    {
+        var result = AgGridQueryOptionsParser.Parse(new AgGridRequest
+        {
+            RowGroupCols = [new() { Id = "category", Field = "category" }],
+            ValueCols = [new() { Id = "price", Field = "price", AggFunc = "average" }],
+            SortModel = [new() { ColId = "price", Sort = "asc" }]
+        });
+
+        result.Sort.Should().ContainSingle();
+        result.Sort[0].Field.Should().Be("priceAvg");
+    }
+
+    [Fact]
+    public void GroupedSort_SumAggregate_ResolvesToSumAlias()
+    {
+        var result = AgGridQueryOptionsParser.Parse(new AgGridRequest
+        {
+            RowGroupCols = [new() { Id = "category", Field = "category" }],
+            ValueCols = [new() { Id = "quantity", Field = "quantity", AggFunc = "SUM" }],
+            SortModel = [new() { ColId = "quantity", Sort = "asc" }]
+        });
+
+        result.Sort.Should().ContainSingle();
+        result.Sort[0].Field.Should().Be("quantitySum");
+    }
+
+    [Theory]
+    [InlineData("SUM")]
+    [InlineData("sum")]
+    [InlineData("Sum")]
+    public void GroupedSort_AggregateFunctionCasing_ResolvesCorrectly(string aggFunc)
+    {
+        var result = AgGridQueryOptionsParser.Parse(new AgGridRequest
+        {
+            RowGroupCols = [new() { Id = "category", Field = "category" }],
+            ValueCols = [new() { Id = "quantity", Field = "quantity", AggFunc = aggFunc }],
+            SortModel = [new() { ColId = "quantity", Sort = "asc" }]
+        });
+
+        result.Sort.Should().ContainSingle();
+        result.Sort[0].Field.Should().Be("quantitySum");
+    }
+
+    [Fact]
+    public void GroupedSort_LeafLevel_PassesSortThroughUnchanged()
+    {
+        var result = AgGridQueryOptionsParser.Parse(new AgGridRequest
+        {
+            RowGroupCols = [new() { Id = "category", Field = "category" }],
+            GroupKeys = ["Electronics"],
+            ValueCols = [new() { Id = "price", Field = "price", AggFunc = "AVG" }],
+            SortModel = [new() { ColId = "price", Sort = "desc" }]
+        });
+
+        // Leaf level: rowGroupCols.Count == groupKeys.Count, so ungrouped
+        result.Sort.Should().ContainSingle();
+        result.Sort[0].Field.Should().Be("price");
+        result.Sort[0].Descending.Should().BeTrue();
+    }
+
+
+    [Fact]
+    public void GroupedSort_GroupKeyIdDiffersFromField_ResolvesCorrectly()
+    {
+        var result = AgGridQueryOptionsParser.Parse(new AgGridRequest
+        {
+            RowGroupCols =
+            [
+                new()
+                {
+                    Id = "cat",
+                    Field = "category"
+                }
+            ],
+            SortModel =
+            [
+                new()
+                {
+                    ColId = "cat",
+                    Sort = "asc"
+                }
+            ]
+        });
+
+        result.Sort.Should().ContainSingle();
+        result.Sort[0].Field.Should().Be("category");
+        result.Sort[0].Descending.Should().BeFalse();
+    }
+
+    [Fact]
+    public void GroupedSort_NullId_FallsBackToField()
+    {
+        var result = AgGridQueryOptionsParser.Parse(new AgGridRequest
+        {
+            RowGroupCols =
+            [
+                new() { Field = "category" }
+            ],
+            ValueCols =
+            [
+                new() { Field = "price", AggFunc = "AVG" }
+            ],
+            SortModel =
+            [
+                new() { ColId = "price", Sort = "desc" }
+            ]
+        });
+
+        result.Sort.Should().ContainSingle();
+        result.Sort[0].Field.Should().Be("priceAvg");
+    }
+
     private static JsonElement Element(string json)
     {
         return JsonDocument.Parse(json).RootElement;
