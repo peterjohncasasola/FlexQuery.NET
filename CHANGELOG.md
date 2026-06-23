@@ -6,10 +6,14 @@ All notable changes to this project will be documented in this file.
 
 ## [3.0.3] - 2026-06-23
 
+### Fixed
+
+- **AG Grid SSRM grouped sort validation:** `sortModel` entries at grouped levels are now validated against the current grouped projection. Aggregate sorts (e.g., `colId: "price"` with `aggFunc: "AVG"`) resolve to their SQL alias (`priceAvg`) instead of the raw column name, preventing invalid `ORDER BY Price` in Dapper grouped queries. Detail-column sorts (`colId: "id"`, `createdOn`) are discarded at grouped levels. Empty or fully-invalid sort models automatically inject the current group key ascending for deterministic pagination. `colId != field` mappings are resolved correctly. `"average"` is normalized to `"avg"` consistently with the aggregate builder. All existing behavior preserved at ungrouped and leaf levels.
+
 ### Behavioral Change
 
 - **Aggregate alias naming convention redesigned:**
-  Aggregate aliases now follow a field-first, camelCase format (`totalSum`, `idCount`, `priceAvg`) instead of the previous `FUNCTION_Field` convention (`SUM_Total`, `COUNT_Id`, `AVG_Price`). Full test suite: **649 tests passed**.
+  Aggregate aliases now follow a field-first, camelCase format (`totalSum`, `idCount`, `priceAvg`) instead of the previous `FUNCTION_Field` convention (`SUM_Total`, `COUNT_Id`, `AVG_Price`). Full test suite: **669 tests passed**.
 
 ### Added
 
@@ -20,6 +24,8 @@ All notable changes to this project will be documented in this file.
 
 ### Changed
 
+- **AgGrid column models:** Added `Id` property to `AgGridGroupColumn` and `AgGridValueColumn` to capture the column identifier from AG Grid payloads.
+- **AgGrid request deserialization:** `DeserializeRequest` now captures the `id` field from `rowGroupCols` and `valueCols` JSON objects, enabling `colId != field` sort resolution.
 - **Documentation:** AgGrid adapter, migration guide, paging guide, grouping/projection/examples docs, and Dapper provider docs updated.
 
 ## [3.0.2] - 2026-06-22

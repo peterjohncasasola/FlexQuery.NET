@@ -93,8 +93,9 @@ public async Task<IActionResult> GetGridData([FromBody] AgGridRequest request)
         opts.AllowedFields = new HashSet<string> { "Id", "Name", "Status", "CreatedAt" };
     });
 
-    // 3. Return format expected by AG Grid
-    return Ok(new { rowData = result.Data, rowCount = result.TotalCount });
+    // 3. Return format expected by AG Grid.
+    // Grouped SSRM responses should prefer ResultCount when available.
+    return Ok(new { rowData = result.Data, rowCount = result.ResultCount ?? result.TotalCount });
 }
 ```
 
@@ -133,6 +134,61 @@ GET /api/users?$filter=Age gt 18 and Status eq 'Active'
 ```
 
 ## 📚 Documentation
+
+## Counting Semantics
+
+`QueryResult<T>` exposes three different row counts. They answer different questions:
+
+| Property | Meaning |
+| ----------- | ------------------------- |
+| `TotalCount` | Filtered source records |
+| `ResultCount` | Shaped rows before paging |
+| `Data.Count` | Current page rows |
+
+For a normal query, `TotalCount` and `ResultCount` usually match:
+
+```text
+1432 products
+pageSize = 20
+
+TotalCount  = 1432
+ResultCount = 1432
+Data.Count  = 20
+```
+
+For grouped or shaped queries, `ResultCount` is the count most UI grids need for paging:
+
+```text
+1432 products
+GROUP BY Brand
+
+4 brand groups
+
+TotalCount  = 1432
+ResultCount = 4
+Data.Count  = current page of groups
+```
+
+`HAVING` is applied before `ResultCount`:
+
+```text
+1432 products
+GROUP BY Brand
+HAVING SUM(Quantity) > 100
+
+2 groups remain
+
+TotalCount  = 1432
+ResultCount = 2
+```
+
+For AG Grid SSRM grouping, prefer:
+
+```csharp
+var rowCount = result.ResultCount ?? result.TotalCount;
+```
+
+`TotalCount` semantics are unchanged for backward compatibility.
 
 For detailed guides, API references, and advanced scenarios, visit our documentation site:
 

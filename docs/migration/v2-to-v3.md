@@ -117,6 +117,58 @@ using FlexQuery.NET.EntityFrameworkCore;
 | `FlexQuery.NET.Adapters.Kendo` | Kendo UI DataSource adapter |
 
 
+
+## ResultCount Added
+
+`QueryResult<T>` now includes an optional `ResultCount` property:
+
+```csharp
+public int? ResultCount { get; init; }
+```
+
+This is additive and backward compatible. Existing code that reads `TotalCount`, `Page`, `PageSize`, or `Data` continues to work.
+
+### Count Semantics
+
+| Property | Meaning |
+| ----------- | ------------------------- |
+| `TotalCount` | Filtered source records |
+| `ResultCount` | Shaped rows before paging |
+| `Data.Count` | Current page rows |
+
+`TotalCount` semantics are unchanged. It still represents the number of source records after filtering and before paging.
+
+`ResultCount` represents the number of rows produced by the final query shape before paging. This matters for grouped, distinct, pivoted, or otherwise cardinality-changing queries.
+
+```text
+1432 products
+GROUP BY Brand
+
+4 brand groups
+
+TotalCount  = 1432
+ResultCount = 4
+```
+
+```text
+1432 products
+DISTINCT Brand
+
+12 brands
+
+TotalCount  = 1432
+ResultCount = 12
+```
+
+For grouped UI adapters such as AG Grid SSRM, prefer:
+
+```csharp
+var rowCount = result.ResultCount ?? result.TotalCount;
+```
+
+This lets grouped result pagination use the shaped row count while preserving compatibility with older results or providers that do not populate `ResultCount`.
+
+
 ### Grand Total Aggregations
 
 Grand total aggregations can now be computed alongside grouped aggregations in a single query:
@@ -128,6 +180,47 @@ options.Aggregates.Add(new AggregateModel
     Function = "sum",
     Alias = "grand_total_price"
 });
+```
+
+### Aggregate Alias Convention
+
+Aggregate aliases were redesigned in v3.0.3 from `FUNCTION_Field` to a field-first, camelCase format:
+
+**Before:**
+```csharp
+options.Aggregates.Add(new AggregateModel
+{
+    Field = "Total",
+    Function = "sum",
+    Alias = "SUM_Total"   // ← old FUNCTION_Field format
+});
+```
+
+**After:**
+```csharp
+options.Aggregates.Add(new AggregateModel
+{
+    Function = "sum",
+    Field = "Total",
+    Alias = "totalSum"    // ← new field-first camelCase format
+});
+```
+
+If you rely on the built-in parsers or `BuildAggregateAlias()`, the new format is applied automatically. Only hardcoded `Alias` strings need updating.
+
+**Sort by aggregate:**
+```csharp
+// Before
+options.Sort = [new SortNode { Field = "SUM_Total", Descending = true }];
+
+// After
+options.Sort = [new SortNode { Field = "totalSum", Descending = true }];
+```
+
+**Response shape change:**
+```json
+// Before: { "status": "active", "COUNT_All": 42 }
+// After:  { "status": "active", "allCount": 42 }
 ```
 
 ### Having Support
