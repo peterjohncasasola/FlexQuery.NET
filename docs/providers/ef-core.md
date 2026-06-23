@@ -141,9 +141,9 @@ var parameters = new FlexQueryParameters
 var options = QueryOptionsParser.Parse(parameters);
 options.Aggregates = new List<AggregateModel>
 {
-    new() { Function = "sum", Field = "Price", Alias = "sum_Price" },
-    new() { Function = "avg", Field = "Price", Alias = "avg_Price" },
-    new() { Function = "count", Field = "Id", Alias = "count_Id" }
+    new() { Function = "sum", Field = "Price", Alias = "priceSum" },
+    new() { Function = "avg", Field = "Price", Alias = "priceAvg" },
+    new() { Function = "count", Field = "Id", Alias = "idCount" }
 };
 
 var result = await _context.Products.FlexQueryAsync<Product>(options);

@@ -151,8 +151,8 @@ GET /api/users?select=status.count()&groupBy=status
 ```json
 {
   "data": [
-    { "status": "active",   "COUNT_All": 42 },
-    { "status": "inactive", "COUNT_All": 6  }
+    { "status": "active",   "allCount": 42 },
+    { "status": "inactive", "allCount": 6  }
   ]
 }
 ```

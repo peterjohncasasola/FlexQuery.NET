@@ -162,8 +162,8 @@ var options = new QueryOptions
     GroupBy = new List<string> { "Category" },
     Aggregates = new List<AggregateModel>
     {
-        new() { Function = "sum", Field = "Price", Alias = "sum_Price" },
-        new() { Function = "count", Field = "Id", Alias = "count_Id" }
+        new() { Function = "sum", Field = "Price", Alias = "priceSum" },
+        new() { Function = "count", Field = "Id", Alias = "idCount" }
     },
     Having = new HavingCondition
     {
@@ -175,7 +175,7 @@ var options = new QueryOptions
 };
 
 // Generated SQL:
-// SELECT [Category], SUM([Price]) AS sum_Price, COUNT([Id]) AS count_Id
+// SELECT [Category], SUM([Price]) AS priceSum, COUNT([Id]) AS idCount
 // FROM [Products]
 // GROUP BY [Category]
 // HAVING SUM([Price]) > @p0
@@ -190,14 +190,14 @@ var options = new QueryOptions
 {
     Aggregates = new List<AggregateModel>
     {
-        new() { Function = "sum", Field = "Total", Alias = "sum_Total" },
-        new() { Function = "avg", Field = "Total", Alias = "avg_Total" }
+        new() { Function = "sum", Field = "Total", Alias = "totalSum" },
+        new() { Function = "avg", Field = "Total", Alias = "totalAvg" }
     }
 };
 
 // Main query: SELECT * FROM [Orders] ...
 // Aggregate query (via TranslateAggregates):
-// SELECT SUM([Total]) AS sum_Total, AVG([Total]) AS avg_Total FROM [Orders]
+// SELECT SUM([Total]) AS totalSum, AVG([Total]) AS totalAvg FROM [Orders]
 ```
 
 The results are returned in `QueryResult<T>.Aggregates` as a nested dictionary:

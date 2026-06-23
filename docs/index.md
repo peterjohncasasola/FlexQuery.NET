@@ -91,6 +91,7 @@ public async Task<IActionResult> GetUsers([FromQuery] FlexQueryParameters parame
     { "id": 2, "name": "Bob",   "email": "bob@example.com" }
   ],
   "totalCount": 48,
+  "resultCount": 48,
   "page": 1,
   "pageSize": 10
 }
@@ -133,8 +134,10 @@ FlexQueryParameters (HTTP DTO)
                    │
                    ▼
             QueryResult<object>
-         { data, totalCount, page, pageSize }
+     { data, totalCount, resultCount, page, pageSize }
 ```
+
+`totalCount` is the number of filtered source records. `resultCount` is the number of shaped rows before paging, which differs for grouping, distinct projection, pivoting, or similar cardinality-changing operations.
 
 All expression trees are translated to SQL by EF Core. No client-side evaluation.
 

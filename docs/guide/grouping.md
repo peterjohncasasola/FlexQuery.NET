@@ -44,9 +44,9 @@ GET /api/users?select=status,count()&groupBy=status
 ```json
 {
   "data": [
-    { "status": "active",   "COUNT_All": 42 },
-    { "status": "inactive", "COUNT_All": 6  },
-    { "status": "pending",  "COUNT_All": 12 }
+    { "status": "active",   "allCount": 42 },
+    { "status": "inactive", "allCount": 6  },
+    { "status": "pending",  "allCount": 12 }
   ],
   "totalCount": 3
 }
@@ -62,8 +62,8 @@ GET /api/orders?select=userId,sum(amount)&groupBy=userId
 ```json
 {
   "data": [
-    { "userId": 1, "SUM_Amount": 1250.00 },
-    { "userId": 2, "SUM_Amount": 780.50  }
+    { "userId": 1, "amountSum": 1250.00 },
+    { "userId": 2, "amountSum": 780.50  }
   ]
 }
 ```
@@ -80,8 +80,8 @@ Only returns groups where the average order amount exceeds 500.
 ```json
 {
   "data": [
-    { "customerId": 1, "AVG_Amount": 625.00 },
-    { "customerId": 5, "AVG_Amount": 812.50 }
+    { "customerId": 1, "amountAvg": 625.00 },
+    { "customerId": 5, "amountAvg": 812.50 }
   ]
 }
 ```
@@ -100,11 +100,11 @@ In the `select` parameter, use function call syntax:
 
 | Syntax | Alias Generated | Description |
 | :--- | :--- | :--- |
-| `count()` | `COUNT_All` | Count all rows in group |
-| `sum(amount)` | `SUM_Amount` | Sum of `amount` field |
-| `avg(amount)` | `AVG_Amount` | Average of `amount` field |
+| `count()` | `allCount` | Count all rows in group |
+| `sum(amount)` | `amountSum` | Sum of `amount` field |
+| `avg(amount)` | `amountAvg` | Average of `amount` field |
 
-Alias format: `{FUNCTION}_{Field}` (uppercase function, PascalCase field).
+Alias format: `{field}{Function}` (camelCase field, PascalCase function).
 
 ---
 
@@ -132,7 +132,7 @@ var options = new QueryOptions
     GroupBy = new List<string> { "status" },
     Aggregates = new List<AggregateModel>
     {
-        new AggregateModel { Function = "count", Alias = "COUNT_All" }
+        new AggregateModel { Function = "count", Alias = "allCount" }
     }
 };
 
@@ -147,7 +147,7 @@ var options = new QueryOptions
     GroupBy = new List<string> { "status" },
     Aggregates = new List<AggregateModel>
     {
-        new AggregateModel { Function = "count", Alias = "COUNT_All" }
+        new AggregateModel { Function = "count", Alias = "allCount" }
     },
     Having = new HavingCondition
     {

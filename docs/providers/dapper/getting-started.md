@@ -160,12 +160,24 @@ All `FlexQueryAsync` overloads return a `QueryResult<T>`:
 ```csharp
 public class QueryResult<T>
 {
-    public IReadOnlyList<T> Data { get; set; }      // The page of results
-    public int TotalCount { get; set; }              // Total matching rows (for pagination)
+    public IReadOnlyList<T> Data { get; set; }       // Current page rows
+    public int? TotalCount { get; set; }             // Filtered source records
+    public int? ResultCount { get; set; }            // Shaped rows before paging
     public int Page { get; set; }                    // Current page number
     public int PageSize { get; set; }                // Items per page
     public Dictionary<string, Dictionary<string, object>>? Aggregates { get; set; }  // Grand totals
 }
+```
+
+`TotalCount` and `ResultCount` are the same for normal cardinality-preserving queries. They differ when a query changes cardinality, such as `GROUP BY`, `DISTINCT`, or future pivot-shaped queries:
+
+```text
+1432 orders
+GROUP BY CustomerId
+
+TotalCount  = 1432 source rows
+ResultCount = number of customer groups
+Data.Count  = groups returned in the current page
 ```
 
 ## Best Practices

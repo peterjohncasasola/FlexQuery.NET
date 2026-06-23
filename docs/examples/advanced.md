@@ -72,9 +72,9 @@ GET /api/orders?select=status,count(),sum(amount)&groupBy=status&sort=count():de
 ```json
 {
   "data": [
-    { "status": "pending",   "COUNT_All": 45, "SUM_Amount": 12400.00 },
-    { "status": "shipped",   "COUNT_All": 38, "SUM_Amount": 9800.50  },
-    { "status": "cancelled", "COUNT_All": 12, "SUM_Amount": 3200.00  }
+    { "status": "pending",   "allCount": 45, "amountSum": 12400.00 },
+    { "status": "shipped",   "allCount": 38, "amountSum": 9800.50  },
+    { "status": "cancelled", "allCount": 12, "amountSum": 3200.00  }
   ],
   "totalCount": 3
 }
@@ -95,7 +95,7 @@ GET /api/orders?select=status,sum(amount)&groupBy=status&having=sum(amount):gt:1
 ```json
 {
   "data": [
-    { "status": "pending", "SUM_Amount": 12400.00 }
+    { "status": "pending", "amountSum": 12400.00 }
   ],
   "totalCount": 1
 }

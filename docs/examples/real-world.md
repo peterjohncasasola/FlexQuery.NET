@@ -240,9 +240,9 @@ GET /api/reports/revenue?filter=createdAt:between:2024-01-01,2024-12-31,status:e
 ```json
 {
   "data": [
-    { "region": "North America", "COUNT_All": 512, "SUM_Amount": 128000.00, "AVG_Amount": 250.00 },
-    { "region": "Europe",        "COUNT_All": 380, "SUM_Amount": 95000.00,  "AVG_Amount": 250.00 },
-    { "region": "Asia Pacific",  "COUNT_All": 210, "SUM_Amount": 52500.00,  "AVG_Amount": 250.00 }
+    { "region": "North America", "allCount": 512, "amountSum": 128000.00, "amountAvg": 250.00 },
+    { "region": "Europe",        "allCount": 380, "amountSum": 95000.00,  "amountAvg": 250.00 },
+    { "region": "Asia Pacific",  "allCount": 210, "amountSum": 52500.00,  "amountAvg": 250.00 }
   ],
   "totalCount": 3
 }

@@ -173,7 +173,78 @@ The `sortModel` array maps directly to FlexQuery sort nodes:
 { "valueCols": [{ "field": "Price", "aggFunc": "sum" }] }
 ```
 
-→ `Aggregates: [{ Function: "sum", Field: "Price", Alias: "sum_Price" }]`
+→ `Aggregates: [{ Function: "sum", Field: "Price", Alias: "priceSum" }]`
+
+## SSRM Response Conversion
+
+The adapter provides `ToAgGridServerSideResponse()` to convert a FlexQuery `QueryResult` into an AG Grid Server-Side Row Model response:
+
+```csharp
+[HttpPost("grid")]
+public async Task<IActionResult> GetGridData([FromBody] AgGridRequest request)
+{
+    var options = request.ToQueryOptions();
+    var result = await _context.Products.FlexQueryAsync<Product>(options);
+    var response = result.ToAgGridServerSideResponse(request);
+    return Ok(response);
+}
+```
+
+The converter handles two response types:
+
+| Request Level | Response Type | Description |
+|---|---|---|
+| **Grouped** (`rowGroupCols.length > groupKeys.length`) | Group rows with metadata | Adds `group`, `key`, `field`, `level`, `leafGroup`, `groupKeys`, `childCount` fields |
+| **Leaf** (`rowGroupCols.length == groupKeys.length` or no grouping) | Passthrough rows | Returns original response data unchanged |
+
+### Group Row Metadata
+
+Group rows include adapter-defined metadata fields for AG Grid SSRM callbacks:
+
+| Response Field | Callback | Description |
+|---|---|---|
+| `group` | `isServerSideGroup` | Always `true` for group rows |
+| `key` | `getServerSideGroupKey` | The group key value (e.g., `"Electronics"`) |
+| `field` | — | The field name of the grouped column |
+| `level` | — | Zero-based grouping depth |
+| `leafGroup` | — | `true` if expanding this group returns leaf rows |
+| `groupKeys` | `getServerSideGroupKey` | Full route including all ancestor keys |
+| `childCount` | `getChildCount` | Number of child rows within this group |
+
+### Aggregate Alias Mapping
+
+When AG Grid groups rows, it expects aggregate values under the **original column field name** — not under FlexQuery's aggregate alias. For example, a column with `field: "quantity"` and `aggFunc: "SUM"` expects `data.quantity`.
+
+The adapter automatically maps FlexQuery aggregate aliases back to the original field name in the response:
+
+| Scenario | FlexQuery Result | AG Grid Response | Behavior |
+|---|---|---|---|
+| Single aggregate per field | `quantitySum: 494220` | `quantity: 494220` | Mapped transparently |
+| Multiple aggregates, same field | `quantitySum: 494220, quantityAvg: 120` | `quantitySum: 494220, quantityAvg: 120` | Aliases preserved (no overwrite) |
+
+**Rule**: If a field has exactly one aggregate in the request's `valueCols`, the alias is renamed to the field name. If a field has multiple aggregates (e.g., both `sum` and `avg` on `quantity`), all aliases are kept unchanged to avoid collisions.
+
+This means:
+- **Single-aggregate columns work out-of-the-box** — no `valueGetter` or column definition changes needed
+- **Multi-aggregate columns** require the frontend to reference the alias (e.g., `valueGetter: p => p.data.quantityAvg`) or use `field: "quantityAvg"` in the column definition
+
+The field names for `group`, `key`, `field`, `level`, `leafGroup`, `groupKeys`, and `childCount` are configurable via `AgGridResponseFieldOptions`:
+
+```csharp
+var options = new AgGridResponseFieldOptions
+{
+    GroupFlagFieldName = "__group",
+    KeyFieldName = "__key",
+    FieldFieldName = "__field",
+    LevelFieldName = "__level",
+    LeafGroupFieldName = "__leaf",
+    RouteFieldName = "__route",
+    ChildCountFieldName = "__count",
+    ChildCountSourceField = "childCount"
+};
+
+var response = result.ToAgGridServerSideResponse(request, options);
+```
 
 ## Real-World Example: End-to-End with Dapper
 

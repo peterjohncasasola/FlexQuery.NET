@@ -14,6 +14,61 @@ Paging applies `SKIP` and `TAKE` to your `IQueryable`. It:
 
 ---
 
+## Counting Semantics
+
+`QueryResult<T>` exposes three related counts:
+
+| Property | Meaning |
+| ----------- | ------------------------- |
+| `TotalCount` | Filtered source records |
+| `ResultCount` | Shaped rows before paging |
+| `Data.Count` | Current page rows |
+
+`TotalCount` preserves the existing FlexQuery behavior: it counts source records after filtering and before paging. `ResultCount` counts the rows produced by the final query shape before paging. For normal queries they usually match.
+
+```text
+1432 products
+pageSize = 20
+
+TotalCount  = 1432
+ResultCount = 1432
+Data.Count  = 20
+```
+
+For grouped, distinct, pivoted, or otherwise shaped queries, `ResultCount` can be smaller than `TotalCount`:
+
+```text
+1432 products
+GROUP BY Brand
+
+4 brand groups
+
+TotalCount  = 1432
+ResultCount = 4
+Data.Count  = current page of groups
+```
+
+For `HAVING`, `ResultCount` is calculated after the grouped rows are filtered:
+
+```text
+1432 products
+GROUP BY Brand
+HAVING SUM(Quantity) > 100
+
+2 groups remain
+
+TotalCount  = 1432
+ResultCount = 2
+```
+
+Adapters and UI grids that page grouped results should generally use:
+
+```csharp
+var rowCount = result.ResultCount ?? result.TotalCount;
+```
+
+---
+
 ## When to Use
 
 Use paging on **any list endpoint** to prevent full-table scans and large network payloads.
@@ -76,7 +131,7 @@ var query = _context.Users.AsQueryable();
 var filtered = query.ApplyFilter(options);
 var filtered2 = filtered.ApplySort(options);
 
-// Count BEFORE paging
+// Count filtered source records BEFORE paging.
 var total = await filtered2.CountAsync();
 
 var paged = filtered2.ApplyPaging(options);
@@ -116,6 +171,7 @@ GET /api/users?page=3&pageSize=5
     { "id": 15, "name": "Petra Voss" }
   ],
   "totalCount": 48,
+  "resultCount": 48,
   "page": 3,
   "pageSize": 5
 }
@@ -155,5 +211,6 @@ if (options.Paging.PageSize > 200) options.Paging.PageSize = 200;
 
 - `CountAsync` runs a separate SQL `COUNT(*)` query. On large tables, this can be slow.
 - Disable `IncludeCount` (`?includeCount=false`) on high-frequency endpoints where total count is not needed.
+- Grouped or shaped queries may also calculate `ResultCount` from the shaped query before paging.
 - Always sort before paging. Without a deterministic `ORDER BY`, results are undefined.
 - Use cursor-based pagination for very large datasets — FlexQuery.NET handles standard offset paging.

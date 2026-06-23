@@ -4,6 +4,34 @@ All notable changes to this project will be documented in this file.
 
 ---
 
+## [3.0.3] - 2026-06-23
+
+### Behavioral Change
+
+- **Aggregate alias naming convention redesigned:**
+  Aggregate aliases now follow a field-first, camelCase format (`totalSum`, `idCount`, `priceAvg`) instead of the previous `FUNCTION_Field` convention (`SUM_Total`, `COUNT_Id`, `AVG_Price`). Full test suite: **649 tests passed**.
+
+### Added
+
+- **AgGrid SSRM response support:** `ToAgGridServerSideResponse()` extension method, `AgGridResponseConverter`, and new models (`AgGridGroupRow`, `AgGridLeafRow`, `AgGridResponseFieldOptions`, `AgGridServerSideResponse`). `AgGridRequest` gains `GroupKeys` for SSRM grouping levels.
+- **QueryResult.ResultCount property:** Separate count for grouped/distinct queries vs `TotalCount`.
+- **Dapper grouping & distinct support:** Full GROUP BY and DISTINCT support, `TranslateSourceCount()` on `ISqlTranslator`, `ExtractCountSql()` helper, and enhanced `ExecuteQueryAsync()` for dual counting.
+- **New test coverage:** `AgGridResponseConverterTests`, `ResultCountTests`, `SqlTranslatorGroupedTests`, `GroupedQueryExecutionTests`.
+
+### Changed
+
+- **Documentation:** AgGrid adapter, migration guide, paging guide, grouping/projection/examples docs, and Dapper provider docs updated.
+
+## [3.0.2] - 2026-06-22
+
+### Added
+
+- **Simplified AG Grid API:** New extension methods — `AgGridRequest.ToQueryOptions()`, `QueryOptions.ApplyAgGridRequest(AgGridRequest)`, `string.FromAgGridJson()` — removing the need to reference `AgGridQueryOptionsParser` directly.
+
+### Changed
+
+- **Documentation:** README and AG Grid adapter guide updated for the simplified API.
+
 ## [3.0.1] - 2026-06-22
 
 ### Breaking Changes
