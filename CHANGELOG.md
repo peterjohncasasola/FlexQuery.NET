@@ -4,7 +4,7 @@ All notable changes to this project will be documented in this file.
 
 ---
 
-## [3.0.4] - 2026-06-23
+## [3.0.4] - 2026-06-24
 
 ### Added
 
@@ -14,7 +14,10 @@ All notable changes to this project will be documented in this file.
 - **RoleAllowedFields auto-projection:** `RoleAllowedFields` now serves as a valid source for default projection injection.
 - **GovernanceValidator:** New `GovernanceValidator.ValidateConfiguration()` for startup-time validation of governance config consistency — detects `BlockedFields` ∩ `AllowedFields` overlap and subset violations for `SelectableFields`/`FilterableFields`/`SortableFields`/`GroupableFields`/`AggregatableFields` vs `AllowedFields`.
 - **GroupedSortValidator:** New `GroupedSortValidator.Validate()` in Core that centralizes grouped sort validation. Removes invalid sort fields (non-group-key, non-aggregate), resolves aggregate field names to aliases, and injects a group-key fallback when all sorts are invalid — ensuring deterministic paging for grouped queries.
-- **New test coverage:** 24 FieldSecurityTests + 2 PagingTests covering default projection priority, wildcard expansion, non-strict re-apply, grouped query exclusion, no-governance fallthrough, config validation, and priority intersection. 6 new grouped query behavior tests across EF Core and Dapper providers (28 total grouped query tests).
+- **SelectTree governance validation:** Recursive `ValidateSelectTree()` method in `FieldAccessValidator` that walks SelectTree projection nodes, builds dot-notation paths, and applies all `CheckAccess()` governance rules (`BlockedFields`, `AllowedFields`, `SelectableFields`, `RoleAllowedFields`, `FieldAccessResolver`, `MaxFieldDepth`, `IncludeAllScalars` expansion).
+- **SelectionNode mutation methods:** `ClearIncludeAllScalars()` and `RemoveChild(string)` for non-strict tree pruning.
+- **Governance test coverage audit:** Full matrix of strict/non-strict/flat/SelectTree coverage across all governance features, documenting 10 gaps for future test improvement.
+- **New test coverage:** 7 SelectTree governance enforcement tests covering strict blocking, nested fields, IncludeAllScalars, non-strict removal, and flat-Select control. 24 FieldSecurityTests + 2 PagingTests covering default projection priority, wildcard expansion, non-strict re-apply, grouped query exclusion, no-governance fallthrough, config validation, and priority intersection. 6 new grouped query behavior tests across EF Core and Dapper providers (28 total grouped query tests).
 
 ### Changed
 
@@ -25,6 +28,7 @@ All notable changes to this project will be documented in this file.
 
 ### Fixed
 
+- **[Critical] SelectTree governance bypass:** `FieldAccessValidator` only validated `options.Select` (flat list). `options.SelectTree` — used by JSON parser, OData, Kendo, AG Grid, and JQL adapters — was never inspected. Blocked fields (`SSN`, `Orders.Total`) could be projected through tree-based entry points without governance enforcement. Fixed by adding recursive `ValidateSelectTree()` that walks all tree nodes, builds dot-notation paths, and applies the full `CheckAccess()` pipeline.
 - **Default response field leak:** When `QueryOptions.Select` was null, the projection builder returned all entity fields regardless of governance configuration. Now governed defaults are injected before validation, ensuring `AllowedFields`, `BlockedFields`, and `RoleAllowedFields` are respected even for unprojected queries.
 - **Dapper invalid SQL for grouped sorts:** Sort fields referencing entity columns not in GROUP BY (e.g., `ORDER BY [Id]` when grouping by `Category`) are now removed before SQL generation instead of producing invalid SQL.
 - **Dapper nondeterministic grouped paging:** Grouped queries with paging but no valid ORDER BY now receive a deterministic fallback sort by the first group key ascending.
