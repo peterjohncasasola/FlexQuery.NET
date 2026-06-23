@@ -1,3 +1,5 @@
+using System.Linq.Expressions;
+using FlexQuery.NET.Constants;
 using FlexQuery.NET.Models;
 using FlexQuery.NET.Parsers;
 using FlexQuery.NET.Caching;
@@ -72,5 +74,77 @@ public class CacheKeyCorrectnessTests
         
         // Different select fields should produce different cache keys
         key1.Should().NotBe(key2);
+    }
+
+    [Fact]
+    public void CanCache_WithExpressionMappings_ReturnsFalse()
+    {
+        var options = new QueryOptions
+        {
+            Filter = new FilterGroup
+            {
+                Logic = LogicOperator.And,
+                Filters = [new FilterCondition { Field = "Status", Operator = "eq", Value = "active" }]
+            }
+        };
+
+        // Without ExpressionMappings, caching is allowed
+        QueryCacheKeyBuilder.CanCache(options).Should().BeTrue();
+
+        // With ExpressionMappings set, caching should be disabled
+        var mappings = new Dictionary<string, LambdaExpression>
+        {
+            ["DerivedStatus"] = Expression.Lambda(Expression.Constant("active"))
+        };
+        options.Items[ContextKeys.ExpressionMappings] = mappings;
+
+        QueryCacheKeyBuilder.CanCache(options).Should().BeFalse();
+    }
+
+    [Fact]
+    public void CacheKey_IdenticalQuery_DifferentEntityType_DifferentKey()
+    {
+        var options = QueryOptionsParser.Parse(new Dictionary<string, StringValues> { { "filter", "Name:eq:john" } });
+
+        var key1 = options.GetCacheKey(typeof(string), "test");
+        var key2 = options.GetCacheKey(typeof(int), "test");
+
+        // Same query on different entity types must produce different cache keys
+        key1.Should().NotBe(key2);
+    }
+
+    [Fact]
+    public void SortOrder_DifferentFieldOrder_DifferentKey()
+    {
+        var optionsA = QueryOptionsParser.Parse(new Dictionary<string, StringValues> { { "sort", "Name:asc,Id:asc" } });
+        var optionsB = QueryOptionsParser.Parse(new Dictionary<string, StringValues> { { "sort", "Id:asc,Name:asc" } });
+
+        var keyA = optionsA.GetCacheKey(typeof(object), "test");
+        var keyB = optionsB.GetCacheKey(typeof(object), "test");
+
+        // Sort order matters — [Name, Id] is a different query shape than [Id, Name]
+        keyA.Should().NotBe(keyB);
+    }
+
+
+    [Fact]
+    public void SelectOrder_DifferentFieldOrder_SameKey()
+    {
+        var optionsA = QueryOptionsParser.Parse(
+            new Dictionary<string, StringValues>
+            {
+                { "select", "Id,Name" }
+            });
+
+        var optionsB = QueryOptionsParser.Parse(
+            new Dictionary<string, StringValues>
+            {
+                { "select", "Name,Id" }
+            });
+
+        var keyA = optionsA.GetCacheKey(typeof(object), "test");
+        var keyB = optionsB.GetCacheKey(typeof(object), "test");
+
+        keyA.Should().Be(keyB);
     }
 }
