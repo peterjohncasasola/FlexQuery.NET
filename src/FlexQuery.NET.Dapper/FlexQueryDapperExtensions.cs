@@ -171,7 +171,7 @@ public static class FlexQueryDapperExtensions
 
             items = DapperRowHydrator.HydrateIncludes<T>(dynamicItems, mapping, registry, options.Includes);
         }
-        else if (typeof(T) == typeof(object) || (options.Aggregates.Count > 0 && options.GroupBy?.Count > 0))
+        else if (typeof(T) == typeof(object) || options.GroupBy?.Count > 0)
         {
             var dynamicItems = await connection.QueryAsync(
                 command.Sql,
@@ -192,11 +192,31 @@ public static class FlexQueryDapperExtensions
                 commandType: CommandType.Text)).AsList();
         }
 
-        var totalCount = items.Count;
-        if (execOptions.IncludeTotalCount && (options.Paging.Page > 1 || (options.Paging.PageSize > 0 && items.Count == options.Paging.PageSize)))
+        int? totalCount = items.Count;
+        int? resultCount = items.Count;
+        if (execOptions.IncludeTotalCount)
         {
-            var countSql = ExtractCountSql(command.Sql);
-            totalCount = (int)await connection.QuerySingleAsync<long>(countSql, parameters, commandTimeout: execOptions.CommandTimeoutSeconds, commandType: CommandType.Text);
+            var sourceCountCommand = translator.TranslateSourceCount(options);
+            var sourceCountParameters = new DynamicParameters();
+            foreach (var param in sourceCountCommand.Parameters)
+            {
+                var cleanName = param.Key.TrimStart('@', ':', '?');
+                sourceCountParameters.Add(cleanName, param.Value);
+            }
+
+            totalCount = (int)await connection.QuerySingleAsync<long>(
+                sourceCountCommand.Sql,
+                sourceCountParameters,
+                commandTimeout: execOptions.CommandTimeoutSeconds,
+                commandType: CommandType.Text);
+
+            resultCount = options.GroupBy is { Count: > 0 } || options.Distinct == true
+                ? (int)await connection.QuerySingleAsync<long>(
+                    ExtractCountSql(command.Sql),
+                    parameters,
+                    commandTimeout: execOptions.CommandTimeoutSeconds,
+                    commandType: CommandType.Text)
+                : totalCount;
         }
 
         Dictionary<string, Dictionary<string, object>>? grandTotals = null;
@@ -241,6 +261,7 @@ public static class FlexQueryDapperExtensions
         {
             Data = items,
             TotalCount = totalCount,
+            ResultCount = resultCount,
             Page = options.Paging.Page,
             PageSize = options.Paging.PageSize,
             Aggregates = grandTotals

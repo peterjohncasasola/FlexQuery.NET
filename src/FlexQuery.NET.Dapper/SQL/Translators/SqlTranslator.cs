@@ -1,3 +1,4 @@
+using System.Text.RegularExpressions;
 using FlexQuery.NET.Models;
 using FlexQuery.NET.Constants;
 using FlexQuery.NET.Dapper.Mapping;
@@ -19,6 +20,7 @@ public interface ISqlTranslator
 
     /// <summary>Translates QueryOptions aggregates list into parameterized SQL.</summary>
     SqlCommand TranslateAggregates(QueryOptions options);
+
 }
 
 /// <summary>
@@ -84,7 +86,7 @@ public sealed class SqlTranslator : ISqlTranslator
 
         var clauses = new List<string> { selectClause, fromClause, joinClause, whereClause, groupByClause, havingClause, orderByClause, pagingClause };
         var sql = string.Join(" ", clauses.Where(c => !string.IsNullOrEmpty(c)));
-        sql = System.Text.RegularExpressions.Regex.Replace(sql, @"\s+", " ");
+        sql = Regex.Replace(sql, @"\s+", " ");
 
         return new SqlCommand
         {
@@ -109,7 +111,28 @@ public sealed class SqlTranslator : ISqlTranslator
 
         var clauses = new List<string> { selectClause, fromClause, joinClause, whereClause };
         var sql = string.Join(" ", clauses.Where(c => !string.IsNullOrEmpty(c)));
-        sql = System.Text.RegularExpressions.Regex.Replace(sql, @"\s+", " ");
+        sql = Regex.Replace(sql, @"\s+", " ");
+
+        return new SqlCommand
+        {
+            Sql = sql,
+            Parameters = parameters.RawParameters
+        };
+    }
+
+    /// <summary>Translates filters into a source-record count SQL command.</summary>
+    internal SqlCommand TranslateSourceCount(QueryOptions options)
+    {
+        var (mapping, selectTree) = PrepareTranslation(options);
+        var parameters = new SqlParameterContext(_dialect);
+
+        var fromClause = BuildFromClause(mapping);
+        var joinClause = _joinBuilder.BuildJoinClause(options, mapping, parameters, selectTree);
+        var whereClause = _whereBuilder.BuildWhereClause(options.Filter, mapping, parameters);
+
+        var clauses = new List<string> { $"SELECT {_dialect.GetCountExpression}", fromClause, joinClause, whereClause };
+        var sql = string.Join(" ", clauses.Where(c => !string.IsNullOrEmpty(c)));
+        sql = Regex.Replace(sql, @"\s+", " ");
 
         return new SqlCommand
         {
@@ -156,7 +179,13 @@ public sealed class SqlTranslator : ISqlTranslator
         var column = SqlDialectHelper.QuoteColumn(_dialect, mapping.GetColumnName(having.Field ?? "*"), mapping);
 
         var valStr = having.Value?.ToString()?.Trim('"');
-        var paramName = parameters.Add(SqlValueConverter.Convert(having.Field ?? string.Empty, valStr, mapping));
+        var convertedValue = SqlValueConverter.Convert(having.Field ?? string.Empty, valStr, mapping);
+        if (_dialect is SqliteDialect && convertedValue is decimal decimalValue)
+        {
+            convertedValue = (double)decimalValue;
+        }
+
+        var paramName = parameters.Add(convertedValue);
 
         var sqlOp = having.Operator.ToLowerInvariant() switch
         {
@@ -177,10 +206,20 @@ public sealed class SqlTranslator : ISqlTranslator
         if (sorts == null || sorts.Count == 0) return string.Empty;
         var columns = sorts.Select(s =>
         {
-            var column = SqlDialectHelper.QuoteColumn(_dialect, mapping.GetColumnName(s.Field), mapping);
+            var column = ResolveOrderByExpression(s, mapping);
             return s.Descending ? $"{column} DESC" : column;
         });
         return $"ORDER BY {string.Join(", ", columns)}";
+    }
+
+    private string ResolveOrderByExpression(SortNode sort, IEntityMapping mapping)
+    {
+        if (mapping.GetPropertyName(sort.Field) is not null)
+        {
+            return SqlDialectHelper.QuoteColumn(_dialect, mapping.GetColumnName(sort.Field), mapping);
+        }
+
+        return _dialect.QuoteIdentifier(sort.Field);
     }
 
     private string BuildPagingClause(PagingOptions paging, SqlParameterContext parameters)
