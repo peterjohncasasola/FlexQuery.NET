@@ -1,8 +1,8 @@
+using FlexQuery.NET.Caching;
 using FlexQuery.NET.Models;
 using FlexQuery.NET.Security;
 using FlexQuery.NET.Exceptions;
 using System.Collections.Concurrent;
-using System.Reflection;
 using FlexQuery.NET.Constants;
 using FlexQuery.NET.Metadata;
 
@@ -189,8 +189,7 @@ public sealed class FieldAccessValidator : IValidationRule
     {
         if (node.IncludeAllScalars && currentType != null)
         {
-            var scalarFields = currentType
-                .GetProperties(BindingFlags.Public | BindingFlags.Instance)
+            var scalarFields = ReflectionCache.GetProperties(currentType)
                 .Where(p => TypeClassification.IsScalarType(p.PropertyType))
                 .Select(p => p.Name);
 
@@ -254,7 +253,7 @@ public sealed class FieldAccessValidator : IValidationRule
     {
         if (parentType == null) return null;
 
-        var prop = parentType.GetProperty(childKey, BindingFlags.Public | BindingFlags.Instance | BindingFlags.IgnoreCase);
+        var prop = ReflectionCache.GetProperty(parentType, childKey);
         if (prop == null) return null;
 
         if (TypeClassification.IsCollectionType(prop.PropertyType, out var elementType))

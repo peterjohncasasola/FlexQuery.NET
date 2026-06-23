@@ -1,4 +1,5 @@
 using System.Reflection;
+using FlexQuery.NET.Caching;
 
 namespace FlexQuery.NET.Helpers;
 
@@ -21,9 +22,7 @@ internal static class TypeHelper
 
         foreach (var segment in segments)
         {
-            prop = current.GetProperty(
-                segment,
-                BindingFlags.Public | BindingFlags.Instance | BindingFlags.IgnoreCase);
+            prop = ReflectionCache.GetProperty(current, segment);
 
             if (prop is null) return null;
             current = prop.PropertyType;

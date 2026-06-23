@@ -1,6 +1,5 @@
 using System.Linq.Expressions;
 using System.Reflection;
-using System.Collections.Concurrent;
 using FlexQuery.NET.Caching;
 using FlexQuery.NET.Expressions;
 using FlexQuery.NET.Helpers;
@@ -73,7 +72,7 @@ internal static class ProjectionBuilder
             }
             else
             {
-                var propInfo = sourceType.GetProperty(propName, BindingFlags.Public | BindingFlags.Instance | BindingFlags.IgnoreCase);
+                var propInfo = ReflectionCache.GetProperty(sourceType, propName);
                 if (propInfo == null) continue;
                 propAccess = Expression.Property(source, propInfo);
                 propType = propInfo.PropertyType;
@@ -212,7 +211,7 @@ internal static class ProjectionBuilder
                 var rootField = field.Split('.', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)[0];
                 rootFields.Add(rootField);
             }
-            foreach (var prop in sourceType.GetProperties(BindingFlags.Public | BindingFlags.Instance))
+            foreach (var prop in ReflectionCache.GetProperties(sourceType))
             {
                 if (TypeClassification.IsScalarType(prop.PropertyType) && rootFields.Contains(prop.Name))
                 {
@@ -222,7 +221,7 @@ internal static class ProjectionBuilder
         }
         else
         {
-            foreach (var prop in sourceType.GetProperties(BindingFlags.Public | BindingFlags.Instance))
+            foreach (var prop in ReflectionCache.GetProperties(sourceType))
             {
                 if (TypeClassification.IsScalarType(prop.PropertyType))
                 {

@@ -1,3 +1,4 @@
+using FlexQuery.NET.Caching;
 using FlexQuery.NET.Models;
 
 namespace FlexQuery.NET.Builders;
@@ -21,7 +22,7 @@ internal static class AggregateResultBuilder
             new Dictionary<string, Dictionary<string, object>>(
                 StringComparer.OrdinalIgnoreCase);
 
-        foreach (var prop in aggregateRow.GetType().GetProperties())
+        foreach (var prop in ReflectionCache.GetProperties(aggregateRow.GetType()))
         {
             if (!aggregateLookup.TryGetValue(prop.Name, out var aggregate))
             {

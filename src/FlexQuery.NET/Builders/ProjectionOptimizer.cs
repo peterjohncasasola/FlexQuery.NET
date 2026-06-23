@@ -1,6 +1,7 @@
-using System.Linq.Expressions;
-using System.Reflection;
 using System.Collections.Concurrent;
+using System.Linq.Expressions;
+using FlexQuery.NET.Caching;
+using FlexQuery.NET.Models;
 using FlexQuery.NET.Metadata;
 using FlexQuery.NET.Models;
 
@@ -61,7 +62,7 @@ public static class ProjectionOptimizer
             var childPath = string.IsNullOrEmpty(currentPath) ? kvp.Key : $"{currentPath}.{kvp.Key}";
             var outputName = !string.IsNullOrWhiteSpace(kvp.Value.Alias) ? kvp.Value.Alias : kvp.Key;
 
-            var propInfo = currentType.GetProperty(kvp.Key, BindingFlags.Public | BindingFlags.Instance | BindingFlags.IgnoreCase);
+            var propInfo = ReflectionCache.GetProperty(currentType, kvp.Key);
             if (propInfo == null) continue;
 
             if (Security.SafePropertyResolver.TryGetCollectionElementType(propInfo.PropertyType, out var elemType))
@@ -89,7 +90,7 @@ public static class ProjectionOptimizer
 
     private static bool IsCollectionNavigation(Type entityType, string propertyName)
     {
-        var prop = entityType.GetProperty(propertyName, BindingFlags.Public | BindingFlags.Instance | BindingFlags.IgnoreCase);
+        var prop = ReflectionCache.GetProperty(entityType, propertyName);
         return prop != null && Security.SafePropertyResolver.TryGetCollectionElementType(prop.PropertyType, out _);
     }
 

@@ -57,6 +57,7 @@
     <InternalsVisibleTo Include="FlexQuery.NET.Adapters.Kendo" />
     <InternalsVisibleTo Include="FlexQuery.NET.EntityFrameworkCore" />
     <InternalsVisibleTo Include="FlexQuery.NET.Parsers.Jql" />
+    <InternalsVisibleTo Include="FlexQuery.Benchmarks" />
   </ItemGroup>
   
 </Project>

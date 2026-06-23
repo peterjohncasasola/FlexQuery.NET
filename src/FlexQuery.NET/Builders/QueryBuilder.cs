@@ -1,5 +1,6 @@
 using System.Linq.Expressions;
 using System.Reflection;
+using FlexQuery.NET.Caching;
 using FlexQuery.NET.Models;
 using FlexQuery.NET.Security;
 using FlexQuery.NET.Expressions;
@@ -84,15 +85,16 @@ public static class QueryBuilder
             string? fieldName = options.Select?.FirstOrDefault(f => !string.IsNullOrWhiteSpace(f) && !f.Contains('.'));
             if (fieldName == null)
             {
-                var defaultSortProp = typeof(T).GetProperties(BindingFlags.Public | BindingFlags.Instance)
+                var allProps = ReflectionCache.GetProperties(typeof(T));
+                var defaultSortProp = allProps
                     .FirstOrDefault(p => p.Name.Equals("Id", StringComparison.OrdinalIgnoreCase) || p.Name.Equals("Key", StringComparison.OrdinalIgnoreCase))
-                    ?? typeof(T).GetProperties(BindingFlags.Public | BindingFlags.Instance).FirstOrDefault();
+                    ?? allProps.FirstOrDefault();
                 fieldName = defaultSortProp?.Name;
             }
 
             if (fieldName != null)
             {
-                var defaultSortProp = typeof(T).GetProperty(fieldName, BindingFlags.Public | BindingFlags.Instance | BindingFlags.IgnoreCase);
+                var defaultSortProp = ReflectionCache.GetProperty(typeof(T), fieldName);
                 if (defaultSortProp != null && !IsCollectionType(defaultSortProp.PropertyType))
                 {
                     var parameter = Expression.Parameter(typeof(T), "x");

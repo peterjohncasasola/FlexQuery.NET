@@ -1,7 +1,7 @@
+using FlexQuery.NET.Caching;
 using FlexQuery.NET.Models;
 using FlexQuery.NET.Metadata;
 using FlexQuery.NET.Security;
-using System.Reflection;
 
 namespace FlexQuery.NET.Validation.Rules;
 
@@ -47,8 +47,7 @@ internal static class DefaultProjectionHelper
 
         if (execOptions.BlockedFields?.Count > 0 && ctx?.TargetType != null)
         {
-            var allScalars = ctx.TargetType
-                .GetProperties(BindingFlags.Public | BindingFlags.Instance)
+            var allScalars = ReflectionCache.GetProperties(ctx.TargetType)
                 .Where(p => TypeClassification.IsScalarType(p.PropertyType))
                 .Select(p => p.Name);
             options.Select = allScalars
@@ -104,7 +103,7 @@ internal static class DefaultProjectionHelper
 
             foreach (var part in parts)
             {
-                var prop = currentType.GetProperty(part, BindingFlags.Public | BindingFlags.Instance | BindingFlags.IgnoreCase);
+                var prop = ReflectionCache.GetProperty(currentType, part);
                 if (prop == null) return;
                 prefix.Add(part);
                 currentType = GetTargetType(prop.PropertyType);
@@ -117,7 +116,9 @@ internal static class DefaultProjectionHelper
 
     private static void ExpandUnderType(Type type, string prefix, string originalPattern, List<string> result)
     {
-        foreach (var prop in type.GetProperties(BindingFlags.Public | BindingFlags.Instance))
+        var allProps = ReflectionCache.GetProperties(type);
+
+        foreach (var prop in allProps)
         {
             if (TypeClassification.IsScalarType(prop.PropertyType))
             {
@@ -126,7 +127,7 @@ internal static class DefaultProjectionHelper
             }
         }
 
-        foreach (var prop in type.GetProperties(BindingFlags.Public | BindingFlags.Instance))
+        foreach (var prop in allProps)
         {
             if (!TypeClassification.IsScalarType(prop.PropertyType) && prop.PropertyType != typeof(object))
             {

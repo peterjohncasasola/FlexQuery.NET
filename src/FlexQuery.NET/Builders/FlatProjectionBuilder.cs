@@ -2,6 +2,7 @@ using System.Linq.Expressions;
 using System.Reflection;
 using FlexQuery.NET.Models;
 using FlexQuery.NET.Security;
+using FlexQuery.NET.Caching;
 using FlexQuery.NET.Helpers;
 using FlexQuery.NET.Constants;
 using FlexQuery.NET.Expressions;
@@ -58,7 +59,7 @@ internal static class FlatProjectionBuilder
         // Walk the navigation path using single-arg SelectMany
         foreach (var hop in hops)
         {
-            var prop = hop.SourceType.GetProperty(hop.PropName, BindingFlags.Public | BindingFlags.Instance | BindingFlags.IgnoreCase)!;
+            var prop = ReflectionCache.GetProperty(hop.SourceType, hop.PropName)!;
             var param = Expression.Parameter(hop.SourceType, "x");
             var propAccess = Expression.Property(param, prop);
 
@@ -98,7 +99,7 @@ internal static class FlatProjectionBuilder
         for (int i = 0; i < hops.Count; i++)
         {
             var hop = hops[i];
-            var prop = currentType.GetProperty(hop.PropName, BindingFlags.Public | BindingFlags.Instance | BindingFlags.IgnoreCase)!;
+            var prop = ReflectionCache.GetProperty(currentType, hop.PropName)!;
 
             if (i == 0)
             {
@@ -138,7 +139,7 @@ internal static class FlatProjectionBuilder
 
                 var prevLevelProp = currentType.GetProperty($"L{i}")!;
                 var prevLevelAccess = Expression.Property(ctxParam, prevLevelProp);
-                var navProp = hop.SourceType.GetProperty(hop.PropName, BindingFlags.Public | BindingFlags.Instance | BindingFlags.IgnoreCase)!;
+                var navProp = ReflectionCache.GetProperty(hop.SourceType, hop.PropName)!;
                 var propAccess = Expression.Property(prevLevelAccess, navProp);
 
                 var enumType = typeof(IEnumerable<>).MakeGenericType(hop.ElementType);
@@ -222,7 +223,7 @@ internal static class FlatProjectionBuilder
                 continue;
             }
 
-            var pi = ownerAccess.Type.GetProperty(field.PropName, BindingFlags.Public | BindingFlags.Instance | BindingFlags.IgnoreCase);
+            var pi = ReflectionCache.GetProperty(ownerAccess.Type, field.PropName);
             if (pi == null) continue;
 
             props[field.OutputName] = (pi.PropertyType, Expression.Property(ownerAccess, pi));
@@ -279,7 +280,7 @@ internal static class FlatProjectionBuilder
                 }
             }
 
-            var pi = currentType.GetProperty(propName, BindingFlags.Public | BindingFlags.Instance | BindingFlags.IgnoreCase);
+            var pi = ReflectionCache.GetProperty(currentType, propName);
             if (pi == null) continue;
 
             if (pi != null)
@@ -339,7 +340,7 @@ internal static class FlatProjectionBuilder
             else
             {
                 // No children specified → project all scalars of the element type
-                foreach (var p in elemType.GetProperties(BindingFlags.Public | BindingFlags.Instance))
+                foreach (var p in ReflectionCache.GetProperties(elemType))
                 {
                     if (TypeClassification.IsScalarType(p.PropertyType))
                         fields.Add(new FieldSpec(nextLevel, p.Name, p.Name, p.PropertyType));
