@@ -17,18 +17,21 @@ internal static class GroupByBuilder
     private static readonly MethodInfo QueryableWhere = ExpressionMethodCache.QueryableWhereSimple();
 
     public static IQueryable<object> Apply<T>(IQueryable<T> query, QueryOptions options)
+        => ApplyUntyped(query, options).Cast<object>();
+
+    internal static IQueryable ApplyUntyped<T>(IQueryable<T> query, QueryOptions options)
     {
         var groupFields = options.GroupBy ?? [];
-        var aggregates = options.Aggregates ?? [];
+        var aggregates = options.Aggregates;
         if (groupFields.Count == 0 && aggregates.Count == 0)
-            return query.Cast<object>();
+            return query;
 
         var sourceType = typeof(T);
         var itemParam = Expression.Parameter(sourceType, "x");
 
         var keyExpression = BuildGroupKeyExpression(itemParam, sourceType, groupFields, options, out var keyType);
         if (keyExpression is null || keyType is null)
-            return query.Cast<object>();
+            return query;
 
         var keySelector = Expression.Lambda(
             typeof(Func<,>).MakeGenericType(sourceType, keyType),
@@ -46,7 +49,7 @@ internal static class GroupByBuilder
         var selectedFields = BuildSelectedFieldList(options, groupFields);
         var projection = BuildGroupProjection(groupParam, keyType, sourceType, selectedFields, aggregates, options, out var projectionType);
         if (projection is null || projectionType is null)
-            return query.Cast<object>();
+            return query;
 
         var selectLambda = Expression.Lambda(
             typeof(Func<,>).MakeGenericType(groupingType, projectionType),
@@ -73,8 +76,7 @@ internal static class GroupByBuilder
             }
         }
 
-        var finalQuery = query.Provider.CreateQuery(finalCall);
-        return finalQuery.Cast<object>();
+        return query.Provider.CreateQuery(finalCall);
     }
 
     private static List<string> BuildSelectedFieldList(QueryOptions options, List<string> groupFields)
@@ -115,11 +117,11 @@ internal static class GroupByBuilder
             fields[field] = (access.Type, access);
         }
 
-        var dynamicType = DynamicTypeBuilder.GetDynamicType(fields.ToDictionary(k => ToProjectionName(k.Key), v => v.Value.Type));
+        var dynamicType = DynamicTypeBuilder.GetDynamicType(fields.ToDictionary(k => GetProjectionName(k.Key), v => v.Value.Type));
         var bindings = new List<MemberBinding>();
         foreach (var field in fields)
         {
-            var prop = dynamicType.GetProperty(ToProjectionName(field.Key));
+            var prop = dynamicType.GetProperty(GetProjectionName(field.Key));
             if (prop is null) return null;
             bindings.Add(Expression.Bind(prop, field.Value.Expr));
         }
@@ -142,8 +144,8 @@ internal static class GroupByBuilder
 
         foreach (var field in selectedFields)
         {
-            var outputName = ToProjectionName(field);
-            if (keyType == typeof(int))
+            var outputName = GetProjectionName(field);
+            if (options.GroupBy is not { Count: > 0 })
                 continue;
 
             var keyExpr = Expression.Property(groupParam, nameof(IGrouping<object, object>.Key));
@@ -240,7 +242,7 @@ internal static class GroupByBuilder
         return true;
     }
 
-    private static string ToProjectionName(string path)
+    internal static string GetProjectionName(string path)
     {
         var last = path.Split('.', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).LastOrDefault() ?? path;
         return string.Concat(last.Where(ch => ch != '_'));

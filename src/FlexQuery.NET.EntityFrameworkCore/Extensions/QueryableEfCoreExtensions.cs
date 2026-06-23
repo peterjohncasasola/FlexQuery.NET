@@ -4,6 +4,7 @@ using FlexQuery.NET.Models;
 using FlexQuery.NET.Parsers;
 using Microsoft.EntityFrameworkCore;
 using System.ComponentModel;
+using System.Reflection;
 using System.Threading;
 
 namespace FlexQuery.NET.EntityFrameworkCore;
@@ -13,6 +14,11 @@ namespace FlexQuery.NET.EntityFrameworkCore;
 /// </summary>
 public static class QueryableEfCoreExtensions
 {
+    private static readonly MethodInfo ExecuteGroupedQueryMethod = typeof(QueryableEfCoreExtensions)
+        .GetMethod(nameof(ExecuteGroupedQueryAsync), BindingFlags.NonPublic | BindingFlags.Static)!;
+
+    private static readonly MethodInfo CountGroupedQueryMethod = typeof(QueryableEfCoreExtensions)
+        .GetMethod(nameof(CountGroupedQueryAsync), BindingFlags.NonPublic | BindingFlags.Static)!;
 
     // ── Include Pipeline ─────────────────────────────────────────────────
 
@@ -167,9 +173,19 @@ public static class QueryableEfCoreExtensions
         }
 
         var filtered = QueryBuilder.ApplyFilter(query, options);
-        filtered = QueryBuilder.ApplySort(filtered, options);
-
         var total = options.IncludeCount == true ? await filtered.CountAsync(cancellationToken) : (int?)null;
+
+        if (options.GroupBy is { Count: > 0 })
+        {
+            var groupedQuery = GroupByBuilder.ApplyUntyped(filtered, options);
+            var resultCount = options.IncludeCount == true
+                ? await CountGroupedQuery(groupedQuery, cancellationToken)
+                : (int?)null;
+            var data = await ExecuteGroupedQuery(groupedQuery, options, cancellationToken);
+            return options.BuildQueryResult(data, total, resultCount: resultCount);
+        }
+
+        filtered = QueryBuilder.ApplySort(filtered, options);
         
         Dictionary<string, Dictionary<string, object>>? grandTotals = null;
 
@@ -202,6 +218,90 @@ public static class QueryableEfCoreExtensions
 
         //convert from QueryResult<T> to QueryResult<object> by treating each T as an object (no projection)
         return options.BuildQueryResult(filteredData, total, grandTotals).ToObjectResult();
+    }
+
+    private static Task<IReadOnlyList<object>> ExecuteGroupedQuery(
+        IQueryable groupedQuery,
+        QueryOptions options,
+        CancellationToken cancellationToken)
+    {
+        return (Task<IReadOnlyList<object>>)ExecuteGroupedQueryMethod
+            .MakeGenericMethod(groupedQuery.ElementType)
+            .Invoke(null, [groupedQuery, options, cancellationToken])!;
+    }
+
+    private static Task<int> CountGroupedQuery(
+        IQueryable groupedQuery,
+        CancellationToken cancellationToken)
+    {
+        return (Task<int>)CountGroupedQueryMethod
+            .MakeGenericMethod(groupedQuery.ElementType)
+            .Invoke(null, [groupedQuery, cancellationToken])!;
+    }
+
+    private static Task<int> CountGroupedQueryAsync<TShape>(
+        IQueryable groupedQuery,
+        CancellationToken cancellationToken)
+    {
+        return ((IQueryable<TShape>)groupedQuery).CountAsync(cancellationToken);
+    }
+
+    private static async Task<IReadOnlyList<object>> ExecuteGroupedQueryAsync<TShape>(
+        IQueryable groupedQuery,
+        QueryOptions options,
+        CancellationToken cancellationToken)
+    {
+        var typedQuery = (IQueryable<TShape>)groupedQuery;
+        var sorts = BuildGroupedSorts<TShape>(options);
+
+        typedQuery = QueryBuilder.ApplySort(typedQuery, sorts, options);
+        typedQuery = QueryBuilder.ApplyPaging(typedQuery, options);
+
+        var rows = await typedQuery.ToListAsync(cancellationToken);
+        return rows.Cast<object>().ToList();
+    }
+
+    private static List<SortNode> BuildGroupedSorts<TShape>(QueryOptions options)
+    {
+        if (options.Sort.Count == 0)
+        {
+            return (options.GroupBy ?? [])
+                .Select(field => new SortNode { Field = GroupByBuilder.GetProjectionName(field) })
+                .ToList();
+        }
+
+        var resultType = typeof(TShape);
+        return options.Sort
+            .Select(sort => new SortNode
+            {
+                Field = ResolveGroupedSortField(resultType, sort, options),
+                Descending = sort.Descending
+            })
+            .ToList();
+    }
+
+    private static string ResolveGroupedSortField(
+        Type resultType,
+        SortNode sort,
+        QueryOptions options)
+    {
+        var directProperty = resultType.GetProperty(
+            sort.Field,
+            BindingFlags.Public | BindingFlags.Instance | BindingFlags.IgnoreCase);
+        if (directProperty is not null)
+        {
+            return directProperty.Name;
+        }
+
+        var aggregate = options.Aggregates.FirstOrDefault(candidate =>
+            candidate.Alias.Equals(sort.Field, StringComparison.OrdinalIgnoreCase)
+            || candidate.Field?.Equals(sort.Field, StringComparison.OrdinalIgnoreCase) == true);
+        if (aggregate is not null)
+        {
+            return aggregate.Alias;
+        }
+
+        return GroupByBuilder.GetProjectionName(sort.Field);
     }
 
 }
