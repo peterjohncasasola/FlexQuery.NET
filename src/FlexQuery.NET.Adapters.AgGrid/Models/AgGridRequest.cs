@@ -14,5 +14,7 @@ public sealed class AgGridRequest
 
     public List<AgGridGroupColumn>? RowGroupCols { get; set; }
 
+    public List<string> GroupKeys { get; set; } = [];
+
     public List<AgGridValueColumn>? ValueCols { get; set; }
 }

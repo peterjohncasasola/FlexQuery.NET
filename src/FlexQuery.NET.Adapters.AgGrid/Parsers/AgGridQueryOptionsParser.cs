@@ -1,6 +1,7 @@
 using System.Text.Json;
 using System.Linq;
 using FlexQuery.NET.Adapters.AgGrid.Models;
+using FlexQuery.NET.Constants;
 using FlexQuery.NET.Models;
 using FlexQuery.NET.Parsers;
 
@@ -13,6 +14,13 @@ public static class AgGridQueryOptionsParser
         ArgumentNullException.ThrowIfNull(request);
 
         var result = new QueryOptions();
+        var rowGroupFields = request.RowGroupCols?
+            .Select(c => c.Field?.Trim())
+            .Where(static f => !string.IsNullOrWhiteSpace(f))
+            .Cast<string>()
+            .ToList() ?? [];
+        var groupKeyCount = Math.Min(request.GroupKeys.Count, rowGroupFields.Count);
+        var isGroupedLevelRequest = rowGroupFields.Count > groupKeyCount;
 
         if (request.FilterModel.Count > 0)
         {
@@ -33,21 +41,26 @@ public static class AgGridQueryOptionsParser
         }
 
         // 2. Row Group Support
-        if (request.RowGroupCols is { Count: > 0 })
+        if (rowGroupFields.Count > 0)
         {
-            var groupByFields = request.RowGroupCols
-                .Select(c => c.Field?.Trim())
-                .Where(f => !string.IsNullOrEmpty(f))
-                .ToList();
-
-            if (groupByFields.Count > 0)
+            if (groupKeyCount > 0)
             {
-                result.GroupBy = groupByFields!;
+                result.Filter = MergeFilters(
+                    result.Filter,
+                    BuildGroupKeyFilter(rowGroupFields, request.GroupKeys, groupKeyCount));
+            }
+
+            if (isGroupedLevelRequest)
+            {
+                result.GroupBy = [rowGroupFields[groupKeyCount]];
             }
         }
 
         // 3. Value Columns / Aggregates Support
-        if (request.ValueCols is { Count: > 0 })
+        // AG Grid always sends valueCols for columns configured with aggFunc, even when
+        // no grouping is active. Aggregates should only be generated when the request
+        // targets an actively grouped level (rowGroupCols.length > groupKeys.length).
+        if (request.ValueCols is { Count: > 0 } && isGroupedLevelRequest)
         {
             foreach (var col in request.ValueCols)
             {
@@ -127,6 +140,16 @@ public static class AgGridQueryOptionsParser
             }
         }
 
+        if (root.TryGetProperty("groupKeys", out var groupKeys) && groupKeys.ValueKind == JsonValueKind.Array)
+        {
+            foreach (var item in groupKeys.EnumerateArray())
+            {
+                request.GroupKeys.Add(item.ValueKind == JsonValueKind.String
+                    ? item.GetString() ?? string.Empty
+                    : item.ToString());
+            }
+        }
+
         if (root.TryGetProperty("valueCols", out var valueCols) && valueCols.ValueKind == JsonValueKind.Array)
         {
             request.ValueCols = new List<AgGridValueColumn>();
@@ -203,6 +226,39 @@ public static class AgGridQueryOptionsParser
         return element.TryGetProperty(propertyName, out var property) && (property.ValueKind == JsonValueKind.True || property.ValueKind == JsonValueKind.False)
             ? property.GetBoolean()
             : defaultValue;
+    }
+
+    private static FilterGroup BuildGroupKeyFilter(
+        IReadOnlyList<string> rowGroupFields,
+        IReadOnlyList<string> groupKeys,
+        int groupKeyCount)
+    {
+        var filter = new FilterGroup { Logic = LogicOperator.And };
+
+        for (var i = 0; i < groupKeyCount; i++)
+        {
+            filter.Filters.Add(new FilterCondition
+            {
+                Field = rowGroupFields[i],
+                Operator = FilterOperators.Equal,
+                Value = groupKeys[i]
+            });
+        }
+
+        return filter;
+    }
+
+    private static FilterGroup MergeFilters(FilterGroup? existing, FilterGroup groupKeyFilter)
+    {
+        if (existing is null)
+        {
+            return groupKeyFilter;
+        }
+
+        var merged = new FilterGroup { Logic = LogicOperator.And };
+        merged.Groups.Add(existing);
+        merged.Groups.Add(groupKeyFilter);
+        return merged;
     }
 
     private static JsonElement? GetElement(JsonElement element, string propertyName)
