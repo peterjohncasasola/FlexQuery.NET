@@ -564,7 +564,7 @@ public class KendoQueryParserTests
         });
 
         result.Aggregates.Should().ContainSingle();
-        result.Aggregates[0].Alias.Should().Be("SUM_totalScore");
+        result.Aggregates[0].Alias.Should().Be("totalScoreSum");
     }
 
     [Fact]
@@ -579,7 +579,7 @@ public class KendoQueryParserTests
         });
 
         result.Aggregates.Should().ContainSingle();
-        result.Aggregates[0].Alias.Should().Be("COUNT_address_city");
+        result.Aggregates[0].Alias.Should().Be("addressCityCount");
     }
 
     [Fact]

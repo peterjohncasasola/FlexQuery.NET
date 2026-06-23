@@ -72,15 +72,20 @@ internal static class ParserUtilities
         => d.TryGetValue(key, out var raw) && int.TryParse(raw, out var val) ? val : defaultValue;
     
     /// <summary>
-    /// Builds an alias for aggregate functions (e.g., "sum_total" or "count_All").
+    /// Builds a camelCase alias for aggregate functions (e.g., "totalSum" or "allCount").
     /// </summary>
     public static string BuildAggregateAlias(string function, string? field)
     {
         var normalized = string.IsNullOrWhiteSpace(field)
             ? "All"
-            : field.Replace('.', '_');
+            : string.Join("", field.Replace('.', '_')
+                .Split('_', StringSplitOptions.RemoveEmptyEntries)
+                .Select((part, i) => i == 0
+                    ? char.ToLowerInvariant(part[0]) + part[1..]
+                    : char.ToUpperInvariant(part[0]) + part[1..]));
 
-        return $"{function.ToUpperInvariant()}_{normalized}";
+        var fn = function.ToLowerInvariant();
+        return $"{normalized}{char.ToUpperInvariant(fn[0])}{fn[1..]}";
     }
 
     private static bool TryParseIndexedKey(

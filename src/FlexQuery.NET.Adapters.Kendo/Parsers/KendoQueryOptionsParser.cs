@@ -1,6 +1,7 @@
 using System.Text.Json;
 using FlexQuery.NET.Adapters.Kendo.Models;
 using FlexQuery.NET.Models;
+using FlexQuery.NET.Parsers;
 
 namespace FlexQuery.NET.Adapters.Kendo.Parsers;
 
@@ -369,18 +370,6 @@ public static class KendoQueryOptionsParser
         };
     }
 
-    /// <summary>
-    /// Builds an alias for aggregate functions (e.g., "sum_total" or "count_All").
-    /// </summary>
-    /// <param name="function">The aggregate function name.</param>
-    /// <param name="field">The field name.</param>
-    /// <returns>The generated alias.</returns>
     private static string BuildAggregateAlias(string function, string? field)
-    {
-        var normalized = string.IsNullOrWhiteSpace(field)
-            ? "All"
-            : field.Replace('.', '_');
-
-        return $"{function.ToUpperInvariant()}_{normalized}";
-    }
+        => ParserUtilities.BuildAggregateAlias(function, field);
 }
