@@ -3,12 +3,14 @@ using FlexQuery.NET.Security;
 using FlexQuery.NET.Exceptions;
 using System.Collections.Concurrent;
 using FlexQuery.NET.Constants;
+using FlexQuery.NET.Metadata;
 
 namespace FlexQuery.NET.Validation.Rules;
 
 /// <summary>
 /// A comprehensive security validator that enforces field-level access control 
-/// across filters, sorts, and projections using server-side execution rules.
+/// across filters, sorts, projections, group-by, aggregates, and having
+/// using server-side execution rules.
 /// </summary>
 /// <remarks>
 /// In non-strict mode (StrictFieldValidation = false), unauthorized fields are
@@ -25,22 +27,22 @@ public sealed class FieldAccessValidator : IValidationRule
         var execOptions = context.ExecutionOptions;
         if (execOptions == null) return;
 
-        // 1. Default Projection: If no select is requested but SelectableFields exist, use them.
-        if ((options.Select == null || options.Select.Count == 0) && execOptions.SelectableFields?.Count > 0)
-        {
-            options.Select = execOptions.SelectableFields.ToList();
-        }
+        // 1. Default Projection: Auto-inject Select when none is specified.
+        ApplyDefaultProjection(options, context, execOptions);
+
+        // 2. Default Sort: Inject DefaultSortField when no sort is specified.
+        ApplyDefaultSort(options, execOptions);
 
         // Validator self-skips if no security configuration is provided
         if (!IsSecurityActive(execOptions)) return;
 
-        // 2. Process Filters - remove unauthorized in non-strict mode
+        // 3. Process Filters - remove unauthorized in non-strict mode
         if (options.Filter != null)
         {
             ValidateFilterGroup(options.Filter, options, context, result, execOptions);
         }
 
-        // 3. Process Sorts - remove unauthorized in non-strict mode
+        // 4. Process Sorts - remove unauthorized in non-strict mode
         if (options.Sort != null)
         {
             for (int i = options.Sort.Count - 1; i >= 0; i--)
@@ -60,7 +62,7 @@ public sealed class FieldAccessValidator : IValidationRule
             }
         }
 
-        // 4. Process Selection - remove unauthorized in non-strict mode
+        // 5. Process Selection - remove unauthorized in non-strict mode
         if (options.Select != null)
         {
             for (int i = options.Select.Count - 1; i >= 0; i--)
@@ -78,6 +80,93 @@ public sealed class FieldAccessValidator : IValidationRule
                 }
             }
         }
+
+        // 6. Process GroupBy - remove unauthorized in non-strict mode
+        if (options.GroupBy != null)
+        {
+            for (int i = options.GroupBy.Count - 1; i >= 0; i--)
+            {
+                var field = options.GroupBy[i];
+                if (!string.IsNullOrWhiteSpace(field))
+                {
+                    if (!CheckAccess(field, QueryOperation.Group, context, result))
+                    {
+                        if (!execOptions.StrictFieldValidation)
+                        {
+                            options.GroupBy.RemoveAt(i);
+                        }
+                    }
+                }
+            }
+        }
+
+        // 7. Process Aggregates - remove unauthorized in non-strict mode
+        if (options.Aggregates != null)
+        {
+            for (int i = options.Aggregates.Count - 1; i >= 0; i--)
+            {
+                var aggregate = options.Aggregates[i];
+                if (!string.IsNullOrWhiteSpace(aggregate.Field))
+                {
+                    if (!CheckAccess(aggregate.Field, QueryOperation.Aggregate, context, result))
+                    {
+                        if (!execOptions.StrictFieldValidation)
+                        {
+                            options.Aggregates.RemoveAt(i);
+                        }
+                    }
+                }
+            }
+        }
+
+        // 8. Process Having - check field if present
+        if (options.Having != null && !string.IsNullOrWhiteSpace(options.Having.Field))
+        {
+            CheckAccess(options.Having.Field, QueryOperation.Having, context, result);
+        }
+    }
+
+    private static void ApplyDefaultProjection(QueryOptions options, QueryContext ctx, QueryExecutionOptions execOptions)
+    {
+        if (options.Select != null && options.Select.Count > 0) return;
+        if (options.SelectTree != null) return;
+        if (options.HasProjection()) return;
+
+        if (execOptions.SelectableFields?.Count > 0)
+        {
+            options.Select = execOptions.SelectableFields.ToList();
+            return;
+        }
+
+        if (execOptions.AllowedFields?.Count > 0)
+        {
+            options.Select = execOptions.AllowedFields.ToList();
+            return;
+        }
+
+        if (execOptions.BlockedFields?.Count > 0 && ctx?.TargetType != null)
+        {
+            var allScalars = ctx.TargetType
+                .GetProperties(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance)
+                .Where(p => TypeClassification.IsScalarType(p.PropertyType))
+                .Select(p => p.Name);
+            options.Select = allScalars
+                .Where(f => !WildcardMatcher.IsMatch(f, execOptions.BlockedFields))
+                .ToList();
+            return;
+        }
+    }
+
+    private static void ApplyDefaultSort(QueryOptions options, QueryExecutionOptions execOptions)
+    {
+        if (string.IsNullOrWhiteSpace(execOptions.DefaultSortField)) return;
+        if (options.Sort.Count > 0) return;
+
+        options.Sort.Add(new SortNode
+        {
+            Field = execOptions.DefaultSortField,
+            Descending = execOptions.DefaultSortDescending
+        });
     }
 
     private static string ResolveSortAccessField(QueryOptions options, string sortField)
@@ -103,6 +192,8 @@ public sealed class FieldAccessValidator : IValidationRule
                options.FilterableFields?.Count > 0 ||
                options.SortableFields?.Count > 0 ||
                options.SelectableFields?.Count > 0 ||
+               options.GroupableFields?.Count > 0 ||
+               options.AggregatableFields?.Count > 0 ||
                options.RoleAllowedFields?.Count > 0 ||
                options.FieldAccessResolver != null;
     }
@@ -204,6 +295,9 @@ public sealed class FieldAccessValidator : IValidationRule
             QueryOperation.Filter => execOptions.FilterableFields,
             QueryOperation.Sort => execOptions.SortableFields,
             QueryOperation.Select => execOptions.SelectableFields,
+            QueryOperation.Group => execOptions.GroupableFields,
+            QueryOperation.Aggregate => execOptions.AggregatableFields,
+            QueryOperation.Having => execOptions.AggregatableFields,
             _ => null
         };
 
@@ -227,6 +321,49 @@ public sealed class FieldAccessValidator : IValidationRule
         }
 
         return true;
+    }
+
+    /// <summary>
+    /// Validates that the DefaultSortField is compatible with the configured governance rules.
+    /// Call this at application startup to catch configuration errors early.
+    /// Throws <see cref="QueryValidationException"/> if DefaultSortField violates governance.
+    /// </summary>
+    public static void ValidateDefaultSortFieldConfiguration(QueryExecutionOptions execOptions)
+    {
+        if (string.IsNullOrWhiteSpace(execOptions.DefaultSortField))
+            return;
+
+        var field = execOptions.DefaultSortField;
+
+        // Check against BlockedFields
+        if (execOptions.BlockedFields?.Count > 0)
+        {
+            if (WildcardMatcher.IsMatch(field, execOptions.BlockedFields))
+            {
+                throw new QueryValidationException(
+                    $"DefaultSortField '{field}' is in BlockedFields and will always be rejected.");
+            }
+        }
+
+        // Check against SortableFields
+        if (execOptions.SortableFields?.Count > 0)
+        {
+            if (!WildcardMatcher.IsMatch(field, execOptions.SortableFields))
+            {
+                throw new QueryValidationException(
+                    $"DefaultSortField '{field}' is not in SortableFields and will be rejected when sorting is validated.");
+            }
+        }
+
+        // Check against AllowedFields (global whitelist)
+        if (execOptions.AllowedFields?.Count > 0)
+        {
+            if (!WildcardMatcher.IsMatch(field, execOptions.AllowedFields))
+            {
+                throw new QueryValidationException(
+                    $"DefaultSortField '{field}' is not in AllowedFields and will be rejected by the global allowlist.");
+            }
+        }
     }
 
     private static void AddDenied(

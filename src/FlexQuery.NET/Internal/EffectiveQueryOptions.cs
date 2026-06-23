@@ -79,4 +79,24 @@ internal sealed class EffectiveQueryOptions
     /// Fields allowed specifically for selection/projection.
     /// </summary>
     public HashSet<string>? SelectableFields { get; init; }
+
+    /// <summary>
+    /// Fields allowed specifically for grouping.
+    /// </summary>
+    public HashSet<string>? GroupableFields { get; init; }
+
+    /// <summary>
+    /// Fields allowed specifically for aggregation.
+    /// </summary>
+    public HashSet<string>? AggregatableFields { get; init; }
+
+    /// <summary>
+    /// Default sort field when no sort is specified.
+    /// </summary>
+    public string? DefaultSortField { get; init; }
+
+    /// <summary>
+    /// Default sort direction when DefaultSortField is used.
+    /// </summary>
+    public bool DefaultSortDescending { get; init; }
 }

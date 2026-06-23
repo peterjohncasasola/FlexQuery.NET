@@ -38,6 +38,19 @@ public class FieldAccessFilter : IActionFilter
         execOptions.FilterableFields = Merge(attribute.Filterable, execOptions.FilterableFields);
         execOptions.SortableFields = Merge(attribute.Sortable, execOptions.SortableFields);
         execOptions.SelectableFields = Merge(attribute.Selectable, execOptions.SelectableFields);
+        execOptions.GroupableFields = Merge(attribute.Groupable, execOptions.GroupableFields);
+        execOptions.AggregatableFields = Merge(attribute.Aggregatable, execOptions.AggregatableFields);
+
+        if (attribute.DefaultSortField != null)
+        {
+            execOptions.DefaultSortField = attribute.DefaultSortField;
+        }
+
+        if (!string.IsNullOrWhiteSpace(attribute.DefaultSortDirection))
+        {
+            execOptions.DefaultSortDescending = attribute.DefaultSortDirection.Equals("desc", StringComparison.OrdinalIgnoreCase)
+                || attribute.DefaultSortDirection.Equals("descending", StringComparison.OrdinalIgnoreCase);
+        }
 
         if (attribute.MaxDepth > 0)
         {

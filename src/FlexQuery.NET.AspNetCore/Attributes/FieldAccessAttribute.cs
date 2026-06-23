@@ -32,6 +32,26 @@ public class FieldAccessAttribute : Attribute
     public string[]? Selectable { get; set; }
 
     /// <summary>
+    /// Gets or sets the list of fields allowed for grouping.
+    /// </summary>
+    public string[]? Groupable { get; set; }
+
+    /// <summary>
+    /// Gets or sets the list of fields allowed for aggregation.
+    /// </summary>
+    public string[]? Aggregatable { get; set; }
+
+    /// <summary>
+    /// Gets or sets the default sort field when no sort is specified.
+    /// </summary>
+    public string? DefaultSortField { get; set; }
+
+    /// <summary>
+    /// Gets or sets the default sort direction.
+    /// </summary>
+    public string? DefaultSortDirection { get; set; }
+
+    /// <summary>
     /// Gets or sets the maximum allowed depth for nested field paths.
     /// </summary>
     public int MaxDepth { get; set; } = -1;

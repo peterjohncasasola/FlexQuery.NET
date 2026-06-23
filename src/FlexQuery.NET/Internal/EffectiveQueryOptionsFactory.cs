@@ -36,7 +36,11 @@ internal static class EffectiveQueryOptionsFactory
             ExpressionMappings = execution.ExpressionMappings,
             FilterableFields = execution.FilterableFields,
             SortableFields = execution.SortableFields,
-            SelectableFields = execution.SelectableFields        
+            SelectableFields = execution.SelectableFields,
+            GroupableFields = execution.GroupableFields,
+            AggregatableFields = execution.AggregatableFields,
+            DefaultSortField = execution.DefaultSortField,
+            DefaultSortDescending = execution.DefaultSortDescending
         };
     }
 }

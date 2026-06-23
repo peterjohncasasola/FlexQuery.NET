@@ -18,5 +18,20 @@ public enum QueryOperation
     /// <summary>
     /// Selection/Projection operation (SELECT clause).
     /// </summary>
-    Select
+    Select,
+
+    /// <summary>
+    /// Group By operation (GROUP BY clause).
+    /// </summary>
+    Group,
+
+    /// <summary>
+    /// Aggregate operation (SUM, COUNT, AVG, MIN, MAX).
+    /// </summary>
+    Aggregate,
+
+    /// <summary>
+    /// Having operation (HAVING clause).
+    /// </summary>
+    Having
 }

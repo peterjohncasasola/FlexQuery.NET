@@ -48,9 +48,11 @@ internal static class ProjectionBuilder
         Type sourceType,
         SelectionNode selectTree,
         FilterGroup? filterContext,
-        QueryOptions options)
+        QueryOptions options,
+        bool isRoot = true)
     {
-        var effectiveNode = NormalizeSelection(sourceType, selectTree);
+        var governedSelectFields = isRoot ? options.Select : null;
+        var effectiveNode = NormalizeSelection(sourceType, selectTree, governedSelectFields);
 
         // Key = output name (alias or prop name), Value = (clrType, expression)
         var propertiesToSelect = new Dictionary<string, (Type TargetType, Expression Assignment)>();
@@ -87,7 +89,7 @@ internal static class ProjectionBuilder
                 {
                     // Collection: source.AsQueryable().Where(...).Select(i => new DynamicType { ... }).ToList()
                     var itemParam = Expression.Parameter(itemType, "i");
-                    var itemInit = BuildMemberInit(itemParam, itemType, childNode, childFilterContext, options);
+                    var itemInit = BuildMemberInit(itemParam, itemType, childNode, childFilterContext, options, isRoot: false);
                     var selectLambda = Expression.Lambda(itemInit, itemParam);
 
                     var asQueryableMethod = AsQueryable.MakeGenericMethod(itemType);
@@ -111,7 +113,7 @@ internal static class ProjectionBuilder
                 else
                 {
                     // Nested Object
-                    var nestedInit = BuildMemberInit(propAccess, propType, childNode, childFilterContext, options);
+                    var nestedInit = BuildMemberInit(propAccess, propType, childNode, childFilterContext, options, isRoot: false);
                     var isNullable = !propType.IsValueType || Nullable.GetUnderlyingType(propType) != null;
 
                     if (isNullable)
@@ -173,19 +175,13 @@ internal static class ProjectionBuilder
         return Security.SafePropertyResolver.TryGetCollectionElementType(type, out itemType);
     }
 
-    private static SelectionNode NormalizeSelection(Type sourceType, SelectionNode selectTree)
+    private static SelectionNode NormalizeSelection(Type sourceType, SelectionNode selectTree, IReadOnlyList<string>? governedSelectFields = null)
     {
         var effective = new SelectionNode();
 
         if (selectTree.IncludeAllScalars)
         {
-            foreach (var prop in sourceType.GetProperties(BindingFlags.Public | BindingFlags.Instance))
-            {
-                if (TypeClassification.IsScalarType(prop.PropertyType))
-                {
-                    effective.GetOrAddChild(prop.Name);
-                }
-            }
+            ExpandScalarFields(sourceType, effective, governedSelectFields);
         }
 
         foreach (var child in selectTree.EnumerateChildren())
@@ -200,16 +196,40 @@ internal static class ProjectionBuilder
 
         if (!effective.HasChildren && !selectTree.HasChildren)
         {
+            ExpandScalarFields(sourceType, effective, governedSelectFields);
+        }
+
+        return effective;
+    }
+
+    private static void ExpandScalarFields(Type sourceType, SelectionNode target, IReadOnlyList<string>? governedSelectFields)
+    {
+        if (governedSelectFields is { Count: > 0 })
+        {
+            var rootFields = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            foreach (var field in governedSelectFields)
+            {
+                var rootField = field.Split('.', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)[0];
+                rootFields.Add(rootField);
+            }
+            foreach (var prop in sourceType.GetProperties(BindingFlags.Public | BindingFlags.Instance))
+            {
+                if (TypeClassification.IsScalarType(prop.PropertyType) && rootFields.Contains(prop.Name))
+                {
+                    target.GetOrAddChild(prop.Name);
+                }
+            }
+        }
+        else
+        {
             foreach (var prop in sourceType.GetProperties(BindingFlags.Public | BindingFlags.Instance))
             {
                 if (TypeClassification.IsScalarType(prop.PropertyType))
                 {
-                    effective.GetOrAddChild(prop.Name);
+                    target.GetOrAddChild(prop.Name);
                 }
             }
         }
-
-        return effective;
     }
 
     private static bool ShouldBuildNestedProjection(Type propertyType, SelectionNode node)

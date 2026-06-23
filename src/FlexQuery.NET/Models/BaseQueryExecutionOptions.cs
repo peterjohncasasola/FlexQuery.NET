@@ -78,6 +78,20 @@ public class BaseQueryOptions
     /// <summary>Fields allowed specifically for selection/projection operations.</summary>
     public HashSet<string>? SelectableFields { get; set; }
 
+    /// <summary>Fields allowed specifically for grouping operations.</summary>
+    public HashSet<string>? GroupableFields { get; set; }
+
+    /// <summary>Fields allowed specifically for aggregation operations.</summary>
+    public HashSet<string>? AggregatableFields { get; set; }
+
+    // --- Default Sort ---
+
+    /// <summary>Default sort field to use when no sort is specified by the client.</summary>
+    public string? DefaultSortField { get; set; }
+
+    /// <summary>Default sort direction when DefaultSortField is used.</summary>
+    public bool DefaultSortDescending { get; set; }
+
     // --- Validation Rules ---
 
     /// <summary>Limits the depth of nested field paths (e.g. "Customer.Orders.Items").</summary>

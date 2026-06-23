@@ -123,6 +123,10 @@ public sealed class DapperQueryOptions : BaseQueryOptions
         target.FilterableFields = source.FilterableFields;
         target.SortableFields = source.SortableFields;
         target.SelectableFields = source.SelectableFields;
+        target.GroupableFields = source.GroupableFields;
+        target.AggregatableFields = source.AggregatableFields;
+        target.DefaultSortField = source.DefaultSortField;
+        target.DefaultSortDescending = source.DefaultSortDescending;
         target.MaxFieldDepth = source.MaxFieldDepth;
         target.StrictFieldValidation = source.StrictFieldValidation;
         target.IncludeTotalCount = source.IncludeTotalCount;

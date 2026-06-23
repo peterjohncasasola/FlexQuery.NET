@@ -70,12 +70,13 @@ internal sealed class SqlSelectBuilder(IMappingRegistry mappingRegistry, ISqlDia
             return $"SELECT {distinctPrefix}{string.Join(", ", selectParts)}";
         }
 
-        TraverseSelectTree(selectTree, mapping, mapping.TableAlias, string.Empty, selectParts);
+        TraverseSelectTree(selectTree, mapping, mapping.TableAlias, string.Empty, selectParts, options.Select);
 
         if (selectParts.Count == 0)
         {
             // Fallback if AST is totally empty
-            foreach (var p in mapping.GetProperties())
+            var governedProps = GetGovernedProperties(mapping, options.Select);
+            foreach (var p in governedProps)
             {
                 selectParts.Add(SqlDialectHelper.QuoteColumn(dialect, mapping.GetColumnName(p), mapping));
             }
@@ -84,7 +85,7 @@ internal sealed class SqlSelectBuilder(IMappingRegistry mappingRegistry, ISqlDia
         return $"SELECT {distinctPrefix}{string.Join(", ", selectParts)}";
     }
 
-    private void TraverseSelectTree(SelectionNode node, IEntityMapping currentMapping, string? currentAlias, string prefix, List<string> selectParts)
+    private void TraverseSelectTree(SelectionNode node, IEntityMapping currentMapping, string? currentAlias, string prefix, List<string> selectParts, IReadOnlyList<string>? governedSelectFields = null)
     {
         bool hasSpecificFields = false;
 
@@ -98,7 +99,7 @@ internal sealed class SqlSelectBuilder(IMappingRegistry mappingRegistry, ISqlDia
                 var nextPrefix = prefix + rel.NavigationPropertyName + "_";
                 var nextAlias = rel.NavigationPropertyName; // Dapper extensions use this
 
-                TraverseSelectTree(child.Value, targetMapping, nextAlias, nextPrefix, selectParts);
+                TraverseSelectTree(child.Value, targetMapping, nextAlias, nextPrefix, selectParts, governedSelectFields);
             }
             else
             {
@@ -117,7 +118,8 @@ internal sealed class SqlSelectBuilder(IMappingRegistry mappingRegistry, ISqlDia
 
         if (node.IncludeAllScalars || (!hasSpecificFields && !node.HasChildren))
         {
-            foreach (var prop in currentMapping.GetProperties())
+            var props = GetGovernedProperties(currentMapping, governedSelectFields);
+            foreach (var prop in props)
             {
                 var col = currentMapping.GetColumnName(prop);
                 var outputName = prefix + col;
@@ -131,6 +133,15 @@ internal sealed class SqlSelectBuilder(IMappingRegistry mappingRegistry, ISqlDia
         }
     }
 
+    private static IEnumerable<string> GetGovernedProperties(IEntityMapping mapping, IReadOnlyList<string>? governedSelectFields)
+    {
+        var rootFields = GetRootGovernedPropertyNames(governedSelectFields);
+        if (rootFields != null)
+            return mapping.GetProperties().Where(p => rootFields.Contains(p));
+
+        return mapping.GetProperties();
+    }
+
     /// <summary>
     /// Builds the SELECT clause and accompanying JOINs for flat/flat-mixed projection mode.
     /// Unlike the tree-shaped SELECT, flat mode requires a single linear navigation path and
@@ -142,7 +153,7 @@ internal sealed class SqlSelectBuilder(IMappingRegistry mappingRegistry, ISqlDia
         QueryOptions options, IEntityMapping mapping, string distinctClause, SelectionNode selectTree)
     {
         var allowRootScalars = options.ProjectionMode == ProjectionMode.FlatMixed;
-        var (navPath, fields) = DecomposeFlatSelection(selectTree, mapping, allowRootScalars);
+        var (navPath, fields) = DecomposeFlatSelection(selectTree, mapping, allowRootScalars, 0, options.Select);
 
         var distinctPrefix = !string.IsNullOrEmpty(distinctClause) ? $"{distinctClause} " : string.Empty;
         var selectParts = new List<string>();
@@ -161,7 +172,8 @@ internal sealed class SqlSelectBuilder(IMappingRegistry mappingRegistry, ISqlDia
 
             if (selectParts.Count == 0)
             {
-                foreach (var propName in mapping.GetProperties())
+                var governedProps = GetGovernedProperties(mapping, options.Select);
+                foreach (var propName in governedProps)
                 {
                     var col = mapping.GetColumnName(propName);
                     selectParts.Add($"{dialectTable}.{dialect.QuoteIdentifier(col)}");
@@ -220,7 +232,8 @@ internal sealed class SqlSelectBuilder(IMappingRegistry mappingRegistry, ISqlDia
 
         if (selectParts.Count == 0)
         {
-            foreach (var propName in currentMapping.GetProperties())
+            var governedProps = GetGovernedProperties(currentMapping, options.Select);
+            foreach (var propName in governedProps)
             {
                 var col = currentMapping.GetColumnName(propName);
                 selectParts.Add($"{dialect.QuoteIdentifier(currentAlias)}.{dialect.QuoteIdentifier(col)}");
@@ -234,7 +247,8 @@ internal sealed class SqlSelectBuilder(IMappingRegistry mappingRegistry, ISqlDia
     private record FlatField(int Level, string OutputName, string PropName, IEntityMapping Mapping);
 
     private (List<string> navPath, List<FlatField> fields) DecomposeFlatSelection(
-        SelectionNode node, IEntityMapping mapping, bool allowRootScalars, int level = 0)
+        SelectionNode node, IEntityMapping mapping, bool allowRootScalars, int level = 0,
+        IReadOnlyList<string>? governedSelectFields = null)
     {
         var navPath = new List<string>();
         var fields = new List<FlatField>();
@@ -269,8 +283,12 @@ internal sealed class SqlSelectBuilder(IMappingRegistry mappingRegistry, ISqlDia
 
             if (node.IncludeAllScalars || node.HasChildren == false)
             {
+                var governedPropNames = GetRootGovernedPropertyNames(governedSelectFields);
                 foreach (var propName in mapping.GetProperties())
                 {
+                    if (governedPropNames != null && !governedPropNames.Contains(propName))
+                        continue;
+
                     var prop = mapping.Type.GetProperty(propName, BindingFlags.Public | BindingFlags.Instance | BindingFlags.IgnoreCase);
                     if (prop != null && TypeClassification.IsScalarType(prop.PropertyType))
                     {
@@ -286,7 +304,7 @@ internal sealed class SqlSelectBuilder(IMappingRegistry mappingRegistry, ISqlDia
             var targetMapping = mappingRegistry.GetMapping(rel.TargetType);
             navPath.Add(rel.NavigationPropertyName);
 
-            var (subPath, subFields) = DecomposeFlatSelection(navNode, targetMapping, allowRootScalars, level + 1);
+            var (subPath, subFields) = DecomposeFlatSelection(navNode, targetMapping, allowRootScalars, level + 1, governedSelectFields);
             navPath.AddRange(subPath);
             fields.AddRange(subFields);
 
@@ -301,5 +319,19 @@ internal sealed class SqlSelectBuilder(IMappingRegistry mappingRegistry, ISqlDia
         }
 
         return (navPath, fields);
+    }
+
+    private static HashSet<string>? GetRootGovernedPropertyNames(IReadOnlyList<string>? governedSelectFields)
+    {
+        if (governedSelectFields is not { Count: > 0 })
+            return null;
+
+        var rootFields = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var field in governedSelectFields)
+        {
+            var root = field.Split('.', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)[0];
+            rootFields.Add(root);
+        }
+        return rootFields;
     }
 }
