@@ -49,4 +49,8 @@ public sealed class SelectionNode
         => _children;
 
     public void MarkIncludeAllScalars() => IncludeAllScalars = true;
+
+    public void ClearIncludeAllScalars() => IncludeAllScalars = false;
+
+    public void RemoveChild(string name) => _children.Remove(name);
 }

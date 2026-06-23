@@ -255,6 +255,161 @@ public sealed class SecurityGovernanceEfCoreIntegrationTests : IDisposable
         }
     }
 
+    // ══════════════════════════════════════════════════════════════
+    //  Phase A — SelectTree Governance Enforcement Tests
+    // ══════════════════════════════════════════════════════════════
+    //
+    //  These tests verify that SelectTree fields are now recursively
+    //  validated by FieldAccessValidator.ValidateSelectTree().
+    //
+    //  In strict mode, violations throw QueryValidationException.
+    //  In non-strict mode, violating children are removed from the tree.
+    //
+    // ══════════════════════════════════════════════════════════════
+
+    // ──────────────────────────────────────────────────────────────
+    //  Test A: BlockedFields — simple field via SelectTree
+    // ──────────────────────────────────────────────────────────────
+
+    [Fact]
+    public async Task SelectTree_Blocks_BlockedField_Strict()
+    {
+        var options = new QueryOptions { IncludeCount = true };
+        options.SelectTree = new SelectionNode();
+        options.SelectTree.GetOrAddChild("SSN");
+
+        var execOptions = new QueryExecutionOptions
+        {
+            BlockedFields = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "SSN" },
+            StrictFieldValidation = true
+        };
+
+        var act = async () => await _db.Customers.FlexQueryAsync(options, execOptions);
+
+        (await act.Should().ThrowAsync<QueryValidationException>())
+            .Which.Message.Should().Contain("SSN");
+    }
+
+    // ──────────────────────────────────────────────────────────────
+    //  Test B: AllowedFields — field not in whitelist via SelectTree
+    // ──────────────────────────────────────────────────────────────
+
+    [Fact]
+    public async Task SelectTree_Blocks_NotInAllowedFields_Strict()
+    {
+        var options = new QueryOptions { IncludeCount = true };
+        options.SelectTree = new SelectionNode();
+        options.SelectTree.GetOrAddChild("SSN");
+
+        var execOptions = new QueryExecutionOptions
+        {
+            AllowedFields = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "Id", "Name" },
+            StrictFieldValidation = true
+        };
+
+        var act = async () => await _db.Customers.FlexQueryAsync(options, execOptions);
+
+        (await act.Should().ThrowAsync<QueryValidationException>())
+            .Which.Message.Should().Contain("SSN");
+    }
+
+    // ──────────────────────────────────────────────────────────────
+    //  Test C: Nested blocked field via SelectTree
+    // ──────────────────────────────────────────────────────────────
+
+    [Fact]
+    public async Task SelectTree_Blocks_NestedBlockedField_Strict()
+    {
+        var options = new QueryOptions { IncludeCount = true };
+        options.SelectTree = new SelectionNode();
+        var orders = options.SelectTree.GetOrAddChild("Orders");
+        orders.GetOrAddChild("Total");
+
+        var execOptions = new QueryExecutionOptions
+        {
+            BlockedFields = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "Orders.Total" },
+            StrictFieldValidation = true
+        };
+
+        var act = async () => await _db.Customers.FlexQueryAsync(options, execOptions);
+
+        (await act.Should().ThrowAsync<QueryValidationException>())
+            .Which.Message.Should().Contain("Orders.Total");
+    }
+
+    // ──────────────────────────────────────────────────────────────
+    //  Test D: IncludeAllScalars (wildcard) via SelectTree
+    // ──────────────────────────────────────────────────────────────
+
+    [Fact]
+    public async Task SelectTree_Blocks_IncludeAllScalarsWithBlocked_Strict()
+    {
+        var options = new QueryOptions { IncludeCount = true };
+        options.SelectTree = new SelectionNode();
+        options.SelectTree.MarkIncludeAllScalars();
+
+        var execOptions = new QueryExecutionOptions
+        {
+            BlockedFields = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "SSN" },
+            StrictFieldValidation = true
+        };
+
+        var act = async () => await _db.Customers.FlexQueryAsync(options, execOptions);
+
+        (await act.Should().ThrowAsync<QueryValidationException>())
+            .Which.Message.Should().Contain("SSN");
+    }
+
+    // ──────────────────────────────────────────────────────────────
+    //  Test E: CONTROL — flat Select correctly blocks field
+    //  (Proves the vulnerability is SelectTree-specific, not a
+    //   general governance failure)
+    // ──────────────────────────────────────────────────────────────
+
+    [Fact]
+    public async Task FlatSelect_CorrectlyBlocks_BlockedField()
+    {
+        var options = new QueryOptions { IncludeCount = true };
+        // Use flat Select (NOT SelectTree) — the normal code path
+        options.Select = new List<string> { "SSN" };
+
+        var execOptions = new QueryExecutionOptions
+        {
+            BlockedFields = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "SSN" },
+            StrictFieldValidation = true
+        };
+
+        // ACT: With flat Select, strict mode should THROW
+        var act = async () => await _db.Customers.FlexQueryAsync(options, execOptions);
+
+        (await act.Should().ThrowAsync<QueryValidationException>())
+            .Which.Message.Should().Contain("SSN");
+    }
+
+    // ──────────────────────────────────────────────────────────────
+    //  Test F: Validation now catches SelectTree blocked fields
+    // ──────────────────────────────────────────────────────────────
+
+    [Fact]
+    public void SelectTree_Validation_Blocks_BlockedField_Strict()
+    {
+        var options = new QueryOptions();
+        options.SelectTree = new SelectionNode();
+        options.SelectTree.GetOrAddChild("SSN");
+
+        var execOptions = new QueryExecutionOptions
+        {
+            BlockedFields = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "SSN" },
+            StrictFieldValidation = true
+        };
+
+        // FieldAccessValidator now validates SelectTree: should throw
+        var act = () => options.Validate(typeof(GovernanceCustomer), execOptions);
+
+        act.Should().Throw<QueryValidationException>()
+            .Which.Message.Should().Contain("SSN");
+    }
+
     // ──────────────────────────────────────────────────────────────
     //  Helpers
     // ──────────────────────────────────────────────────────────────

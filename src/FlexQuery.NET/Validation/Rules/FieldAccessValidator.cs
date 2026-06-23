@@ -2,6 +2,7 @@ using FlexQuery.NET.Models;
 using FlexQuery.NET.Security;
 using FlexQuery.NET.Exceptions;
 using System.Collections.Concurrent;
+using System.Reflection;
 using FlexQuery.NET.Constants;
 using FlexQuery.NET.Metadata;
 
@@ -84,6 +85,28 @@ public sealed class FieldAccessValidator : IValidationRule
             }
         }
 
+        // 5b. Process SelectTree - remove unauthorized in non-strict mode
+        if (options.SelectTree != null)
+        {
+            ValidateSelectTree(
+                options.SelectTree,
+                string.Empty,
+                context.TargetType,
+                context,
+                result,
+                execOptions);
+
+            // Mirror flat-Select behavior: inject default projection when tree is emptied
+            if (!execOptions.StrictFieldValidation &&
+                options.SelectTree != null &&
+                !options.SelectTree.HasChildren &&
+                !options.SelectTree.IncludeAllScalars)
+            {
+                options.SelectTree = null;
+                DefaultProjectionHelper.InjectDefaultProjection(options, context, execOptions);
+            }
+        }
+
         // 6. Process GroupBy - remove unauthorized in non-strict mode
         if (options.GroupBy != null)
         {
@@ -154,6 +177,91 @@ public sealed class FieldAccessValidator : IValidationRule
         return string.IsNullOrWhiteSpace(aggregate?.Field)
             ? sortField
             : aggregate.Field;
+    }
+
+    private void ValidateSelectTree(
+        SelectionNode node,
+        string prefix,
+        Type? currentType,
+        QueryContext context,
+        ValidationResult result,
+        QueryExecutionOptions execOptions)
+    {
+        if (node.IncludeAllScalars && currentType != null)
+        {
+            var scalarFields = currentType
+                .GetProperties(BindingFlags.Public | BindingFlags.Instance)
+                .Where(p => TypeClassification.IsScalarType(p.PropertyType))
+                .Select(p => p.Name);
+
+            if (execOptions.StrictFieldValidation)
+            {
+                foreach (var scalar in scalarFields)
+                {
+                    var fieldPath = string.IsNullOrEmpty(prefix) ? scalar : $"{prefix}.{scalar}";
+                    CheckAccess(fieldPath, QueryOperation.Select, context, result);
+                }
+            }
+            else
+            {
+                var allowedScalars = new List<string>();
+                foreach (var scalar in scalarFields)
+                {
+                    var fieldPath = string.IsNullOrEmpty(prefix) ? scalar : $"{prefix}.{scalar}";
+                    if (CheckAccess(fieldPath, QueryOperation.Select, context, result))
+                    {
+                        allowedScalars.Add(scalar);
+                    }
+                }
+
+                node.ClearIncludeAllScalars();
+                foreach (var scalar in allowedScalars)
+                {
+                    node.GetOrAddChild(scalar);
+                }
+            }
+        }
+
+        var children = node.EnumerateChildren().ToList();
+        foreach (var kvp in children)
+        {
+            var childPath = string.IsNullOrEmpty(prefix) ? kvp.Key : $"{prefix}.{kvp.Key}";
+            var childType = ResolveSelectTreeChildType(currentType, kvp.Key);
+
+            if (kvp.Value.HasChildren || kvp.Value.IncludeAllScalars)
+            {
+                ValidateSelectTree(kvp.Value, childPath, childType, context, result, execOptions);
+
+                if (!execOptions.StrictFieldValidation && !kvp.Value.HasChildren && !kvp.Value.IncludeAllScalars)
+                {
+                    node.RemoveChild(kvp.Key);
+                }
+            }
+            else
+            {
+                if (!CheckAccess(childPath, QueryOperation.Select, context, result))
+                {
+                    if (!execOptions.StrictFieldValidation)
+                    {
+                        node.RemoveChild(kvp.Key);
+                    }
+                }
+            }
+        }
+    }
+
+    private static Type? ResolveSelectTreeChildType(Type? parentType, string childKey)
+    {
+        if (parentType == null) return null;
+
+        var prop = parentType.GetProperty(childKey, BindingFlags.Public | BindingFlags.Instance | BindingFlags.IgnoreCase);
+        if (prop == null) return null;
+
+        if (TypeClassification.IsCollectionType(prop.PropertyType, out var elementType))
+            return elementType;
+        if (prop.PropertyType.IsClass && prop.PropertyType != typeof(string))
+            return prop.PropertyType;
+        return null;
     }
 
     private bool IsSecurityActive(QueryExecutionOptions options)
@@ -361,7 +469,7 @@ public sealed class FieldAccessValidator : IValidationRule
         {
             return mapped;
         }
-
+    
         return _normalizationCache.GetOrAdd(rawField, f => f.Trim());
     }
 }
