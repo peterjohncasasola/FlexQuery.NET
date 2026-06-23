@@ -16,6 +16,7 @@ public static class QueryResultExtensions
         return new QueryResult<TProjected>
         {
             TotalCount = queryResult.TotalCount,
+            ResultCount = queryResult.ResultCount,
             Page       = queryResult.Page,
             PageSize   = queryResult.PageSize,
             Aggregates = queryResult.Aggregates,
@@ -41,6 +42,7 @@ public static class QueryResultExtensions
         return new QueryResult<object>
         {
             TotalCount = result.TotalCount,
+            ResultCount = result.ResultCount,
             Page       = result.Page,
             PageSize   = result.PageSize,
             Aggregates = result.Aggregates,
@@ -65,6 +67,7 @@ public static class QueryResultExtensions
         return new QueryResult<dynamic>
         {
             TotalCount = result.TotalCount,
+            ResultCount = result.ResultCount,
             Page       = result.Page,
             PageSize   = result.PageSize,
             Aggregates = result.Aggregates,
