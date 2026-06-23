@@ -48,7 +48,8 @@ public sealed class FieldAccessValidator : IValidationRule
                 var sort = options.Sort[i];
                 if (!string.IsNullOrWhiteSpace(sort.Field))
                 {
-                    if (!CheckAccess(sort.Field, QueryOperation.Sort, context, result))
+                    var accessField = ResolveSortAccessField(options, sort.Field);
+                    if (!CheckAccess(accessField, QueryOperation.Sort, context, result))
                     {
                         if (!execOptions.StrictFieldValidation)
                         {
@@ -77,6 +78,21 @@ public sealed class FieldAccessValidator : IValidationRule
                 }
             }
         }
+    }
+
+    private static string ResolveSortAccessField(QueryOptions options, string sortField)
+    {
+        if (options.GroupBy is not { Count: > 0 })
+        {
+            return sortField;
+        }
+
+        var aggregate = options.Aggregates.FirstOrDefault(candidate =>
+            candidate.Alias.Equals(sortField, StringComparison.OrdinalIgnoreCase));
+
+        return string.IsNullOrWhiteSpace(aggregate?.Field)
+            ? sortField
+            : aggregate.Field;
     }
 
     private bool IsSecurityActive(QueryExecutionOptions options)

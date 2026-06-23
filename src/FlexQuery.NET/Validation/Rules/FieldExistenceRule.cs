@@ -22,6 +22,8 @@ public sealed class FieldExistenceRule : IValidationRule
         foreach (var sort in options.Sort)
         {
             if (string.IsNullOrWhiteSpace(sort.Field)) continue;
+            if (IsGroupedAggregateAlias(options, sort.Field)) continue;
+
             if (!Builders.FieldResolver.TryResolveType(context.TargetType, sort.Field, context.ExecutionOptions, out _))
             {
                 result.Errors.Add(new ValidationError(
@@ -31,6 +33,11 @@ public sealed class FieldExistenceRule : IValidationRule
             }
         }
     }
+
+    private static bool IsGroupedAggregateAlias(QueryOptions options, string field)
+        => options.GroupBy is { Count: > 0 }
+           && options.Aggregates.Any(aggregate =>
+               aggregate.Alias.Equals(field, StringComparison.OrdinalIgnoreCase));
 
     private void ValidateFilterGroup(FilterGroup group, Type entityType, QueryExecutionOptions? executionOptions, ValidationResult result)
     {
