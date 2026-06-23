@@ -142,4 +142,43 @@ public class PagingTests : IDisposable
 
         result.Should().HaveCount(10);
     }
+
+    [Fact]
+    public void Paging_SkipWithoutSort_UsesFirstSelectFieldAsFallback()
+    {
+        var opts = new QueryOptions
+        {
+            Paging = { Page = 2, PageSize = 3 },
+            Select = new List<string> { "Name" }
+        };
+
+        var result = _db.Entities
+            .AsQueryable()
+            .ApplyFilter(opts)
+            .ApplyPaging(opts)
+            .ToList();
+
+        // Should return records ordered by Name (fallback sort from Select[0])
+        result.Should().NotBeEmpty();
+        result.Should().HaveCount(3);
+    }
+
+    [Fact]
+    public void Paging_SkipWithoutSort_WhenNoSelect_UsesDefaultProperty()
+    {
+        var opts = new QueryOptions
+        {
+            Paging = { Page = 2, PageSize = 3 }
+        };
+
+        var result = _db.Entities
+            .AsQueryable()
+            .ApplyFilter(opts)
+            .ApplyPaging(opts)
+            .ToList();
+
+        // Should return records with default sort (Id)
+        result.Should().NotBeEmpty();
+        result.Should().HaveCount(3);
+    }
 }

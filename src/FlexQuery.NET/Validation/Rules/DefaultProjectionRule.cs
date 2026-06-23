@@ -1,0 +1,151 @@
+using FlexQuery.NET.Models;
+using FlexQuery.NET.Metadata;
+using FlexQuery.NET.Security;
+using System.Reflection;
+
+namespace FlexQuery.NET.Validation.Rules;
+
+public sealed class DefaultProjectionRule : IValidationRule
+{
+    public void Validate(QueryOptions options, QueryContext context, ValidationResult result)
+    {
+        var execOptions = context.ExecutionOptions;
+        if (execOptions == null) return;
+
+        DefaultProjectionHelper.InjectDefaultProjection(options, context, execOptions);
+    }
+}
+
+internal static class DefaultProjectionHelper
+{
+    public static void InjectDefaultProjection(QueryOptions options, QueryContext ctx, QueryExecutionOptions execOptions)
+    {
+        if (options.Select != null && options.Select.Count > 0) return;
+        if (options.SelectTree != null) return;
+        if (options.HasProjection()) return;
+
+        if (execOptions.SelectableFields?.Count > 0)
+        {
+            options.Select = ExpandWildcardFields(execOptions.SelectableFields, ctx.TargetType);
+            return;
+        }
+
+        if (execOptions.RoleAllowedFields?.Count > 0 && !string.IsNullOrEmpty(execOptions.CurrentRole))
+        {
+            if (execOptions.RoleAllowedFields.TryGetValue(execOptions.CurrentRole, out var roleFields) && roleFields.Count > 0)
+            {
+                options.Select = ExpandWildcardFields(roleFields, ctx.TargetType);
+                return;
+            }
+        }
+
+        if (execOptions.AllowedFields?.Count > 0)
+        {
+            options.Select = ExpandWildcardFields(execOptions.AllowedFields, ctx.TargetType);
+            return;
+        }
+
+        if (execOptions.BlockedFields?.Count > 0 && ctx?.TargetType != null)
+        {
+            var allScalars = ctx.TargetType
+                .GetProperties(BindingFlags.Public | BindingFlags.Instance)
+                .Where(p => TypeClassification.IsScalarType(p.PropertyType))
+                .Select(p => p.Name);
+            options.Select = allScalars
+                .Where(f => !WildcardMatcher.IsMatch(f, execOptions.BlockedFields))
+                .ToList();
+        }
+    }
+
+    internal static List<string> ExpandWildcardFields(IEnumerable<string> fields, Type? targetType)
+    {
+        var result = new List<string>();
+        foreach (var field in fields)
+        {
+            if (field.Contains('*'))
+            {
+                if (targetType == null)
+                {
+                    result.Add(field);
+                    continue;
+                }
+                ExpandWildcard(field, targetType, result);
+            }
+            else
+            {
+                result.Add(field);
+            }
+        }
+        return result;
+    }
+
+    private static void ExpandWildcard(string pattern, Type type, List<string> result)
+    {
+        var starIndex = pattern.IndexOf('*', StringComparison.Ordinal);
+        if (starIndex < 0)
+        {
+            result.Add(pattern);
+            return;
+        }
+
+        var pathBeforeStar = starIndex == 0
+            ? string.Empty
+            : pattern[..(starIndex - 1)];
+
+        if (string.IsNullOrEmpty(pathBeforeStar))
+        {
+            ExpandUnderType(type, string.Empty, pattern, result);
+        }
+        else
+        {
+            var parts = pathBeforeStar.Split('.', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+            var currentType = type;
+            var prefix = new List<string>();
+
+            foreach (var part in parts)
+            {
+                var prop = currentType.GetProperty(part, BindingFlags.Public | BindingFlags.Instance | BindingFlags.IgnoreCase);
+                if (prop == null) return;
+                prefix.Add(part);
+                currentType = GetTargetType(prop.PropertyType);
+                if (currentType == null) return;
+            }
+
+            ExpandUnderType(currentType, string.Join(".", prefix), pattern, result);
+        }
+    }
+
+    private static void ExpandUnderType(Type type, string prefix, string originalPattern, List<string> result)
+    {
+        foreach (var prop in type.GetProperties(BindingFlags.Public | BindingFlags.Instance))
+        {
+            if (TypeClassification.IsScalarType(prop.PropertyType))
+            {
+                var fieldPath = string.IsNullOrEmpty(prefix) ? prop.Name : $"{prefix}.{prop.Name}";
+                result.Add(fieldPath);
+            }
+        }
+
+        foreach (var prop in type.GetProperties(BindingFlags.Public | BindingFlags.Instance))
+        {
+            if (!TypeClassification.IsScalarType(prop.PropertyType) && prop.PropertyType != typeof(object))
+            {
+                var childType = GetTargetType(prop.PropertyType);
+                if (childType != null && childType != type)
+                {
+                    var childPrefix = string.IsNullOrEmpty(prefix) ? prop.Name : $"{prefix}.{prop.Name}";
+                    ExpandUnderType(childType, childPrefix, originalPattern, result);
+                }
+            }
+        }
+    }
+
+    private static Type? GetTargetType(Type propertyType)
+    {
+        if (TypeClassification.IsCollectionType(propertyType, out var itemType))
+            return itemType;
+        if (propertyType.IsClass && propertyType != typeof(string))
+            return propertyType;
+        return null;
+    }
+}

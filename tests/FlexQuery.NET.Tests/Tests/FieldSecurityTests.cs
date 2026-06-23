@@ -5,6 +5,7 @@ using FlexQuery.NET.Validation;
 using FlexQuery.NET.Exceptions;
 using FlexQuery.NET.Extensions;
 using FlexQuery.NET.Security;
+using FlexQuery.NET.Configuration;
 using FlexQuery.NET.Validation.Rules;
 using FluentAssertions;
 using Microsoft.Extensions.Primitives;
@@ -752,6 +753,477 @@ public class FieldSecurityTests
 
         act.Should().Throw<QueryValidationException>()
            .Which.Message.Should().Contain("BlockedFields");
+    }
+
+    // ──────────────────────────────────────────────────────────────────
+    //  Role-based default projection tests
+    // ──────────────────────────────────────────────────────────────────
+
+    [Fact]
+    public void DefaultProjection_ShouldUseRoleAllowedFields()
+    {
+        var options = new QueryOptions();
+        var execOptions = new QueryExecutionOptions
+        {
+            CurrentRole = "admin",
+            RoleAllowedFields = new Dictionary<string, HashSet<string>>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["admin"] = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "Id", "Name" },
+                ["user"] = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "Id" }
+            }
+        };
+
+        options.Validate(typeof(Customer), execOptions);
+
+        options.Select.Should().NotBeNull();
+        options.Select.Should().HaveCount(2);
+        options.Select.Should().Contain("Id");
+        options.Select.Should().Contain("Name");
+    }
+
+    [Fact]
+    public void DefaultProjection_ShouldNotUseRoleAllowedFields_WhenRoleHasNoMatch()
+    {
+        var options = new QueryOptions();
+        var execOptions = new QueryExecutionOptions
+        {
+            CurrentRole = "nonexistent",
+            RoleAllowedFields = new Dictionary<string, HashSet<string>>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["admin"] = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "Id", "Name" }
+            }
+        };
+
+        options.Validate(typeof(Customer), execOptions);
+
+        options.Select.Should().BeNull();
+    }
+
+    [Fact]
+    public void DefaultProjection_ShouldFallThroughToBlockedFields_WhenRoleAllowedFieldsNoMatch()
+    {
+        var options = new QueryOptions();
+        var execOptions = new QueryExecutionOptions
+        {
+            CurrentRole = "nonexistent",
+            RoleAllowedFields = new Dictionary<string, HashSet<string>>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["admin"] = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "Id", "Name" }
+            },
+            BlockedFields = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "Name" }
+        };
+
+        options.Validate(typeof(Customer), execOptions);
+
+        options.Select.Should().NotBeNull();
+        options.Select.Should().Contain("Id");
+        options.Select.Should().NotContain("Name");
+    }
+
+    // ──────────────────────────────────────────────────────────────────
+    //  Wildcard expansion tests
+    // ──────────────────────────────────────────────────────────────────
+
+    private class CustomerWithOrders
+    {
+        public int Id { get; set; }
+        public string Name { get; set; } = string.Empty;
+        public List<OrderItem> Orders { get; set; } = new();
+    }
+
+    private class OrderItem
+    {
+        public int OrderId { get; set; }
+        public decimal Total { get; set; }
+        public string Status { get; set; } = string.Empty;
+    }
+
+    [Fact]
+    public void DefaultProjection_ShouldExpandWildcard_SelectableFields()
+    {
+        var options = new QueryOptions();
+        var execOptions = new QueryExecutionOptions
+        {
+            SelectableFields = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "Id", "Orders.*" }
+        };
+
+        options.Validate(typeof(Customer), execOptions);
+
+        options.Select.Should().NotBeNull();
+        options.Select.Should().Contain("Id");
+        options.Select.Should().Contain("Orders.Total");
+        options.Select.Should().Contain("Orders.Status");
+    }
+
+    [Fact]
+    public void DefaultProjection_ShouldExpandWildcard_AllowedFields()
+    {
+        var options = new QueryOptions();
+        var execOptions = new QueryExecutionOptions
+        {
+            AllowedFields = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "Id", "Orders.*" }
+        };
+
+        options.Validate(typeof(Customer), execOptions);
+
+        options.Select.Should().NotBeNull();
+        options.Select.Should().Contain("Id");
+        options.Select.Should().Contain("Orders.Total");
+        options.Select.Should().Contain("Orders.Status");
+    }
+
+    [Fact]
+    public void ExpandWildcardFields_ShouldHandleSimpleWildcard()
+    {
+        var result = DefaultProjectionHelper.ExpandWildcardFields(
+            new[] { "Id", "Name", "*" }, typeof(Customer));
+
+        result.Should().Contain("Id");
+        result.Should().Contain("Name");
+        result.Should().Contain("SSN"); // scalar from *
+    }
+
+    // ──────────────────────────────────────────────────────────────────
+    //  NonStrict re-apply tests
+    // ──────────────────────────────────────────────────────────────────
+
+    [Fact]
+    public void NonStrict_ShouldReapplyDefaultProjection_WhenAllSelectFieldsBlocked()
+    {
+        var options = new QueryOptions
+        {
+            Select = new List<string> { "SSN" }
+        };
+        var execOptions = new QueryExecutionOptions
+        {
+            BlockedFields = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "SSN" },
+            StrictFieldValidation = false
+        };
+
+        var result = options.Validate(typeof(Customer), execOptions);
+
+        result.IsValid.Should().BeFalse(); // SSN was denied
+        options.Select.Should().NotBeNull();
+        options.Select.Should().Contain("Id");
+        options.Select.Should().Contain("Name");
+        options.Select.Should().NotContain("SSN");
+    }
+
+    [Fact]
+    public void NonStrict_ShouldReapplyDefaultProjection_WhenAllSelectFieldsRemovedByAllowedFields()
+    {
+        var options = new QueryOptions
+        {
+            Select = new List<string> { "SSN", "Email" }
+        };
+        var execOptions = new QueryExecutionOptions
+        {
+            AllowedFields = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "Id", "Name" },
+            StrictFieldValidation = false
+        };
+
+        var result = options.Validate(typeof(Customer), execOptions);
+
+        result.IsValid.Should().BeFalse(); // SSN, Email were denied
+        options.Select.Should().NotBeNull();
+        options.Select.Should().Contain("Id");
+        options.Select.Should().Contain("Name");
+        options.Select.Should().NotContain("SSN");
+        options.Select.Should().NotContain("Email");
+    }
+
+    [Fact]
+    public void Strict_ShouldThrow_WhenSelectFieldBlocked_NoReapply()
+    {
+        var options = new QueryOptions
+        {
+            Select = new List<string> { "SSN" }
+        };
+        var execOptions = new QueryExecutionOptions
+        {
+            BlockedFields = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "SSN" },
+            StrictFieldValidation = true
+        };
+
+        Assert.Throws<QueryValidationException>(() => options.ValidateOrThrow<Customer>(execOptions));
+    }
+
+    [Fact]
+    public void StrictDefaultProjection_ShouldThrow_WhenInjectedFieldIsBlocked()
+    {
+        var options = new QueryOptions();
+        var execOptions = new QueryExecutionOptions
+        {
+            SelectableFields = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "Id", "Name", "Email" },
+            BlockedFields = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "Email" },
+            StrictFieldValidation = true
+        };
+
+        // DefaultProjectionRule injects ["Id", "Name", "Email"] via SelectableFields
+        // FieldAccessValidator then blocks "Email" in strict mode → QueryValidationException
+        Assert.Throws<QueryValidationException>(() => options.ValidateOrThrow<Customer>(execOptions));
+    }
+
+    [Fact]
+    public void StrictDefaultProjection_ShouldThrow_WhenInjectedFieldNotInAllowedFields()
+    {
+        var options = new QueryOptions();
+        var execOptions = new QueryExecutionOptions
+        {
+            SelectableFields = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "Id", "Name", "Email" },
+            AllowedFields = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "Id", "Name" },
+            StrictFieldValidation = true
+        };
+
+        // DefaultProjectionRule injects ["Id", "Name", "Email"] via SelectableFields
+        // FieldAccessValidator blocks "Email" (not in AllowedFields) in strict mode
+        Assert.Throws<QueryValidationException>(() => options.ValidateOrThrow<Customer>(execOptions));
+    }
+
+    [Fact]
+    public void StrictDefaultProjection_ShouldThrow_WhenAllowedFieldInjectedAndBlocked()
+    {
+        var options = new QueryOptions();
+        var execOptions = new QueryExecutionOptions
+        {
+            AllowedFields = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "Id", "Name", "Email" },
+            BlockedFields = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "Email" },
+            StrictFieldValidation = true
+        };
+
+        // DefaultProjectionRule injects ["Id", "Name", "Email"] via AllowedFields
+        // FieldAccessValidator blocks "Email" in strict mode
+        Assert.Throws<QueryValidationException>(() => options.ValidateOrThrow<Customer>(execOptions));
+    }
+
+    // ──────────────────────────────────────────────────────────────────
+    //  Grouped query exclusion tests
+    // ──────────────────────────────────────────────────────────────────
+
+    [Fact]
+    public void DefaultProjection_ShouldNotApply_WhenGroupByProvided()
+    {
+        var options = new QueryOptions
+        {
+            GroupBy = new List<string> { "Name" }
+        };
+        var execOptions = new QueryExecutionOptions
+        {
+            AllowedFields = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "Id", "Name" }
+        };
+
+        options.Validate(typeof(Customer), execOptions);
+
+        options.Select.Should().BeNull();
+    }
+
+    [Fact]
+    public void DefaultProjection_ShouldNotApply_WhenAggregatesProvided()
+    {
+        var options = new QueryOptions
+        {
+            Aggregates = new List<AggregateModel>
+            {
+                new() { Function = "count", Field = "Id", Alias = "cnt" }
+            }
+        };
+        var execOptions = new QueryExecutionOptions
+        {
+            AllowedFields = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "Id" }
+        };
+
+        options.Validate(typeof(Customer), execOptions);
+
+        options.Select.Should().BeNull();
+    }
+
+    // ──────────────────────────────────────────────────────────────────
+    //  No governance tests
+    // ──────────────────────────────────────────────────────────────────
+
+    [Fact]
+    public void DefaultProjection_ShouldNotApply_WhenNoGovernance()
+    {
+        var options = new QueryOptions();
+
+        options.Validate(typeof(Customer));
+
+        options.Select.Should().BeNull();
+    }
+
+    [Fact]
+    public void DefaultProjection_ShouldNotApply_WhenOnlyFilterableFields()
+    {
+        var options = new QueryOptions();
+        var execOptions = new QueryExecutionOptions
+        {
+            FilterableFields = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "Id", "Name" }
+        };
+
+        options.Validate(typeof(Customer), execOptions);
+
+        options.Select.Should().BeNull();
+    }
+
+    // ──────────────────────────────────────────────────────────────────
+    //  Startup configuration validation tests
+    // ──────────────────────────────────────────────────────────────────
+
+    [Fact]
+    public void ValidateGovernanceConfig_ShouldThrow_WhenBlockedAndAllowedIntersect()
+    {
+        var execOptions = new QueryExecutionOptions
+        {
+            AllowedFields = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "Id", "Name", "SSN" },
+            BlockedFields = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "SSN" }
+        };
+
+        Action act = () => GovernanceValidator.ValidateConfiguration(execOptions);
+
+        act.Should().Throw<QueryValidationException>()
+           .Which.Message.Should().Contain("BlockedFields");
+    }
+
+    [Fact]
+    public void ValidateGovernanceConfig_ShouldThrow_WhenSelectableNotSubsetOfAllowed()
+    {
+        var execOptions = new QueryExecutionOptions
+        {
+            AllowedFields = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "Id", "Name" },
+            SelectableFields = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "Id", "Name", "Email" }
+        };
+
+        Action act = () => GovernanceValidator.ValidateConfiguration(execOptions);
+
+        act.Should().Throw<QueryValidationException>()
+           .Which.Message.Should().Contain("SelectableFields");
+    }
+
+    [Fact]
+    public void ValidateGovernanceConfig_ShouldThrow_WhenSortableNotSubsetOfAllowed()
+    {
+        var execOptions = new QueryExecutionOptions
+        {
+            AllowedFields = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "Id", "Name" },
+            SortableFields = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "Id", "Name", "Salary" }
+        };
+
+        Action act = () => GovernanceValidator.ValidateConfiguration(execOptions);
+
+        act.Should().Throw<QueryValidationException>()
+           .Which.Message.Should().Contain("SortableFields");
+    }
+
+    [Fact]
+    public void ValidateGovernanceConfig_ShouldThrow_WhenFilterableNotSubsetOfAllowed()
+    {
+        var execOptions = new QueryExecutionOptions
+        {
+            AllowedFields = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "Id", "Name" },
+            FilterableFields = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "Id", "Email" }
+        };
+
+        Action act = () => GovernanceValidator.ValidateConfiguration(execOptions);
+
+        act.Should().Throw<QueryValidationException>()
+           .Which.Message.Should().Contain("FilterableFields");
+    }
+
+    [Fact]
+    public void ValidateGovernanceConfig_ShouldThrow_WhenGroupableNotSubsetOfAllowed()
+    {
+        var execOptions = new QueryExecutionOptions
+        {
+            AllowedFields = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "Id", "Name" },
+            GroupableFields = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "Name", "SSN" }
+        };
+
+        Action act = () => GovernanceValidator.ValidateConfiguration(execOptions);
+
+        act.Should().Throw<QueryValidationException>()
+           .Which.Message.Should().Contain("GroupableFields");
+    }
+
+    [Fact]
+    public void ValidateGovernanceConfig_ShouldThrow_WhenAggregatableNotSubsetOfAllowed()
+    {
+        var execOptions = new QueryExecutionOptions
+        {
+            AllowedFields = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "Id", "Name" },
+            AggregatableFields = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "Name", "SSN" }
+        };
+
+        Action act = () => GovernanceValidator.ValidateConfiguration(execOptions);
+
+        act.Should().Throw<QueryValidationException>()
+           .Which.Message.Should().Contain("AggregatableFields");
+    }
+
+    [Fact]
+    public void ValidateGovernanceConfig_ShouldPass_WhenConfigIsConsistent()
+    {
+        var execOptions = new QueryExecutionOptions
+        {
+            AllowedFields = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "Id", "Name" },
+            BlockedFields = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "SSN" },
+            SelectableFields = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "Id", "Name" },
+            SortableFields = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "Id", "Name" },
+            FilterableFields = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "Id", "Name" },
+            GroupableFields = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "Name" },
+            AggregatableFields = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "Id" }
+        };
+
+        Action act = () => GovernanceValidator.ValidateConfiguration(execOptions);
+
+        act.Should().NotThrow();
+    }
+
+    // ──────────────────────────────────────────────────────────────────
+    //  Priorities intersection tests
+    // ──────────────────────────────────────────────────────────────────
+
+    [Fact]
+    public void DefaultProjection_SelectableFieldsTakesPriority_OverAllowedFields()
+    {
+        var options = new QueryOptions();
+        var execOptions = new QueryExecutionOptions
+        {
+            SelectableFields = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "Id", "Name", "Email" },
+            AllowedFields = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "Id", "Name" },
+            StrictFieldValidation = false
+        };
+
+        var result = options.Validate(typeof(Customer), execOptions);
+
+        // DefaultProjectionRule uses SelectableFields first — Email is injected
+        // Then FieldAccessValidator checks all Select fields against AllowedFields
+        // Email is denied (not in AllowedFields), removed in non-strict mode
+        Assert.False(result.IsValid);
+        Assert.Contains("Id", options.Select);
+        Assert.Contains("Name", options.Select);
+        Assert.DoesNotContain("Email", options.Select);
+    }
+
+    [Fact]
+    public void DefaultProjection_RoleAllowedFieldsTakesPriority_OverAllowedFields()
+    {
+        var options = new QueryOptions();
+        var execOptions = new QueryExecutionOptions
+        {
+            CurrentRole = "admin",
+            RoleAllowedFields = new Dictionary<string, HashSet<string>>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["admin"] = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "Id", "Name" }
+            },
+            AllowedFields = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "Id", "Name", "SSN" }
+        };
+
+        options.Validate(typeof(Customer), execOptions);
+
+        options.Select.Should().NotBeNull();
+        // RoleAllowedFields used for injection: no SSN
+        options.Select.Should().HaveCount(2);
+        options.Select.Should().NotContain("SSN");
     }
 
     private class MockResolver : IFieldAccessResolver

@@ -26,6 +26,43 @@ opts.BlockedFields = new HashSet<string> { "PasswordHash", "InternalCost", "Tena
 
 Evaluated even if `AllowedFields` is not set. Block specific sensitive fields without enumerating every allowed field.
 
+### Default Projection Injection
+
+When no `Select` is specified, `DefaultProjectionRule` auto-injects a governed default projection using the first available source:
+
+```csharp
+// Priority: SelectableFields > RoleAllowedFields > AllowedFields > entity props minus BlockedFields
+opts.SelectableFields = new HashSet<string> { "Id", "Name", "Email" };
+opts.AllowedFields = new HashSet<string> { "Id", "Name" };
+// Result: default Select = { "Id", "Name", "Email" }
+```
+
+This ensures unprojected queries (e.g., `GET /products` without `$select`) respect field governance instead of returning all entity fields.
+
+### Wildcard Expansion
+
+Wildcard patterns in governance lists are expanded against entity metadata at injection time:
+
+```csharp
+opts.SelectableFields = new HashSet<string> { "Id", "Name", "Orders.*" };
+// Expands to: { "Id", "Name", "Orders.OrderId", "Orders.Total", "Orders.Status", ... }
+```
+
+### Governance Configuration Validation
+
+`GovernanceValidator.ValidateConfiguration()` detects inconsistent governance settings at startup:
+
+```csharp
+// Throws: field "SSN" is both blocked and allowed
+opts.BlockedFields = new HashSet<string> { "SSN" };
+opts.AllowedFields = new HashSet<string> { "Id", "Name", "SSN" };
+GovernanceValidator.ValidateConfiguration(opts);
+```
+
+Checks enforced:
+- `BlockedFields` must not intersect with `AllowedFields`
+- `SelectableFields`, `FilterableFields`, `SortableFields`, `GroupableFields`, `AggregatableFields` must each be subsets of `AllowedFields` (when both are configured)
+
 ### Per-Operation Restrictions
 
 ```csharp

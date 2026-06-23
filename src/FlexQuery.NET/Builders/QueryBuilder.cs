@@ -80,16 +80,26 @@ public static class QueryBuilder
         // Add a default OrderBy to prevent EF Core errors when calling Skip() on unordered queries.
         if (options.Paging.Skip > 0 && query is not IOrderedQueryable<T>)
         {
-            var defaultSortProp = typeof(T).GetProperties(BindingFlags.Public | BindingFlags.Instance)
-                .FirstOrDefault(p => p.Name.Equals("Id", StringComparison.OrdinalIgnoreCase) || p.Name.Equals("Key", StringComparison.OrdinalIgnoreCase)) 
-                ?? typeof(T).GetProperties(BindingFlags.Public | BindingFlags.Instance).FirstOrDefault();
-
-            if (defaultSortProp != null && !IsCollectionType(defaultSortProp.PropertyType))
+            // Prefer the first governance-compliant select field (already validated)
+            string? fieldName = options.Select?.FirstOrDefault(f => !string.IsNullOrWhiteSpace(f) && !f.Contains('.'));
+            if (fieldName == null)
             {
-                var parameter = Expression.Parameter(typeof(T), "x");
-                var property = Expression.Property(parameter, defaultSortProp);
-                var keySelector = Expression.Lambda(property, parameter);
-                query = ApplyInitialOrder(query, keySelector, defaultSortProp.PropertyType, false);
+                var defaultSortProp = typeof(T).GetProperties(BindingFlags.Public | BindingFlags.Instance)
+                    .FirstOrDefault(p => p.Name.Equals("Id", StringComparison.OrdinalIgnoreCase) || p.Name.Equals("Key", StringComparison.OrdinalIgnoreCase))
+                    ?? typeof(T).GetProperties(BindingFlags.Public | BindingFlags.Instance).FirstOrDefault();
+                fieldName = defaultSortProp?.Name;
+            }
+
+            if (fieldName != null)
+            {
+                var defaultSortProp = typeof(T).GetProperty(fieldName, BindingFlags.Public | BindingFlags.Instance | BindingFlags.IgnoreCase);
+                if (defaultSortProp != null && !IsCollectionType(defaultSortProp.PropertyType))
+                {
+                    var parameter = Expression.Parameter(typeof(T), "x");
+                    var property = Expression.Property(parameter, defaultSortProp);
+                    var keySelector = Expression.Lambda(property, parameter);
+                    query = ApplyInitialOrder(query, keySelector, defaultSortProp.PropertyType, false);
+                }
             }
         }
 

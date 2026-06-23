@@ -4,6 +4,26 @@ All notable changes to this project will be documented in this file.
 
 ---
 
+## [3.0.4] - 2026-06-23
+
+### Added
+
+- **DefaultProjectionRule:** New validation rule (runs first in the pipeline) that auto-injects a governed `Select` when no explicit projection is specified. Priority: `SelectableFields` > `RoleAllowedFields` > `AllowedFields` > entity metadata minus `BlockedFields`.
+- **Wildcard pattern expansion:** `DefaultProjectionHelper.ExpandWildcardFields` expands patterns like `Orders.*` by recursively walking navigation properties via reflection at injection time.
+- **Non-strict re-apply:** When `Select` is emptied by NonStrict field removal, the default projection is automatically re-injected.
+- **RoleAllowedFields auto-projection:** `RoleAllowedFields` now serves as a valid source for default projection injection.
+- **GovernanceValidator:** New `GovernanceValidator.ValidateConfiguration()` for startup-time validation of governance config consistency — detects `BlockedFields` ∩ `AllowedFields` overlap and subset violations for `SelectableFields`/`FilterableFields`/`SortableFields`/`GroupableFields`/`AggregatableFields` vs `AllowedFields`.
+- **New test coverage:** 24 FieldSecurityTests + 2 PagingTests covering default projection priority, wildcard expansion, non-strict re-apply, grouped query exclusion, no-governance fallthrough, config validation, and priority intersection.
+
+### Changed
+
+- **Paging fallback sort respects governance:** `QueryBuilder.ApplyPaging` now uses `options.Select?.FirstOrDefault()` before falling back to `Id`/`Key`/first property, ensuring deterministic pagination uses a governed field.
+- **Documentation:** Security & Governance guide updated with default projection, wildcard expansion, and config validation sections.
+
+### Fixed
+
+- **Default response field leak:** When `QueryOptions.Select` was null, the projection builder returned all entity fields regardless of governance configuration. Now governed defaults are injected before validation, ensuring `AllowedFields`, `BlockedFields`, and `RoleAllowedFields` are respected even for unprojected queries.
+
 ## [3.0.3] - 2026-06-23
 
 ### Fixed

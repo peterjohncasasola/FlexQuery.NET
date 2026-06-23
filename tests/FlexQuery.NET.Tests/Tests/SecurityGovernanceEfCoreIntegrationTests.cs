@@ -1,0 +1,409 @@
+using FlexQuery.NET.EntityFrameworkCore;
+using FlexQuery.NET.Exceptions;
+using FlexQuery.NET.Extensions;
+using FlexQuery.NET.Models;
+using Microsoft.Data.Sqlite;
+using Microsoft.EntityFrameworkCore;
+using FluentAssertions;
+using System.Reflection;
+
+namespace FlexQuery.NET.Tests.Tests;
+
+public sealed class SecurityGovernanceEfCoreIntegrationTests : IDisposable
+{
+    private readonly GovernanceDbContext _db = GovernanceDbContext.CreateSeeded();
+
+    public void Dispose() => _db.Dispose();
+
+    // ──────────────────────────────────────────────────────────────
+    //  Test 1: AllowedFields restricts default projection
+    // ──────────────────────────────────────────────────────────────
+
+    [Fact]
+    public async Task AllowedFields_ShouldRestrictDefaultProjection()
+    {
+        var options = new QueryOptions { IncludeCount = true };
+        var execOptions = new QueryExecutionOptions
+        {
+            AllowedFields = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "Id", "Name" }
+        };
+
+        var result = await _db.Customers.FlexQueryAsync(options, execOptions);
+
+        result.Data.Should().NotBeEmpty();
+        foreach (var row in result.Data)
+        {
+            Read<int>(row, "Id").Should().NotBe(0);
+            Read<string>(row, "Name").Should().NotBeNullOrEmpty();
+            HasProperty(row, "SSN").Should().BeFalse();
+            HasProperty(row, "Salary").Should().BeFalse();
+        }
+    }
+
+    // ──────────────────────────────────────────────────────────────
+    //  Test 2: BlockedFields should exclude fields
+    // ──────────────────────────────────────────────────────────────
+
+    [Fact]
+    public async Task BlockedFields_ShouldExcludeFieldsFromDefaultProjection()
+    {
+        var options = new QueryOptions { IncludeCount = true };
+        var execOptions = new QueryExecutionOptions
+        {
+            BlockedFields = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "SSN" }
+        };
+
+        var result = await _db.Customers.FlexQueryAsync(options, execOptions);
+
+        result.Data.Should().NotBeEmpty();
+        foreach (var row in result.Data)
+        {
+            Read<int>(row, "Id").Should().BeGreaterThan(0);
+            Read<string>(row, "Name").Should().NotBeNullOrEmpty();
+            Read<decimal>(row, "Salary").Should().BeGreaterThan(0);
+            HasProperty(row, "SSN").Should().BeFalse();
+        }
+    }
+
+    // ──────────────────────────────────────────────────────────────
+    //  Test 3: Explicit Select still validated
+    // ──────────────────────────────────────────────────────────────
+
+    [Fact]
+    public async Task ExplicitSelect_ShouldThrow_WhenFieldIsBlocked()
+    {
+        var options = new QueryOptions
+        {
+            Select = new List<string> { "SSN" }
+        };
+        var execOptions = new QueryExecutionOptions
+        {
+            BlockedFields = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "SSN" }
+        };
+
+        var act = async () => await _db.Customers.FlexQueryAsync(options, execOptions);
+
+        (await act.Should().ThrowAsync<QueryValidationException>())
+            .Which.Message.Should().Contain("SSN");
+    }
+
+    // ──────────────────────────────────────────────────────────────
+    //  Test 4: GroupableFields enforcement
+    // ──────────────────────────────────────────────────────────────
+
+    [Fact]
+    public async Task GroupBy_ShouldThrow_WhenFieldNotInGroupableFields()
+    {
+        var options = new QueryOptions
+        {
+            GroupBy = new List<string> { "Salary" },
+            Aggregates = { new AggregateModel { Field = "Salary", Function = "sum", Alias = "salarySum" } },
+            Paging = { Disabled = true }
+        };
+        var execOptions = new QueryExecutionOptions
+        {
+            GroupableFields = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "Name" }
+        };
+
+        var act = async () => await _db.Customers.FlexQueryAsync(options, execOptions);
+
+        await act.Should().ThrowAsync<QueryValidationException>();
+    }
+
+    // ──────────────────────────────────────────────────────────────
+    //  Test 5: AggregatableFields enforcement
+    // ──────────────────────────────────────────────────────────────
+
+    [Fact]
+    public async Task Aggregate_ShouldThrow_WhenFieldNotInAggregatableFields()
+    {
+        var options = new QueryOptions
+        {
+            Aggregates = { new AggregateModel { Field = "Salary", Function = "sum", Alias = "salarySum" } },
+            Paging = { Disabled = true }
+        };
+        var execOptions = new QueryExecutionOptions
+        {
+            AggregatableFields = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "Id" }
+        };
+
+        var act = async () => await _db.Customers.FlexQueryAsync(options, execOptions);
+
+        await act.Should().ThrowAsync<QueryValidationException>();
+    }
+
+    // ──────────────────────────────────────────────────────────────
+    //  Test 6: Having enforcement
+    // ──────────────────────────────────────────────────────────────
+
+    [Fact]
+    public async Task Having_ShouldThrow_WhenFieldNotInAggregatableFields()
+    {
+        var options = new QueryOptions
+        {
+            GroupBy = new List<string> { "Name" },
+            Aggregates = { new AggregateModel { Field = "Salary", Function = "sum", Alias = "salarySum" } },
+            Having = new HavingCondition { Field = "Salary", Function = "sum", Operator = "gt", Value = "0" },
+            Paging = { Disabled = true }
+        };
+        var execOptions = new QueryExecutionOptions
+        {
+            AggregatableFields = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "Id" }
+        };
+
+        var act = async () => await _db.Customers.FlexQueryAsync(options, execOptions);
+
+        await act.Should().ThrowAsync<QueryValidationException>();
+    }
+
+    // ──────────────────────────────────────────────────────────────
+    //  Test 7: DefaultSortField injection
+    // ──────────────────────────────────────────────────────────────
+
+    [Fact]
+    public async Task DefaultSortField_ShouldOrderResults()
+    {
+        var options = new QueryOptions { Paging = { Page = 1, PageSize = 10 } };
+        var execOptions = new QueryExecutionOptions
+        {
+            DefaultSortField = "Name",
+            AllowedFields = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "Id", "Name" }
+        };
+
+        var result = await _db.Customers.FlexQueryAsync(options, execOptions);
+
+        var names = result.Data
+            .Select(row => Read<string>(row, "Name"))
+            .ToList();
+
+        names.Should().BeInAscendingOrder();
+    }
+
+    // ──────────────────────────────────────────────────────────────
+    //  Test 8: NonStrict cleanup
+    // ──────────────────────────────────────────────────────────────
+
+    [Fact]
+    public void NonStrict_ShouldRemoveBlockedFields_AndKeepAllowedFields()
+    {
+        var options = new QueryOptions
+        {
+            Select = new List<string> { "Name", "SSN" }
+        };
+        var execOptions = new QueryExecutionOptions
+        {
+            BlockedFields = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "SSN" },
+            StrictFieldValidation = false
+        };
+
+        options.Validate(typeof(GovernanceCustomer), execOptions);
+
+        options.Select.Should().Contain("Name");
+        options.Select.Should().NotContain("SSN");
+    }
+
+    // ──────────────────────────────────────────────────────────────
+    //  Test 9: RoleAllowedFields default projection
+    // ──────────────────────────────────────────────────────────────
+
+    [Fact]
+    public async Task RoleAllowedFields_ShouldRestrictDefaultProjection()
+    {
+        var options = new QueryOptions { IncludeCount = true };
+        var execOptions = new QueryExecutionOptions
+        {
+            CurrentRole = "admin",
+            RoleAllowedFields = new Dictionary<string, HashSet<string>>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["admin"] = new(StringComparer.OrdinalIgnoreCase) { "Id", "Name" }
+            }
+        };
+
+        var result = await _db.Customers.FlexQueryAsync(options, execOptions);
+
+        result.Data.Should().NotBeEmpty();
+        foreach (var row in result.Data)
+        {
+            Read<int>(row, "Id").Should().BeGreaterThan(0);
+            Read<string>(row, "Name").Should().NotBeNullOrEmpty();
+            HasProperty(row, "SSN").Should().BeFalse();
+            HasProperty(row, "Salary").Should().BeFalse();
+        }
+    }
+
+    // ──────────────────────────────────────────────────────────────
+    //  Test 10: Wildcard expansion
+    // ──────────────────────────────────────────────────────────────
+
+    [Fact]
+    public async Task AllowedFields_Wildcard_ShouldExpandAndProjectNavigationProperties()
+    {
+        var options = new QueryOptions { IncludeCount = true, Paging = { Page = 1, PageSize = 10 } };
+        var execOptions = new QueryExecutionOptions
+        {
+            AllowedFields = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "Id", "Name", "Orders.*" }
+        };
+
+        var result = await _db.Customers.FlexQueryAsync(options, execOptions);
+
+        result.Data.Should().NotBeEmpty();
+        foreach (var row in result.Data)
+        {
+            Read<int>(row, "Id").Should().BeGreaterThan(0);
+            Read<string>(row, "Name").Should().NotBeNullOrEmpty();
+            HasProperty(row, "SSN").Should().BeFalse();
+        }
+    }
+
+    // ──────────────────────────────────────────────────────────────
+    //  Helpers
+    // ──────────────────────────────────────────────────────────────
+
+    private static T Read<T>(object row, string propertyName)
+    {
+        if (row is IReadOnlyDictionary<string, object?> rod
+            && rod.TryGetValue(propertyName, out var rov))
+            return rov is null ? default! : (T)Convert.ChangeType(rov, typeof(T))!;
+
+        if (row is IDictionary<string, object?> d
+            && d.TryGetValue(propertyName, out var dv))
+            return dv is null ? default! : (T)Convert.ChangeType(dv, typeof(T))!;
+
+        var prop = row.GetType().GetProperty(propertyName,
+            BindingFlags.Public | BindingFlags.Instance | BindingFlags.IgnoreCase);
+        if (prop == null)
+            throw new InvalidOperationException($"Property '{propertyName}' not found on {row.GetType().Name}");
+
+        var val = prop.GetValue(row);
+        return val is null ? default! : (T)Convert.ChangeType(val, typeof(T))!;
+    }
+
+    private static bool HasProperty(object row, string propertyName)
+    {
+        if (row is IDictionary<string, object?> d)
+            return d.ContainsKey(propertyName);
+        return row.GetType().GetProperty(propertyName,
+            BindingFlags.Public | BindingFlags.Instance | BindingFlags.IgnoreCase) != null;
+    }
+}
+
+// ──────────────────────────────────────────────────────────────────
+//  Governance-specific DbContext and entities
+// ──────────────────────────────────────────────────────────────────
+
+public sealed class GovernanceDbContext : DbContext
+{
+    private readonly SqliteConnection _connection;
+
+    public DbSet<GovernanceCustomer> Customers => Set<GovernanceCustomer>();
+    public DbSet<GovernanceOrder> Orders => Set<GovernanceOrder>();
+
+    private GovernanceDbContext(DbContextOptions<GovernanceDbContext> options, SqliteConnection connection)
+        : base(options)
+    {
+        _connection = connection;
+    }
+
+    protected override void OnModelCreating(ModelBuilder modelBuilder)
+    {
+        modelBuilder.Entity<GovernanceCustomer>(entity =>
+        {
+            entity.HasKey(x => x.Id);
+            entity.Property(x => x.Name).IsRequired();
+            entity.Property(x => x.SSN).IsRequired();
+            entity.Property(x => x.Salary).HasColumnType("NUMERIC");
+            entity.HasMany(x => x.Orders)
+                .WithOne()
+                .HasForeignKey(x => x.CustomerId);
+        });
+
+        modelBuilder.Entity<GovernanceOrder>(entity =>
+        {
+            entity.HasKey(x => x.Id);
+            entity.Property(x => x.Total).HasColumnType("NUMERIC");
+            entity.Property(x => x.Status).IsRequired();
+            entity.Property(x => x.Category);
+        });
+    }
+
+    public override void Dispose()
+    {
+        base.Dispose();
+        _connection.Dispose();
+    }
+
+    public static GovernanceDbContext CreateSeeded()
+    {
+        var connection = new SqliteConnection("Filename=:memory:");
+        connection.Open();
+
+        var options = new DbContextOptionsBuilder<GovernanceDbContext>()
+            .UseSqlite(connection)
+            .Options;
+
+        var context = new GovernanceDbContext(options, connection);
+        context.Database.EnsureCreated();
+
+        if (!context.Customers.Any())
+        {
+            context.Customers.AddRange(
+                new GovernanceCustomer
+                {
+                    Id = 1,
+                    Name = "Alice",
+                    SSN = "111-11-1111",
+                    Salary = 50000m,
+                    Orders =
+                    [
+                        new() { Id = 1, CustomerId = 1, Total = 100m, Status = "Shipped", Category = "Electronics" },
+                        new() { Id = 2, CustomerId = 1, Total = 200m, Status = "Pending", Category = "Books" }
+                    ]
+                },
+                new GovernanceCustomer
+                {
+                    Id = 2,
+                    Name = "Bob",
+                    SSN = "222-22-2222",
+                    Salary = 60000m,
+                    Orders =
+                    [
+                        new() { Id = 3, CustomerId = 2, Total = 300m, Status = "Shipped", Category = "Electronics" }
+                    ]
+                },
+                new GovernanceCustomer
+                {
+                    Id = 3,
+                    Name = "Charlie",
+                    SSN = "333-33-3333",
+                    Salary = 70000m,
+                    Orders =
+                    [
+                        new() { Id = 4, CustomerId = 3, Total = 400m, Status = "Cancelled", Category = "Books" }
+                    ]
+                });
+
+            context.SaveChanges();
+        }
+
+        return context;
+    }
+}
+
+public sealed class GovernanceCustomer
+{
+    public int Id { get; set; }
+    public string Name { get; set; } = string.Empty;
+    public string SSN { get; set; } = string.Empty;
+    public decimal Salary { get; set; }
+    public List<GovernanceOrder> Orders { get; set; } = [];
+}
+
+public sealed class GovernanceOrder
+{
+    public int Id { get; set; }
+    public int CustomerId { get; set; }
+    public decimal Total { get; set; }
+    public string Status { get; set; } = string.Empty;
+    public string Category { get; set; } = string.Empty;
+    // No back-reference to GovernanceCustomer to avoid circular recursion in DefaultProjectionHelper
+}

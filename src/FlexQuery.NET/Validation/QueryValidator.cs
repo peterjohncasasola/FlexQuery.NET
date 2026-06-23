@@ -15,6 +15,7 @@ public sealed class QueryValidator : IQueryValidator
     /// </summary>
     public QueryValidator()
     {
+        _rules.Add(new DefaultProjectionRule());
         _rules.Add(new FieldAccessValidator());
         _rules.Add(new IncludeAccessValidator());
         _rules.Add(new FieldExistenceRule());

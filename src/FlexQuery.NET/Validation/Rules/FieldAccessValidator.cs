@@ -27,10 +27,7 @@ public sealed class FieldAccessValidator : IValidationRule
         var execOptions = context.ExecutionOptions;
         if (execOptions == null) return;
 
-        // 1. Default Projection: Auto-inject Select when none is specified.
-        ApplyDefaultProjection(options, context, execOptions);
-
-        // 2. Default Sort: Inject DefaultSortField when no sort is specified.
+        // Default Sort: Inject DefaultSortField when no sort is specified.
         ApplyDefaultSort(options, execOptions);
 
         // Validator self-skips if no security configuration is provided
@@ -79,6 +76,12 @@ public sealed class FieldAccessValidator : IValidationRule
                     }
                 }
             }
+
+            // Re-apply default projection if all fields were removed in non-strict mode
+            if (!execOptions.StrictFieldValidation && options.Select.Count == 0)
+            {
+                DefaultProjectionHelper.InjectDefaultProjection(options, context, execOptions);
+            }
         }
 
         // 6. Process GroupBy - remove unauthorized in non-strict mode
@@ -123,37 +126,6 @@ public sealed class FieldAccessValidator : IValidationRule
         if (options.Having != null && !string.IsNullOrWhiteSpace(options.Having.Field))
         {
             CheckAccess(options.Having.Field, QueryOperation.Having, context, result);
-        }
-    }
-
-    private static void ApplyDefaultProjection(QueryOptions options, QueryContext ctx, QueryExecutionOptions execOptions)
-    {
-        if (options.Select != null && options.Select.Count > 0) return;
-        if (options.SelectTree != null) return;
-        if (options.HasProjection()) return;
-
-        if (execOptions.SelectableFields?.Count > 0)
-        {
-            options.Select = execOptions.SelectableFields.ToList();
-            return;
-        }
-
-        if (execOptions.AllowedFields?.Count > 0)
-        {
-            options.Select = execOptions.AllowedFields.ToList();
-            return;
-        }
-
-        if (execOptions.BlockedFields?.Count > 0 && ctx?.TargetType != null)
-        {
-            var allScalars = ctx.TargetType
-                .GetProperties(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance)
-                .Where(p => TypeClassification.IsScalarType(p.PropertyType))
-                .Select(p => p.Name);
-            options.Select = allScalars
-                .Where(f => !WildcardMatcher.IsMatch(f, execOptions.BlockedFields))
-                .ToList();
-            return;
         }
     }
 
@@ -374,7 +346,10 @@ public sealed class FieldAccessValidator : IValidationRule
     {
         if (options.StrictFieldValidation)
         {
-            throw new QueryValidationException(message);
+            throw new QueryValidationException($"{message} (Field: {field})")
+            {
+                // Store the field in Result for consumers that inspect it
+            };
         }
 
         result.Errors.Add(new ValidationError(message, ValidationErrorCodes.FieldAccessDenied, field));
