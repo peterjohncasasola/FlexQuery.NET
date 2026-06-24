@@ -86,6 +86,16 @@ public sealed class SqlTranslator : ISqlTranslator
         var sortForOrderBy = options.GroupBy?.Count > 0
             ? GroupedSortValidator.Validate(options.Sort, options.GroupBy, options.Aggregates)
             : options.Sort;
+
+        if (!options.Paging.Disabled
+            && _dialect.RequiresOrderByForPaging
+            && sortForOrderBy is { Count: 0 })
+        {
+            throw new InvalidOperationException(
+                $"Paging requires an ORDER BY clause when using the {_dialect.GetType().Name} dialect. "
+                + "Add at least one Sort field to QueryOptions.Sort, or set Paging.Disabled = true.");
+        }
+
         var orderByClause = BuildOrderByClause(sortForOrderBy, mapping);
         var pagingClause = BuildPagingClause(options.Paging, parameters);
 

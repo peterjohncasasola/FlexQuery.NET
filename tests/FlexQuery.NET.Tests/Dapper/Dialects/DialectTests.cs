@@ -96,6 +96,63 @@ public class DialectTests
     }
 
     // ========================
+    // Paging Validation Tests (ORDER BY requirement)
+    // ========================
+
+    [Fact]
+    public void SqlServer_PagingWithoutSort_Throws()
+    {
+        var options = CreatePagedOptionsWithoutSort();
+        var act = () => new SqlTranslator(_registry, new SqlServerDialect()).Translate(options);
+
+        act.Should().Throw<InvalidOperationException>()
+            .WithMessage("*ORDER BY*");
+    }
+
+    [Fact]
+    public void Oracle_PagingWithoutSort_Throws()
+    {
+        var options = CreatePagedOptionsWithoutSort();
+        var act = () => new SqlTranslator(_registry, new OracleDialect()).Translate(options);
+
+        act.Should().Throw<InvalidOperationException>()
+            .WithMessage("*ORDER BY*");
+    }
+
+    [Fact]
+    public void SqlServer_GroupByPaging_Succeeds()
+    {
+        var options = CreateGroupByOptions();
+        options.Paging.Page = 2;
+        options.Paging.PageSize = 10;
+        var command = new SqlTranslator(_registry, new SqlServerDialect()).Translate(options);
+
+        command.Sql.Should().Contain("ORDER BY");
+        command.Sql.Should().Contain("OFFSET");
+        command.Sql.Should().Contain("FETCH NEXT");
+    }
+
+    [Fact]
+    public void Sqlite_PagingWithoutSort_Succeeds()
+    {
+        var options = CreatePagedOptionsWithoutSort();
+        var command = new SqlTranslator(_registry, new SqliteDialect()).Translate(options);
+
+        command.Sql.Should().Contain("LIMIT");
+        command.Sql.Should().Contain("OFFSET");
+    }
+
+    [Fact]
+    public void PostgreSql_PagingWithoutSort_Succeeds()
+    {
+        var options = CreatePagedOptionsWithoutSort();
+        var command = new SqlTranslator(_registry, new PostgreSqlDialect()).Translate(options);
+
+        command.Sql.Should().Contain("LIMIT");
+        command.Sql.Should().Contain("OFFSET");
+    }
+
+    // ========================
     // Identifier Escaping Tests
     // ========================
 
@@ -823,6 +880,7 @@ public class DialectTests
 
         var options = new QueryOptions
         {
+            Paging = { Disabled = true },
             Includes = new List<string> { "Roles" }
         };
         options.Items[ContextKeys.EntityType] = typeof(TestEntityWithJoin);
@@ -985,6 +1043,17 @@ public class DialectTests
     {
         var options = new QueryOptions
         {
+            Paging = { Page = 2, PageSize = 10 },
+            Sort = { new SortNode { Field = "Id" } }
+        };
+        options.Items[ContextKeys.EntityType] = typeof(TestEntity);
+        return options;
+    }
+
+    private static QueryOptions CreatePagedOptionsWithoutSort()
+    {
+        var options = new QueryOptions
+        {
             Paging = { Page = 2, PageSize = 10 }
         };
         options.Items[ContextKeys.EntityType] = typeof(TestEntity);
@@ -995,6 +1064,7 @@ public class DialectTests
     {
         var options = new QueryOptions
         {
+            Paging = { Disabled = true },
             Filter = new FilterGroup
             {
                 Filters = [new FilterCondition { Field = "Name", Operator = "eq", Value = "Test" }]
@@ -1008,6 +1078,7 @@ public class DialectTests
     {
         var options = new QueryOptions
         {
+            Paging = { Disabled = true },
             Filter = new FilterGroup
             {
                 Filters = [new FilterCondition { Field = "Name", Operator = "contains", Value = "test" }]
@@ -1021,6 +1092,7 @@ public class DialectTests
     {
         var options = new QueryOptions
         {
+            Paging = { Disabled = true },
             Filter = new FilterGroup
             {
                 Filters = [new FilterCondition { Field = "Status", Operator = "in", Value = "Active,Pending" }]
@@ -1034,6 +1106,7 @@ public class DialectTests
     {
         var options = new QueryOptions
         {
+            Paging = { Disabled = true },
             Filter = new FilterGroup
             {
                 Filters = [new FilterCondition { Field = "Age", Operator = "between", Value = "20,30" }]
@@ -1068,6 +1141,7 @@ public class DialectTests
     {
         var options = new QueryOptions
         {
+            Paging = { Disabled = true },
             Distinct = true
         };
         options.Items[ContextKeys.EntityType] = typeof(TestEntity);
@@ -1111,6 +1185,7 @@ public class DialectTests
 
         var options = new QueryOptions
         {
+            Paging = { Disabled = true },
             Includes = new List<string> { "Roles" }
         };
         options.Items[ContextKeys.EntityType] = typeof(TestEntityWithJoin);

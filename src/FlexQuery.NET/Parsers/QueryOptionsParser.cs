@@ -11,7 +11,7 @@ namespace FlexQuery.NET.Parsers;
 /// </summary>
 public static class QueryOptionsParser
 {
-    private static readonly List<IQueryParser> _parsers = new()
+    private static List<IQueryParser> _parsers = new()
     {
         new JsonQueryParser(),
         new DslQueryParser()
@@ -19,24 +19,33 @@ public static class QueryOptionsParser
 
     static QueryOptionsParser()
     {
-        try
-        {
-            TryRegisterParser(
-                "FlexQuery.NET.MiniOData.Parsers.MiniODataParser, FlexQuery.NET.MiniOData");
-            TryRegisterParser(
-                "FlexQuery.NET.Parsers.Jql.JqlQueryParser, FlexQuery.NET.Parsers.Jql");
-        }
-        catch
-        {
-            // Ignore if the assembly is not loaded or available
-        }
+        RegisterIfAvailable("FlexQuery.NET.MiniOData.Parsers.MiniODataParser, FlexQuery.NET.MiniOData");
+        RegisterIfAvailable("FlexQuery.NET.Parsers.Jql.JqlQueryParser, FlexQuery.NET.Parsers.Jql");
     }
 
     /// <summary>
     /// Registers a new query parser implementation.
     /// New parsers are given priority over existing ones.
+    /// Thread-safe: uses copy-on-write so in-progress <see cref="Parse"/> calls are not affected.
     /// </summary>
-    public static void RegisterParser(IQueryParser parser) => _parsers.Insert(0, parser);
+    public static void RegisterParser(IQueryParser parser)
+    {
+        var updated = new List<IQueryParser>(_parsers);
+        updated.Insert(0, parser);
+        _parsers = updated;
+    }
+
+    private static void RegisterIfAvailable(string typeName)
+    {
+        try
+        {
+            if (Type.GetType(typeName) is { } type && Activator.CreateInstance(type) is IQueryParser parser)
+                RegisterParser(parser);
+        }
+        catch
+        {
+        }
+    }
 
     /// <summary>
     /// Parses a strongly typed <see cref="FlexQueryParameters"/> into <see cref="QueryOptions"/>.
@@ -71,14 +80,17 @@ public static class QueryOptionsParser
             return options;
         }
 
+        // Snapshot the parser list to avoid "Collection was modified" when RegisterParser
+        // is called concurrently from another thread (e.g., parallel test execution).
+        var parsers = _parsers;
         IQueryParser? parser = null;
 
         if (syntax != QuerySyntax.AutoDetect)
         {
-            parser = _parsers.FirstOrDefault(p => p.Syntax == syntax);
+            parser = parsers.FirstOrDefault(p => p.Syntax == syntax);
         }
 
-        parser ??= _parsers.FirstOrDefault(p => p.CanParse(parameters)) ?? _parsers.Last();
+        parser ??= parsers.FirstOrDefault(p => p.CanParse(parameters)) ?? parsers.Last();
 
         var parsedOptions = parser.Parse(parameters);
         ParserCache.Set(cacheKey, parsedOptions);

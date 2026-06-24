@@ -1,5 +1,6 @@
 using System.Data;
 using System.Data.Common;
+using System.Text.RegularExpressions;
 using Dapper;
 using FlexQuery.NET.Models;
 using FlexQuery.NET.Parsers;
@@ -192,10 +193,11 @@ public static class FlexQueryDapperExtensions
                 commandType: CommandType.Text)).AsList();
         }
 
-        int? totalCount = items.Count;
+        int? totalCount = null;
         int? resultCount = items.Count;
         if (execOptions.IncludeTotalCount)
         {
+            totalCount = items.Count;
             var sourceCountCommand = translator.TranslateSourceCount(options);
             var sourceCountParameters = new DynamicParameters();
             foreach (var param in sourceCountCommand.Parameters)
@@ -270,14 +272,41 @@ public static class FlexQueryDapperExtensions
 
     private static string ExtractCountSql(string sql)
     {
-        var keywords = new[] { "ORDER BY", "LIMIT", "OFFSET" };
+        // Match ORDER BY, LIMIT, and OFFSET with word boundaries to avoid matching
+        // inside identifiers or aliases (e.g. "myOffset" or "order_by_field").
+        // Skip matches nested inside parentheses (subqueries) by tracking depth.
+        var patterns = new[] { @"\bORDER\s+BY\b", @"\bLIMIT\b", @"\bOFFSET\b" };
         var minIdx = sql.Length;
-        foreach (var kw in keywords)
+
+        foreach (var pattern in patterns)
         {
-            var idx = sql.IndexOf(kw, StringComparison.OrdinalIgnoreCase);
-            if (idx >= 0 && idx < minIdx) minIdx = idx;
+            var match = Regex.Match(sql, pattern, RegexOptions.IgnoreCase);
+            while (match.Success)
+            {
+                if (!IsInsideParentheses(sql, match.Index))
+                {
+                    if (match.Index < minIdx)
+                        minIdx = match.Index;
+                    break;
+                }
+                match = match.NextMatch();
+            }
         }
+
         var baseSql = sql[..minIdx];
         return $"SELECT COUNT(1) FROM ({baseSql.Trim()}) AS CountTable";
+    }
+
+    private static bool IsInsideParentheses(string sql, int index)
+    {
+        int depth = 0;
+        for (int i = 0; i < index; i++)
+        {
+            if (sql[i] == '(')
+                depth++;
+            else if (sql[i] == ')')
+                depth--;
+        }
+        return depth > 0;
     }
 }

@@ -51,4 +51,7 @@ public sealed class OracleDialect : ISqlDialect
 
     /// <summary>Prepends the parameter prefix to a parameter name.</summary>
     public string CreateParameterName(string name) => $":{name}";
+
+    /// <summary>Oracle 12c+ requires ORDER BY with OFFSET/FETCH pagination.</summary>
+    public bool RequiresOrderByForPaging => true;
 }

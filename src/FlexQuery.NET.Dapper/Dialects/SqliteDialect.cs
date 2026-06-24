@@ -48,4 +48,7 @@ public sealed class SqliteDialect : ISqlDialect
 
     /// <summary>Prepends the parameter prefix to a parameter name.</summary>
     public string CreateParameterName(string name) => $"@{name}";
+
+    /// <summary>LIMIT/OFFSET pagination does not require ORDER BY.</summary>
+    public bool RequiresOrderByForPaging => false;
 }

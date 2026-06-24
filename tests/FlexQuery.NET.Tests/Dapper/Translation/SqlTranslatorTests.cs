@@ -169,6 +169,7 @@ public class SqlTranslatorTests
     {
         var options = new QueryOptions
         {
+            Sort = { new SortNode { Field = "Id" } },
             Paging = { Page = 2, PageSize = 10 }
         };
         options.Items[ContextKeys.EntityType] = typeof(TestEntity);
@@ -176,6 +177,7 @@ public class SqlTranslatorTests
         var translator = new SqlTranslator(_registry, new SqlServerDialect());
         var command = translator.Translate(options);
 
+        command.Sql.Should().Contain("ORDER BY");
         command.Sql.Should().Contain("OFFSET");
         command.Sql.Should().Contain("FETCH NEXT");
         command.Parameters.Should().ContainKey("@Offset");

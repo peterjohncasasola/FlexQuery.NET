@@ -38,4 +38,10 @@ public interface ISqlDialect
 
     /// <summary>Creates a parameter name with the dialect's parameter prefix.</summary>
     string CreateParameterName(string name);
+
+    /// <summary>
+    /// When true, paging (OFFSET/FETCH) requires an ORDER BY clause.
+    /// SQL Server and Oracle 12c+ require this; LIMIT/OFFSET dialects do not.
+    /// </summary>
+    bool RequiresOrderByForPaging { get; }
 }

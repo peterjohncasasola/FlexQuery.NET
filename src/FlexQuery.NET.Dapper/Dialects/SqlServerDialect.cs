@@ -38,4 +38,7 @@ public sealed class SqlServerDialect : ISqlDialect
 
     /// <summary>Prepends the parameter prefix to a parameter name.</summary>
     public string CreateParameterName(string name) => $"@{name}";
+
+    /// <summary>SQL Server requires ORDER BY with OFFSET/FETCH pagination.</summary>
+    public bool RequiresOrderByForPaging => true;
 }

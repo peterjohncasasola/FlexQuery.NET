@@ -211,9 +211,38 @@ public class ResultCountTests
         await db.SaveChangesAsync();
     }
 
+    [Fact]
+    public async Task Dapper_IncludeTotalCountFalse_ReturnsNullTotalCount()
+    {
+        using var db = SqlProjectionDbContext.CreateSeeded();
+        var result = await ExecuteDapperOrdersAsync(db, new QueryOptions
+        {
+            Paging = { Page = 1, PageSize = 2 },
+            IncludeCount = true
+        }, includeTotalCount: false);
+
+        result.TotalCount.Should().BeNull();
+        result.Data.Should().HaveCount(2);
+    }
+
+    [Fact]
+    public async Task Dapper_IncludeTotalCountTrue_ReturnsActualCount()
+    {
+        using var db = SqlProjectionDbContext.CreateSeeded();
+        var result = await ExecuteDapperOrdersAsync(db, new QueryOptions
+        {
+            Paging = { Page = 1, PageSize = 2 },
+            IncludeCount = true
+        }, includeTotalCount: true);
+
+        result.TotalCount.Should().Be(4);
+        result.Data.Should().HaveCount(2);
+    }
+
     private static async Task<QueryResult<object>> ExecuteDapperOrdersAsync(
         SqlProjectionDbContext db,
-        QueryOptions options)
+        QueryOptions options,
+        bool includeTotalCount = true)
     {
         var connection = db.Database.GetDbConnection();
         if (connection.State != System.Data.ConnectionState.Open)
@@ -226,7 +255,7 @@ public class ResultCountTests
                 Dialect = new SqliteDialect(),
                 MappingRegistry = CreateRegistry(),
                 EntityType = typeof(SqlOrder),
-                IncludeTotalCount = true
+                IncludeTotalCount = includeTotalCount
             });
     }
 

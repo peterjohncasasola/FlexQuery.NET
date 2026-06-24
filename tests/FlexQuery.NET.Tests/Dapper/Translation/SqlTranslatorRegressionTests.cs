@@ -91,6 +91,7 @@ public class SqlTranslatorRegressionTests
 
         var options = new QueryOptions
         {
+            Sort = { new SortNode { Field = "Name" } },
             Filter = new FilterGroup
             {
                 Logic = LogicOperator.And,
@@ -117,6 +118,7 @@ public class SqlTranslatorRegressionTests
 
         command.Sql.Should().Contain("[Age] > @p0");
         command.Sql.Should().Contain("[Name] = @p1");
+        command.Sql.Should().Contain("ORDER BY");
         command.Sql.Should().Contain("OFFSET @Offset ROWS FETCH NEXT @PageSize ROWS ONLY");
     }
 
@@ -131,6 +133,7 @@ public class SqlTranslatorRegressionTests
 
         var options = new QueryOptions
         {
+            Sort = { new SortNode { Field = "Name" } },
             Filter = new FilterGroup
             {
                 Logic = LogicOperator.And,
@@ -156,6 +159,7 @@ public class SqlTranslatorRegressionTests
 
         command.Sql.Should().Contain("[Name] = @p0");
         command.Sql.Should().Contain("EXISTS (SELECT 1 FROM [Orders] WHERE [Orders].[CustomerId] = [Customers].[Id] AND ([Total] > @p1))");
+        command.Sql.Should().Contain("ORDER BY");
         command.Sql.Should().Contain("OFFSET @Offset ROWS FETCH NEXT @PageSize ROWS ONLY");
         
         command.Parameters.Should().ContainKey("@p0");
