@@ -32,7 +32,8 @@ internal static class QueryCacheKeyBuilder
             .Append("top=").Append(options.Top).Append('|')
             .Append("page=").Append(options.Paging.Page).Append('|')
             .Append("pageSize=").Append(options.Paging.PageSize).Append('|')
-            .Append("pagingDisabled=").Append(options.Paging.Disabled);
+            .Append("pagingDisabled=").Append(options.Paging.Disabled)
+            .Append("|efCoreOperators=").Append(options.Items.ContainsKey("__EfCoreOperators"));
 
         return sb.ToString();
     }

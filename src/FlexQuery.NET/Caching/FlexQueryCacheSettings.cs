@@ -9,7 +9,7 @@ public static class FlexQueryCacheSettings
     /// Gets or sets whether expression caching is enabled globally.
     /// Default is false.
     /// </summary>
-    public static bool EnableCache { get; set; } = false;
+    public static bool EnableCache { get; set; } = true;
 
     /// <summary>
     /// Gets or sets whether to cache compiled lambdas (Delegates).
