@@ -4,6 +4,64 @@ All notable changes to this project will be documented in this file.
 
 ---
 
+## [3.1.0] - 2026-06-25
+
+### Breaking
+
+- **Dapper return type unified:** `FlexQueryAsync<T>()` now returns `QueryResult<object>` instead of `QueryResult<T>`. Callers using `var` are unaffected; explicit `QueryResult<TEntity>` type annotations must change to `QueryResult<object>`.
+- **DebugResult namespace moved:** From `FlexQuery.NET.Extensions` to `FlexQuery.NET.Models`. Add `using FlexQuery.NET.Models;` where referenced.
+
+### Added
+
+- **Execution diagnostics / observability:** New `IFlexQueryExecutionListener` interface with 4 lifecycle events (`QueryParsed`, `QueryTranslated`, `QueryExecuted`, `QueryMaterialized`). Added `configureExecution` parameter on all Dapper and EF Core `FlexQueryAsync` overloads accepting `FlexQueryExecutionConfig`.
+- **AG Grid SSRM camelCase support:** New `camelCase` parameter on `AgGridResponseConverter.Convert()` and `ToAgGridServerSideResponse()` extension method, enabling automatic PascalCase-to-camelCase conversion of POCO property names in row data dictionaries. Group metadata fields remain configurable via `AgGridResponseFieldOptions`.
+- **Sample Web API project:** `FlexQuery.NET.Samples.WebApi` demonstrating EF Core, Dapper, AG Grid SSRM, and Kendo UI integrations with SQLite, Swagger, and demo frontends.
+- **Dapper SQL generation benchmarks:** `DapperSqlGenerationBenchmarks` covering simple, complex-filter, and aggregate SQL generation against the SqlServer dialect.
+- **Projection/validation benchmarks:** `ProjectionBenchmarks` for `SelectTreeBuilder`, `DynamicTypeBuilder` cache hit/miss, and `QueryCacheKeyBuilder` performance.
+- **Shared ProjectionMetadataBuilder:** Extracted from `ProjectionBuilder` into shared `ProjectionMetadata` / `ProjectionMetadataBuilder` types used by both Dapper and EF Core providers.
+- **DynamicType for GroupBy/aggregate results:** GroupBy and aggregate queries now produce `DynamicType` instances instead of `Dictionary<string, object>`, respecting ASP.NET Core's `PropertyNamingPolicy` (camelCase/PascalCase).
+
+### Fixed
+
+- **HAVING pipeline — parser, SQL gen, aliases:** Three bugs causing HAVING to be silently dropped or return incorrect results: (1) HavingParser regex required a field name, breaking field-less aggregates like `count:gt:20`. (2) Dapper SqlTranslator emitted quoted `[*]` columns for field-less aggregates and bound comparison values as strings, causing SQLite type mismatches. (3) BuildAggregateAlias produced `allCount` instead of predictable `Count` alias.
+- **Dapper TotalCount/ResultCount alignment:** Removed unconditional `ResultCount = items.Count` (matches EF Core which leaves it null when count is off). Now checks `options.IncludeCount` (user parameter) in addition to `execOptions.IncludeTotalCount` (server-side setting). Both providers return identical `QueryResult` structure for all scenarios.
+- **DslParsingBenchmarks:** Updated to use `DslAstParser.Parse` and `JqlQueryParser` instance API.
+
+### Changed
+
+- **Projection refactor:** `ProjectionBuilder` split into shared `ProjectionMetadataBuilder` + EF Core-specific `ProjectionExpressionBuilder`, reducing code duplication between providers.
+- **Dapper entity type validation:** `MappingRegistry` and `FlexQueryDapperExtensions` now guard against `typeof(object)` entity type with a clear error message.
+- **Connection lifecycle docs:** Added XML remarks on all Dapper `FlexQueryAsync` overloads explaining auto-open (not auto-close) behavior. Added `CancellationToken` parameter to `ExecuteQueryAsync`.
+- **DebugResult extracted:** Moved from inline class in `FlexQueryDebugExtensions.cs` to `FlexQuery.NET.Models/DebugResult.cs`.
+- **Benchmarks project references:** Added Dapper, JQL, and MiniOData parser project references.
+- **Solution and samples:** Samples folder added to `.slnx`.
+
+## [3.0.6] - 2026-06-24
+
+### Fixed
+
+- **SQL Server / Oracle paging validation:** `SqlTranslator.Translate()` now validates that paging queries have an ORDER BY clause when using dialects that require it (SQL Server, Oracle). Throws `InvalidOperationException` at translation time instead of a database runtime error.
+- **Dapper IncludeTotalCount semantics:** `IncludeTotalCount = false` now returns `TotalCount = null` instead of `items.Count` (page size), which was semantically incorrect.
+- **QueryOptionsParser thread-safety:** `_parsers` list modified by `RegisterParser()` was not synchronized with `Parse()` enumeration, causing `InvalidOperationException: Collection was modified` under concurrent requests. Fixed with copy-on-write + atomic reference swap.
+- **ExtractCountSql hardening:** Naive `IndexOf` keyword matching could truncate SQL at the wrong position when keywords appeared inside subqueries. Replaced with parentheses-depth-aware regex tracking to skip nested matches.
+- **EF Core package dependency pinning:** Updated `Microsoft.EntityFrameworkCore` minimum versions from `6.0.0` / `8.0.0` to `6.0.36` / `8.0.13` for patched releases.
+
+## [3.0.5] - 2026-06-24
+
+### Added
+
+- **Expression caching enabled by default:** `FlexQueryCacheSettings.EnableCache` is now `true` (was `false`). Expression trees for predicates and projections are cached after first build per unique query shape. Bounded at 2000 entries with FIFO eviction. Automatically disabled when `ExpressionMappings` are present.
+- **ReflectionCache:** New `FlexQuery.NET.Caching.ReflectionCache` centralizes all property metadata lookups (GetProperty, GetProperties, dot-path chain resolution, IEnumerable element type detection) across validation, projection, wildcard expansion, and grouping pipelines. Refactored 14 call sites.
+- **DynamicTypeBuilder cache hardening:** Added bounded FIFO eviction via `FlexQueryCacheSettings.MaxCacheSize`. Cache key changed from `Type.GetHashCode()` (unstable) to `Type.FullName` (stable). Added `Clear()` and `Count` API.
+
+### Fixed
+
+- **EF Core operator cache poisoning:** `UseEfCoreOperators()` now sets a marker in `options.Items["__EfCoreOperators"]` included in the cache key. Previously, `OperatorHandlerRegistry` global static state was not part of the cache key — identical `QueryOptions` with different operator handler registrations shared cached expressions, returning wrong SQL.
+
+### Changed
+
+- **Cache isolation:** `FlexQueryParserCache` now deep-clones parsed options on retrieval to prevent callers from mutating cached state.
+
 ## [3.0.4] - 2026-06-24
 
 ### Added

@@ -1,0 +1,663 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FlexQuery.NET — AG Grid SSRM Diagnostic Demo</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
+    <script src="https://cdn.jsdelivr.net/npm/ag-grid-enterprise@31.3.4/dist/ag-grid-enterprise.min.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ag-grid-community@31.3.4/styles/ag-grid.css" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ag-grid-community@31.3.4/styles/ag-theme-quartz.css" />
+    <style>
+        :root {
+            --bg-primary: #0b0f19; --bg-secondary: #111827; --bg-card: #1f2937;
+            --accent: #6366f1; --accent-gradient: linear-gradient(135deg, #6366f1 0%, #a855f7 100%);
+            --text-main: #f3f4f6; --text-muted: #9ca3af; --text-dim: #6b7280;
+            --border: #374151; --green: #22c55e; --orange: #f59e0b; --amber: #fbbf24;
+        }
+        body.light-mode {
+            --bg-primary: #f8fafc; --bg-secondary: #ffffff; --bg-card: #f1f5f9;
+            --text-main: #0f172a; --text-muted: #64748b; --text-dim: #94a3b8;
+            --border: #e2e8f0;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: 'Plus Jakarta Sans', sans-serif; background: var(--bg-primary); color: var(--text-main); min-height: 100vh; display: flex; flex-direction: column; transition: background 0.25s ease, color 0.25s ease; }
+        header { background: var(--bg-secondary); border-bottom: 1px solid var(--border); padding: 1rem 2rem; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 100; transition: background 0.25s ease, border-color 0.25s ease; }
+        .logo-section h1 { font-family: 'Outfit', sans-serif; font-size: 1.35rem; font-weight: 700; background: var(--accent-gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .logo-section p { font-size: 0.75rem; color: var(--text-muted); }
+        nav { display: flex; gap: 0.5rem; align-items: center; }
+        nav a { color: var(--text-muted); text-decoration: none; font-weight: 500; font-size: 0.875rem; padding: 0.45rem 0.9rem; border-radius: 6px; transition: all 0.2s; }
+        nav a:hover { color: var(--text-main); background: rgba(255,255,255,0.05); }
+        nav a.active { color: #fff; background: var(--accent-gradient); }
+        nav a#themeToggle { cursor: pointer; font-size: 0.8rem; }
+        nav a#themeToggle:hover { background: rgba(255,255,255,0.08); }
+
+        .page-layout { display: flex; flex: 1; gap: 0; overflow: hidden; position: relative; }
+        .grid-area { flex: 1; display: flex; flex-direction: column; padding: 1.25rem 1.5rem 0; min-width: 0; }
+
+        .grid-toolbar { display: flex; flex-direction: column; gap: 0.5rem; margin-bottom: 0.75rem; }
+        .toolbar-row { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.75rem; }
+        .provider-switch { display: flex; align-items: center; gap: 0.75rem; background: var(--bg-secondary); border: 1px solid var(--border); border-radius: 8px; padding: 0.5rem 0.75rem; transition: background 0.25s ease, border-color 0.25s ease; }
+        .provider-switch label { font-size: 0.75rem; font-weight: 600; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.05em; white-space: nowrap; }
+        .provider-switch .option { display: flex; align-items: center; gap: 0.35rem; padding: 0.35rem 0.75rem; border-radius: 6px; cursor: pointer; font-size: 0.8rem; font-weight: 500; transition: all 0.2s; border: 1px solid transparent; }
+        .provider-switch .option:hover { border-color: var(--border); }
+        .provider-switch .option.active { background: rgba(99,102,241,0.2); border-color: var(--accent); color: #fff; font-weight: 600; }
+        .provider-switch .option input { display: none; }
+
+        .demo-chips { display: flex; gap: 0.4rem; flex-wrap: wrap; align-items: center; }
+        .chip-separator { width: 1px; height: 22px; background: var(--border); margin: 0 0.3rem; flex-shrink: 0; }
+        .demo-chip { padding: 0.3rem 0.6rem; border-radius: 6px; font-size: 0.72rem; font-weight: 500; cursor: pointer; border: 1px solid var(--border); background: var(--bg-card); color: var(--text-muted); white-space: nowrap; transition: all 0.15s; }
+        .demo-chip:hover { border-color: var(--accent); color: var(--text-main); background: rgba(99,102,241,0.1); }
+        .demo-chip.group-chip { border-color: #6366f1; color: #a5b4fc; }
+        .demo-chip.group-chip:hover { border-color: #a855f7; background: rgba(99,102,241,0.18); }
+        .demo-chip.active-chip { background: rgba(99,102,241,0.25); border-color: var(--accent); color: #fff; }
+
+        .grid-container { flex: 1; min-height: 400px; background: var(--bg-secondary); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.3); }
+        .ag-theme-quartz-dark { --ag-background-color: var(--bg-secondary); --ag-header-background-color: #1f2937; --ag-odd-row-background-color: #182232; --ag-border-color: var(--border); --ag-row-hover-color: rgba(99,102,241,0.15); --ag-selected-row-background-color: rgba(99,102,241,0.3); --ag-font-family: 'Plus Jakarta Sans', sans-serif; }
+        body.light-mode .ag-theme-quartz-dark { --ag-background-color: #ffffff; --ag-header-background-color: #f8fafc; --ag-odd-row-background-color: #f8fafc; --ag-border-color: #e2e8f0; --ag-row-hover-color: rgba(99,102,241,0.08); --ag-selected-row-background-color: rgba(99,102,241,0.15); }
+
+        /* Floating Pipeline Toggle */
+        .float-toggle {
+            position: absolute; right: 0; top: 50%; transform: translateY(-50%);
+            z-index: 25; cursor: pointer; border: none;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            transition: right 0.3s ease, background 0.25s ease;
+            line-height: 1.2;
+        }
+        .float-toggle.state-collapsed {
+            background: var(--accent-gradient); color: #fff;
+            width: 28px; padding: 0.7rem 0.2rem;
+            border-radius: 8px 0 0 8px;
+            font-size: 0.55rem; font-weight: 700;
+            writing-mode: vertical-lr; letter-spacing: 0.06em;
+            box-shadow: 0 4px 15px rgba(99,102,241,0.4);
+            gap: 0.2rem;
+        }
+        .float-toggle.state-collapsed:hover { width: 32px; box-shadow: 0 6px 25px rgba(99,102,241,0.6); }
+        .float-toggle.state-open {
+            right: 400px; background: var(--bg-card); color: var(--text-muted);
+            width: 22px; padding: 0.5rem 0;
+            border-radius: 6px 0 0 6px;
+            font-size: 0.65rem; border: 1px solid var(--border); border-right: none;
+            writing-mode: unset;
+        }
+        .float-toggle.state-open:hover { color: var(--text-main); }
+        .float-toggle.state-open .toggle-label { display: none; }
+
+        .diag-panel { width: 400px; min-width: 300px; background: var(--bg-secondary); border-left: 1px solid var(--border); display: flex; flex-direction: column; overflow: hidden; transition: width 0.3s ease, min-width 0.3s ease, border-color 0.25s ease; }
+        .diag-panel.collapsed { width: 0; min-width: 0; border-left: none; }
+
+        .diag-header { display: flex; justify-content: space-between; align-items: center; padding: 0.85rem 1rem; border-bottom: 1px solid var(--border); font-family: 'Outfit', sans-serif; font-weight: 600; font-size: 0.85rem; background: #1a1f2e; }
+        .diag-endpoint-badge { font-family: 'Outfit', monospace; font-size: 0.58rem; font-weight: 400; background: var(--bg-card); border: 1px solid var(--border); border-radius: 4px; padding: 0.15rem 0.4rem; color: var(--text-dim); }
+        .diag-header-actions { display: flex; gap: 0.3rem; }
+        .diag-header-actions button { background: none; border: 1px solid var(--border); color: var(--text-muted); padding: 0.2rem 0.5rem; border-radius: 4px; cursor: pointer; font-size: 0.65rem; transition: all 0.2s; }
+        .diag-header-actions button:hover { border-color: var(--accent); color: #fff; }
+        .diag-body { flex: 1; overflow-y: auto; padding: 0.65rem; }
+
+        .pipeline-flow { margin-bottom: 0.75rem; padding: 0.5rem; background: rgba(99,102,241,0.05); border: 1px solid var(--border); border-radius: 8px; }
+        .pipeline-row { display: flex; align-items: center; justify-content: center; gap: 0.3rem; }
+        .pipeline-step { font-size: 0.6rem; font-weight: 600; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.04em; white-space: nowrap; }
+        .pipeline-arrow { color: var(--accent); font-size: 0.65rem; }
+        .pipeline-step.hit { color: var(--accent); }
+        .pipeline-step.miss { color: var(--text-dim); }
+        .pipeline-step.hero { color: #fff; font-weight: 700; font-size: 0.65rem; background: linear-gradient(135deg, rgba(99,102,241,0.25), rgba(168,85,247,0.25)); padding: 0.15rem 0.5rem; border-radius: 4px; border: 1px solid rgba(99,102,241,0.3); }
+
+        .diag-section { margin-bottom: 0.6rem; }
+        .diag-section-title { font-size: 0.7rem; font-weight: 600; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 0.3rem; display: flex; align-items: center; gap: 0.35rem; }
+        .diag-section-title .status-dot { width: 5px; height: 5px; border-radius: 50%; display: inline-block; }
+        .diag-section-title .status-dot.live { background: var(--green); }
+        .diag-section-title .status-dot.pending { background: var(--text-dim); }
+        .diag-json { background: #0d1117; border: 1px solid var(--border); border-radius: 6px; padding: 0.5rem 0.7rem; font-family: 'Outfit', monospace; font-size: 0.68rem; line-height: 1.45; color: #e2e8f0; overflow-x: auto; white-space: pre-wrap; word-break: break-all; max-height: 130px; overflow-y: auto; }
+        .diag-sql { background: #0d1117; border: 1px solid var(--border); border-radius: 6px; padding: 0.5rem 0.7rem; font-family: 'Outfit', monospace; font-size: 0.65rem; line-height: 1.45; color: #e2e8f0; overflow-x: auto; white-space: pre-wrap; word-break: break-all; max-height: 100px; overflow-y: auto; }
+
+        .diag-meta { display: flex; gap: 0.4rem; flex-wrap: wrap; margin-bottom: 0.65rem; }
+        .diag-meta-item { background: var(--bg-card); border: 1px solid var(--border); border-radius: 5px; padding: 0.25rem 0.55rem; font-size: 0.68rem; }
+        .diag-meta-item .label { color: var(--text-dim); }
+        .diag-meta-item .value { color: var(--text-main); font-weight: 600; }
+        .diag-meta-item.group-active { border-color: #6366f1; background: rgba(99,102,241,0.1); }
+
+        .code-collapse-bar { margin: 0.5rem 1.5rem 0; padding: 0.4rem 0.85rem; background: rgba(99,102,241,0.04); border: 1px dashed var(--border); border-radius: 8px; cursor: pointer; display: flex; align-items: center; gap: 0.4rem; font-size: 0.7rem; color: var(--text-dim); transition: all 0.2s; user-select: none; }
+        .code-collapse-bar:hover { border-color: var(--accent); background: rgba(99,102,241,0.1); color: var(--text-main); }
+        .code-collapse-arrow { font-size: 0.5rem; transition: transform 0.25s ease; display: inline-block; }
+        .code-collapse-bar.open .code-collapse-arrow { transform: rotate(90deg); }
+        .code-collapse-label { font-weight: 600; color: var(--accent); }
+        .code-collapse-hint { margin-left: auto; font-size: 0.62rem; opacity: 0.6; }
+
+        .code-snippet { background: var(--bg-secondary); border: 1px solid var(--border); border-radius: 10px; margin: 0.4rem 1.5rem 0.75rem; overflow: hidden; }
+        .code-snippet.collapsed { max-height: 0; margin-top: 0; margin-bottom: 0.25rem; border-width: 0; opacity: 0; transition: all 0.25s ease; }
+        .code-snippet:not(.collapsed) { max-height: 300px; opacity: 1; transition: all 0.25s ease; }
+        .code-snippet-header { display: flex; justify-content: space-between; padding: 0.5rem 0.85rem; background: #1a1f2e; border-bottom: 1px solid var(--border); font-size: 0.7rem; color: var(--text-dim); align-items: center; }
+        .code-snippet-header .file { color: var(--accent); font-family: 'Outfit', monospace; }
+        .code-snippet-header .copy-btn { background: none; border: 1px solid var(--border); color: var(--text-muted); padding: 0.15rem 0.5rem; border-radius: 4px; cursor: pointer; font-size: 0.65rem; }
+        .code-snippet-header .copy-btn:hover { border-color: var(--accent); color: #fff; }
+        .code-snippet-body { padding: 0.85rem; font-family: 'Outfit', monospace; font-size: 0.75rem; line-height: 1.55; color: #e2e8f0; overflow-x: auto; }
+        .kw { color: #c084fc; } .type { color: #60a5fa; } .str { color: #34d399; } .cmt { color: #6b7280; font-style: italic; }
+
+        footer { text-align: center; padding: 0.85rem 2rem; font-size: 0.7rem; color: var(--text-dim); border-top: 1px solid var(--border); background: var(--bg-secondary); display: flex; justify-content: center; align-items: center; gap: 0.85rem; flex-wrap: wrap; transition: background 0.25s ease, border-color 0.25s ease; }
+        footer a { color: var(--text-muted); text-decoration: none; }
+        footer a:hover { color: var(--accent); }
+        footer .sep { color: var(--border); }
+
+        @media (max-width: 900px) {
+            .page-layout { flex-direction: column; }
+            .diag-panel:not(.collapsed) { width: 100%; min-width: unset; border-left: none; border-top: 1px solid var(--border); max-height: 45vh; }
+            .diag-panel.collapsed { max-height: 0; width: 100%; min-width: unset; }
+            .float-toggle { display: none; }
+            header { flex-direction: column; gap: 0.5rem; padding: 0.75rem 1rem; }
+            nav { flex-wrap: wrap; justify-content: center; }
+            .toolbar-row { flex-direction: column; align-items: stretch; }
+        }
+    </style>
+</head>
+<body class="ag-theme-quartz-dark">
+    <header>
+        <div class="logo-section">
+            <h1>&#9889; FlexQuery.NET</h1>
+            <p>AG Grid SSRM — Live Diagnostic Demo</p>
+        </div>
+        <nav>
+            <a href="/">Home</a>
+            <a href="/aggrid.html" class="active">AG Grid</a>
+            <a href="/kendo.html">Kendo UI</a>
+            <a href="/comparison.html">Comparison</a>
+            <a href="/playground.html">Playground</a>
+            <a href="/swagger">API Docs</a>
+            <a id="themeToggle" href="#" onclick="toggleTheme(event)">&#127769; Dark</a>
+        </nav>
+    </header>
+
+    <div class="page-layout">
+        <div class="grid-area">
+            <div class="grid-toolbar">
+                <div class="toolbar-row">
+                    <div class="provider-switch" id="providerSwitch">
+                        <label>Provider:</label>
+                        <label class="option active" data-provider="ef" onclick="setProvider('ef')">
+                            <input type="radio" name="provider" value="ef" checked>EF Core
+                        </label>
+                        <label class="option" data-provider="dapper" onclick="setProvider('dapper')">
+                            <input type="radio" name="provider" value="dapper">Dapper
+                        </label>
+                    </div>
+                    <div class="demo-chips">
+                        <div class="demo-chip" onclick="applyDemo('filter-city')">&#127961; City = Houston</div>
+                        <div class="demo-chip" onclick="applyDemo('active')">&#128269; Active Customers</div>
+                        <div class="demo-chip" onclick="applyDemo('sort-email-desc')">&#8595; Sort Email Desc</div>
+                        <div class="demo-chip" onclick="applyDemo('sort-date-desc')">&#128197; Newest First</div>
+                        <div class="demo-chip" onclick="applyDemo('page-50')">&#128106; Page Size 50</div>
+                        <div class="demo-chip" onclick="applyDemo('clear')">&#8634; Clear All</div>
+                    </div>
+                </div>
+                <div class="toolbar-row">
+                    <div class="demo-chips">
+                        <span style="font-size:0.68rem;color:var(--text-dim);font-weight:600;letter-spacing:0.04em;text-transform:uppercase;white-space:nowrap;">Grouping</span>
+                        <span class="chip-separator"></span>
+                        <div class="demo-chip group-chip" id="chip-group-status" onclick="applyDemo('group-status')">&#128101; Group By Status</div>
+                        <div class="demo-chip group-chip" id="chip-group-city" onclick="applyDemo('group-city')">&#127980; Group By City</div>
+                        <div class="demo-chip group-chip" id="chip-group-clear" onclick="applyDemo('group-clear')">&#8634; Clear Grouping</div>
+                    </div>
+                </div>
+            </div>
+            <div id="myGrid" class="grid-container ag-theme-quartz-dark"></div>
+        </div>
+
+        <button class="float-toggle state-collapsed" id="floatToggle" onclick="toggleDiagPanel()">
+            <span class="toggle-label">&#9889; Pipeline</span>
+        </button>
+
+        <div class="diag-panel collapsed" id="diagPanel">
+            <div class="diag-header">
+                <div style="display:flex;align-items:center;gap:0.5rem;">
+                    <span>&#9889; FlexQuery Pipeline</span>
+                    <span class="diag-endpoint-badge" id="diagEndpointBadge">POST /api/aggrid/customers</span>
+                </div>
+                <div class="diag-header-actions">
+                    <button onclick="copyCurl()" title="Copy curl command">&#128203; Copy curl</button>
+                    <button onclick="clearDiagnostics()">Clear</button>
+                </div>
+            </div>
+            <div class="diag-body" id="diagBody">
+                <div class="pipeline-flow">
+                    <div class="pipeline-row">
+                        <span class="pipeline-step hit" id="pipeReq">AG Grid Request</span>
+                        <span class="pipeline-arrow">&#8595;</span>
+                    </div>
+                    <div class="pipeline-row" style="margin:0.2rem 0;">
+                        <span class="pipeline-step hero" id="pipeOpt">Normalized QueryOptions</span>
+                    </div>
+                    <div class="pipeline-row">
+                        <span class="pipeline-arrow">&#8595;</span>
+                        <span class="pipeline-step hit" id="pipeSql">Generated SQL</span>
+                    </div>
+                </div>
+
+                <div class="diag-meta" id="diagMeta">
+                    <div class="diag-meta-item"><span class="label">Adapter:</span> <span class="value" id="metaAdapter">—</span></div>
+                    <div class="diag-meta-item"><span class="label">Provider:</span> <span class="value" id="metaProvider">—</span></div>
+                    <div class="diag-meta-item"><span class="label">Response:</span> <span class="value" id="metaTime">—</span></div>
+                    <div class="diag-meta-item"><span class="label">Rows:</span> <span class="value" id="metaRows">—</span></div>
+                    <div class="diag-meta-item"><span class="label">Filters:</span> <span class="value" id="metaFilters">0</span></div>
+                    <div class="diag-meta-item"><span class="label">Sorts:</span> <span class="value" id="metaSorts">0</span></div>
+                    <div class="diag-meta-item" id="metaGroupByItem"><span class="label">GroupBy:</span> <span class="value" id="metaGroupBy">—</span></div>
+                </div>
+
+                <div class="diag-section">
+                    <div class="diag-section-title"><span class="status-dot pending" id="reqDot"></span> AG Grid Request</div>
+                    <div class="diag-json" id="diagRequest"><span class="null">Waiting for grid interaction...</span></div>
+                </div>
+
+                <div class="diag-section">
+                    <div class="diag-section-title"><span class="status-dot pending" id="optDot"></span> Parsed QueryOptions</div>
+                    <div class="diag-json" id="diagOptions"><span class="null">Grid request will be parsed here...</span></div>
+                </div>
+
+                <div class="diag-section">
+                    <div class="diag-section-title"><span class="status-dot pending" id="sqlDot"></span> Generated SQL</div>
+                    <div class="diag-sql" id="diagSql"><span class="null">FlexQuery generates the SQL automatically...</span></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="code-collapse-bar" id="codeToggleBar" onclick="toggleCode()">
+        <span class="code-collapse-arrow" id="codeArrow">&#9654;</span>
+        <span class="code-collapse-label">See How It Works</span>
+        <span class="code-collapse-hint" id="codeHint">Only 3 lines of code</span>
+    </div>
+
+    <div class="code-snippet collapsed" id="codeSnippet">
+        <div class="code-snippet-header">
+            <span class="file" id="codeSnippetFile">&#128196; AgGridController.cs — EF Core</span>
+            <button class="copy-btn" onclick="copyCode(this)">Copy code</button>
+        </div>
+        <div class="code-snippet-body" id="codeSnippetBody"><pre><span class="cmt">// 1. Parse AG Grid SSRM request to QueryOptions</span>
+<span class="kw">var</span> options = request.<span class="kw">ToQueryOptions</span>();
+options.<span class="kw">IncludeCount</span> = <span class="kw">true</span>;
+
+<span class="cmt">// 2. Execute against EF Core</span>
+<span class="kw">var</span> result = <span class="kw">await</span> _db.Customers
+    .<span class="kw">AsNoTracking</span>()
+    .<span class="kw">FlexQueryAsync</span>&lt;<span class="type">Customer</span>&gt;(options);
+
+<span class="cmt">// 3. Return AG Grid-compatible response</span>
+<span class="kw">return</span> <span class="kw">Ok</span>(result.<span class="kw">ToAgGridServerSideResponse</span>(request));</pre></div>
+    </div>
+
+    <footer>
+        <span>&#9889; FlexQuery.NET v3.0.7</span>
+        <span class="sep">|</span>
+        <a href="https://nuget.org/packages/FlexQuery.NET" target="_blank">dotnet add package FlexQuery.NET</a>
+        <span class="sep">|</span>
+        <a href="https://github.com/peterjohncasasola/FlexQuery.NET" target="_blank">View on GitHub</a>
+        <span class="sep">|</span>
+        <a href="https://github.com/peterjohncasasola/FlexQuery.NET/stargazers" target="_blank">
+            <img src="https://img.shields.io/github/stars/peterjohncasasola/FlexQuery.NET?style=flat&amp;label=Stars&amp;color=6366f1" alt="Stars">
+        </a>
+        <a href="https://nuget.org/packages/FlexQuery.NET" target="_blank">
+            <img src="https://img.shields.io/nuget/v/FlexQuery.NET?style=flat&amp;label=NuGet&amp;color=6366f1" alt="NuGet">
+        </a>
+    </footer>
+
+    <script>
+        // ── Theme ────────────────────────────────────────────────────────────
+        function toggleTheme(e) {
+            e.preventDefault();
+            const isLight = document.body.classList.toggle('light-mode');
+            const theme = isLight ? 'light' : 'dark';
+            document.getElementById('themeToggle').textContent = isLight ? '\u2600\uFE0F Light' : '\uD83C\uDF19 Dark';
+            localStorage.setItem('agTheme', theme);
+            applyGridTheme(theme);
+        }
+
+        function applyGridTheme(theme) {
+            const gridEl = document.getElementById('myGrid');
+            if (theme === 'light') {
+                gridEl.classList.remove('ag-theme-quartz-dark');
+                gridEl.classList.add('ag-theme-quartz');
+                document.body.classList.remove('ag-theme-quartz-dark');
+                document.body.classList.add('ag-theme-quartz');
+            } else {
+                gridEl.classList.remove('ag-theme-quartz');
+                gridEl.classList.add('ag-theme-quartz-dark');
+                document.body.classList.remove('ag-theme-quartz');
+                document.body.classList.add('ag-theme-quartz-dark');
+            }
+            if (gridApi) gridApi.refreshHeader();
+        }
+
+        function loadTheme() {
+            const saved = localStorage.getItem('agTheme');
+            if (saved === 'light') {
+                document.body.classList.add('light-mode');
+                document.getElementById('themeToggle').textContent = '\u2600\uFE0F Light';
+                applyGridTheme('light');
+            }
+        }
+
+        // ── Pipeline Sidebar ────────────────────────────────────────────────
+        let panelOpen = false;
+
+        function initPanelState() {
+            const saved = localStorage.getItem('pipelineOpen');
+            panelOpen = saved === 'true';
+            if (panelOpen) {
+                document.getElementById('diagPanel').classList.remove('collapsed');
+                document.getElementById('floatToggle').className = 'float-toggle state-open';
+                document.getElementById('floatToggle').innerHTML = '\u25C0';
+            }
+        }
+
+        function toggleDiagPanel() {
+            panelOpen = !panelOpen;
+            const panel = document.getElementById('diagPanel');
+            const btn = document.getElementById('floatToggle');
+            if (panelOpen) {
+                panel.classList.remove('collapsed');
+                btn.className = 'float-toggle state-open';
+                btn.innerHTML = '\u25C0';
+            } else {
+                panel.classList.add('collapsed');
+                btn.className = 'float-toggle state-collapsed';
+                btn.innerHTML = '<span class="toggle-label">\u26A1 Pipeline</span>';
+            }
+            localStorage.setItem('pipelineOpen', panelOpen);
+        }
+
+        // ── Provider State ──────────────────────────────────────────────────
+        let currentProvider = 'ef';
+        let columnApi = null;
+        const ENDPOINTS = { ef: '/api/aggrid/customers', dapper: '/api/aggrid-dapper/customers' };
+
+        const EF_CODE = `<span class="cmt">// 1. Parse AG Grid SSRM request to QueryOptions</span>\n<span class="kw">var</span> options = request.<span class="kw">ToQueryOptions</span>();\noptions.<span class="kw">IncludeCount</span> = <span class="kw">true</span>;\n\n<span class="cmt">// 2. Execute against EF Core</span>\n<span class="kw">var</span> result = <span class="kw">await</span> _db.Customers\n    .<span class="kw">AsNoTracking</span>()\n    .<span class="kw">FlexQueryAsync</span>&lt;<span class="type">Customer</span>&gt;(options);\n\n<span class="cmt">// 3. Return AG Grid-compatible response</span>\n<span class="kw">return</span> <span class="kw">Ok</span>(result.<span class="kw">ToAgGridServerSideResponse</span>(request));`;
+        const DAPPER_CODE = `<span class="cmt">// 1. Parse AG Grid SSRM request to QueryOptions</span>\n<span class="kw">var</span> options = request.<span class="kw">ToQueryOptions</span>();\noptions.<span class="kw">IncludeCount</span> = <span class="kw">true</span>;\n\n<span class="cmt">// 2. Execute against Dapper</span>\n<span class="kw">var</span> connection = _db.Database.<span class="kw">GetDbConnection</span>();\n<span class="kw">var</span> result = <span class="kw">await</span> connection\n    .<span class="kw">FlexQueryAsync</span>&lt;<span class="type">Customer</span>&gt;(options);\n\n<span class="cmt">// 3. Return AG Grid-compatible response</span>\n<span class="kw">return</span> <span class="kw">Ok</span>(result.<span class="kw">ToAgGridServerSideResponse</span>(request));`;
+
+        let gridApi = null;
+        let activeFilters = 0;
+        let activeSorts = 0;
+        let activeGroupBy = null;
+
+        function setProvider(prov) {
+            if (currentProvider === prov) return;
+            currentProvider = prov;
+            document.querySelectorAll('#providerSwitch .option').forEach(o => o.classList.toggle('active', o.dataset.provider === prov));
+            document.getElementById('diagEndpointBadge').textContent = 'POST ' + ENDPOINTS[prov];
+            updateCodeSnippet(prov);
+            if (gridApi) gridApi.refreshServerSide({ purge: true });
+        }
+
+        function updateCodeSnippet(prov) {
+            const code = prov === 'dapper' ? DAPPER_CODE : EF_CODE;
+            const title = prov === 'dapper' ? 'AgGridDapperController.cs \u2014 Dapper' : 'AgGridController.cs \u2014 EF Core';
+            document.getElementById('codeSnippetFile').textContent = '\uD83D\uDCC4 ' + title;
+            document.getElementById('codeSnippetBody').querySelector('pre').innerHTML = code;
+        }
+
+        // ── Diagnostics ─────────────────────────────────────────────────────
+        function clearDiagnostics() {
+            ['diagRequest','diagOptions','diagSql'].forEach(id => {
+                document.getElementById(id).innerHTML = '<span class="null">Waiting for grid interaction...</span>';
+            });
+            ['metaAdapter','metaProvider','metaTime','metaRows','metaFilters','metaSorts'].forEach(id => {
+                document.getElementById(id).textContent = id === 'metaFilters' || id === 'metaSorts' ? '0' : '\u2014';
+            });
+            document.getElementById('metaGroupBy').textContent = '\u2014';
+            document.getElementById('metaGroupByItem').classList.remove('group-active');
+            document.querySelectorAll('.status-dot').forEach(d => d.className = 'status-dot pending');
+            document.getElementById('pipeReq').className = 'pipeline-step miss';
+            document.getElementById('pipeOpt').className = 'pipeline-step miss';
+            document.getElementById('pipeSql').className = 'pipeline-step miss';
+            activeFilters = 0; activeSorts = 0; activeGroupBy = null;
+        }
+
+        function updateDiagPanel(data) {
+            const d = data.__diagnostics || {};
+
+            document.getElementById('metaAdapter').textContent = d.adapter || 'AG Grid';
+            document.getElementById('metaProvider').textContent = d.provider || 'EF Core';
+            document.getElementById('metaTime').textContent = d.executionTimeMs != null ? d.executionTimeMs + 'ms' : '\u2014';
+            document.getElementById('metaRows').textContent = data.rowCount != null ? String(data.rowCount) : '\u2014';
+            document.getElementById('metaFilters').textContent = activeFilters;
+            document.getElementById('metaSorts').textContent = activeSorts;
+
+            const groupBy = d.parsedOptions?.groupBy;
+            if (groupBy && groupBy.length > 0) {
+                const gb = groupBy.join(', ');
+                document.getElementById('metaGroupBy').textContent = gb;
+                document.getElementById('metaGroupByItem').classList.add('group-active');
+            } else {
+                document.getElementById('metaGroupBy').textContent = '\u2014';
+                document.getElementById('metaGroupByItem').classList.remove('group-active');
+            }
+
+            if (d.request) { setDiagJson('diagRequest', d.request); document.getElementById('reqDot').className = 'status-dot live'; document.getElementById('pipeReq').className = 'pipeline-step hit'; }
+            if (d.parsedOptions) { setDiagJson('diagOptions', d.parsedOptions); document.getElementById('optDot').className = 'status-dot live'; document.getElementById('pipeOpt').className = 'pipeline-step hero'; }
+            if (d.generatedSql) { document.getElementById('diagSql').textContent = d.generatedSql; document.getElementById('sqlDot').className = 'status-dot live'; document.getElementById('pipeSql').className = 'pipeline-step hit'; }
+            else { document.getElementById('diagSql').innerHTML = '<span class="null">SQL preview not available</span>'; }
+        }
+
+        function setDiagJson(elementId, obj) {
+            document.getElementById(elementId).innerHTML = syntaxHighlight(JSON.stringify(obj, null, 2));
+        }
+
+        function syntaxHighlight(json) {
+            return json.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+                .replace(/"([^"]+)"\s*:/g, '<span class="key">"$1"</span>:')
+                .replace(/: "([^"]*)"/g, ': <span class="str">"$1"</span>')
+                .replace(/: (\d+(?:\.\d+)?)/g, ': <span class="num">$1</span>')
+                .replace(/: (true|false)/g, ': <span class="bool">$1</span>')
+                .replace(/: (null)/g, ': <span class="null">$1</span>');
+        }
+
+        function copyCurl() {
+            const filterEl = document.getElementById('diagRequest');
+            let curl = 'curl -X POST "' + ENDPOINTS[currentProvider] + '" \\\n  -H "Content-Type: application/json" \\\n';
+            try {
+                const reqJson = JSON.parse(filterEl.textContent || '{}');
+                curl += "  -d '" + JSON.stringify(reqJson) + "'";
+            } catch (e) {
+                curl += "  -d '{}'";
+            }
+            navigator.clipboard.writeText(curl);
+            const ctlBtn = event?.target;
+            if (ctlBtn && ctlBtn.textContent.indexOf('curl') >= 0) {
+                const orig = ctlBtn.textContent;
+                ctlBtn.textContent = '\u2713 Copied!';
+                setTimeout(() => { ctlBtn.textContent = orig; }, 1500);
+            }
+        }
+
+        function toggleCode() {
+            const snippet = document.getElementById('codeSnippet');
+            const bar = document.getElementById('codeToggleBar');
+            const arrow = document.getElementById('codeArrow');
+            const hint = document.getElementById('codeHint');
+            const isOpen = !snippet.classList.toggle('collapsed');
+            bar.classList.toggle('open', isOpen);
+            arrow.innerHTML = isOpen ? '&#9660;' : '&#9654;';
+            hint.textContent = isOpen ? '3 lines of code' : 'Only 3 lines of code';
+        }
+
+        function copyCode(btn) {
+            navigator.clipboard.writeText(btn.closest('.code-snippet').querySelector('pre').textContent);
+            const orig = btn.textContent;
+            btn.textContent = 'Copied!';
+            setTimeout(() => btn.textContent = orig, 1500);
+        }
+
+        function updateGroupChips() {
+            ['group-status', 'group-city'].forEach(id => {
+                const chip = document.getElementById('chip-' + id.replace('group-', ''));
+                if (chip) chip.classList.remove('active-chip');
+            });
+            if (activeGroupBy) {
+                const chip = document.getElementById('chip-' + activeGroupBy);
+                if (chip) chip.classList.add('active-chip');
+            }
+        }
+
+        // ── Demo Buttons ────────────────────────────────────────────────────
+        function applyDemo(action) {
+            if (!gridApi || !columnApi) return;
+
+            if (action.startsWith('group-')) {
+                handleGroupAction(action);
+                return;
+            }
+
+            switch (action) {
+                case 'filter-city':
+                    if (activeGroupBy) clearGroupColumn();
+                    gridApi.setFilterModel({ city: { type: 'equals', filter: 'Houston' } });
+                    activeFilters = 1; activeSorts = 0;
+                    break;
+                case 'active':
+                    if (activeGroupBy) clearGroupColumn();
+                    gridApi.setFilterModel({ status: { type: 'equals', filter: 'Active' } });
+                    activeFilters = 1; activeSorts = 0;
+                    break;
+                case 'sort-email-desc':
+                    if (activeGroupBy) clearGroupColumn();
+                    gridApi.setFilterModel({});
+                    columnApi.applyColumnState({ state: [{ colId: 'email', sort: 'desc' }], defaultState: { sort: null } });
+                    activeFilters = 0; activeSorts = 1;
+                    break;
+                case 'sort-date-desc':
+                    if (activeGroupBy) clearGroupColumn();
+                    gridApi.setFilterModel({});
+                    columnApi.applyColumnState({ state: [{ colId: 'createdDate', sort: 'desc' }], defaultState: { sort: null } });
+                    activeFilters = 0; activeSorts = 1;
+                    break;
+                case 'page-50':
+                    gridApi.paginationSetPageSize(50);
+                    break;
+                case 'clear':
+                    if (activeGroupBy) clearGroupColumn();
+                    gridApi.setFilterModel({});
+                    columnApi.applyColumnState({ state: [], defaultState: { sort: null } });
+                    gridApi.paginationSetPageSize(20);
+                    activeFilters = 0; activeSorts = 0;
+                    break;
+            }
+        }
+
+        function handleGroupAction(action) {
+            switch (action) {
+                case 'group-status':
+                    gridApi.setFilterModel({});
+                    columnApi.applyColumnState({
+                        state: [
+                            { colId: 'status', rowGroup: true },
+                            { colId: 'city', rowGroup: false }
+                        ],
+                        defaultState: { sort: null }
+                    });
+                    activeGroupBy = 'status';
+                    activeFilters = 0; activeSorts = 0;
+                    updateGroupChips();
+                    gridApi.refreshServerSide({ purge: true });
+                    break;
+                case 'group-city':
+                    gridApi.setFilterModel({});
+                    columnApi.applyColumnState({
+                        state: [
+                            { colId: 'city', rowGroup: true },
+                            { colId: 'status', rowGroup: false }
+                        ],
+                        defaultState: { sort: null }
+                    });
+                    activeGroupBy = 'city';
+                    activeFilters = 0; activeSorts = 0;
+                    updateGroupChips();
+                    gridApi.refreshServerSide({ purge: true });
+                    break;
+                case 'group-clear':
+                    clearGroupColumn();
+                    break;
+            }
+        }
+
+        function clearGroupColumn() {
+            columnApi.applyColumnState({
+                state: [
+                    { colId: 'status', rowGroup: false },
+                    { colId: 'city', rowGroup: false }
+                ]
+            });
+            activeGroupBy = null;
+            updateGroupChips();
+            gridApi.refreshServerSide({ purge: true });
+        }
+
+        // ── AG Grid ─────────────────────────────────────────────────────────
+        const columnDefs = [
+            { field: 'id', headerName: 'ID', width: 80, sortable: true, filter: 'agNumberColumnFilter' },
+            { field: 'firstName', headerName: 'First Name', sortable: true, filter: 'agTextColumnFilter' },
+            { field: 'lastName', headerName: 'Last Name', sortable: true, enableRowGroup: true, filter: 'agTextColumnFilter' },
+            { field: 'email', headerName: 'Email', minWidth: 220, sortable: true, filter: 'agTextColumnFilter' },
+            { field: 'city', headerName: 'City', sortable: true, enableRowGroup: true, filter: 'agTextColumnFilter' },
+            { field: 'status', headerName: 'Status', sortable: true, enableRowGroup: true, filter: 'agSetColumnFilter', filterParams: { values: ['Active', 'Inactive', 'Pending'] } },
+            { field: 'createdDate', headerName: 'Created Date', sortable: true, filter: 'agDateColumnFilter', valueFormatter: p => p.value ? new Date(p.value).toLocaleDateString() : '' }
+        ];
+
+        function createGrid() {
+            const gridOptions = {
+                columnDefs: columnDefs,
+                rowModelType: 'serverSide',
+                pagination: true,
+                paginationPageSize: 20,
+                cacheBlockSize: 20,
+                defaultColDef: {
+                    flex: 1, minWidth: 120, resizable: true, sortable: true, filter: true, floatingFilter: true
+                },
+                rowGroupPanelShow: 'always',
+                groupDisplayType: 'singleColumn',
+                animateRows: true,
+                sideBar: {
+                    toolPanels: [
+                        { id: 'columns', labelDefault: 'Columns', labelKey: 'columns', iconKey: 'columns', toolPanel: 'agColumnsToolPanel' },
+                        { id: 'filters', labelDefault: 'Filters', labelKey: 'filters', iconKey: 'filter', toolPanel: 'agFiltersToolPanel' }
+                    ]
+                },
+                onFilterChanged: function(e) {
+                    const model = gridApi.getFilterModel();
+                    activeFilters = model ? Object.keys(model).length : 0;
+                },
+                onSortChanged: function(e) {
+                    const state = gridApi.getColumnState ? gridApi.getColumnState().filter(c => c.sort) : [];
+                    activeSorts = state.length;
+                },
+                onGridReady: function(params) {
+                    columnApi = params.columnApi;
+                },
+                serverSideDatasource: {
+                    getRows: async params => {
+                        try {
+                            const response = await fetch(ENDPOINTS[currentProvider], {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify(params.request)
+                            });
+                            const data = await response.json();
+                            params.success({ rowData: data.rowData, rowCount: data.rowCount });
+                            updateDiagPanel(data);
+                        } catch (error) {
+                            console.error(error);
+                            params.fail();
+                        }
+                    }
+                }
+            };
+
+            const gridDiv = document.querySelector('#myGrid');
+            const api = agGrid.createGrid(gridDiv, gridOptions);
+            return api;
+        }
+
+        gridApi = createGrid();
+        loadTheme();
+        initPanelState();
+    </script>
+</body>
+</html>

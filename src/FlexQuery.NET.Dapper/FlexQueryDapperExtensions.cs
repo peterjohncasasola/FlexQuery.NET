@@ -3,6 +3,7 @@ using System.Data.Common;
 using System.Text.RegularExpressions;
 using Dapper;
 using FlexQuery.NET.Helpers;
+using FlexQuery.NET.Internal;
 using FlexQuery.NET.Models;
 using FlexQuery.NET.Parsers;
 using FlexQuery.NET.Projection;
@@ -37,25 +38,21 @@ public static class FlexQueryDapperExtensions
     public static async Task<QueryResult<object>> FlexQueryAsync<T>(
         this DbConnection connection,
         FlexQueryParameters parameters,
-        Action<DapperQueryOptions>? configureDapper = null) where T : class
+        Action<DapperQueryOptions>? configureDapper = null,
+        Action<FlexQueryExecutionConfig>? configureExecution = null) where T : class
     {
         var dapperOptions = new DapperQueryOptions();
         configureDapper?.Invoke(dapperOptions);
         ValidateEntityType(typeof(T), dapperOptions.EntityType);
 
-        var parsedOptions = QueryOptionsParser.Parse(parameters);
-        SetEntityType(parsedOptions, typeof(T), dapperOptions);
-
-        var execOptions = dapperOptions.ToQueryExecutionOptions();
-        parsedOptions.ValidateOrThrow(dapperOptions.EntityType ?? typeof(T), execOptions);
-
-        return await ExecuteQueryAsync<T>(connection, parsedOptions, dapperOptions);
+        return await connection.FlexQueryAsync<T>(parameters, dapperOptions, configureExecution);
     }
 
     public static async Task<QueryResult<object>> FlexQueryAsync<T>(
         this DbConnection connection,
         FlexQueryParameters parameters,
-        DapperQueryOptions? dapperQueryOptions = null) where T : class
+        DapperQueryOptions? dapperQueryOptions = null,
+        Action<FlexQueryExecutionConfig>? configureExecution = null) where T : class
     {
         var dapperOptions = dapperQueryOptions ?? new DapperQueryOptions();
         ValidateEntityType(typeof(T), dapperOptions.EntityType);
@@ -66,13 +63,25 @@ public static class FlexQueryDapperExtensions
         var execOptions = dapperOptions.ToQueryExecutionOptions();
         parsedOptions.ValidateOrThrow(dapperOptions.EntityType ?? typeof(T), execOptions);
 
-        return await ExecuteQueryAsync<T>(connection, parsedOptions, dapperOptions);
+        var execConfig = new FlexQueryExecutionConfig();
+        configureExecution?.Invoke(execConfig);
+        FlexQueryExecutionContext? ctx = null;
+        if (execConfig.Listener is not null)
+        {
+            ctx = new FlexQueryExecutionContext(execConfig, default);
+            await ctx.Listener.QueryParsedAsync(
+                new QueryParsedEvent(ctx.QueryId, parsedOptions, ctx.Stopwatch.Elapsed, DateTimeOffset.UtcNow),
+                ctx.CancellationToken);
+        }
+
+        return await ExecuteQueryAsync<T>(connection, parsedOptions, dapperOptions, ctx);
     }
 
     public static async Task<QueryResult<object>> FlexQueryAsync<T>(
         this DbConnection connection,
         IDictionary<string, StringValues> parameters,
-        Action<DapperQueryOptions>? configureDapper = null) where T : class
+        Action<DapperQueryOptions>? configureDapper = null,
+        Action<FlexQueryExecutionConfig>? configureExecution = null) where T : class
     {
         var dict = parameters.ToDictionary(k => k.Key, v => v.Value.ToString(), StringComparer.OrdinalIgnoreCase);
 
@@ -87,24 +96,26 @@ public static class FlexQueryDapperExtensions
             RawParameters = dict
         };
 
-        return await FlexQueryAsync<T>(connection, flexParams, configureDapper);
+        return await FlexQueryAsync<T>(connection, flexParams, configureDapper, configureExecution);
     }
 
     public static async Task<QueryResult<object>> FlexQueryAsync<T>(
         this DbConnection connection,
         QueryOptions options,
-        Action<DapperQueryOptions>? configureDapper = null) where T : class
+        Action<DapperQueryOptions>? configureDapper = null,
+        Action<FlexQueryExecutionConfig>? configureExecution = null) where T : class
     {
         var dapperOptions = new DapperQueryOptions();
         configureDapper?.Invoke(dapperOptions);
 
-        return await connection.FlexQueryAsync<T>(options, dapperOptions);
+        return await connection.FlexQueryAsync<T>(options, dapperOptions, configureExecution);
     }
 
     public static async Task<QueryResult<object>> FlexQueryAsync<T>(
         this DbConnection connection,
         QueryOptions options,
-        DapperQueryOptions? dapperQueryOptions = null) where T : class
+        DapperQueryOptions? dapperQueryOptions = null,
+        Action<FlexQueryExecutionConfig>? configureExecution = null) where T : class
     {
         ArgumentNullException.ThrowIfNull(connection);
         ArgumentNullException.ThrowIfNull(options);
@@ -117,18 +128,31 @@ public static class FlexQueryDapperExtensions
         var execOptions = dapperOptions.ToQueryExecutionOptions();
         options.ValidateOrThrow(dapperOptions.EntityType ?? typeof(T), execOptions);
 
-        return await ExecuteQueryAsync<T>(connection, options, dapperOptions);
+        var execConfig = new FlexQueryExecutionConfig();
+        configureExecution?.Invoke(execConfig);
+        FlexQueryExecutionContext? ctx = null;
+        if (execConfig.Listener is not null)
+        {
+            ctx = new FlexQueryExecutionContext(execConfig, default);
+            await ctx.Listener.QueryParsedAsync(
+                new QueryParsedEvent(ctx.QueryId, options, ctx.Stopwatch.Elapsed, DateTimeOffset.UtcNow),
+                ctx.CancellationToken);
+        }
+
+        return await ExecuteQueryAsync<T>(connection, options, dapperOptions, ctx);
     }
 
     private static async Task<QueryResult<object>> ExecuteQueryAsync<T>(
         DbConnection connection,
         QueryOptions options,
         DapperQueryOptions execOptions,
-        CancellationToken cancellationToken = default) where T : class
+        FlexQueryExecutionContext? ctx = null) where T : class
     {
+        var ct = ctx?.CancellationToken ?? default;
+
         if (connection.State == ConnectionState.Closed)
         {
-            await connection.OpenAsync(cancellationToken);
+            await connection.OpenAsync(ct);
         }
 
         var dialect = execOptions.Dialect
@@ -150,6 +174,15 @@ public static class FlexQueryDapperExtensions
         {
             var cleanName = param.Key.TrimStart('@', ':', '?');
             parameters.Add(cleanName, param.Value);
+        }
+
+        // Emit translation event
+        if (ctx?.Listener is not null)
+        {
+            var paramDict = command.Parameters.ToDictionary(k => k.Key, v => v.Value);
+            await ctx.Listener.QueryTranslatedAsync(
+                new QueryTranslatedEvent(ctx.QueryId, command.Sql, paramDict, ctx.Stopwatch.Elapsed, DateTimeOffset.UtcNow),
+                ctx.CancellationToken);
         }
 
         var metadata = ProjectionMetadataBuilder.Build(entityType, options);
@@ -307,7 +340,15 @@ public static class FlexQueryDapperExtensions
             }
         }
 
-        return new QueryResult<object>
+        var now = DateTimeOffset.UtcNow;
+        if (ctx?.Listener is not null)
+        {
+            await ctx.Listener.QueryExecutedAsync(
+                new QueryExecutedEvent(ctx.QueryId, items.Count, null, ctx.Stopwatch.Elapsed, now),
+                ctx.CancellationToken);
+        }
+
+        var queryResult = new QueryResult<object>
         {
             Data = items,
             TotalCount = totalCount,
@@ -316,6 +357,15 @@ public static class FlexQueryDapperExtensions
             PageSize = options.Paging.PageSize,
             Aggregates = grandTotals
         };
+
+        if (ctx?.Listener is not null)
+        {
+            await ctx.Listener.QueryMaterializedAsync(
+                new QueryMaterializedEvent(ctx.QueryId, queryResult, null, ctx.Stopwatch.Elapsed, DateTimeOffset.UtcNow),
+                ctx.CancellationToken);
+        }
+
+        return queryResult;
     }
 
     private static string ExtractCountSql(string sql)

@@ -1,0 +1,562 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FlexQuery.NET — Unified Querying for .NET</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-primary: #0b0f19;
+            --bg-secondary: #111827;
+            --bg-card: #1f2937;
+            --accent: #6366f1;
+            --accent-gradient: linear-gradient(135deg, #6366f1 0%, #a855f7 100%);
+            --text-main: #f3f4f6;
+            --text-muted: #9ca3af;
+            --text-dim: #6b7280;
+            --border: #374151;
+            --green: #22c55e;
+            --amber: #f59e0b;
+            --nav-height: 72px;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-main);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        header {
+            background: var(--bg-secondary);
+            border-bottom: 1px solid var(--border);
+            padding: 1rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+        .logo-section {
+            display: flex;
+            flex-direction: column;
+        }
+        .logo-section h1 {
+            font-family: 'Outfit', sans-serif;
+            font-size: 1.35rem;
+            font-weight: 700;
+            background: var(--accent-gradient);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .logo-section p {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+        }
+        nav {
+            display: flex;
+            gap: 0.5rem;
+            align-items: center;
+        }
+        nav a {
+            color: var(--text-muted);
+            text-decoration: none;
+            font-weight: 500;
+            font-size: 0.875rem;
+            padding: 0.45rem 0.9rem;
+            border-radius: 6px;
+            transition: all 0.2s ease;
+        }
+        nav a:hover { color: var(--text-main); background: rgba(255,255,255,0.05); }
+        nav a.active { color: #fff; background: var(--accent-gradient); }
+        .badge-link { padding: 0.25rem 0.5rem; }
+        .badge-link img { height: 20px; display: block; }
+
+        main { flex: 1; }
+        .hero {
+            text-align: center;
+            padding: 4rem 2rem 3rem;
+            max-width: 900px;
+            margin: 0 auto;
+        }
+        .hero h1 {
+            font-family: 'Outfit', sans-serif;
+            font-size: 3rem;
+            font-weight: 800;
+            line-height: 1.15;
+            margin-bottom: 1rem;
+        }
+        .hero h1 .gradient {
+            background: var(--accent-gradient);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .hero p {
+            font-size: 1.15rem;
+            color: var(--text-muted);
+            line-height: 1.7;
+            max-width: 680px;
+            margin: 0 auto 2rem;
+        }
+        .hero-install {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.75rem;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 0.75rem 1.5rem;
+            font-family: 'Outfit', monospace;
+            font-size: 0.95rem;
+            color: var(--text-main);
+            margin-bottom: 2.5rem;
+        }
+        .hero-install .copy-hint {
+            font-size: 0.7rem;
+            color: var(--text-dim);
+            font-family: 'Plus Jakarta Sans', sans-serif;
+        }
+        .hero-install .cmd { color: var(--accent); }
+        .hero-actions {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+        .hero-actions a {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.75rem 1.75rem;
+            border-radius: 10px;
+            font-weight: 600;
+            font-size: 0.95rem;
+            text-decoration: none;
+            transition: all 0.2s;
+        }
+        .btn-primary {
+            background: var(--accent-gradient);
+            color: #fff;
+        }
+        .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 4px 20px rgba(99,102,241,0.4); }
+        .btn-secondary {
+            background: var(--bg-card);
+            color: var(--text-main);
+            border: 1px solid var(--border);
+        }
+        .btn-secondary:hover { border-color: var(--accent); }
+
+        .section {
+            max-width: 1100px;
+            margin: 0 auto;
+            padding: 3rem 2rem;
+        }
+        .section-title {
+            font-family: 'Outfit', sans-serif;
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+        }
+        .section-subtitle {
+            color: var(--text-muted);
+            font-size: 0.95rem;
+            margin-bottom: 2rem;
+        }
+
+        .code-block-wrapper {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            overflow: hidden;
+            margin-bottom: 2rem;
+        }
+        .code-block-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.75rem 1.25rem;
+            background: #1a1f2e;
+            border-bottom: 1px solid var(--border);
+            font-size: 0.8rem;
+            color: var(--text-dim);
+        }
+        .code-block-header .file {
+            font-family: 'Outfit', monospace;
+            color: var(--accent);
+        }
+        .code-block-header .copy-btn {
+            background: none;
+            border: 1px solid var(--border);
+            color: var(--text-muted);
+            padding: 0.3rem 0.7rem;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 0.75rem;
+            transition: all 0.2s;
+        }
+        .code-block-header .copy-btn:hover { border-color: var(--accent); color: #fff; }
+        .code-block-body {
+            padding: 1.25rem;
+            overflow-x: auto;
+            font-family: 'Outfit', monospace;
+            font-size: 0.85rem;
+            line-height: 1.6;
+            color: #e2e8f0;
+        }
+        .code-block-body .kw { color: #c084fc; }
+        .code-block-body .type { color: #60a5fa; }
+        .code-block-body .str { color: #34d399; }
+        .code-block-body .cmt { color: #6b7280; font-style: italic; }
+        .code-block-body .num { color: #f59e0b; }
+
+        .features {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1rem;
+        }
+        .feature-card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 1.5rem;
+            transition: border-color 0.2s;
+        }
+        .feature-card:hover { border-color: var(--accent); }
+        .feature-card h3 {
+            font-family: 'Outfit', sans-serif;
+            font-size: 1rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .feature-card p {
+            font-size: 0.88rem;
+            color: var(--text-muted);
+            line-height: 1.6;
+        }
+        .feature-card .badge {
+            display: inline-block;
+            font-size: 0.7rem;
+            font-weight: 600;
+            padding: 0.15rem 0.5rem;
+            border-radius: 4px;
+            background: rgba(99,102,241,0.2);
+            color: var(--accent);
+            margin-top: 0.6rem;
+        }
+
+        .pipeline {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+            padding: 2rem 0;
+        }
+        .pipeline-step {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 0.6rem 1.2rem;
+            font-size: 0.8rem;
+            font-weight: 500;
+            text-align: center;
+            min-width: 100px;
+        }
+        .pipeline-arrow {
+            color: var(--accent);
+            font-size: 1.2rem;
+            font-weight: 700;
+        }
+        .pipeline-step.accent { border-color: var(--accent); }
+
+        .demo-links {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 1rem;
+        }
+        .demo-link-card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 1.5rem;
+            text-decoration: none;
+            color: inherit;
+            transition: all 0.2s;
+        }
+        .demo-link-card:hover { border-color: var(--accent); transform: translateY(-2px); }
+        .demo-link-card h3 {
+            font-family: 'Outfit', sans-serif;
+            font-size: 1rem;
+            font-weight: 600;
+            margin-bottom: 0.3rem;
+        }
+        .demo-link-card p {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            line-height: 1.5;
+        }
+        .demo-link-card .arrow {
+            display: inline-block;
+            margin-top: 0.5rem;
+            color: var(--accent);
+            font-weight: 600;
+            font-size: 0.85rem;
+        }
+
+        footer {
+            text-align: center;
+            padding: 1.5rem 2rem;
+            font-size: 0.8rem;
+            color: var(--text-dim);
+            border-top: 1px solid var(--border);
+            background: var(--bg-secondary);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+        footer a { color: var(--text-muted); text-decoration: none; }
+        footer a:hover { color: var(--accent); }
+        footer .sep { color: var(--border); }
+
+        .adapter-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 0.75rem;
+            margin: 1.5rem 0;
+        }
+        .adapter-item {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 0.75rem 1rem;
+            text-align: center;
+            font-size: 0.85rem;
+            font-weight: 500;
+        }
+        .adapter-item .nuget {
+            display: block;
+            font-size: 0.65rem;
+            color: var(--text-dim);
+            font-weight: 400;
+            margin-top: 0.25rem;
+        }
+
+        @media (max-width: 640px) {
+            header { flex-direction: column; gap: 0.75rem; padding: 0.75rem 1rem; }
+            nav { flex-wrap: wrap; justify-content: center; }
+            .hero h1 { font-size: 2rem; }
+            .pipeline-step { min-width: 70px; font-size: 0.7rem; padding: 0.4rem 0.8rem; }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="logo-section">
+            <h1>&#9889; FlexQuery.NET</h1>
+            <p>Unified querying across EF Core, Dapper, AG Grid, Kendo UI, JQL &amp; MiniOData</p>
+        </div>
+        <nav>
+            <a href="/" class="active">Home</a>
+            <a href="/aggrid.html">AG Grid</a>
+            <a href="/kendo.html">Kendo UI</a>
+            <a href="/comparison.html">Provider Comparison</a>
+            <a href="/playground.html">Playground</a>
+            <a href="/swagger">API Docs</a>
+            <a href="https://github.com/peterjohncasasola/FlexQuery.NET" class="badge-link" target="_blank">
+                <img src="https://img.shields.io/github/stars/peterjohncasasola/FlexQuery.NET?style=social" alt="GitHub stars">
+            </a>
+        </nav>
+    </header>
+
+    <main>
+        <section class="hero">
+            <h1>Write queries <span class="gradient">once</span>.<br>Run across <span class="gradient">any</span> provider.</h1>
+            <p>
+                FlexQuery.NET provides a unified query abstraction that works across EF Core, Dapper, AG Grid, Kendo UI, JQL, and MiniOData.
+                One query syntax. One set of parameters. Any data access layer.
+            </p>
+            <div class="hero-install">
+                <span class="cmd">dotnet add package FlexQuery.NET</span>
+                <span class="copy-hint">&#x2398; click to copy</span>
+            </div>
+            <div class="hero-actions">
+                <a href="/aggrid.html" class="btn-primary">&#9654; See it in action</a>
+                <a href="/playground.html" class="btn-secondary">&#9000; Live playground</a>
+                <a href="/swagger" class="btn-secondary">&#128220; API docs</a>
+            </div>
+        </section>
+
+        <div class="section">
+            <h2 class="section-title">&#9981; The Pipeline</h2>
+            <p class="section-subtitle">Every grid interaction flows through FlexQuery.NET's unified pipeline</p>
+            <div class="pipeline">
+                <div class="pipeline-step accent">Grid Request<br><span style="font-size:0.7rem;color:var(--text-dim)">AG Grid / Kendo</span></div>
+                <div class="pipeline-arrow">&#8594;</div>
+                <div class="pipeline-step accent">&#9889; FlexQuery<br><span style="font-size:0.7rem;color:var(--text-dim)">QueryOptions</span></div>
+                <div class="pipeline-arrow">&#8594;</div>
+                <div class="pipeline-step">SQL / LINQ<br><span style="font-size:0.7rem;color:var(--text-dim)">Generated</span></div>
+                <div class="pipeline-arrow">&#8594;</div>
+                <div class="pipeline-step">Results<br><span style="font-size:0.7rem;color:var(--text-dim)">JSON Response</span></div>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2 class="section-title">&#128221; Copy-Paste Controller</h2>
+            <p class="section-subtitle">This is the entire backend for the AG Grid SSRM demo — 3 lines of FlexQuery</p>
+            <div class="code-block-wrapper">
+                <div class="code-block-header">
+                    <span class="file">&#128196; AgGridController.cs</span>
+                    <button class="copy-btn" onclick="copyCode(this)">Copy code</button>
+                </div>
+                <div class="code-block-body"><pre><span class="kw">public async</span> <span class="type">Task</span>&lt;<span class="type">IActionResult</span>&gt; <span class="kw">GetCustomers</span>(
+    [<span class="type">FromBody</span>] <span class="type">AgGridRequest</span> request)
+{
+    <span class="cmt">// 1. Parse AG Grid SSRM request &#8594; QueryOptions</span>
+    <span class="kw">var</span> options = request.<span class="kw">ToQueryOptions</span>();
+    options.<span class="kw">IncludeCount</span> = <span class="kw">true</span>;
+
+    <span class="cmt">// 2. Execute against EF Core (or Dapper!)</span>
+    <span class="kw">var</span> result = <span class="kw">await</span> _db.Customers
+        .<span class="kw">AsNoTracking</span>()
+        .<span class="kw">FlexQueryAsync</span>&lt;<span class="type">Customer</span>&gt;(options);
+
+    <span class="cmt">// 3. Return AG Grid-compatible response</span>
+    <span class="kw">return</span> <span class="kw">Ok</span>(result.<span class="kw">ToAgGridServerSideResponse</span>(request));
+}</pre></div>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2 class="section-title">&#129520; Adapters &amp; Providers</h2>
+            <p class="section-subtitle">FlexQuery.NET translates each format into the same unified QueryOptions</p>
+            <div class="adapter-grid">
+                <div class="adapter-item">&#128083; EF Core<span class="nuget">FlexQuery.NET.EntityFrameworkCore</span></div>
+                <div class="adapter-item">&#128187; Dapper<span class="nuget">FlexQuery.NET.Dapper</span></div>
+                <div class="adapter-item">&#127760; AG Grid<span class="nuget">FlexQuery.NET.Adapters.AgGrid</span></div>
+                <div class="adapter-item">&#127912; Kendo UI<span class="nuget">FlexQuery.NET.Adapters.Kendo</span></div>
+                <div class="adapter-item">&#128220; JQL<span class="nuget">FlexQuery.NET.Parsers.Jql</span></div>
+                <div class="adapter-item">&#128209; MiniOData<span class="nuget">FlexQuery.NET.Parsers.MiniOData</span></div>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2 class="section-title">&#127383; Interactive Demos</h2>
+            <p class="section-subtitle">See FlexQuery.NET in action — each demo opens the diagnostic panel to show the pipeline</p>
+            <div class="demo-links">
+                <a href="/aggrid.html" class="demo-link-card">
+                    <h3>&#127760; AG Grid SSRM</h3>
+                    <p>Server-side row model with filtering, sorting, grouping, and live request diagnostics</p>
+                    <span class="arrow">Open demo &#8594;</span>
+                </a>
+                <a href="/kendo.html" class="demo-link-card">
+                    <h3>&#127912; Kendo UI Grid</h3>
+                    <p>Kendo DataSource with server-side operations and format-specific diagnostics</p>
+                    <span class="arrow">Open demo &#8594;</span>
+                </a>
+                <a href="/comparison.html" class="demo-link-card">
+                    <h3>&#9878; Provider Comparison</h3>
+                    <p>Run the same query against EF Core and Dapper side-by-side</p>
+                    <span class="arrow">Compare providers &#8594;</span>
+                </a>
+                <a href="/playground.html" class="demo-link-card">
+                    <h3>&#9000; Playground</h3>
+                    <p>Type FlexQuery DSL parameters and see parsed options, SQL, and results instantly</p>
+                    <span class="arrow">Try it &#8594;</span>
+                </a>
+                <a href="/swagger" class="demo-link-card">
+                    <h3>&#128220; Swagger API</h3>
+                    <p>Explore all endpoints, test queries, and inspect response schemas</p>
+                    <span class="arrow">Open API docs &#8594;</span>
+                </a>
+                <a href="https://github.com/peterjohncasasola/FlexQuery.NET" class="demo-link-card" target="_blank">
+                    <h3>&#11088; GitHub</h3>
+                    <p>Star the repo, file issues, contribute, and read the full documentation</p>
+                    <span class="arrow">View on GitHub &#8594;</span>
+                </a>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2 class="section-title">&#128200; Features at a Glance</h2>
+            <div class="features">
+                <div class="feature-card">
+                    <h3>&#128269; Filtering</h3>
+                    <p>DSL or JQL syntax with operators: eq, neq, contains, startswith, endswith, gt, gte, lt, lte. AND/OR group logic.</p>
+                    <span class="badge">?filter=Status:eq:Active</span>
+                </div>
+                <div class="feature-card">
+                    <h3>&#128196; Sorting</h3>
+                    <p>Multi-column sort with asc/desc direction. Works across all providers.</p>
+                    <span class="badge">?sort=LastName:asc,City:desc</span>
+                </div>
+                <div class="feature-card">
+                    <h3>&#128106; Paging</h3>
+                    <p>Page-based pagination with total count. Server-side skip/take.</p>
+                    <span class="badge">?page=1&amp;pageSize=20</span>
+                </div>
+                <div class="feature-card">
+                    <h3>&#128083; Projection</h3>
+                    <p>Select only the fields you need. Reduces bandwidth and query cost.</p>
+                    <span class="badge">?select=Id,FirstName,Email</span>
+                </div>
+                <div class="feature-card">
+                    <h3>&#128279; Include</h3>
+                    <p>Eager-load navigation properties with optional filtered includes.</p>
+                    <span class="badge">?include=Orders</span>
+                </div>
+                <div class="feature-card">
+                    <h3>&#128200; Aggregation</h3>
+                    <p>Count, sum, average, min, max with GROUP BY and HAVING support.</p>
+                    <span class="badge">?groupBy=Status&amp;aggregate=count:Id:count</span>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <footer>
+        <span>&#9889; FlexQuery.NET v3.0.7</span>
+        <span class="sep">|</span>
+        <a href="https://nuget.org/packages/FlexQuery.NET" target="_blank">dotnet add package FlexQuery.NET</a>
+        <span class="sep">|</span>
+        <a href="https://github.com/peterjohncasasola/FlexQuery.NET" target="_blank">View on GitHub</a>
+        <span class="sep">|</span>
+        <a href="https://github.com/peterjohncasasola/FlexQuery.NET/stargazers" target="_blank">
+            <img src="https://img.shields.io/github/stars/peterjohncasasola/FlexQuery.NET?style=flat&amp;label=Stars&amp;color=6366f1" alt="Stars">
+        </a>
+        <a href="https://nuget.org/packages/FlexQuery.NET" target="_blank">
+            <img src="https://img.shields.io/nuget/v/FlexQuery.NET?style=flat&amp;label=NuGet&amp;color=6366f1" alt="NuGet">
+        </a>
+    </footer>
+
+    <script>
+        document.querySelector('.hero-install')?.addEventListener('click', function() {
+            navigator.clipboard.writeText('dotnet add package FlexQuery.NET');
+            const hint = this.querySelector('.copy-hint');
+            const orig = hint.textContent;
+            hint.textContent = '&#10003; copied!';
+            setTimeout(() => hint.textContent = orig, 1500);
+        });
+
+        function copyCode(btn) {
+            const pre = btn.closest('.code-block-wrapper').querySelector('pre');
+            navigator.clipboard.writeText(pre.textContent);
+            const orig = btn.textContent;
+            btn.textContent = 'Copied!';
+            setTimeout(() => btn.textContent = orig, 1500);
+        }
+    </script>
+</body>
+</html>

@@ -78,15 +78,4 @@ public static class FlexQueryDebugExtensions
     }
 }
 
-/// <summary>
-/// Result of a FlexQuery debug operation.
-/// </summary>
-public sealed class DebugResult
-{
-    /// <summary>The parsed AST.</summary>
-    public object? Ast { get; set; }
-    /// <summary>The generated LINQ lambda as a string.</summary>
-    public string LinqLambda { get; set; } = string.Empty;
-    /// <summary>The structural visualization of the expression tree.</summary>
-    public string ExpressionTree { get; set; } = string.Empty;
-}
+// DebugResult is defined in FlexQuery.NET.Models

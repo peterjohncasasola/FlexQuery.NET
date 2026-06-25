@@ -1,0 +1,564 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FlexQuery.NET — Provider Comparison</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-primary: #0b0f19;
+            --bg-secondary: #111827;
+            --bg-card: #1f2937;
+            --accent: #6366f1;
+            --accent-gradient: linear-gradient(135deg, #6366f1 0%, #a855f7 100%);
+            --text-main: #f3f4f6;
+            --text-muted: #9ca3af;
+            --text-dim: #6b7280;
+            --border: #374151;
+            --green: #22c55e;
+            --orange: #f59e0b;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-main);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        header {
+            background: var(--bg-secondary);
+            border-bottom: 1px solid var(--border);
+            padding: 1rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+        .logo-section h1 {
+            font-family: 'Outfit', sans-serif;
+            font-size: 1.35rem;
+            font-weight: 700;
+            background: var(--accent-gradient);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .logo-section p { font-size: 0.75rem; color: var(--text-muted); }
+        nav { display: flex; gap: 0.5rem; align-items: center; }
+        nav a {
+            color: var(--text-muted); text-decoration: none; font-weight: 500;
+            font-size: 0.875rem; padding: 0.45rem 0.9rem; border-radius: 6px;
+            transition: all 0.2s;
+        }
+        nav a:hover { color: var(--text-main); background: rgba(255,255,255,0.05); }
+        nav a.active { color: #fff; background: var(--accent-gradient); }
+        .badge-link { padding: 0.25rem 0.5rem; }
+        .badge-link img { height: 20px; display: block; }
+
+        main { flex: 1; padding: 2rem; max-width: 1400px; margin: 0 auto; width: 100%; }
+
+        .hero-bar {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+        .hero-bar h2 {
+            font-family: 'Outfit', sans-serif;
+            font-size: 1.5rem;
+            font-weight: 700;
+        }
+        .hero-bar p {
+            color: var(--text-muted);
+            font-size: 0.95rem;
+            margin-top: 0.3rem;
+        }
+
+        .query-builder {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 1.25rem;
+            margin-bottom: 2rem;
+        }
+        .query-builder .row {
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+            align-items: end;
+        }
+        .query-builder .field {
+            display: flex;
+            flex-direction: column;
+            gap: 0.3rem;
+        }
+        .query-builder label {
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: var(--text-dim);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+        .query-builder input, .query-builder select {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            color: var(--text-main);
+            padding: 0.5rem 0.75rem;
+            border-radius: 6px;
+            font-family: 'Outfit', monospace;
+            font-size: 0.85rem;
+            min-width: 140px;
+        }
+        .query-builder input:focus, .query-builder select:focus {
+            outline: none;
+            border-color: var(--accent);
+        }
+        .query-builder .execute-btn {
+            background: var(--accent-gradient);
+            color: #fff;
+            border: none;
+            padding: 0.55rem 1.5rem;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .query-builder .execute-btn:hover { transform: translateY(-1px); box-shadow: 0 4px 15px rgba(99,102,241,0.4); }
+        .query-builder .execute-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; box-shadow: none; }
+
+        .comparison-area {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.5rem;
+        }
+        .provider-card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+        .provider-card-header {
+            padding: 1rem 1.25rem;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: #1a1f2e;
+        }
+        .provider-card-header h3 {
+            font-family: 'Outfit', sans-serif;
+            font-size: 1rem;
+            font-weight: 600;
+        }
+        .provider-card-header .badge-ef {
+            font-size: 0.7rem;
+            padding: 0.25rem 0.6rem;
+            border-radius: 5px;
+            background: rgba(99,102,241,0.2);
+            color: var(--accent);
+            font-weight: 600;
+        }
+        .provider-card-header .badge-dapper {
+            font-size: 0.7rem;
+            padding: 0.25rem 0.6rem;
+            border-radius: 5px;
+            background: rgba(245,158,11,0.2);
+            color: var(--orange);
+            font-weight: 600;
+        }
+        .provider-card-body {
+            padding: 1rem 1.25rem;
+            flex: 1;
+        }
+        .provider-stats {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+        .stat-item {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 0.4rem 0.75rem;
+            font-size: 0.75rem;
+        }
+        .stat-item .label { color: var(--text-dim); }
+        .stat-item .value { font-weight: 600; color: var(--text-main); }
+
+        .sql-preview {
+            background: #0d1117;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 0.65rem 0.85rem;
+            font-family: 'Outfit', monospace;
+            font-size: 0.7rem;
+            line-height: 1.5;
+            color: #e2e8f0;
+            overflow-x: auto;
+            white-space: pre-wrap;
+            word-break: break-all;
+            max-height: 200px;
+            overflow-y: auto;
+            margin-bottom: 1rem;
+        }
+        .sql-label {
+            font-size: 0.7rem;
+            font-weight: 600;
+            color: var(--text-dim);
+            text-transform: uppercase;
+            margin-bottom: 0.3rem;
+        }
+
+        .results-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.8rem;
+        }
+        .results-table th {
+            text-align: left;
+            padding: 0.4rem 0.5rem;
+            color: var(--text-dim);
+            font-size: 0.7rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            border-bottom: 1px solid var(--border);
+        }
+        .results-table td {
+            padding: 0.35rem 0.5rem;
+            border-bottom: 1px solid var(--border);
+            color: var(--text-main);
+        }
+        .results-table tr:hover td { background: rgba(255,255,255,0.02); }
+        .results-empty {
+            color: var(--text-dim);
+            font-style: italic;
+            font-size: 0.85rem;
+            text-align: center;
+            padding: 3rem 1rem;
+        }
+
+        .code-comparison {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.5rem;
+            margin-top: 2rem;
+        }
+        .code-block {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            overflow: hidden;
+        }
+        .code-block-header {
+            display: flex;
+            justify-content: space-between;
+            padding: 0.5rem 1rem;
+            background: #1a1f2e;
+            border-bottom: 1px solid var(--border);
+            font-size: 0.7rem;
+            color: var(--text-dim);
+        }
+        .code-block-header .file { color: var(--accent); font-family: 'Outfit', monospace; }
+        .code-block-header .copy-btn {
+            background: none; border: 1px solid var(--border); color: var(--text-muted);
+            padding: 0.2rem 0.5rem; border-radius: 4px; cursor: pointer; font-size: 0.65rem;
+        }
+        .code-block-header .copy-btn:hover { border-color: var(--accent); color: #fff; }
+        .code-block-body {
+            padding: 0.85rem;
+            font-family: 'Outfit', monospace;
+            font-size: 0.75rem;
+            line-height: 1.5;
+            color: #e2e8f0;
+            overflow-x: auto;
+        }
+        .kw { color: #c084fc; }
+        .type { color: #60a5fa; }
+        .str { color: #34d399; }
+        .cmt { color: #6b7280; font-style: italic; }
+
+        footer {
+            text-align: center;
+            padding: 1rem 2rem;
+            font-size: 0.75rem;
+            color: var(--text-dim);
+            border-top: 1px solid var(--border);
+            background: var(--bg-secondary);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 1rem;
+            flex-wrap: wrap;
+            margin-top: 2rem;
+        }
+        footer a { color: var(--text-muted); text-decoration: none; }
+        footer a:hover { color: var(--accent); }
+        footer .sep { color: var(--border); }
+
+        @media (max-width: 800px) {
+            .comparison-area, .code-comparison { grid-template-columns: 1fr; }
+            .query-builder .row { flex-direction: column; }
+            .query-builder .field { width: 100%; }
+            .query-builder input { width: 100%; }
+            header { flex-direction: column; gap: 0.5rem; padding: 0.75rem 1rem; }
+            nav { flex-wrap: wrap; justify-content: center; }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="logo-section">
+            <h1>&#9889; FlexQuery.NET</h1>
+            <p>Provider Comparison — EF Core vs Dapper</p>
+        </div>
+        <nav>
+            <a href="/">Home</a>
+            <a href="/aggrid.html">AG Grid</a>
+            <a href="/kendo.html">Kendo UI</a>
+            <a href="/comparison.html" class="active">Comparison</a>
+            <a href="/playground.html">Playground</a>
+            <a href="/swagger">API Docs</a>
+            <a href="https://github.com/peterjohncasasola/FlexQuery.NET" class="badge-link" target="_blank">
+                <img src="https://img.shields.io/github/stars/peterjohncasasola/FlexQuery.NET?style=social" alt="Stars">
+            </a>
+        </nav>
+    </header>
+
+    <main>
+        <div class="hero-bar">
+            <h2>&#9878; Same Query. Different Provider. Identical Results.</h2>
+            <p>Enter a query below and see it execute against <strong>EF Core</strong> and <strong>Dapper</strong> side-by-side. FlexQuery.NET generates provider-specific code for each.</p>
+        </div>
+
+        <div class="query-builder">
+            <div class="row">
+                <div class="field">
+                    <label>Filter (DSL)</label>
+                    <input type="text" id="qFilter" placeholder="e.g. Status:eq:Active" value="Status:eq:Active">
+                </div>
+                <div class="field">
+                    <label>Sort</label>
+                    <input type="text" id="qSort" placeholder="e.g. LastName:asc" value="LastName:asc">
+                </div>
+                <div class="field">
+                    <label>Page</label>
+                    <input type="number" id="qPage" value="1" min="1" style="min-width:80px;">
+                </div>
+                <div class="field">
+                    <label>Page Size</label>
+                    <input type="number" id="qPageSize" value="5" min="1" max="50" style="min-width:80px;">
+                </div>
+                <div class="field">
+                    <label>Select</label>
+                    <input type="text" id="qSelect" placeholder="e.g. Id,FirstName,Email">
+                </div>
+                <div class="field">
+                    <button class="execute-btn" id="executeBtn" onclick="runComparison()">&#9654; Run Comparison</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="comparison-area">
+            <div class="provider-card">
+                <div class="provider-card-header">
+                    <h3>&#128083; EF Core</h3>
+                    <span class="badge-ef">Provider</span>
+                </div>
+                <div class="provider-card-body">
+                    <div class="provider-stats">
+                        <div class="stat-item">
+                            <span class="label">Response:</span>
+                            <span class="value" id="efTime">—</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="label">Rows:</span>
+                            <span class="value" id="efRows">—</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="label">Total:</span>
+                            <span class="value" id="efTotal">—</span>
+                        </div>
+                    </div>
+                    <div class="sql-label">Generated SQL</div>
+                    <div class="sql-preview" id="efSql"><span style="color:var(--text-dim);font-style:italic;">Execute a query to see generated SQL...</span></div>
+                    <div id="efResults"><div class="results-empty">No results yet</div></div>
+                </div>
+            </div>
+
+            <div class="provider-card">
+                <div class="provider-card-header">
+                    <h3>&#128187; Dapper</h3>
+                    <span class="badge-dapper">Provider</span>
+                </div>
+                <div class="provider-card-body">
+                    <div class="provider-stats">
+                        <div class="stat-item">
+                            <span class="label">Response:</span>
+                            <span class="value" id="dapperTime">—</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="label">Rows:</span>
+                            <span class="value" id="dapperRows">—</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="label">Total:</span>
+                            <span class="value" id="dapperTotal">—</span>
+                        </div>
+                    </div>
+                    <div class="sql-label">Generated SQL</div>
+                    <div class="sql-preview" id="dapperSql"><span style="color:var(--text-dim);font-style:italic;">Execute a query to see generated SQL...</span></div>
+                    <div id="dapperResults"><div class="results-empty">No results yet</div></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="code-comparison">
+            <div class="code-block">
+                <div class="code-block-header">
+                    <span class="file">&#128196; EfCustomersController.cs</span>
+                    <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+                </div>
+                <div class="code-block-body"><pre>[<span class="type">HttpGet</span>]
+<span class="kw">public async</span> <span class="type">Task</span>&lt;<span class="type">IActionResult</span>&gt; <span class="kw">GetCustomers</span>(
+    [<span class="type">FromQuery</span>] <span class="type">FlexQueryParameters</span> p)
+{
+    <span class="kw">var</span> result = <span class="kw">await</span> _db.Customers
+        .<span class="kw">AsNoTracking</span>()
+        .<span class="kw">FlexQueryAsync</span>&lt;<span class="type">Customer</span>&gt;(p);
+
+    <span class="kw">return</span> <span class="kw">Ok</span>(result);
+}</pre></div>
+            </div>
+            <div class="code-block">
+                <div class="code-block-header">
+                    <span class="file">&#128196; DapperCustomersController.cs</span>
+                    <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+                </div>
+                <div class="code-block-body"><pre>[<span class="type">HttpGet</span>]
+<span class="kw">public async</span> <span class="type">Task</span>&lt;<span class="type">IActionResult</span>&gt; <span class="kw">GetCustomers</span>(
+    [<span class="type">FromQuery</span>] <span class="type">FlexQueryParameters</span> p)
+{
+    <span class="kw">var</span> result = <span class="kw">await</span> connection
+        .<span class="kw">FlexQueryAsync</span>&lt;<span class="type">Customer</span>&gt;(p, opt =&gt;
+    {
+        opt.<span class="kw">Dialect</span> = <span class="kw">new</span> <span class="type">SqliteDialect</span>();
+        opt.<span class="kw">MappingRegistry</span> = _registry;
+    });
+
+    <span class="kw">return</span> <span class="kw">Ok</span>(result);
+}</pre></div>
+            </div>
+        </div>
+    </main>
+
+    <footer>
+        <span>&#9889; FlexQuery.NET v3.0.7</span>
+        <span class="sep">|</span>
+        <a href="https://nuget.org/packages/FlexQuery.NET" target="_blank">dotnet add package FlexQuery.NET</a>
+        <span class="sep">|</span>
+        <a href="https://github.com/peterjohncasasola/FlexQuery.NET" target="_blank">View on GitHub</a>
+        <span class="sep">|</span>
+        <a href="https://github.com/peterjohncasasola/FlexQuery.NET/stargazers" target="_blank">
+            <img src="https://img.shields.io/github/stars/peterjohncasasola/FlexQuery.NET?style=flat&amp;label=Stars&amp;color=6366f1" alt="Stars">
+        </a>
+        <a href="https://nuget.org/packages/FlexQuery.NET" target="_blank">
+            <img src="https://img.shields.io/nuget/v/FlexQuery.NET?style=flat&amp;label=NuGet&amp;color=6366f1" alt="NuGet">
+        </a>
+    </footer>
+
+    <script>
+        async function runComparison() {
+            const btn = document.getElementById('executeBtn');
+            btn.disabled = true;
+            btn.textContent = 'Running...';
+
+            const filter = document.getElementById('qFilter').value;
+            const sort = document.getElementById('qSort').value;
+            const page = document.getElementById('qPage').value;
+            const pageSize = document.getElementById('qPageSize').value;
+            const select = document.getElementById('qSelect').value;
+
+            const params = new URLSearchParams();
+            if (filter) params.set('filter', filter);
+            if (sort) params.set('sort', sort);
+            if (page) params.set('page', page);
+            if (pageSize) params.set('pageSize', pageSize);
+            if (select) params.set('select', select);
+
+            const queryString = params.toString();
+
+            try {
+                const [efRes, dapperRes] = await Promise.all([
+                    fetch('/api/ef/customers?' + queryString).then(r => r.json()),
+                    fetch('/api/dapper/customers?' + queryString).then(r => r.json())
+                ]);
+
+                renderResults('ef', efRes, ['Id', 'FirstName', 'LastName', 'Email', 'Status', 'City']);
+                renderResults('dapper', dapperRes, ['Id', 'FirstName', 'LastName', 'Email', 'Status', 'City']);
+
+                if (efRes.__diagnostics) {
+                    document.getElementById('efTime').textContent = efRes.__diagnostics.executionTimeMs + 'ms';
+                    document.getElementById('efRows').textContent = efRes.data ? efRes.data.length : '\u2014';
+                    document.getElementById('efTotal').textContent = efRes.totalCount ?? '\u2014';
+                    document.getElementById('efSql').textContent = efRes.__diagnostics.generatedSql || 'No SQL preview available';
+                }
+                if (dapperRes.__diagnostics) {
+                    document.getElementById('dapperTime').textContent = dapperRes.__diagnostics.executionTimeMs + 'ms';
+                    document.getElementById('dapperRows').textContent = dapperRes.data ? dapperRes.data.length : '\u2014';
+                    document.getElementById('dapperTotal').textContent = dapperRes.totalCount ?? '\u2014';
+                    document.getElementById('dapperSql').textContent = dapperRes.__diagnostics.generatedSql || 'No SQL preview available';
+                }
+            } catch (err) {
+                console.error('Comparison error:', err);
+                document.getElementById('efSql').textContent = 'Error: ' + err.message;
+                document.getElementById('dapperSql').textContent = 'Error: ' + err.message;
+            }
+
+            btn.disabled = false;
+            btn.textContent = '\u25B6 Run Comparison';
+        }
+
+        function renderResults(prefix, data, fields) {
+            const container = document.getElementById(prefix + 'Results');
+            const rows = data?.data;
+            if (!rows || rows.length === 0) {
+                container.innerHTML = '<div class="results-empty">No results</div>';
+                return;
+            }
+
+            let html = '<table class="results-table"><thead><tr>';
+            fields.forEach(f => { html += '<th>' + f + '</th>'; });
+            html += '</tr></thead><tbody>';
+            rows.forEach(row => {
+                html += '<tr>';
+                fields.forEach(f => {
+                    let val = row[f] ?? '';
+                    if (f === 'createdDate' && val) val = new Date(val).toLocaleDateString();
+                    html += '<td>' + val + '</td>';
+                });
+                html += '</tr>';
+            });
+            html += '</tbody></table>';
+            container.innerHTML = html;
+        }
+
+        function copyCode(btn) {
+            const pre = btn.closest('.code-block').querySelector('pre');
+            navigator.clipboard.writeText(pre.textContent);
+            const orig = btn.textContent;
+            btn.textContent = 'Copied!';
+            setTimeout(() => btn.textContent = orig, 1500);
+        }
+
+        // Auto-run on load with default query
+        window.addEventListener('DOMContentLoaded', () => runComparison());
+    </script>
+</body>
+</html>

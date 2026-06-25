@@ -1,5 +1,6 @@
 using FlexQuery.NET.Builders;
 using FlexQuery.NET.Extensions;
+using FlexQuery.NET.Internal;
 using FlexQuery.NET.Models;
 using FlexQuery.NET.Parsers;
 using FlexQuery.NET.Validation;
@@ -67,13 +68,14 @@ public static class QueryableEfCoreExtensions
         this IQueryable<T> query,
         FlexQueryParameters parameters,
         Action<QueryExecutionOptions>? configure = null,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        Action<FlexQueryExecutionConfig>? configureExecution = null)
         where T : class
     {
         var exec = new QueryExecutionOptions();
         configure?.Invoke(exec);
 
-        return await query.FlexQueryAsync(parameters, exec, cancellationToken);
+        return await query.FlexQueryAsync(parameters, exec, cancellationToken, configureExecution);
     }
 
     /// <summary>
@@ -88,7 +90,8 @@ public static class QueryableEfCoreExtensions
         this IQueryable<T> query,
         FlexQueryParameters parameters,
         QueryExecutionOptions execOptions,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        Action<FlexQueryExecutionConfig>? configureExecution = null)
         where T : class
     {
         var options = QueryOptionsParser.Parse(parameters);
@@ -97,9 +100,20 @@ public static class QueryableEfCoreExtensions
 
         options.ValidateOrThrow<T>(execOptions);
 
+        var execConfig = new FlexQueryExecutionConfig();
+        configureExecution?.Invoke(execConfig);
+        FlexQueryExecutionContext? ctx = null;
+        if (execConfig.Listener is not null)
+        {
+            ctx = new FlexQueryExecutionContext(execConfig, cancellationToken);
+            await ctx.Listener.QueryParsedAsync(
+                new QueryParsedEvent(ctx.QueryId, options, ctx.Stopwatch.Elapsed, DateTimeOffset.UtcNow),
+                ctx.CancellationToken);
+        }
+
         var hasProjection = options.HasProjection();
 
-        return await query.ApplyFlexQueryAsync(options, hasProjection, execOptions, cancellationToken);
+        return await query.ApplyFlexQueryAsync(options, hasProjection, execOptions, ctx);
     }
 
     /// <summary>
@@ -125,13 +139,14 @@ public static class QueryableEfCoreExtensions
         this IQueryable<T> query,
         QueryOptions options,
         Action<QueryExecutionOptions>? configure = null,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        Action<FlexQueryExecutionConfig>? configureExecution = null)
         where T : class
     {
         var execOptions = new QueryExecutionOptions();
         configure?.Invoke(execOptions);
 
-        return await query.FlexQueryAsync(options, execOptions, cancellationToken);
+        return await query.FlexQueryAsync(options, execOptions, cancellationToken, configureExecution);
     }
 
     /// <summary>
@@ -146,7 +161,8 @@ public static class QueryableEfCoreExtensions
         this IQueryable<T> query,
         QueryOptions options,
         QueryExecutionOptions execOptions,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        Action<FlexQueryExecutionConfig>? configureExecution = null)
         where T : class
     {
         ArgumentNullException.ThrowIfNull(query);
@@ -157,15 +173,27 @@ public static class QueryableEfCoreExtensions
 
         options.ValidateOrThrow<T>(execOptions);
 
+        var execConfig = new FlexQueryExecutionConfig();
+        configureExecution?.Invoke(execConfig);
+        FlexQueryExecutionContext? ctx = null;
+        if (execConfig.Listener is not null)
+        {
+            ctx = new FlexQueryExecutionContext(execConfig, cancellationToken);
+            await ctx.Listener.QueryParsedAsync(
+                new QueryParsedEvent(ctx.QueryId, options, ctx.Stopwatch.Elapsed, DateTimeOffset.UtcNow),
+                ctx.CancellationToken);
+        }
+
         var hasProjection = options.HasProjection();
 
-        return await query.ApplyFlexQueryAsync(options, hasProjection, execOptions, cancellationToken);
+        return await query.ApplyFlexQueryAsync(options, hasProjection, execOptions, ctx);
     }
 
     private static async Task<QueryResult<object>> ApplyFlexQueryAsync<T>(this IQueryable<T> query, 
-        QueryOptions options, bool hasProjection, QueryExecutionOptions? execOptions = null, CancellationToken cancellationToken = default)
+        QueryOptions options, bool hasProjection, QueryExecutionOptions? execOptions = null, FlexQueryExecutionContext? ctx = null)
         where T : class
     {
+        var ct = ctx?.CancellationToken ?? default;
         QueryOptionsEfCoreExtensions.EnsureEfCoreOperatorsRegistered();
 
         if (execOptions?.UseNoTracking == true)
@@ -174,16 +202,38 @@ public static class QueryableEfCoreExtensions
         }
 
         var filtered = QueryBuilder.ApplyFilter(query, options);
-        var total = options.IncludeCount == true ? await filtered.CountAsync(cancellationToken) : (int?)null;
+        var total = options.IncludeCount == true ? await filtered.CountAsync(ct) : (int?)null;
 
         if (options.GroupBy is { Count: > 0 })
         {
             var groupedQuery = GroupByBuilder.ApplyUntyped(filtered, options);
+
+            if (ctx?.Listener is not null)
+            {
+                var tsql = TryGetSql(groupedQuery);
+                await ctx.Listener.QueryTranslatedAsync(
+                    new QueryTranslatedEvent(ctx.QueryId, tsql, null, ctx.Stopwatch.Elapsed, DateTimeOffset.UtcNow),
+                    ctx.CancellationToken);
+            }
+
             var resultCount = options.IncludeCount == true
-                ? await CountGroupedQuery(groupedQuery, cancellationToken)
+                ? await CountGroupedQuery(groupedQuery, ct)
                 : (int?)null;
-            var data = await ExecuteGroupedQuery(groupedQuery, options, cancellationToken);
-            return options.BuildQueryResult(data, total, resultCount: resultCount);
+            var data = await ExecuteGroupedQuery(groupedQuery, options, ct);
+            var groupResult = options.BuildQueryResult(data, total, resultCount: resultCount);
+
+            if (ctx?.Listener is not null)
+            {
+                var now = DateTimeOffset.UtcNow;
+                await ctx.Listener.QueryExecutedAsync(
+                    new QueryExecutedEvent(ctx.QueryId, data.Count, null, ctx.Stopwatch.Elapsed, now),
+                    ctx.CancellationToken);
+                await ctx.Listener.QueryMaterializedAsync(
+                    new QueryMaterializedEvent(ctx.QueryId, groupResult, null, ctx.Stopwatch.Elapsed, now),
+                    ctx.CancellationToken);
+            }
+
+            return groupResult;
         }
 
         filtered = QueryBuilder.ApplySort(filtered, options);
@@ -195,7 +245,7 @@ public static class QueryableEfCoreExtensions
         {
             var aggregateQuery = GroupByBuilder.Apply(filtered, options);
 
-            var aggRow = await aggregateQuery.FirstOrDefaultAsync(cancellationToken);
+            var aggRow = await aggregateQuery.FirstOrDefaultAsync(ct);
 
             grandTotals = AggregateResultBuilder.Build(
                 aggRow,
@@ -209,16 +259,84 @@ public static class QueryableEfCoreExtensions
         // if the projection engine behavior changes.
         filtered = filtered.ApplyFilteredIncludes(options);
 
-        if (hasProjection)
+        // Capture SQL for translation event
+        if (ctx?.Listener is not null)
         {
-            var projectedData = await filtered.ApplySelect(options).ToListAsync(cancellationToken);
-            return options.BuildQueryResult(projectedData, total, grandTotals); // QueryResult<object>
+            var sql = TryGetSql(filtered);
+            await ctx.Listener.QueryTranslatedAsync(
+                new QueryTranslatedEvent(ctx.QueryId, sql, null, ctx.Stopwatch.Elapsed, DateTimeOffset.UtcNow),
+                ctx.CancellationToken);
         }
 
-        var filteredData = await filtered.ToListAsync(cancellationToken);
+        IReadOnlyList<object>? dataList = null;
+        QueryResult<object>? result = null;
 
-        //convert from QueryResult<T> to QueryResult<object> by treating each T as an object (no projection)
-        return options.BuildQueryResult(filteredData, total, grandTotals).ToObjectResult();
+        try
+        {
+            if (hasProjection)
+            {
+                var projectedData = await filtered.ApplySelect(options).ToListAsync(ct);
+                dataList = projectedData;
+
+                if (ctx?.Listener is not null)
+                {
+                    await ctx.Listener.QueryExecutedAsync(
+                        new QueryExecutedEvent(ctx.QueryId, dataList.Count, null, ctx.Stopwatch.Elapsed, DateTimeOffset.UtcNow),
+                        ctx.CancellationToken);
+                }
+
+                result = options.BuildQueryResult(projectedData, total, grandTotals);
+            }
+            else
+            {
+                var filteredData = await filtered.ToListAsync(ct);
+                dataList = filteredData;
+
+                if (ctx?.Listener is not null)
+                {
+                    await ctx.Listener.QueryExecutedAsync(
+                        new QueryExecutedEvent(ctx.QueryId, dataList.Count, null, ctx.Stopwatch.Elapsed, DateTimeOffset.UtcNow),
+                        ctx.CancellationToken);
+                }
+
+                result = options.BuildQueryResult(filteredData, total, grandTotals).ToObjectResult();
+            }
+
+            if (ctx?.Listener is not null)
+            {
+                await ctx.Listener.QueryMaterializedAsync(
+                    new QueryMaterializedEvent(ctx.QueryId, result, null, ctx.Stopwatch.Elapsed, DateTimeOffset.UtcNow),
+                    ctx.CancellationToken);
+            }
+        }
+        catch (Exception ex)
+        {
+            var now = DateTimeOffset.UtcNow;
+            if (ctx?.Listener is not null)
+            {
+                if (dataList is not null)
+                {
+                    await ctx.Listener.QueryMaterializedAsync(
+                        new QueryMaterializedEvent(ctx.QueryId, null, ex, ctx.Stopwatch.Elapsed, now),
+                        ctx.CancellationToken);
+                }
+                else
+                {
+                    await ctx.Listener.QueryExecutedAsync(
+                        new QueryExecutedEvent(ctx.QueryId, null, ex, ctx.Stopwatch.Elapsed, now),
+                        ctx.CancellationToken);
+                }
+            }
+            throw;
+        }
+
+        return result!;
+    }
+
+    private static string? TryGetSql(IQueryable query)
+    {
+        try { return query.ToQueryString(); }
+        catch { return null; }
     }
 
     private static Task<IReadOnlyList<object>> ExecuteGroupedQuery(

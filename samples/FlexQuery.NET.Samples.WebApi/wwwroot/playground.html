@@ -1,0 +1,680 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FlexQuery.NET — Query Playground</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
+    <style>
+        :root {
+            --bg-primary: #0b0f19; --bg-secondary: #111827; --bg-card: #1f2937;
+            --accent: #6366f1; --accent-gradient: linear-gradient(135deg, #6366f1 0%, #a855f7 100%);
+            --text-main: #f3f4f6; --text-muted: #9ca3af; --text-dim: #6b7280;
+            --border: #374151; --green: #22c55e; --orange: #f59e0b; --amber: #fbbf24;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: 'Plus Jakarta Sans', sans-serif; background: var(--bg-primary); color: var(--text-main); min-height: 100vh; display: flex; flex-direction: column; }
+        header { background: var(--bg-secondary); border-bottom: 1px solid var(--border); padding: 1rem 2rem; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 100; }
+        .logo-section h1 { font-family: 'Outfit', sans-serif; font-size: 1.35rem; font-weight: 700; background: var(--accent-gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .logo-section p { font-size: 0.75rem; color: var(--text-muted); }
+        nav { display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap; }
+        nav a { color: var(--text-muted); text-decoration: none; font-weight: 500; font-size: 0.875rem; padding: 0.45rem 0.9rem; border-radius: 6px; transition: all 0.2s; }
+        nav a:hover { color: var(--text-main); background: rgba(255,255,255,0.05); }
+        nav a.active { color: #fff; background: var(--accent-gradient); }
+
+        .page-layout { display: flex; flex: 1; gap: 0; overflow: hidden; }
+        .left-panel { width: 360px; min-width: 300px; background: var(--bg-secondary); border-right: 1px solid var(--border); display: flex; flex-direction: column; overflow-y: auto; padding: 1rem; }
+        .right-panel { flex: 1; display: flex; flex-direction: column; overflow-y: auto; padding: 1rem; gap: 0.6rem; min-width: 0; }
+
+        .section-label { font-size: 0.68rem; font-weight: 600; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.4rem; }
+
+        .example-chips { display: flex; flex-wrap: wrap; gap: 0.3rem; margin-bottom: 1rem; }
+        .example-chip { padding: 0.3rem 0.55rem; border-radius: 6px; font-size: 0.72rem; font-weight: 500; cursor: pointer; border: 1px solid var(--border); background: var(--bg-card); color: var(--text-muted); white-space: nowrap; transition: all 0.15s; }
+        .example-chip:hover { border-color: var(--accent); color: var(--text-main); background: rgba(99,102,241,0.1); }
+        .example-chip.projection { border-color: var(--amber); color: #fde68a; }
+        .example-chip.projection:hover { border-color: #f59e0b; background: rgba(245,158,11,0.12); }
+        .example-chip.group { border-color: #8b5cf6; color: #c4b5fd; }
+        .example-chip.group:hover { border-color: #a78bfa; background: rgba(139,92,246,0.12); }
+        .example-chip.aggregate { border-color: #06b6d4; color: #67e8f9; }
+        .example-chip.aggregate:hover { border-color: #22d3ee; background: rgba(6,182,212,0.12); }
+        .example-chip.having { border-color: var(--orange); color: #fde68a; }
+        .example-chip.having:hover { border-color: #f59e0b; background: rgba(245,158,11,0.12); }
+
+        .chip-divider { font-size: 0.62rem; font-weight: 600; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.08em; padding: 0.3rem 0 0.15rem; border-top: 1px solid var(--border); margin-top: 0.15rem; }
+
+        .input-group { margin-bottom: 0.6rem; }
+        .input-group label { display: block; font-size: 0.68rem; font-weight: 600; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.2rem; }
+        .input-group input, .input-group select {
+            width: 100%; background: var(--bg-card); border: 1px solid var(--border); color: var(--text-main);
+            padding: 0.4rem 0.6rem; border-radius: 5px; font-family: 'Outfit', monospace; font-size: 0.78rem;
+        }
+        .input-group input:focus, .input-group select:focus { outline: none; border-color: var(--accent); }
+        .input-row { display: flex; gap: 0.6rem; }
+        .input-row .input-group { flex: 1; }
+
+        .provider-row { display: flex; gap: 0.35rem; margin-bottom: 0.6rem; }
+        .provider-option { flex: 1; padding: 0.4rem; text-align: center; border-radius: 5px; cursor: pointer; font-size: 0.75rem; font-weight: 500; border: 1px solid var(--border); background: var(--bg-card); color: var(--text-muted); transition: all 0.15s; }
+        .provider-option:hover { border-color: var(--accent); }
+        .provider-option.active { background: rgba(99,102,241,0.2); border-color: var(--accent); color: #fff; font-weight: 600; }
+        .provider-option input { display: none; }
+
+        .execute-btn { width: 100%; background: var(--accent-gradient); color: #fff; border: none; padding: 0.5rem; border-radius: 7px; font-weight: 600; font-size: 0.85rem; cursor: pointer; transition: all 0.2s; }
+        .execute-btn:hover { transform: translateY(-1px); box-shadow: 0 4px 15px rgba(99,102,241,0.4); }
+        .execute-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; box-shadow: none; }
+
+        /* Pipeline Banner */
+        .pipeline-banner {
+            background: var(--bg-card); border: 1px solid var(--border); border-radius: 7px;
+            padding: 0.35rem 0.65rem; font-size: 0.65rem; color: var(--text-dim); text-align: center;
+            font-family: 'Outfit', sans-serif; letter-spacing: 0.02em; display: flex;
+            align-items: center; justify-content: center; gap: 0.4rem; flex-wrap: wrap;
+        }
+        .pipeline-banner .step { color: var(--text-muted); }
+        .pipeline-banner .arrow { color: var(--accent); }
+        .pipeline-banner .active-step { color: #fff; font-weight: 700; background: var(--accent-gradient); padding: 0.1rem 0.4rem; border-radius: 3px; font-size: 0.6rem; }
+
+        /* Meta Row */
+        .output-meta { display: flex; gap: 0.35rem; flex-wrap: wrap; align-items: center; }
+        .output-meta-item { background: var(--bg-card); border: 1px solid var(--border); border-radius: 4px; padding: 0.15rem 0.45rem; font-size: 0.62rem; }
+        .output-meta-item .label { color: var(--text-dim); }
+        .output-meta-item .value { font-weight: 600; }
+
+        .status-dot { width: 5px; height: 5px; border-radius: 50%; display: inline-block; margin-right: 0.25rem; vertical-align: middle; }
+        .status-dot.ready { background: var(--text-dim); }
+        .status-dot.live { background: var(--green); }
+        .status-dot.error { background: #ef4444; }
+
+        .proj-diff { color: var(--green); font-size: 0.58rem; margin-left: 0.2rem; }
+        .proj-diff.worse { color: #ef4444; }
+
+        /* View Mode Toggle */
+        .view-mode-toggle { display: flex; gap: 2px; background: rgba(255,255,255,0.05); border-radius: 3px; padding: 2px; margin-left: auto; }
+        .view-mode-option { padding: 0.15rem 0.45rem; font-size: 0.6rem; font-weight: 600; cursor: pointer; border-radius: 2px; color: var(--text-dim); transition: all 0.15s; white-space: nowrap; }
+        .view-mode-option:hover { color: var(--text-main); }
+        .view-mode-option.active { background: var(--accent-gradient); color: #fff; }
+
+        /* Output Card Base */
+        .output-card { background: var(--bg-secondary); border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+        .output-card-header { display: flex; justify-content: space-between; align-items: center; padding: 0.45rem 0.85rem; background: #1a1f2e; border-bottom: 1px solid var(--border); }
+        .output-card-header h3 { font-family: 'Outfit', sans-serif; font-size: 0.75rem; font-weight: 600; }
+        .output-card-body { padding: 0.6rem 0.85rem; }
+
+        /* Diagnostics Card */
+        .diag-card { flex-shrink: 0; }
+        .diag-tabs { display: flex; gap: 0; background: #1a1f2e; border-bottom: 1px solid var(--border); overflow-x: auto; }
+        .diag-tab { padding: 0.35rem 0.7rem; font-size: 0.65rem; font-weight: 600; cursor: pointer; color: var(--text-dim); border-bottom: 2px solid transparent; transition: all 0.15s; white-space: nowrap; }
+        .diag-tab:hover { color: var(--text-main); }
+        .diag-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+        .diag-panel { display: none; }
+        .diag-panel.active { display: block; }
+
+        .output-url { font-family: 'Outfit', monospace; font-size: 0.68rem; color: #93c5fd; line-height: 1.4; word-break: break-all; white-space: pre-wrap; }
+        .output-url .url-muted { color: var(--text-dim); }
+
+        .output-json { background: #0d1117; border: 1px solid var(--border); border-radius: 5px; padding: 0.45rem 0.65rem; font-family: 'Outfit', monospace; font-size: 0.65rem; line-height: 1.4; color: #e2e8f0; overflow-x: auto; white-space: pre-wrap; word-break: break-all; max-height: 180px; overflow-y: auto; }
+        .output-payload { max-height: 260px; }
+        .output-json .key { color: #60a5fa; } .output-json .str { color: #34d399; } .output-json .num { color: #f59e0b; } .output-json .bool { color: #c084fc; } .output-json .null { color: #6b7280; }
+
+        .output-sql { background: #0d1117; border: 1px solid var(--border); border-radius: 5px; padding: 0.45rem 0.65rem; font-family: 'Outfit', monospace; font-size: 0.62rem; line-height: 1.4; color: #e2e8f0; overflow-x: auto; white-space: pre-wrap; max-height: 120px; overflow-y: auto; }
+        .sql-params { margin-top: 0.35rem; font-size: 0.6rem; color: var(--text-dim); font-family: 'Outfit', monospace; }
+
+        .payload-header { display: flex; justify-content: flex-end; margin-bottom: 0.35rem; }
+        .payload-header label { font-size: 0.62rem; color: var(--text-dim); cursor: pointer; display: flex; align-items: center; gap: 0.25rem; }
+        .payload-header input { accent-color: var(--accent); }
+
+        .badge { font-size: 0.58rem; padding: 0.12rem 0.4rem; border-radius: 3px; font-weight: 600; }
+        .badge-ef { background: rgba(99,102,241,0.2); color: var(--accent); }
+        .badge-dapper { background: rgba(245,158,11,0.2); color: var(--orange); }
+
+        /* Results Card - Hero */
+        .results-card { flex: 1; display: flex; flex-direction: column; min-height: 300px; }
+        .results-card .output-card-body { flex: 1; overflow: auto; }
+
+        .results-table { width: 100%; border-collapse: collapse; font-size: 0.7rem; }
+        .results-table th { text-align: left; padding: 0.3rem 0.45rem; color: var(--text-dim); font-size: 0.6rem; font-weight: 600; text-transform: uppercase; border-bottom: 1px solid var(--border); position: sticky; top: 0; background: var(--bg-secondary); }
+        .results-table td { padding: 0.25rem 0.45rem; border-bottom: 1px solid var(--border); color: var(--text-main); }
+        .results-table tr:hover td { background: rgba(255,255,255,0.02); }
+
+        .view-toggle { display: flex; gap: 2px; background: rgba(255,255,255,0.05); border-radius: 3px; padding: 2px; }
+        .toggle-option { padding: 0.15rem 0.45rem; font-size: 0.6rem; font-weight: 600; cursor: pointer; border-radius: 2px; color: var(--text-dim); transition: all 0.15s; }
+        .toggle-option:hover { color: var(--text-main); }
+        .toggle-option.active { background: var(--accent-gradient); color: #fff; }
+
+        .results-json { display: none; }
+        .results-json.visible { display: block; max-height: unset; }
+
+        /* Empty State Hero */
+        .results-empty-hero { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 2.5rem 1rem; color: var(--text-dim); gap: 1rem; min-height: 200px; }
+        .results-empty-hero .hero-icon { font-size: 2rem; opacity: 0.3; }
+        .results-empty-hero p { font-size: 0.85rem; font-weight: 500; }
+        .results-empty-hero .empty-chips { display: flex; gap: 0.4rem; flex-wrap: wrap; justify-content: center; }
+        .results-empty-hero .empty-chips span { padding: 0.35rem 0.65rem; background: var(--bg-card); border: 1px solid var(--border); border-radius: 6px; cursor: pointer; font-size: 0.72rem; color: var(--text-muted); transition: all 0.15s; }
+        .results-empty-hero .empty-chips span:hover { border-color: var(--accent); color: var(--text-main); background: rgba(99,102,241,0.08); }
+
+        /* Pipeline View Mode */
+        .pipeline-mode .diag-card { flex-shrink: unset; flex: unset; }
+        .pipeline-mode .results-card { flex: unset; min-height: 180px; }
+        .pipeline-mode .output-payload { max-height: 160px; }
+        .pipeline-mode .output-json { max-height: 120px; }
+
+        footer { text-align: center; padding: 0.65rem 2rem; font-size: 0.65rem; color: var(--text-dim); border-top: 1px solid var(--border); background: var(--bg-secondary); display: flex; justify-content: center; align-items: center; gap: 0.75rem; flex-wrap: wrap; margin-top: auto; }
+        footer a { color: var(--text-muted); text-decoration: none; }
+        footer a:hover { color: var(--accent); }
+        footer .sep { color: var(--border); }
+
+        @media (max-width: 900px) {
+            .page-layout { flex-direction: column; }
+            .left-panel { width: 100%; min-width: unset; border-right: none; border-bottom: 1px solid var(--border); max-height: 45vh; }
+            header { flex-direction: column; gap: 0.5rem; padding: 0.65rem 1rem; }
+            nav { flex-wrap: wrap; justify-content: center; }
+            .view-mode-toggle { margin-left: 0; }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="logo-section">
+            <h1>&#9889; FlexQuery.NET</h1>
+            <p>Query Playground</p>
+        </div>
+        <nav>
+            <a href="/">Home</a>
+            <a href="/aggrid.html">AG Grid</a>
+            <a href="/kendo.html">Kendo UI</a>
+            <a href="/comparison.html">Comparison</a>
+            <a href="/playground.html" class="active">Playground</a>
+            <a href="/swagger">API Docs</a>
+        </nav>
+    </header>
+
+    <div class="page-layout">
+        <div class="left-panel">
+            <div class="section-label">Example Queries</div>
+            <div class="example-chips">
+                <div class="example-chip" onclick="loadPreset('active')">&#128293; Active</div>
+                <div class="example-chip" onclick="loadPreset('houston')">&#127961; Houston</div>
+                <div class="example-chip" onclick="loadPreset('email-smith')">&#128231; Email filter</div>
+                <div class="example-chip" onclick="loadPreset('newest')">&#128197; Newest</div>
+                <div class="example-chip projection" onclick="loadPreset('projection')">&#127919; Projection</div>
+                <div class="example-chip" onclick="loadPreset('include-orders')">&#128230; +Orders</div>
+                <div class="example-chip" onclick="loadPreset('multi-sort')">&#128257; Multi Sort</div>
+                <div class="chip-divider">Advanced Query Features</div>
+                <div class="example-chip group" onclick="loadPreset('group-status')">&#128101; Group By Status</div>
+                <div class="example-chip group" onclick="loadPreset('group-city')">&#127961; Group By City</div>
+                <div class="example-chip aggregate" onclick="loadPreset('aggregates')">&#128202; Aggregates Demo</div>
+                <div class="example-chip having" onclick="loadPreset('having')">&#128293; Having Demo</div>
+            </div>
+
+            <div class="section-label">Query Parameters</div>
+
+            <div class="input-group">
+                <label>Filter (DSL)</label>
+                <input type="text" id="pgFilter" placeholder="status:eq:active" oninput="updateUrlPreview()">
+            </div>
+            <div class="input-group">
+                <label>Sort</label>
+                <input type="text" id="pgSort" placeholder="createdDate:desc" oninput="updateUrlPreview()">
+            </div>
+            <div class="input-row">
+                <div class="input-group">
+                    <label>Page</label>
+                    <input type="number" id="pgPage" value="1" min="1" oninput="updateUrlPreview()">
+                </div>
+                <div class="input-group">
+                    <label>Page Size</label>
+                    <input type="number" id="pgPageSize" value="20" min="1" max="50" oninput="updateUrlPreview()">
+                </div>
+            </div>
+            <div class="input-group">
+                <label>Select (projection)</label>
+                <input type="text" id="pgSelect" placeholder="id,firstName,email" oninput="updateUrlPreview()">
+            </div>
+            <div class="input-group">
+                <label>Include (navigation)</label>
+                <input type="text" id="pgInclude" placeholder="orders" oninput="updateUrlPreview()">
+            </div>
+            <div class="input-group">
+                <label>GroupBy</label>
+                <input type="text" id="pgGroupByInput" placeholder="status" oninput="updateUrlPreview()">
+            </div>
+            <div class="input-group">
+                <label>Having (DSL)</label>
+                <input type="text" id="pgHavingInput" placeholder="count:gt:20" oninput="updateUrlPreview()">
+            </div>
+
+            <div class="section-label">Provider</div>
+            <div class="provider-row" id="providerSwitch">
+                <div class="provider-option active" data-provider="ef" onclick="setProvider('ef')">
+                    <input type="radio" name="provider" value="ef" checked>EF Core
+                </div>
+                <div class="provider-option" data-provider="dapper" onclick="setProvider('dapper')">
+                    <input type="radio" name="provider" value="dapper">Dapper
+                </div>
+            </div>
+
+            <button class="execute-btn" id="pgExecuteBtn" onclick="runPlayground()">&#9654; Execute</button>
+        </div>
+
+        <div class="right-panel" id="rightPanel">
+            <!-- Pipeline Banner -->
+            <div class="pipeline-banner">
+                <span class="step">DSL</span>
+                <span class="arrow">&#8594;</span>
+                <span class="step">QueryOptions</span>
+                <span class="arrow">&#8594;</span>
+                <span class="step">SQL</span>
+                <span class="arrow">&#8594;</span>
+                <span class="step">JSON</span>
+                <span class="arrow">&#8594;</span>
+                <span class="active-step">Results</span>
+            </div>
+
+            <!-- Meta Row -->
+            <div class="output-meta">
+                <div class="output-meta-item"><span class="status-dot ready" id="pgStatusDot"></span><span class="label">Status:</span> <span class="value" id="pgStatus">Ready</span></div>
+                <div class="output-meta-item"><span class="label">Provider:</span> <span class="value" id="pgMetaProvider">EF Core</span></div>
+                <div class="output-meta-item"><span class="label">Response:</span> <span class="value" id="pgTime">—</span></div>
+                <div class="output-meta-item"><span class="label">Rows:</span> <span class="value" id="pgRows">—</span></div>
+                <div class="output-meta-item"><span class="label">Total:</span> <span class="value" id="pgTotal">—</span></div>
+                <div class="output-meta-item"><span class="label">Filters:</span> <span class="value" id="pgFilters">0</span></div>
+                <div class="output-meta-item"><span class="label">Sorts:</span> <span class="value" id="pgSorts">0</span></div>
+                <div class="output-meta-item" id="pgMetaGroupBy" style="display:none;"><span class="label">GroupBy:</span> <span class="value" id="pgGroupBy">—</span></div>
+                <div class="output-meta-item" id="pgMetaAggregates" style="display:none;"><span class="label">Aggregates:</span> <span class="value" id="pgAggregates">—</span></div>
+                <div class="output-meta-item" id="pgMetaHaving" style="display:none;"><span class="label">Having:</span> <span class="value" id="pgHaving">—</span></div>
+                <div class="output-meta-item"><span class="label">Cols:</span> <span class="value" id="pgColumns">—</span></div>
+                <div class="output-meta-item"><span class="label">Payload:</span> <span class="value" id="pgPayloadSize">—</span></div>
+                <div class="view-mode-toggle" id="viewModeToggle">
+                    <span class="view-mode-option active" data-mode="results" onclick="setViewMode('results')">Results Focus</span>
+                    <span class="view-mode-option" data-mode="pipeline" onclick="setViewMode('pipeline')">Pipeline Focus</span>
+                </div>
+            </div>
+
+            <!-- Diagnostics Card (Tabs) -->
+            <div class="output-card diag-card" id="diagCard">
+                <div class="diag-tabs">
+                    <span class="diag-tab active" data-tab="request" onclick="switchDiagTab('request')">Request</span>
+                    <span class="diag-tab" data-tab="options" onclick="switchDiagTab('options')">QueryOptions</span>
+                    <span class="diag-tab" data-tab="sql" onclick="switchDiagTab('sql')">SQL</span>
+                    <span class="diag-tab" data-tab="payload" onclick="switchDiagTab('payload')">Payload</span>
+                </div>
+                <div class="output-card-body">
+                    <div class="diag-panel active" id="diagRequest">
+                        <div class="output-url" id="pgUrlPreview"><span class="url-muted">Type parameters on the left to build the URL...</span></div>
+                    </div>
+                    <div class="diag-panel" id="diagOptions">
+                        <div class="output-json" id="pgOptions"><span class="null">Execute a query to see parsed QueryOptions...</span></div>
+                    </div>
+                    <div class="diag-panel" id="diagSql">
+                        <div class="output-sql" id="pgSql"><span style="color:var(--text-dim);font-style:italic;">Execute a query to see generated SQL...</span></div>
+                        <div class="sql-params" id="pgSqlParams"></div>
+                    </div>
+                    <div class="diag-panel" id="diagPayload">
+                        <div class="payload-header">
+                            <label><input type="checkbox" id="pgPayloadMetaToggle" onchange="togglePayloadMeta()"> Show Diagnostics Metadata</label>
+                        </div>
+                        <div class="output-json output-payload" id="pgPayload"><span class="null">Execute a query to see the API response...</span></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Results Card (Hero) -->
+            <div class="output-card results-card" id="resultsCard">
+                <div class="output-card-header">
+                    <h3>&#128202; Results Preview</h3>
+                    <div class="view-toggle" id="pgViewToggle">
+                        <span class="toggle-option active" data-view="table" onclick="setResultView('table')">Table</span>
+                        <span class="toggle-option" data-view="json" onclick="setResultView('json')">JSON</span>
+                    </div>
+                </div>
+                <div class="output-card-body">
+                    <div id="pgResults">
+                        <div class="results-empty-hero">
+                            <div class="hero-icon">&#9889;</div>
+                            <p>Try one of the example queries</p>
+                            <div class="empty-chips">
+                                <span onclick="loadPreset('active')">&#128293; Active Customers</span>
+                                <span onclick="loadPreset('houston')">&#127961; Houston Customers</span>
+                                <span onclick="loadPreset('projection')">&#127919; Projection Demo</span>
+                                <span onclick="loadPreset('include-orders')">&#128230; Include Orders</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="output-json results-json" id="pgResultsJson"><span class="null">Execute a query to see results</span></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <footer>
+        <span>&#9889; FlexQuery.NET v3.0.7</span>
+        <span class="sep">|</span>
+        <a href="https://nuget.org/packages/FlexQuery.NET" target="_blank">dotnet add package FlexQuery.NET</a>
+        <span class="sep">|</span>
+        <a href="https://github.com/peterjohncasasola/FlexQuery.NET" target="_blank">View on GitHub</a>
+        <span class="sep">|</span>
+        <a href="https://github.com/peterjohncasasola/FlexQuery.NET/stargazers" target="_blank">
+            <img src="https://img.shields.io/github/stars/peterjohncasasola/FlexQuery.NET?style=flat&amp;label=Stars&amp;color=6366f1" alt="Stars">
+        </a>
+        <a href="https://nuget.org/packages/FlexQuery.NET" target="_blank">
+            <img src="https://img.shields.io/nuget/v/FlexQuery.NET?style=flat&amp;label=NuGet&amp;color=6366f1" alt="NuGet">
+        </a>
+    </footer>
+
+    <script>
+        let currentProvider = 'ef';
+        let lastResponse = null;
+        let currentView = 'table';
+        let currentDiagTab = 'request';
+        let showPayloadMeta = false;
+        let cleanPayloadJson = '';
+        let fullPayloadJson = '';
+        let prevCols = null;
+        let prevPayloadBytes = null;
+
+        const ENDPOINTS = { ef: '/api/ef/customers', dapper: '/api/dapper/customers' };
+
+        const PRESETS = {
+            'active': { filter: 'Status:eq:Active', sort: '', select: '', include: '', page: '1', pageSize: '20', groupBy: '', having: '' },
+            'houston': { filter: 'City:eq:Houston', sort: '', select: '', include: '', page: '1', pageSize: '20', groupBy: '', having: '' },
+            'email-smith': { filter: 'Email:contains:smith', sort: '', select: '', include: '', page: '1', pageSize: '20', groupBy: '', having: '' },
+            'newest': { filter: '', sort: 'CreatedDate:desc', select: '', include: '', page: '1', pageSize: '20', groupBy: '', having: '' },
+            'projection': { filter: '', sort: '', select: 'id,firstName,email', include: '', page: '1', pageSize: '20', groupBy: '', having: '' },
+            'include-orders': { filter: '', sort: '', select: 'id,firstName,email', include: 'Orders', page: '1', pageSize: '10', groupBy: '', having: '' },
+            'multi-sort': { filter: '', sort: 'City:asc,CreatedDate:desc', select: '', include: '', page: '1', pageSize: '20', groupBy: '', having: '' },
+            'group-status': { filter: '', sort: '', select: 'status,count()', include: '', page: '1', pageSize: '50', groupBy: 'status', having: '' },
+            'group-city': { filter: '', sort: '', select: 'city,count()', include: '', page: '1', pageSize: '50', groupBy: 'city', having: '' },
+            'aggregates': { filter: '', sort: '', select: 'status,count(),avg(salary),max(salary)', include: '', page: '1', pageSize: '50', groupBy: 'status', having: '' },
+            'having': { filter: '', sort: '', select: 'status,count()', include: '', page: '1', pageSize: '50', groupBy: 'status', having: 'count:gt:20' }
+        };
+
+        function setProvider(prov) {
+            if (currentProvider === prov) return;
+            currentProvider = prov;
+            document.querySelectorAll('#providerSwitch .provider-option').forEach(o => o.classList.toggle('active', o.dataset.provider === prov));
+            document.getElementById('pgMetaProvider').textContent = prov === 'dapper' ? 'Dapper' : 'EF Core';
+            updateUrlPreview();
+        }
+
+        function loadPreset(name) {
+            const p = PRESETS[name];
+            if (!p) return;
+            document.getElementById('pgFilter').value = p.filter;
+            document.getElementById('pgSort').value = p.sort;
+            document.getElementById('pgPage').value = p.page;
+            document.getElementById('pgPageSize').value = p.pageSize;
+            document.getElementById('pgSelect').value = p.select;
+            document.getElementById('pgInclude').value = p.include;
+            document.getElementById('pgGroupByInput').value = p.groupBy || '';
+            document.getElementById('pgHavingInput').value = p.having || '';
+            updateUrlPreview();
+            runPlayground();
+        }
+
+        function buildQueryString() {
+            const filter = document.getElementById('pgFilter').value.trim();
+            const sort = document.getElementById('pgSort').value.trim();
+            const page = document.getElementById('pgPage').value;
+            const pageSize = document.getElementById('pgPageSize').value;
+            const select = document.getElementById('pgSelect').value.trim();
+            const include = document.getElementById('pgInclude').value.trim();
+            const groupBy = document.getElementById('pgGroupByInput').value.trim();
+            const having = document.getElementById('pgHavingInput').value.trim();
+
+            const params = new URLSearchParams();
+            if (filter) params.set('filter', filter);
+            if (sort) params.set('sort', sort);
+            if (page && page !== '1') params.set('page', page);
+            if (pageSize && pageSize !== '20') params.set('pageSize', pageSize);
+            if (select) params.set('select', select);
+            if (include) params.set('include', include);
+            if (groupBy) params.set('groupBy', groupBy);
+            if (having) params.set('having', having);
+            return params.toString();
+        }
+
+        function formatPayloadSize(bytes) {
+            return bytes < 1024 ? bytes + ' B' : (bytes / 1024).toFixed(1) + ' KB';
+        }
+
+        function updateUrlPreview() {
+            const qs = buildQueryString();
+            const url = ENDPOINTS[currentProvider] + (qs ? '?' + qs : '');
+            const el = document.getElementById('pgUrlPreview');
+            if (qs) {
+                el.innerHTML = '<span class="url-muted">' + ENDPOINTS[currentProvider] + '</span>?<br>' + highlightQueryString(qs);
+            } else {
+                el.textContent = ENDPOINTS[currentProvider];
+            }
+        }
+
+        function highlightQueryString(qs) {
+            return qs.split('&').map(pair => {
+                const [k, v] = pair.split('=');
+                return '  <span class="key">' + k + '</span>=<span class="str">' + (v || '') + '</span>';
+            }).join('<br>');
+        }
+
+        function switchDiagTab(tab) {
+            currentDiagTab = tab;
+            document.querySelectorAll('.diag-tab').forEach(t => t.classList.toggle('active', t.dataset.tab === tab));
+            document.querySelectorAll('.diag-panel').forEach(p => p.classList.toggle('active', p.id === 'diag' + tab.charAt(0).toUpperCase() + tab.slice(1)));
+        }
+
+        function setViewMode(mode) {
+            document.getElementById('rightPanel').classList.toggle('pipeline-mode', mode === 'pipeline');
+            document.querySelectorAll('#viewModeToggle .view-mode-option').forEach(o =>
+                o.classList.toggle('active', o.dataset.mode === mode));
+        }
+
+        function setResultView(view) {
+            currentView = view;
+            document.querySelectorAll('#pgViewToggle .toggle-option').forEach(o =>
+                o.classList.toggle('active', o.dataset.view === view));
+            const tableEl = document.getElementById('pgResults');
+            const jsonEl = document.getElementById('pgResultsJson');
+            if (view === 'table') {
+                tableEl.style.display = '';
+                jsonEl.style.display = 'none';
+                jsonEl.classList.remove('visible');
+            } else {
+                tableEl.style.display = 'none';
+                jsonEl.style.display = '';
+                jsonEl.classList.add('visible');
+            }
+        }
+
+        function togglePayloadMeta() {
+            showPayloadMeta = document.getElementById('pgPayloadMetaToggle').checked;
+            document.getElementById('pgPayload').innerHTML = syntaxHighlight(showPayloadMeta ? fullPayloadJson : cleanPayloadJson);
+        }
+
+        async function runPlayground() {
+            const btn = document.getElementById('pgExecuteBtn');
+            btn.disabled = true;
+            btn.textContent = 'Executing...';
+            document.getElementById('pgStatus').textContent = 'Executing...';
+            document.getElementById('pgStatusDot').className = 'status-dot ready';
+
+            const qs = buildQueryString();
+            const endpoint = ENDPOINTS[currentProvider];
+            const url = endpoint + (qs ? '?' + qs : '');
+
+            try {
+                const res = await fetch(url);
+                if (!res.ok) throw new Error('HTTP ' + res.status);
+                const data = await res.json();
+
+                lastResponse = data;
+
+                document.getElementById('pgStatus').textContent = 'Success';
+                document.getElementById('pgStatusDot').className = 'status-dot live';
+
+                const dataRows = data.data || [];
+
+                if (data.__diagnostics) {
+                    const d = data.__diagnostics;
+                    document.getElementById('pgTime').textContent = d.executionTimeMs != null ? d.executionTimeMs + 'ms' : '\u2014';
+
+                    const opts = d.parsedOptions || {};
+                    document.getElementById('pgFilters').textContent = opts.filterCount ?? 0;
+                    document.getElementById('pgSorts').textContent = opts.sortCount ?? 0;
+
+                    if (opts) {
+                        document.getElementById('pgOptions').innerHTML = syntaxHighlight(JSON.stringify(opts, null, 2));
+                    }
+
+                    const groupBy = opts.groupBy;
+                    const aggregates = opts.aggregates;
+                    const having = opts.having;
+
+                    const gbEl = document.getElementById('pgMetaGroupBy');
+                    const agEl = document.getElementById('pgMetaAggregates');
+                    const hvEl = document.getElementById('pgMetaHaving');
+
+                    if (groupBy && groupBy.length > 0) {
+                        document.getElementById('pgGroupBy').textContent = groupBy.join(', ');
+                        gbEl.style.display = '';
+                    } else { gbEl.style.display = 'none'; }
+
+                    if (aggregates && aggregates.length > 0) {
+                        document.getElementById('pgAggregates').textContent = aggregates.length;
+                        agEl.style.display = '';
+                    } else { agEl.style.display = 'none'; }
+
+                    if (having) {
+                        const hvStr = having.function + '(' + (having.field || '') + ')';
+                        document.getElementById('pgHaving').textContent = hvStr;
+                        hvEl.style.display = '';
+                    } else { hvEl.style.display = 'none'; }
+
+                    if (d.generatedSql) {
+                        document.getElementById('pgSql').textContent = d.generatedSql;
+                        let paramHtml = '';
+                        const matches = d.generatedSql.match(/@p\d+/g);
+                        if (matches) {
+                            const seen = new Set();
+                            matches.forEach(m => { if (!seen.has(m)) { seen.add(m); paramHtml += m + ' '; } });
+                            if (paramHtml) paramHtml = 'Parameters: ' + paramHtml.trim();
+                        }
+                        document.getElementById('pgSqlParams').textContent = paramHtml;
+                    } else {
+                        document.getElementById('pgSql').innerHTML = '<span style="color:var(--text-dim);font-style:italic;">SQL preview not available</span>';
+                        document.getElementById('pgSqlParams').textContent = '';
+                    }
+                }
+
+                document.getElementById('pgRows').textContent = dataRows.length || '\u2014';
+                document.getElementById('pgTotal').textContent = data.totalCount ?? '\u2014';
+
+                fullPayloadJson = JSON.stringify(data, null, 2);
+                const { __diagnostics, ...cleanData } = data;
+                cleanPayloadJson = JSON.stringify(cleanData, null, 2);
+                document.getElementById('pgPayload').innerHTML = syntaxHighlight(showPayloadMeta ? fullPayloadJson : cleanPayloadJson);
+
+                const fullBytes = new TextEncoder().encode(fullPayloadJson).length;
+                const cleanBytes = new TextEncoder().encode(cleanPayloadJson).length;
+                const displayBytes = showPayloadMeta ? fullBytes : cleanBytes;
+                document.getElementById('pgPayloadSize').textContent = formatPayloadSize(displayBytes);
+
+                if (dataRows.length > 0) {
+                    const fields = Object.keys(dataRows[0]).filter(f => f !== 'orders');
+                    const colCount = fields.length;
+                    document.getElementById('pgColumns').textContent = colCount;
+
+                    const colsEl = document.getElementById('pgColumns');
+                    if (prevCols !== null && prevCols !== colCount) {
+                        colsEl.innerHTML = colCount + ' <span class="proj-diff">&#9660; ' + prevCols + '</span>';
+                    } else if (prevCols !== null) {
+                        colsEl.textContent = colCount;
+                    }
+                    prevCols = colCount;
+
+                    const sizeEl = document.getElementById('pgPayloadSize');
+                    if (prevPayloadBytes !== null && prevPayloadBytes !== displayBytes) {
+                        const direction = displayBytes < prevPayloadBytes ? '&#9660;' : '&#9650;';
+                        const cls = displayBytes < prevPayloadBytes ? 'proj-diff' : 'proj-diff worse';
+                        sizeEl.innerHTML = formatPayloadSize(displayBytes) + ' <span class="' + cls + '">' + direction + ' ' + formatPayloadSize(prevPayloadBytes) + '</span>';
+                    }
+                    prevPayloadBytes = displayBytes;
+                } else {
+                    document.getElementById('pgColumns').textContent = '\u2014';
+                    prevCols = null;
+                    prevPayloadBytes = null;
+                }
+
+                renderResults(data);
+
+                if (dataRows.length > 0) {
+                    document.getElementById('pgResultsJson').innerHTML = syntaxHighlight(JSON.stringify(dataRows, null, 2));
+                } else {
+                    document.getElementById('pgResultsJson').innerHTML = '<span class="null">[]</span>';
+                }
+
+                if (currentView === 'json') {
+                    document.getElementById('pgResults').style.display = 'none';
+                    document.getElementById('pgResultsJson').style.display = '';
+                    document.getElementById('pgResultsJson').classList.add('visible');
+                }
+
+            } catch (err) {
+                lastResponse = null;
+                document.getElementById('pgStatus').textContent = 'Error';
+                document.getElementById('pgStatusDot').className = 'status-dot error';
+                document.getElementById('pgSql').textContent = 'Error: ' + err.message;
+                document.getElementById('pgSqlParams').textContent = '';
+                document.getElementById('pgPayload').innerHTML = '<span class="null">Error fetching response</span>';
+                document.getElementById('pgPayloadSize').textContent = '\u2014';
+                document.getElementById('pgColumns').textContent = '\u2014';
+                document.getElementById('pgMetaGroupBy').style.display = 'none';
+                document.getElementById('pgMetaAggregates').style.display = 'none';
+                document.getElementById('pgMetaHaving').style.display = 'none';
+                prevCols = null;
+                prevPayloadBytes = null;
+            }
+
+            btn.disabled = false;
+            btn.textContent = '\u25B6 Execute';
+        }
+
+        function renderResults(data) {
+            const container = document.getElementById('pgResults');
+            const rows = data?.data;
+            if (!rows || rows.length === 0) {
+                container.innerHTML = '<div class="results-empty-hero"><div class="hero-icon">&#128270;</div><p>No results found</p></div>';
+                return;
+            }
+
+            const excludeFields = new Set(['orders']);
+            const fields = Object.keys(rows[0]).filter(f => !excludeFields.has(f));
+            let html = '<table class="results-table"><thead><tr>';
+            fields.forEach(f => { html += '<th>' + f + '</th>'; });
+            html += '</tr></thead><tbody>';
+            rows.forEach(row => {
+                html += '<tr>';
+                fields.forEach(f => {
+                    let val = row[f] ?? '';
+                    if (f === 'createdDate' && val) val = new Date(val).toLocaleDateString();
+                    if (typeof val === 'object') val = JSON.stringify(val);
+                    html += '<td>' + String(val).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').substring(0, 60) + '</td>';
+                });
+                html += '</tr>';
+            });
+            html += '</tbody></table>';
+            container.innerHTML = html;
+        }
+
+        function syntaxHighlight(json) {
+            return json.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+                .replace(/"([^"]+)"\s*:/g, '<span class="key">"$1"</span>:')
+                .replace(/: "([^"]*)"/g, ': <span class="str">"$1"</span>')
+                .replace(/: (\d+(?:\.\d+)?)/g, ': <span class="num">$1</span>')
+                .replace(/: (true|false)/g, ': <span class="bool">$1</span>')
+                .replace(/: (null)/g, ': <span class="null">$1</span>');
+        }
+
+        updateUrlPreview();
+    </script>
+</body>
+</html>

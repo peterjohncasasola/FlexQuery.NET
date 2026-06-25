@@ -1,5 +1,6 @@
 <Solution>
   <Folder Name="/src/">
+    <Project Path="src/FlexQuery.NET.Diagnostics/FlexQuery.NET.Diagnostics.csproj" />
     <Project Path="src/FlexQuery.NET.EntityFrameworkCore/FlexQuery.NET.EntityFrameworkCore.csproj" />
     <Project Path="src/FlexQuery.NET/FlexQuery.NET.csproj" />
     <Project Path="src/FlexQuery.NET.AspNetCore/FlexQuery.NET.AspNetCore.csproj" />
@@ -11,5 +12,8 @@
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/FlexQuery.NET.Tests/FlexQuery.NET.Tests.csproj" />
+  </Folder>
+  <Folder Name="/samples/">
+    <Project Path="samples/FlexQuery.NET.Samples.WebApi/FlexQuery.NET.Samples.WebApi.csproj" />
   </Folder>
 </Solution>

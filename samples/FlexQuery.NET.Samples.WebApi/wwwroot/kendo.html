@@ -1,0 +1,541 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FlexQuery.NET — Kendo UI Grid Diagnostic Demo</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@progress/kendo-theme-default/dist/all.css" />
+    <script src="https://kendo.cdn.telerik.com/2023.2.829/js/kendo.all.min.js"></script>
+    <style>
+        :root {
+            --bg-primary: #0b0f19; --bg-secondary: #111827; --bg-card: #1f2937;
+            --accent: #6366f1; --accent-gradient: linear-gradient(135deg, #6366f1 0%, #a855f7 100%);
+            --text-main: #f3f4f6; --text-muted: #9ca3af; --text-dim: #6b7280;
+            --border: #374151; --green: #22c55e; --orange: #f59e0b;
+            --brand-kendo: #f35800;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: 'Plus Jakarta Sans', sans-serif; background: var(--bg-primary); color: var(--text-main); min-height: 100vh; display: flex; flex-direction: column; }
+        header { background: var(--bg-secondary); border-bottom: 1px solid var(--border); padding: 1rem 2rem; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 100; }
+        .logo-section h1 { font-family: 'Outfit', sans-serif; font-size: 1.35rem; font-weight: 700; background: var(--accent-gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .logo-section p { font-size: 0.75rem; color: var(--text-muted); }
+        nav { display: flex; gap: 0.5rem; align-items: center; }
+        nav a { color: var(--text-muted); text-decoration: none; font-weight: 500; font-size: 0.875rem; padding: 0.45rem 0.9rem; border-radius: 6px; transition: all 0.2s; }
+        nav a:hover { color: var(--text-main); background: rgba(255,255,255,0.05); }
+        nav a.active { color: #fff; background: var(--accent-gradient); }
+        .badge-link { padding: 0.25rem 0.5rem; }
+        .badge-link img { height: 20px; display: block; }
+
+        .adapter-banner {
+            background: linear-gradient(135deg, rgba(243,88,0,0.08) 0%, rgba(99,102,241,0.08) 100%);
+            border-left: 3px solid var(--brand-kendo);
+            margin: 0.75rem 1.5rem 0;
+            padding: 0.55rem 1rem;
+            border-radius: 8px;
+            font-size: 0.78rem;
+            color: var(--text-muted);
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+        }
+        .adapter-banner .icon { font-size: 0.9rem; flex-shrink: 0; }
+        .adapter-banner strong { color: var(--text-main); }
+        .adapter-banner .badge {
+            background: var(--brand-kendo);
+            color: #fff;
+            font-size: 0.58rem;
+            font-weight: 700;
+            padding: 0.15rem 0.4rem;
+            border-radius: 4px;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            margin-left: 0.2rem;
+        }
+        .adapter-banner a { color: var(--accent); text-decoration: none; white-space: nowrap; }
+        .adapter-banner a:hover { text-decoration: underline; }
+
+        .page-layout { display: flex; flex: 1; gap: 0; overflow: hidden; }
+        .grid-area { flex: 1; display: flex; flex-direction: column; padding: 1.25rem 1.5rem 0; min-width: 0; }
+
+        .grid-toolbar { display: flex; flex-direction: column; gap: 0.5rem; margin-bottom: 0.75rem; }
+        .toolbar-row { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.75rem; }
+        .grid-title h2 { font-family: 'Outfit', sans-serif; font-size: 1.05rem; font-weight: 600; }
+        .grid-title span { font-size: 0.78rem; color: var(--text-muted); font-weight: 400; margin-left: 0.5rem; }
+
+        .demo-chips { display: flex; gap: 0.4rem; flex-wrap: wrap; align-items: center; }
+        .demo-chip { padding: 0.3rem 0.6rem; border-radius: 6px; font-size: 0.72rem; font-weight: 500; cursor: pointer; border: 1px solid var(--border); background: var(--bg-card); color: var(--text-muted); white-space: nowrap; transition: all 0.15s; }
+        .demo-chip:hover { border-color: var(--accent); color: var(--text-main); background: rgba(99,102,241,0.1); }
+
+        .grid-container { flex: 1; min-height: 300px; background: var(--bg-secondary); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.3); }
+        .grid-container > #grid { height: 100%; }
+
+        :root {
+            --kendo-color-app-surface: #111827 !important;
+            --kendo-color-on-app-surface: #f3f4f6 !important;
+            --kendo-color-surface: #1f2937 !important;
+            --kendo-color-border: #374151 !important;
+            --kendo-color-base: #1f2937 !important;
+            --kendo-color-primary: #6366f1 !important;
+            --kendo-body-bg: #111827 !important;
+            --kendo-body-text: #f3f4f6 !important;
+        }
+        .k-grid { background: var(--bg-secondary) !important; border-color: var(--border) !important; color: var(--text-main) !important; font-family: 'Plus Jakarta Sans', sans-serif !important; }
+        .k-grid-header { background: #1f2937 !important; border-bottom: 1px solid var(--border) !important; }
+        .k-header { color: var(--text-main) !important; font-weight: 600 !important; background: #1f2937 !important; }
+        .k-grid td { border-color: var(--border) !important; background: var(--bg-secondary) !important; color: var(--text-main) !important; }
+        .k-grid tr.k-alt td { background: #182232 !important; }
+        .k-grid tr:hover td { background: rgba(99,102,241,0.12) !important; }
+        .k-grid-pager { background: #1f2937 !important; color: var(--text-main) !important; border-top: 1px solid var(--border) !important; }
+        .k-pager-numbers .k-link { color: var(--text-muted) !important; background: transparent !important; }
+        .k-pager-numbers .k-selected { background: var(--accent) !important; color: #fff !important; border-radius: 4px !important; }
+        .k-pager-info { color: var(--text-muted) !important; }
+        .k-filter-row td { background: #1a1f2e !important; border-color: var(--border) !important; }
+        .k-filter-row input, .k-filter-row .k-dropdown { background: var(--bg-card) !important; color: var(--text-main) !important; border-color: var(--border) !important; }
+        .k-pager-wrap { background: #1f2937 !important; border-color: var(--border) !important; }
+        .k-input, .k-picker { background: var(--bg-card) !important; color: var(--text-main) !important; border-color: var(--border) !important; }
+
+        .diag-panel { width: 400px; min-width: 300px; background: var(--bg-secondary); border-left: 1px solid var(--border); display: flex; flex-direction: column; overflow: hidden; transition: width 0.25s ease, min-width 0.25s ease; }
+        .diag-panel.collapsed { width: 0; min-width: 0; border-left: none; }
+        .diag-panel-toggle { position: absolute; right: 0; top: 50%; transform: translateY(-50%); background: var(--bg-card); border: 1px solid var(--border); color: var(--text-muted); width: 24px; height: 48px; cursor: pointer; font-size: 0.7rem; border-radius: 6px 0 0 6px; z-index: 10; display: flex; align-items: center; justify-content: center; }
+        .diag-panel-toggle:hover { border-color: var(--accent); color: #fff; }
+        .diag-panel-wrapper { position: relative; display: flex; height: 100%; }
+
+        .diag-header { display: flex; justify-content: space-between; align-items: center; padding: 0.85rem 1rem; border-bottom: 1px solid var(--border); font-family: 'Outfit', sans-serif; font-weight: 600; font-size: 0.85rem; background: #1a1f2e; }
+        .diag-endpoint-badge { font-family: 'Outfit', monospace; font-size: 0.58rem; font-weight: 400; background: var(--bg-card); border: 1px solid var(--border); border-radius: 4px; padding: 0.15rem 0.4rem; color: var(--text-dim); }
+        .diag-header-actions { display: flex; gap: 0.3rem; }
+        .diag-header-actions button { background: none; border: 1px solid var(--border); color: var(--text-muted); padding: 0.2rem 0.5rem; border-radius: 4px; cursor: pointer; font-size: 0.65rem; transition: all 0.2s; }
+        .diag-header-actions button:hover { border-color: var(--accent); color: #fff; }
+        .diag-body { flex: 1; overflow-y: auto; padding: 0.65rem; }
+
+        .pipeline-flow { margin-bottom: 0.75rem; padding: 0.5rem; background: rgba(99,102,241,0.05); border: 1px solid var(--border); border-radius: 8px; }
+        .pipeline-row { display: flex; align-items: center; justify-content: center; gap: 0.3rem; }
+        .pipeline-step { font-size: 0.6rem; font-weight: 600; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.04em; white-space: nowrap; }
+        .pipeline-arrow { color: var(--accent); font-size: 0.65rem; }
+        .pipeline-step.hit { color: var(--accent); }
+        .pipeline-step.miss { color: var(--text-dim); }
+        .pipeline-step.hero { color: #fff; font-weight: 700; font-size: 0.65rem; background: linear-gradient(135deg, rgba(99,102,241,0.25), rgba(168,85,247,0.25)); padding: 0.15rem 0.5rem; border-radius: 4px; border: 1px solid rgba(99,102,241,0.3); }
+
+        .diag-section { margin-bottom: 0.6rem; }
+        .diag-section-title { font-size: 0.7rem; font-weight: 600; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 0.3rem; display: flex; align-items: center; gap: 0.35rem; }
+        .diag-section-title .status-dot { width: 5px; height: 5px; border-radius: 50%; display: inline-block; }
+        .diag-section-title .status-dot.live { background: var(--green); }
+        .diag-section-title .status-dot.pending { background: var(--text-dim); }
+        .diag-json { background: #0d1117; border: 1px solid var(--border); border-radius: 6px; padding: 0.5rem 0.7rem; font-family: 'Outfit', monospace; font-size: 0.68rem; line-height: 1.45; color: #e2e8f0; overflow-x: auto; white-space: pre-wrap; word-break: break-all; max-height: 130px; overflow-y: auto; }
+        .diag-sql { background: #0d1117; border: 1px solid var(--border); border-radius: 6px; padding: 0.5rem 0.7rem; font-family: 'Outfit', monospace; font-size: 0.65rem; line-height: 1.45; color: #e2e8f0; overflow-x: auto; white-space: pre-wrap; word-break: break-all; max-height: 100px; overflow-y: auto; }
+
+        .diag-meta { display: flex; gap: 0.4rem; flex-wrap: wrap; margin-bottom: 0.65rem; }
+        .diag-meta-item { background: var(--bg-card); border: 1px solid var(--border); border-radius: 5px; padding: 0.25rem 0.55rem; font-size: 0.68rem; }
+        .diag-meta-item .label { color: var(--text-dim); }
+        .diag-meta-item .value { color: var(--text-main); font-weight: 600; }
+
+        .code-collapse-bar { margin: 0.5rem 1.5rem 0; padding: 0.4rem 0.85rem; background: rgba(99,102,241,0.04); border: 1px dashed var(--border); border-radius: 8px; cursor: pointer; display: flex; align-items: center; gap: 0.4rem; font-size: 0.7rem; color: var(--text-dim); transition: all 0.2s; user-select: none; }
+        .code-collapse-bar:hover { border-color: var(--accent); background: rgba(99,102,241,0.1); color: var(--text-main); }
+        .code-collapse-arrow { font-size: 0.5rem; transition: transform 0.25s ease; display: inline-block; }
+        .code-collapse-bar.open .code-collapse-arrow { transform: rotate(90deg); }
+        .code-collapse-label { font-weight: 600; color: var(--accent); }
+        .code-collapse-hint { margin-left: auto; font-size: 0.62rem; opacity: 0.6; }
+
+        .code-snippet { background: var(--bg-secondary); border: 1px solid var(--border); border-radius: 10px; margin: 0.4rem 1.5rem 0.75rem; overflow: hidden; }
+        .code-snippet.collapsed { max-height: 0; margin-top: 0; margin-bottom: 0.25rem; border-width: 0; opacity: 0; transition: all 0.25s ease; }
+        .code-snippet:not(.collapsed) { max-height: 300px; opacity: 1; transition: all 0.25s ease; }
+        .code-snippet-header { display: flex; justify-content: space-between; padding: 0.5rem 0.85rem; background: #1a1f2e; border-bottom: 1px solid var(--border); font-size: 0.7rem; color: var(--text-dim); align-items: center; }
+        .code-snippet-header .file { color: var(--accent); font-family: 'Outfit', monospace; }
+        .code-snippet-header .copy-btn { background: none; border: 1px solid var(--border); color: var(--text-muted); padding: 0.15rem 0.5rem; border-radius: 4px; cursor: pointer; font-size: 0.65rem; }
+        .code-snippet-header .copy-btn:hover { border-color: var(--accent); color: #fff; }
+        .code-snippet-body { padding: 0.85rem; font-family: 'Outfit', monospace; font-size: 0.75rem; line-height: 1.55; color: #e2e8f0; overflow-x: auto; }
+        .kw { color: #c084fc; } .type { color: #60a5fa; } .str { color: #34d399; } .cmt { color: #6b7280; font-style: italic; }
+
+        footer { text-align: center; padding: 0.85rem 2rem; font-size: 0.7rem; color: var(--text-dim); border-top: 1px solid var(--border); background: var(--bg-secondary); display: flex; justify-content: center; align-items: center; gap: 0.85rem; flex-wrap: wrap; }
+        footer a { color: var(--text-muted); text-decoration: none; }
+        footer a:hover { color: var(--accent); }
+        footer .sep { color: var(--border); }
+
+        @media (max-width: 900px) {
+            .page-layout { flex-direction: column; }
+            .diag-panel:not(.collapsed) { width: 100%; min-width: unset; border-left: none; border-top: 1px solid var(--border); max-height: 45vh; }
+            .diag-panel.collapsed { max-height: 0; width: 100%; min-width: unset; }
+            .diag-panel-toggle { display: none; }
+            header { flex-direction: column; gap: 0.5rem; padding: 0.75rem 1rem; }
+            nav { flex-wrap: wrap; justify-content: center; }
+            .toolbar-row { flex-direction: column; align-items: stretch; }
+            .adapter-banner { margin: 0.5rem 0.75rem 0; font-size: 0.7rem; flex-wrap: wrap; }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="logo-section">
+            <h1>&#9889; FlexQuery.NET</h1>
+            <p>Kendo UI Grid — Live Diagnostic Demo</p>
+        </div>
+        <nav>
+            <a href="/">Home</a>
+            <a href="/aggrid.html">AG Grid</a>
+            <a href="/kendo.html" class="active">Kendo UI</a>
+            <a href="/comparison.html">Comparison</a>
+            <a href="/playground.html">Playground</a>
+            <a href="/swagger">API Docs</a>
+            <a href="https://github.com/peterjohncasasola/FlexQuery.NET" class="badge-link" target="_blank">
+                <img src="https://img.shields.io/github/stars/peterjohncasasola/FlexQuery.NET?style=social" alt="Stars">
+            </a>
+        </nav>
+    </header>
+
+    <div class="adapter-banner">
+        <span class="icon">&#9889;</span>
+        <span>
+            This grid is powered by <strong>FlexQuery.NET.Adapters.Kendo</strong><span class="badge">Adapter</span>
+            &mdash; automatically translating Kendo DataSource requests into <strong>QueryOptions</strong>
+            and executing them against <strong>EF Core + SQLite</strong>.
+            <a href="https://github.com/peterjohncasasola/FlexQuery.NET/tree/main/src/FlexQuery.NET.Adapters.Kendo" target="_blank">View source &#8594;</a>
+        </span>
+    </div>
+
+    <div class="page-layout">
+        <div class="grid-area">
+            <div class="grid-toolbar">
+                <div class="toolbar-row">
+                    <div class="grid-title">
+                        <h2>Customers <span>Kendo UI DataSource</span></h2>
+                    </div>
+                    <div class="demo-chips">
+                        <div class="demo-chip" onclick="applyDemo('filter-city')">&#127961; City = Houston</div>
+                        <div class="demo-chip" onclick="applyDemo('active')">&#128269; Active Customers</div>
+                        <div class="demo-chip" onclick="applyDemo('sort-email-desc')">&#8595; Sort Email Desc</div>
+                        <div class="demo-chip" onclick="applyDemo('sort-date-desc')">&#128197; Newest First</div>
+                        <div class="demo-chip" onclick="applyDemo('page-50')">&#128106; Page Size 50</div>
+                        <div class="demo-chip" onclick="applyDemo('clear')">&#8634; Clear All</div>
+                    </div>
+                </div>
+            </div>
+            <div class="grid-container">
+                <div id="grid"></div>
+            </div>
+        </div>
+
+        <div class="diag-panel-wrapper">
+            <button class="diag-panel-toggle" id="diagToggleBtn" onclick="toggleDiagPanel()" title="Toggle Pipeline">&#9664;</button>
+            <div class="diag-panel" id="diagPanel">
+                <div class="diag-header">
+                    <div style="display:flex;align-items:center;gap:0.5rem;">
+                        <span>&#9889; FlexQuery Pipeline</span>
+                        <span class="diag-endpoint-badge">POST /api/kendo/customers</span>
+                    </div>
+                    <div class="diag-header-actions">
+                        <button onclick="copyCurl()" title="Copy curl command">&#128203; Copy curl</button>
+                        <button onclick="clearDiagnostics()">Clear</button>
+                    </div>
+                </div>
+                <div class="diag-body" id="diagBody">
+                    <div class="pipeline-flow">
+                        <div class="pipeline-row">
+                            <span class="pipeline-step hit" id="pipeReq">Kendo DataSource Request</span>
+                            <span class="pipeline-arrow">&#8595;</span>
+                        </div>
+                        <div class="pipeline-row" style="margin:0.2rem 0;">
+                            <span class="pipeline-step hero" id="pipeOpt">Normalized QueryOptions</span>
+                        </div>
+                        <div class="pipeline-row">
+                            <span class="pipeline-arrow">&#8595;</span>
+                            <span class="pipeline-step hit" id="pipeSql">Generated SQL</span>
+                        </div>
+                    </div>
+
+                    <div class="diag-meta" id="diagMeta">
+                        <div class="diag-meta-item"><span class="label">Adapter:</span> <span class="value" id="metaAdapter">—</span></div>
+                        <div class="diag-meta-item"><span class="label">Provider:</span> <span class="value" id="metaProvider">—</span></div>
+                        <div class="diag-meta-item"><span class="label">Response:</span> <span class="value" id="metaTime">—</span></div>
+                        <div class="diag-meta-item"><span class="label">Rows:</span> <span class="value" id="metaRows">—</span></div>
+                        <div class="diag-meta-item"><span class="label">Filters:</span> <span class="value" id="metaFilters">0</span></div>
+                        <div class="diag-meta-item"><span class="label">Sorts:</span> <span class="value" id="metaSorts">0</span></div>
+                    </div>
+
+                    <div class="diag-section">
+                        <div class="diag-section-title"><span class="status-dot pending" id="reqDot"></span> Kendo DataSource Request</div>
+                        <div class="diag-json" id="diagRequest"><span class="null">Waiting for grid interaction...</span></div>
+                    </div>
+
+                    <div class="diag-section">
+                        <div class="diag-section-title"><span class="status-dot pending" id="optDot"></span> Parsed QueryOptions</div>
+                        <div class="diag-json" id="diagOptions"><span class="null">Kendo request will be parsed here...</span></div>
+                    </div>
+
+                    <div class="diag-section">
+                        <div class="diag-section-title"><span class="status-dot pending" id="sqlDot"></span> Generated SQL</div>
+                        <div class="diag-sql" id="diagSql"><span class="null">FlexQuery generates the SQL automatically...</span></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="code-collapse-bar" id="codeToggleBar" onclick="toggleCode()">
+        <span class="code-collapse-arrow" id="codeArrow">&#9654;</span>
+        <span class="code-collapse-label">See How It Works</span>
+        <span class="code-collapse-hint" id="codeHint">Only 3 lines of code</span>
+    </div>
+
+    <div class="code-snippet collapsed" id="codeSnippet">
+        <div class="code-snippet-header">
+            <span class="file">&#128196; KendoController.cs — the complete backend</span>
+            <button class="copy-btn" onclick="copyCode(this)">Copy code</button>
+        </div>
+        <div class="code-snippet-body"><pre><span class="cmt">// 1. Parse Kendo DataSource request to QueryOptions</span>
+<span class="kw">var</span> options = request.<span class="kw">ToQueryOptions</span>();
+options.<span class="kw">IncludeCount</span> = <span class="kw">true</span>;
+
+<span class="cmt">// 2. Execute against EF Core</span>
+<span class="kw">var</span> result = <span class="kw">await</span> _db.Customers
+    .<span class="kw">AsNoTracking</span>()
+    .<span class="kw">FlexQueryAsync</span>&lt;<span class="type">Customer</span>&gt;(options);
+
+<span class="cmt">// 3. Return Kendo-compatible response</span>
+<span class="kw">return</span> <span class="kw">Ok</span>(<span class="kw">new</span> { data = result.Data, total = result.TotalCount });</pre></div>
+    </div>
+
+    <footer>
+        <span>&#9889; FlexQuery.NET v3.0.7</span>
+        <span class="sep">|</span>
+        <a href="https://nuget.org/packages/FlexQuery.NET" target="_blank">dotnet add package FlexQuery.NET</a>
+        <span class="sep">|</span>
+        <a href="https://github.com/peterjohncasasola/FlexQuery.NET" target="_blank">View on GitHub</a>
+        <span class="sep">|</span>
+        <a href="https://github.com/peterjohncasasola/FlexQuery.NET/stargazers" target="_blank">
+            <img src="https://img.shields.io/github/stars/peterjohncasasola/FlexQuery.NET?style=flat&amp;label=Stars&amp;color=6366f1" alt="Stars">
+        </a>
+        <a href="https://nuget.org/packages/FlexQuery.NET" target="_blank">
+            <img src="https://img.shields.io/nuget/v/FlexQuery.NET?style=flat&amp;label=NuGet&amp;color=6366f1" alt="NuGet">
+        </a>
+    </footer>
+
+    <script>
+        let lastKendoRequest = null;
+        let activeFilters = 0;
+        let activeSorts = 0;
+
+        function toggleDiagPanel() {
+            const panel = document.getElementById('diagPanel');
+            const btn = document.getElementById('diagToggleBtn');
+            const isCollapsed = panel.classList.toggle('collapsed');
+            btn.innerHTML = isCollapsed ? '&#9654;' : '&#9664;';
+            btn.title = isCollapsed ? 'Show Pipeline' : 'Hide Pipeline';
+        }
+
+        function clearDiagnostics() {
+            ['diagRequest','diagOptions','diagSql'].forEach(id => {
+                document.getElementById(id).innerHTML = '<span class="null">Waiting for grid interaction...</span>';
+            });
+            ['metaAdapter','metaProvider','metaTime','metaRows','metaFilters','metaSorts'].forEach(id => {
+                document.getElementById(id).textContent = id === 'metaFilters' || id === 'metaSorts' ? '0' : '\u2014';
+            });
+            document.querySelectorAll('.status-dot').forEach(d => d.className = 'status-dot pending');
+            document.getElementById('pipeReq').className = 'pipeline-step miss';
+            document.getElementById('pipeOpt').className = 'pipeline-step miss';
+            document.getElementById('pipeSql').className = 'pipeline-step miss';
+            activeFilters = 0; activeSorts = 0;
+        }
+
+        function updateDiagPanel(data) {
+            const d = data.__diagnostics || {};
+
+            document.getElementById('metaAdapter').textContent = d.adapter || 'Kendo';
+            document.getElementById('metaProvider').textContent = d.provider || 'EF Core';
+            document.getElementById('metaTime').textContent = d.executionTimeMs != null ? d.executionTimeMs + 'ms' : '\u2014';
+            document.getElementById('metaRows').textContent = data.total != null ? String(data.total) : '\u2014';
+
+            const fCount = d.parsedOptions ? (d.parsedOptions.filterCount || 0) : (d.request ? (d.request.filterCount || 0) : 0);
+            const sCount = d.parsedOptions ? (d.parsedOptions.sortCount || 0) : (d.request ? (d.request.sortCount || 0) : 0);
+            document.getElementById('metaFilters').textContent = fCount;
+            document.getElementById('metaSorts').textContent = sCount;
+
+            if (lastKendoRequest) {
+                setDiagJson('diagRequest', lastKendoRequest);
+                document.getElementById('reqDot').className = 'status-dot live';
+                document.getElementById('pipeReq').className = 'pipeline-step hit';
+            } else if (d.request) {
+                setDiagJson('diagRequest', d.request);
+                document.getElementById('reqDot').className = 'status-dot live';
+                document.getElementById('pipeReq').className = 'pipeline-step hit';
+            }
+            if (d.parsedOptions) {
+                setDiagJson('diagOptions', d.parsedOptions);
+                document.getElementById('optDot').className = 'status-dot live';
+                document.getElementById('pipeOpt').className = 'pipeline-step hero';
+            }
+            if (d.generatedSql) {
+                document.getElementById('diagSql').textContent = d.generatedSql;
+                document.getElementById('sqlDot').className = 'status-dot live';
+                document.getElementById('pipeSql').className = 'pipeline-step hit';
+            } else {
+                document.getElementById('diagSql').innerHTML = '<span class="null">SQL preview not available</span>';
+            }
+        }
+
+        function setDiagJson(elementId, obj) {
+            document.getElementById(elementId).innerHTML = syntaxHighlight(JSON.stringify(obj, null, 2));
+        }
+
+        function syntaxHighlight(json) {
+            return json.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+                .replace(/"([^"]+)"\s*:/g, '<span class="key">"$1"</span>:')
+                .replace(/: "([^"]*)"/g, ': <span class="str">"$1"</span>')
+                .replace(/: (\d+(?:\.\d+)?)/g, ': <span class="num">$1</span>')
+                .replace(/: (true|false)/g, ': <span class="bool">$1</span>')
+                .replace(/: (null)/g, ': <span class="null">$1</span>');
+        }
+
+        function copyCurl() {
+            const filterEl = document.getElementById('diagRequest');
+            let curl = 'curl -X POST "/api/kendo/customers" \\\n  -H "Content-Type: application/json" \\\n';
+            try {
+                const reqJson = JSON.parse(filterEl.textContent || '{}');
+                curl += "  -d '" + JSON.stringify(reqJson) + "'";
+            } catch (e) {
+                curl += "  -d '{}'";
+            }
+            navigator.clipboard.writeText(curl);
+            const ctlBtn = event?.target;
+            if (ctlBtn && ctlBtn.textContent.indexOf('curl') >= 0) {
+                const orig = ctlBtn.textContent;
+                ctlBtn.textContent = '\u2713 Copied!';
+                setTimeout(() => { ctlBtn.textContent = orig; }, 1500);
+            }
+        }
+
+        function toggleCode() {
+            const snippet = document.getElementById('codeSnippet');
+            const bar = document.getElementById('codeToggleBar');
+            const arrow = document.getElementById('codeArrow');
+            const hint = document.getElementById('codeHint');
+            const isOpen = !snippet.classList.toggle('collapsed');
+            bar.classList.toggle('open', isOpen);
+            arrow.innerHTML = isOpen ? '&#9660;' : '&#9654;';
+            hint.textContent = isOpen ? '3 lines of code' : 'Only 3 lines of code';
+        }
+
+        function copyCode(btn) {
+            navigator.clipboard.writeText(btn.closest('.code-snippet').querySelector('pre').textContent);
+            const orig = btn.textContent;
+            btn.textContent = 'Copied!';
+            setTimeout(() => btn.textContent = orig, 1500);
+        }
+
+        // ── Demo Buttons ────────────────────────────────────────────────────
+        function applyDemo(action) {
+            const grid = $("#grid").data("kendoGrid");
+            if (!grid) return;
+            const ds = grid.dataSource;
+
+            switch (action) {
+                case 'filter-city':
+                    ds.filter({ logic: "and", filters: [{ field: "city", operator: "eq", value: "Houston" }] });
+                    activeFilters = 1; activeSorts = 0;
+                    break;
+                case 'active':
+                    ds.filter({ logic: "and", filters: [{ field: "status", operator: "eq", value: "Active" }] });
+                    activeFilters = 1; activeSorts = 0;
+                    break;
+                case 'sort-email-desc':
+                    ds.filter({});
+                    ds.sort([{ field: "email", dir: "desc" }]);
+                    activeFilters = 0; activeSorts = 1;
+                    break;
+                case 'sort-date-desc':
+                    ds.filter({});
+                    ds.sort([{ field: "createdDate", dir: "desc" }]);
+                    activeFilters = 0; activeSorts = 1;
+                    break;
+                case 'page-50':
+                    ds.pageSize(50);
+                    activeFilters = Object.keys(ds.filter() || {}).length > 0 ? 1 : 0;
+                    activeSorts = (ds.sort() || []).length;
+                    break;
+                case 'clear':
+                    ds.filter({});
+                    ds.sort([]);
+                    ds.pageSize(20);
+                    activeFilters = 0; activeSorts = 0;
+                    break;
+            }
+        }
+
+        $(document).ready(function() {
+            $("#grid").kendoGrid({
+                dataSource: {
+                    transport: {
+                        read: function(options) {
+                            var request = {
+                                page: options.data.page,
+                                pageSize: options.data.pageSize,
+                                skip: options.data.skip || 0,
+                                take: options.data.take || 20,
+                                filter: options.data.filter,
+                                sort: options.data.sort
+                            };
+                            lastKendoRequest = JSON.parse(JSON.stringify(request));
+                            $.ajax({
+                                url: "/api/kendo/customers",
+                                type: "POST",
+                                contentType: "application/json",
+                                dataType: "json",
+                                data: JSON.stringify(request),
+                                success: function(result) {
+                                    if (result.__diagnostics) {
+                                        updateDiagPanel(result);
+                                    }
+                                    options.success(result);
+                                },
+                                error: function() {
+                                    document.getElementById('diagSql').innerHTML = '<span style="color:#ef4444;">Request failed. Check console for details.</span>';
+                                    options.error();
+                                }
+                            });
+                        }
+                    },
+                    schema: {
+                        data: "data",
+                        total: "total"
+                    },
+                    serverPaging: true,
+                    serverSorting: true,
+                    serverFiltering: true,
+                    pageSize: 20
+                },
+                filterable: true,
+                sortable: true,
+                pageable: {
+                    refresh: true,
+                    pageSizes: [10, 20, 50, 100],
+                    buttonCount: 5
+                },
+                columns: [
+                    { field: "id", title: "ID", width: 80, filterable: { number: { placeholder: "Filter ID" } } },
+                    { field: "firstName", title: "First Name" },
+                    { field: "lastName", title: "Last Name" },
+                    { field: "email", title: "Email", width: 220 },
+                    { field: "city", title: "City" },
+                    {
+                        field: "status",
+                        title: "Status",
+                        values: [
+                            { text: "Active", value: "Active" },
+                            { text: "Inactive", value: "Inactive" },
+                            { text: "Pending", value: "Pending" }
+                        ]
+                    },
+                    {
+                        field: "createdDate",
+                        title: "Created Date",
+                        template: "#= createdDate ? new Date(createdDate).toLocaleDateString() : '' #",
+                        filterable: { ui: "datepicker" }
+                    }
+                ]
+            });
+        });
+    </script>
+</body>
+</html>
