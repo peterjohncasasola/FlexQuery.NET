@@ -68,13 +68,33 @@ public static class AgGridExtensions
     }
 
     /// <summary>
-    /// Converts a FlexQuery result into an AG Grid SSRM response payload.
+    /// Converts a FlexQuery result into an AG Grid SSRM response payload
+    /// with the default property-name casing (PascalCase from CLR types).
     /// </summary>
     public static AgGridServerSideResponse ToAgGridServerSideResponse<T>(
         this QueryResult<T> result,
         AgGridRequest request,
         AgGridResponseFieldOptions? options = null)
     {
-        return AgGridResponseConverter.Convert(request, result, options);
+        return AgGridResponseConverter.Convert(request, result, false, options);
+    }
+
+    /// <summary>
+    /// Converts a FlexQuery result into an AG Grid SSRM response payload.
+    /// </summary>
+    /// <param name="request"></param>
+    /// <param name="camelCase">
+    /// When <c>true</c>, property names in row data dictionaries are converted to camelCase.
+    /// Use this when your AG Grid column definitions use camelCase field names.
+    /// </param>
+    /// <param name="result"></param>
+    /// <param name="options"></param>
+    public static AgGridServerSideResponse ToAgGridServerSideResponse<T>(
+        this QueryResult<T> result,
+        AgGridRequest request,
+        bool camelCase,
+        AgGridResponseFieldOptions? options = null)
+    {
+        return AgGridResponseConverter.Convert(request, result, options: options, camelCase: camelCase);
     }
 }

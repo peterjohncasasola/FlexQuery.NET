@@ -19,7 +19,9 @@ namespace FlexQuery.NET.Adapters.AgGrid.Converters;
 /// </remarks>
 public static class AgGridResponseConverter
 {
-    private static readonly ConcurrentDictionary<Type, PropertyInfo[]> ReadablePropertyCache = new();
+    private sealed record PropertyEntry(PropertyInfo Info, string Name, string CamelName);
+
+    private static readonly ConcurrentDictionary<Type, PropertyEntry[]> ReadablePropertyCache = new();
 
     /// <summary>
     /// Converts a FlexQuery result for the current SSRM request into group rows or leaf rows.
@@ -30,11 +32,16 @@ public static class AgGridResponseConverter
     /// The FlexQuery result. Grouped data must already be grouped and aggregated by FlexQuery at
     /// the grouping level selected by the request.
     /// </param>
+    /// <param name="camelCase">
+    /// When <c>true</c>, converts POCO property names to camelCase in the row data dictionaries.
+    /// When <c>false</c> (default), property names are preserved as-is from the CLR type.
+    /// </param>
     /// <param name="options">Optional names for adapter-defined response metadata fields.</param>
     /// <returns>An AG Grid SSRM response for the current store level.</returns>
     public static AgGridServerSideResponse Convert<T>(
         AgGridRequest request,
         QueryResult<T> result,
+        bool camelCase = false,
         AgGridResponseFieldOptions? options = null)
     {
         ArgumentNullException.ThrowIfNull(request);
@@ -50,7 +57,7 @@ public static class AgGridResponseConverter
 
         var level = request.GroupKeys.Count;
         var rows = result.Data
-            .Select(ToDictionary)
+            .Select(row => ToDictionary(row, camelCase))
             .Select(row => MapAggregateAliases(row, request.ValueCols))
             .ToList();
 
@@ -68,7 +75,7 @@ public static class AgGridResponseConverter
 
         var groupRows = rows
             .Select(row => ToGroupRow(row, currentField, level, leafGroup, request.GroupKeys, options))
-            .Select(group => ToDictionary(group, options))
+            .Select(group => ToDictionary(group, camelCase, options))
             .ToList();
 
         return new AgGridServerSideResponse
@@ -77,7 +84,7 @@ public static class AgGridResponseConverter
             RowCount = ResolveRowCount(result)
         };
     }
-    
+
     private static int? ResolveRowCount<T>(QueryResult<T> result)
     {
         return result.ResultCount ?? result.TotalCount;
@@ -108,17 +115,26 @@ public static class AgGridResponseConverter
         };
     }
 
-    private static Dictionary<string, object?> ToDictionary(AgGridGroupRow row, AgGridResponseFieldOptions options)
+    private static Dictionary<string, object?> ToDictionary(AgGridGroupRow row, bool camelCase, AgGridResponseFieldOptions options)
     {
-        var result = new Dictionary<string, object?>(row.Values, StringComparer.OrdinalIgnoreCase)
+        var result = camelCase
+            ? new Dictionary<string, object?>(row.Values.Count + 5, StringComparer.OrdinalIgnoreCase)
+            : new Dictionary<string, object?>(row.Values, StringComparer.OrdinalIgnoreCase);
+
+        if (camelCase)
         {
-            [options.GroupFlagFieldName] = row.Group,
-            [options.KeyFieldName] = row.Key,
-            [options.FieldFieldName] = row.Field,
-            [options.LevelFieldName] = row.Level,
-            [options.LeafGroupFieldName] = row.LeafGroup,
-            [options.RouteFieldName] = row.Route
-        };
+            foreach (var kvp in row.Values)
+            {
+                result[ToCamelCase(kvp.Key)] = kvp.Value;
+            }
+        }
+
+        result[options.GroupFlagFieldName] = row.Group;
+        result[options.KeyFieldName] = row.Key;
+        result[options.FieldFieldName] = row.Field;
+        result[options.LevelFieldName] = row.Level;
+        result[options.LeafGroupFieldName] = row.LeafGroup;
+        result[options.RouteFieldName] = row.Route;
 
         if (row.ChildCount.HasValue)
         {
@@ -128,7 +144,7 @@ public static class AgGridResponseConverter
         return result;
     }
 
-    private static Dictionary<string, object?> ToDictionary<T>(T row)
+    private static Dictionary<string, object?> ToDictionary<T>(T row, bool camelCase)
     {
         if (row is null)
         {
@@ -159,16 +175,18 @@ public static class AgGridResponseConverter
             return values;
         }
 
-        var properties = ReadablePropertyCache.GetOrAdd(
-            row.GetType(),
-            static type => type.GetProperties(BindingFlags.Public | BindingFlags.Instance)
-                .Where(static property => property.CanRead && property.GetIndexParameters().Length == 0)
-                .ToArray());
-
-        var result = new Dictionary<string, object?>(StringComparer.OrdinalIgnoreCase);
-        foreach (var property in properties)
+        var entries = ReadablePropertyCache.GetOrAdd(row.GetType(), static type =>
         {
-            result[property.Name] = property.GetValue(row);
+            var props = type.GetProperties(BindingFlags.Public | BindingFlags.Instance)
+                .Where(static p => p.CanRead && p.GetIndexParameters().Length == 0)
+                .ToArray();
+            return props.Select(p => new PropertyEntry(p, p.Name, ToCamelCase(p.Name))).ToArray();
+        });
+
+        var result = new Dictionary<string, object?>(entries.Length, StringComparer.OrdinalIgnoreCase);
+        foreach (var entry in entries)
+        {
+            result[camelCase ? entry.CamelName : entry.Name] = entry.Info.GetValue(row);
         }
 
         return result;
@@ -272,5 +290,16 @@ public static class AgGridResponseConverter
                 result = default;
                 return false;
         }
+    }
+
+    private static string ToCamelCase(string name)
+    {
+        if (name.Length == 0 || char.IsLower(name[0]))
+            return name;
+        return string.Create(name.Length, name, (span, s) =>
+        {
+            span[0] = char.ToLowerInvariant(s[0]);
+            s.AsSpan(1).CopyTo(span[1..]);
+        });
     }
 }

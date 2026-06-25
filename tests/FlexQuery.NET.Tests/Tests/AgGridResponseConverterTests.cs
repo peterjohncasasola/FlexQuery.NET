@@ -224,7 +224,7 @@ public class AgGridResponseConverterTests
             ChildCountSourceField = "childTotal"
         };
 
-        var response = AgGridResponseConverter.Convert(request, result, options);
+        var response = AgGridResponseConverter.Convert(request, result, options: options);
 
         response.RowData.Should().ContainSingle();
         response.RowData[0].Should().Contain(new Dictionary<string, object?>
@@ -267,7 +267,7 @@ public class AgGridResponseConverterTests
             ChildCountSourceField = "quantityCount"
         };
 
-        var response = AgGridResponseConverter.Convert(request, result, options);
+        var response = AgGridResponseConverter.Convert(request, result, options: options);
 
         response.RowData.Should().ContainSingle();
         response.RowData[0]["quantityCount"].Should().Be(25);
