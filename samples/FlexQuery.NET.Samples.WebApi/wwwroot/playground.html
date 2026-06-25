@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>FlexQuery.NET — Query Playground</title>
+    <title>FlexQuery.NET — Query Inspector</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
@@ -13,9 +13,12 @@
             --accent: #6366f1; --accent-gradient: linear-gradient(135deg, #6366f1 0%, #a855f7 100%);
             --text-main: #f3f4f6; --text-muted: #9ca3af; --text-dim: #6b7280;
             --border: #374151; --green: #22c55e; --orange: #f59e0b; --amber: #fbbf24;
+            --accent-blue: #60a5fa; --accent-green: #22c55e; --accent-amber: #f59e0b;
+            --accent-purple: #c084fc; --accent-red: #ef4444; --card-bg: #1a1f30; --card-border: #2a2f3f;
         }
         * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { font-family: 'Plus Jakarta Sans', sans-serif; background: var(--bg-primary); color: var(--text-main); min-height: 100vh; display: flex; flex-direction: column; }
+        html, body { height: 100%; }
+        body { font-family: 'Plus Jakarta Sans', sans-serif; background: var(--bg-primary); color: var(--text-main); display: flex; flex-direction: column; }
         header { background: var(--bg-secondary); border-bottom: 1px solid var(--border); padding: 1rem 2rem; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 100; }
         .logo-section h1 { font-family: 'Outfit', sans-serif; font-size: 1.35rem; font-weight: 700; background: var(--accent-gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
         .logo-section p { font-size: 0.75rem; color: var(--text-muted); }
@@ -24,12 +27,11 @@
         nav a:hover { color: var(--text-main); background: rgba(255,255,255,0.05); }
         nav a.active { color: #fff; background: var(--accent-gradient); }
 
-        .page-layout { display: flex; flex: 1; gap: 0; overflow: hidden; }
+        .page-layout { display: flex; flex: 1; min-height: 0; gap: 0; overflow: hidden; }
         .left-panel { width: 360px; min-width: 300px; background: var(--bg-secondary); border-right: 1px solid var(--border); display: flex; flex-direction: column; overflow-y: auto; padding: 1rem; }
-        .right-panel { flex: 1; display: flex; flex-direction: column; overflow-y: auto; padding: 1rem; gap: 0.6rem; min-width: 0; }
+        .right-panel { flex: 1; display: flex; flex-direction: column; overflow: hidden; padding: 1.25rem 1.25rem 0.75rem; gap: 0.75rem; min-height: 0; min-width: 0; }
 
         .section-label { font-size: 0.68rem; font-weight: 600; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.4rem; }
-
         .example-chips { display: flex; flex-wrap: wrap; gap: 0.3rem; margin-bottom: 1rem; }
         .example-chip { padding: 0.3rem 0.55rem; border-radius: 6px; font-size: 0.72rem; font-weight: 500; cursor: pointer; border: 1px solid var(--border); background: var(--bg-card); color: var(--text-muted); white-space: nowrap; transition: all 0.15s; }
         .example-chip:hover { border-color: var(--accent); color: var(--text-main); background: rgba(99,102,241,0.1); }
@@ -41,7 +43,6 @@
         .example-chip.aggregate:hover { border-color: #22d3ee; background: rgba(6,182,212,0.12); }
         .example-chip.having { border-color: var(--orange); color: #fde68a; }
         .example-chip.having:hover { border-color: #f59e0b; background: rgba(245,158,11,0.12); }
-
         .chip-divider { font-size: 0.62rem; font-weight: 600; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.08em; padding: 0.3rem 0 0.15rem; border-top: 1px solid var(--border); margin-top: 0.15rem; }
 
         .input-group { margin-bottom: 0.6rem; }
@@ -67,99 +68,233 @@
         /* Pipeline Banner */
         .pipeline-banner {
             background: var(--bg-card); border: 1px solid var(--border); border-radius: 7px;
-            padding: 0.35rem 0.65rem; font-size: 0.65rem; color: var(--text-dim); text-align: center;
+            padding: 0.45rem 0.85rem; font-size: 0.75rem; color: var(--text-dim); text-align: center;
             font-family: 'Outfit', sans-serif; letter-spacing: 0.02em; display: flex;
-            align-items: center; justify-content: center; gap: 0.4rem; flex-wrap: wrap;
+            align-items: center; justify-content: center; gap: 0.5rem; flex-wrap: wrap;
         }
         .pipeline-banner .step { color: var(--text-muted); }
         .pipeline-banner .arrow { color: var(--accent); }
-        .pipeline-banner .active-step { color: #fff; font-weight: 700; background: var(--accent-gradient); padding: 0.1rem 0.4rem; border-radius: 3px; font-size: 0.6rem; }
+        .pipeline-banner .active-step { color: #fff; font-weight: 700; background: var(--accent-gradient); padding: 0.15rem 0.5rem; border-radius: 4px; font-size: 0.7rem; }
 
         /* Meta Row */
-        .output-meta { display: flex; gap: 0.35rem; flex-wrap: wrap; align-items: center; }
-        .output-meta-item { background: var(--bg-card); border: 1px solid var(--border); border-radius: 4px; padding: 0.15rem 0.45rem; font-size: 0.62rem; }
+        .output-meta { display: flex; gap: 0.45rem; flex-wrap: wrap; align-items: center; }
+        .output-meta-item { background: var(--bg-card); border: 1px solid var(--border); border-radius: 5px; padding: 0.2rem 0.55rem; font-size: 0.72rem; }
         .output-meta-item .label { color: var(--text-dim); }
         .output-meta-item .value { font-weight: 600; }
 
-        .status-dot { width: 5px; height: 5px; border-radius: 50%; display: inline-block; margin-right: 0.25rem; vertical-align: middle; }
+        .status-dot { width: 7px; height: 7px; border-radius: 50%; display: inline-block; margin-right: 0.3rem; vertical-align: middle; }
         .status-dot.ready { background: var(--text-dim); }
         .status-dot.live { background: var(--green); }
-        .status-dot.error { background: #ef4444; }
+        .status-dot.error { background: var(--accent-red); }
 
-        .proj-diff { color: var(--green); font-size: 0.58rem; margin-left: 0.2rem; }
-        .proj-diff.worse { color: #ef4444; }
-
-        /* View Mode Toggle */
-        .view-mode-toggle { display: flex; gap: 2px; background: rgba(255,255,255,0.05); border-radius: 3px; padding: 2px; margin-left: auto; }
-        .view-mode-option { padding: 0.15rem 0.45rem; font-size: 0.6rem; font-weight: 600; cursor: pointer; border-radius: 2px; color: var(--text-dim); transition: all 0.15s; white-space: nowrap; }
-        .view-mode-option:hover { color: var(--text-main); }
-        .view-mode-option.active { background: var(--accent-gradient); color: #fff; }
+        /* Section Tabs — Inspector | Results */
+        .section-tabs { display: flex; gap: 0; background: #1a1f2e; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+        .section-tab { padding: 0.55rem 1.25rem; font-size: 0.8125rem; font-weight: 600; cursor: pointer; color: var(--text-dim); transition: all 0.15s; user-select: none; display: flex; align-items: center; gap: 0.4rem; flex: 1; justify-content: center; border-right: 1px solid var(--border); }
+        .section-tab:last-child { border-right: none; }
+        .section-tab:hover { color: var(--text-main); background: rgba(255,255,255,0.03); }
+        .section-tab.active { color: #fff; background: var(--accent-gradient); }
+        .section-panel { display: none; }
+        .section-panel.active { display: flex; flex-direction: column; gap: 0.75rem; flex: 1; min-height: 0; overflow: hidden; }
 
         /* Output Card Base */
         .output-card { background: var(--bg-secondary); border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
-        .output-card-header { display: flex; justify-content: space-between; align-items: center; padding: 0.45rem 0.85rem; background: #1a1f2e; border-bottom: 1px solid var(--border); }
-        .output-card-header h3 { font-family: 'Outfit', sans-serif; font-size: 0.75rem; font-weight: 600; }
-        .output-card-body { padding: 0.6rem 0.85rem; }
+        .output-card-header { display: flex; justify-content: space-between; align-items: center; padding: 0.55rem 1rem; background: #1a1f2e; border-bottom: 1px solid var(--border); }
+        .output-card-header h3 { font-family: 'Outfit', sans-serif; font-size: 0.875rem; font-weight: 600; }
+        .output-card-body { padding: 1rem 1.125rem; }
 
         /* Diagnostics Card */
-        .diag-card { flex-shrink: 0; }
-        .diag-tabs { display: flex; gap: 0; background: #1a1f2e; border-bottom: 1px solid var(--border); overflow-x: auto; }
-        .diag-tab { padding: 0.35rem 0.7rem; font-size: 0.65rem; font-weight: 600; cursor: pointer; color: var(--text-dim); border-bottom: 2px solid transparent; transition: all 0.15s; white-space: nowrap; }
-        .diag-tab:hover { color: var(--text-main); }
-        .diag-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+        .diag-card { display: flex; flex-direction: column; flex: 1; min-height: 0; }
+
+        .diag-card > .output-card-body { display: flex; flex-direction: column; flex: 1; overflow: auto; min-height: 0; }
+
+        /* Tab Bar */
+        .diag-tabs { display: flex; gap: 0; background: #1a1f2e; border-bottom: 1px solid var(--border); overflow-x: auto; z-index: 10; flex-shrink: 0; }
+        .diag-tab { padding: 0.55rem 1rem; font-size: 0.8125rem; font-weight: 600; cursor: pointer; color: var(--text-dim); border-bottom: 2px solid transparent; transition: all 0.15s; white-space: nowrap; display: flex; align-items: center; gap: 0.4rem; user-select: none; }
+        .diag-tab:hover { color: var(--text-main); background: rgba(255,255,255,0.03); }
+        .diag-tab.active { color: #fff; border-bottom-color: var(--accent); background: rgba(99,102,241,0.08); }
         .diag-panel { display: none; }
         .diag-panel.active { display: block; }
+        .diag-panel.active.flex-panel { display: flex; flex-direction: column; flex: 1; min-height: 0; }
 
-        .output-url { font-family: 'Outfit', monospace; font-size: 0.68rem; color: #93c5fd; line-height: 1.4; word-break: break-all; white-space: pre-wrap; }
-        .output-url .url-muted { color: var(--text-dim); }
-
-        .output-json { background: #0d1117; border: 1px solid var(--border); border-radius: 5px; padding: 0.45rem 0.65rem; font-family: 'Outfit', monospace; font-size: 0.65rem; line-height: 1.4; color: #e2e8f0; overflow-x: auto; white-space: pre-wrap; word-break: break-all; max-height: 180px; overflow-y: auto; }
-        .output-payload { max-height: 260px; }
+        /* Output JSON */
+        .output-json { background: #0d1117; border: 1px solid var(--border); border-radius: 5px; padding: 0.75rem 1rem; font-family: 'Outfit', monospace; font-size: 0.8125rem; line-height: 1.6; color: #e2e8f0; overflow: auto; white-space: pre-wrap; word-break: break-all; }
         .output-json .key { color: #60a5fa; } .output-json .str { color: #34d399; } .output-json .num { color: #f59e0b; } .output-json .bool { color: #c084fc; } .output-json .null { color: #6b7280; }
 
-        .output-sql { background: #0d1117; border: 1px solid var(--border); border-radius: 5px; padding: 0.45rem 0.65rem; font-family: 'Outfit', monospace; font-size: 0.62rem; line-height: 1.4; color: #e2e8f0; overflow-x: auto; white-space: pre-wrap; max-height: 120px; overflow-y: auto; }
-        .sql-params { margin-top: 0.35rem; font-size: 0.6rem; color: var(--text-dim); font-family: 'Outfit', monospace; }
+        /* Summary Section */
+        .summary-section { margin-bottom: 0.75rem; }
+        .summary-section:last-child { margin-bottom: 0; }
+        .summary-section-header { font-size: 0.6875rem; font-weight: 700; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 0.4rem; opacity: 0.7; }
 
-        .payload-header { display: flex; justify-content: flex-end; margin-bottom: 0.35rem; }
-        .payload-header label { font-size: 0.62rem; color: var(--text-dim); cursor: pointer; display: flex; align-items: center; gap: 0.25rem; }
-        .payload-header input { accent-color: var(--accent); }
+        /* Summary Grid */
+        .summary-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.5rem; }
+        .summary-card { background: var(--bg-card); border: 1px solid var(--card-border); border-radius: 6px; padding: 0.75rem 0.85rem 0.6rem; border-left: 4px solid var(--accent); display: flex; flex-direction: column; gap: 0.15rem; }
+        .summary-card .label { font-size: 0.6875rem; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.05em; font-weight: 500; }
+        .summary-card .value { font-size: 1.25rem; font-weight: 600; color: var(--text-main); font-family: 'Outfit', sans-serif; line-height: 1.25; }
+        .summary-card .sub { font-size: 0.65rem; color: var(--text-dim); margin-top: 0.1rem; }
 
-        .badge { font-size: 0.58rem; padding: 0.12rem 0.4rem; border-radius: 3px; font-weight: 600; }
+        .summary-card.provider { border-left-color: var(--accent-blue); }
+        .summary-card.execution { border-left-color: var(--accent-amber); }
+        .summary-card.query { border-left-color: var(--accent-purple); }
+        .summary-card.data { border-left-color: var(--accent-green); }
+
+        .summary-footer { display: flex; justify-content: space-between; align-items: center; margin-top: 0.5rem; padding: 0.35rem 0.65rem; background: var(--bg-card); border: 1px solid var(--card-border); border-radius: 5px; font-size: 0.75rem; }
+        .summary-footer .slowest { color: var(--accent-amber); display: flex; align-items: center; gap: 0.25rem; }
+        .summary-footer .status { display: flex; align-items: center; gap: 0.3rem; }
+        .summary-footer .status.success { color: var(--accent-green); }
+        .summary-footer .status.error { color: var(--accent-red); }
+
+        /* Complexity Badge + Bar */
+        .complexity-badge { display: inline-block; padding: 0.1rem 0.45rem; border-radius: 4px; font-size: 0.6875rem; font-weight: 700; text-transform: uppercase; vertical-align: middle; }
+        .complexity-badge.low { background: rgba(34,197,94,0.2); color: var(--accent-green); }
+        .complexity-badge.medium { background: rgba(245,158,11,0.2); color: var(--accent-amber); }
+        .complexity-badge.high { background: rgba(239,68,68,0.2); color: var(--accent-red); }
+        .complexity-score { font-size: 0.6875rem; color: var(--text-muted); font-weight: 400; }
+        .complexity-bar { margin-top: 0.25rem; height: 4px; background: var(--border); border-radius: 2px; overflow: hidden; }
+        .complexity-bar-fill { height: 100%; border-radius: 2px; }
+        .complexity-bar-fill.low { background: var(--accent-green); }
+        .complexity-bar-fill.medium { background: var(--accent-amber); }
+        .complexity-bar-fill.high { background: var(--accent-red); }
+        .complexity-factors { margin-top: 0.3rem; display: flex; gap: 0.5rem; flex-wrap: wrap; }
+        .complexity-factor { font-size: 0.65rem; color: var(--text-dim); display: flex; align-items: center; gap: 0.25rem; }
+        .complexity-factor-factor { color: var(--text-muted); }
+
+        /* Timeline */
+        .timeline-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem; }
+        .timeline-header h4 { font-size: 0.75rem; color: var(--text-muted); font-weight: 600; }
+        .timeline-chart { margin-bottom: 0.75rem; padding: 0.6rem 0.75rem; background: #0d1117; border: 1px solid var(--border); border-radius: 6px; }
+        .timeline-bar-row { display: flex; align-items: center; gap: 0.6rem; padding: 0.35rem 0; }
+        .bar-label { width: 90px; font-size: 0.75rem; color: var(--text-muted); text-align: right; flex-shrink: 0; font-weight: 500; }
+        .bar-track { flex: 1; height: 22px; background: rgba(255,255,255,0.06); border-radius: 4px; overflow: hidden; }
+        .bar-fill { height: 100%; border-radius: 4px; background: var(--accent); transition: width 0.3s ease; min-width: 2px; }
+        .bar-fill.slowest { background: linear-gradient(90deg, var(--accent-amber), #f97316); box-shadow: 0 0 10px rgba(245,158,11,0.35); }
+        .bar-duration { width: 72px; font-size: 0.75rem; font-family: 'Outfit', monospace; color: var(--text-main); text-align: right; flex-shrink: 0; }
+        .bar-percent { width: 44px; font-size: 0.6875rem; color: var(--text-dim); text-align: right; flex-shrink: 0; }
+        .bar-slowest-icon { color: var(--accent-amber); font-size: 0.85rem; width: 16px; text-align: center; }
+        .timeline-table-wrapper { margin-top: 0.4rem; }
+        .timeline-table { width: 100%; border-collapse: collapse; font-size: 0.75rem; }
+        .timeline-table th { text-align: left; padding: 0.35rem 0.5rem; color: var(--text-dim); font-weight: 600; border-bottom: 1px solid var(--border); text-transform: uppercase; letter-spacing: 0.04em; font-size: 0.6875rem; }
+        .timeline-table td { padding: 0.3rem 0.5rem; border-bottom: 1px solid var(--border); color: var(--text-main); }
+        .timeline-table .total-row td { font-weight: 700; border-top: 2px solid var(--text-dim); color: var(--text-main); padding: 0.4rem 0.5rem; }
+
+        /* SQL */
+        .sql-toolbar { display: flex; gap: 0.5rem; margin-bottom: 0.5rem; flex-wrap: wrap; align-items: center; flex-shrink: 0; }
+        .sql-dialect { margin-left: auto; font-size: 0.75rem; color: var(--text-dim); display: flex; align-items: center; flex-shrink: 0; }
+        .toolbar-btn { background: var(--bg-card); border: 1px solid var(--border); color: var(--text-muted); padding: 0.3rem 0.65rem; border-radius: 5px; font-size: 0.75rem; cursor: pointer; font-family: 'Plus Jakarta Sans', sans-serif; transition: all 0.15s; line-height: 1.4; }
+        .toolbar-btn:hover { border-color: var(--accent); color: #fff; }
+        .toolbar-btn.copied { border-color: var(--accent-green); color: var(--accent-green); }
+        .sql-editor { display: flex; background: #0d1117; border: 1px solid var(--border); border-radius: 6px; overflow: auto; flex: 1; min-height: 0; }
+        .sql-line-numbers { min-width: 36px; padding: 0.75rem 0.4rem; text-align: right; color: var(--text-dim); font-family: 'Outfit', monospace; font-size: 0.8125rem; line-height: 1.6; user-select: none; border-right: 1px solid var(--border); background: #0a0e14; }
+        .sql-code { padding: 0.75rem 1rem; font-family: 'Outfit', monospace; font-size: 0.8125rem; line-height: 1.6; color: #e2e8f0; white-space: pre-wrap; overflow-x: auto; flex: 1; }
+        .sql-kw { color: #c084fc; font-weight: 600; }
+        .sql-str { color: #34d399; }
+        .sql-num { color: #f59e0b; }
+        .sql-op { color: #60a5fa; }
+        .sql-cmt { color: #6b7280; font-style: italic; }
+        .sql-params-table { width: 100%; border-collapse: collapse; font-size: 0.75rem; margin-top: 0.5rem; }
+        .sql-params-table th { text-align: left; padding: 0.3rem 0.5rem; color: var(--text-dim); font-weight: 600; border-bottom: 1px solid var(--border); }
+        .sql-params-table td { padding: 0.3rem 0.5rem; border-bottom: 1px solid var(--border); color: var(--text-main); font-family: 'Outfit', monospace; font-size: 0.75rem; }
+
+        /* Parsed Query Options */
+        .options-sections { display: flex; flex-direction: column; gap: 0.75rem; }
+        .option-section { border-left: 3px solid var(--accent); padding-left: 0.85rem; }
+        .option-section.filter { border-left-color: var(--accent-blue); }
+        .option-section.sort { border-left-color: var(--accent-purple); }
+        .option-section.select { border-left-color: var(--accent-green); }
+        .option-section.group { border-left-color: var(--accent-amber); }
+        .option-section.aggregate { border-left-color: #06b6d4; }
+        .option-section.paging { border-left-color: var(--accent); }
+        .option-section.settings { border-left-color: var(--text-dim); }
+        .option-section-header { font-size: 0.75rem; font-weight: 600; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.25rem; }
+        .option-section-body { font-size: 0.8125rem; color: var(--text-muted); line-height: 1.7; }
+        .option-item { padding: 0.1rem 0; }
+        .option-field { color: #93c5fd; }
+        .option-op { color: var(--accent-amber); }
+        .option-value { color: #34d399; }
+        .option-toggle-on { color: var(--accent-green); }
+        .option-toggle-off { color: var(--accent-red); }
+
+        /* Pipeline */
+        .pipeline-stages { display: flex; flex-direction: column; }
+        .pipeline-stage-row { display: flex; align-items: stretch; gap: 0; }
+        .pipeline-connector { display: flex; flex-direction: column; align-items: center; width: 22px; flex-shrink: 0; }
+        .connector-dot { width: 10px; height: 10px; border-radius: 50%; margin-top: 7px; flex-shrink: 0; position: relative; z-index: 1; }
+        .connector-dot.passed { background: var(--accent-green); box-shadow: 0 0 6px rgba(34,197,94,0.5); }
+        .connector-dot.failed { background: var(--accent-red); }
+        .connector-line { width: 2px; flex: 1; background: var(--border); min-height: 16px; margin: 3px 0; }
+        .pipeline-stage-row:last-child .connector-line { display: none; }
+        .connector-arrow { font-size: 0.65rem; color: var(--text-dim); line-height: 1; margin: 2px 0; }
+        .stage-content { display: flex; align-items: center; gap: 0.6rem; padding: 0.3rem 0 0.3rem 0.5rem; flex: 1; }
+        .stage-status-icon { font-size: 0.8125rem; width: 16px; text-align: center; }
+        .stage-status-icon.passed { color: var(--accent-green); }
+        .stage-status-icon.failed { color: var(--accent-red); }
+        .stage-name { font-size: 0.8125rem; color: var(--text-main); flex: 1; font-weight: 500; }
+        .stage-duration { font-size: 0.75rem; font-family: 'Outfit', monospace; color: var(--text-muted); min-width: 70px; text-align: right; }
+        .stage-slowest-badge { font-size: 0.65rem; background: rgba(245,158,11,0.2); color: var(--accent-amber); padding: 0.1rem 0.4rem; border-radius: 4px; font-weight: 700; }
+        .pipeline-footer { display: flex; justify-content: space-between; align-items: center; margin-top: 0.5rem; padding: 0.35rem 0.65rem; background: var(--bg-card); border: 1px solid var(--card-border); border-radius: 5px; font-size: 0.75rem; }
+
+        /* Warnings & Suggestions */
+        .banner { border-radius: 6px; padding: 0.45rem 0.85rem; font-size: 0.75rem; cursor: pointer; transition: all 0.15s; }
+        .banner-header { display: flex; justify-content: space-between; align-items: center; font-weight: 600; }
+        .banner-body { margin-top: 0.4rem; padding-left: 1.25rem; display: none; }
+        .banner.expanded .banner-body { display: block; }
+        .banner-item { padding: 0.15rem 0; color: var(--text-muted); }
+        .banner-item::before { content: '● '; }
+        .banner-warnings { background: rgba(245,158,11,0.08); border: 1px solid rgba(245,158,11,0.25); color: var(--accent-amber); }
+        .banner-suggestions { background: rgba(99,102,241,0.08); border: 1px solid rgba(99,102,241,0.25); color: var(--accent-blue); }
+        .banner-chevron { font-size: 0.65rem; color: var(--text-dim); transition: transform 0.15s; }
+        .banner.expanded .banner-chevron { transform: rotate(180deg); }
+
+        /* Raw JSON */
+        .raw-toolbar { display: flex; gap: 0.5rem; margin-bottom: 0.5rem; flex-wrap: wrap; align-items: center; flex-shrink: 0; }
+        .raw-toggle-group { display: flex; gap: 0; background: var(--bg-card); border: 1px solid var(--border); border-radius: 5px; margin-left: auto; overflow: hidden; }
+        .raw-toggle-opt { padding: 0.25rem 0.5rem; font-size: 0.75rem; cursor: pointer; color: var(--text-dim); border-right: 1px solid var(--border); transition: all 0.15s; }
+        .raw-toggle-opt:last-child { border-right: none; }
+        .raw-toggle-opt:hover { color: var(--text-main); }
+        .raw-toggle-opt.active { background: var(--accent); color: #fff; }
+        .raw-json-viewer { flex: 1; overflow: auto; min-height: 0; }
+        .raw-json-viewer .output-json { overflow: visible; max-height: none; }
+        .raw-payload-size { font-size: 0.75rem; color: var(--text-dim); margin-top: 0.4rem; flex-shrink: 0; }
+
+        /* Badges */
+        .badge { font-size: 0.6875rem; padding: 0.15rem 0.5rem; border-radius: 4px; font-weight: 600; }
         .badge-ef { background: rgba(99,102,241,0.2); color: var(--accent); }
         .badge-dapper { background: rgba(245,158,11,0.2); color: var(--orange); }
 
-        /* Results Card - Hero */
-        .results-card { flex: 1; display: flex; flex-direction: column; min-height: 300px; }
-        .results-card .output-card-body { flex: 1; overflow: auto; }
+        /* Query Type Badge */
+        .query-type-badge { display: inline-block; padding: 0.15rem 0.55rem; border-radius: 5px; font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; }
+        .query-type-badge.aggregate { background: rgba(6,182,212,0.2); color: #67e8f9; }
+        .query-type-badge.projection { background: rgba(251,191,36,0.2); color: #fde68a; }
+        .query-type-badge.filter { background: rgba(99,102,241,0.2); color: #a5b4fc; }
+        .query-type-badge.grouped { background: rgba(139,92,246,0.2); color: #c4b5fd; }
+        .query-type-badge.paged { background: rgba(34,197,94,0.2); color: #86efac; }
+        .query-type-badge.simple { background: rgba(107,114,128,0.2); color: var(--text-muted); }
 
-        .results-table { width: 100%; border-collapse: collapse; font-size: 0.7rem; }
-        .results-table th { text-align: left; padding: 0.3rem 0.45rem; color: var(--text-dim); font-size: 0.6rem; font-weight: 600; text-transform: uppercase; border-bottom: 1px solid var(--border); position: sticky; top: 0; background: var(--bg-secondary); }
-        .results-table td { padding: 0.25rem 0.45rem; border-bottom: 1px solid var(--border); color: var(--text-main); }
+        /* Results Card */
+        .results-card { flex: 1; display: flex; flex-direction: column; min-height: 0; }
+        .results-card .output-card-body { flex: 1; overflow: auto; min-height: 0; }
+        .results-toolbar { display: flex; align-items: center; gap: 0.5rem; }
+        .results-toolbar .sep { width: 1px; height: 18px; background: var(--border); margin: 0 0.25rem; }
+        .results-table { width: 100%; border-collapse: collapse; font-size: 0.8125rem; }
+        .results-table th { text-align: left; padding: 0.45rem 0.55rem; color: var(--text-dim); font-size: 0.72rem; font-weight: 600; text-transform: uppercase; border-bottom: 1px solid var(--border); position: sticky; top: 0; background: var(--bg-secondary); }
+        .results-table td { padding: 0.4rem 0.55rem; border-bottom: 1px solid var(--border); color: var(--text-main); }
         .results-table tr:hover td { background: rgba(255,255,255,0.02); }
 
-        .view-toggle { display: flex; gap: 2px; background: rgba(255,255,255,0.05); border-radius: 3px; padding: 2px; }
-        .toggle-option { padding: 0.15rem 0.45rem; font-size: 0.6rem; font-weight: 600; cursor: pointer; border-radius: 2px; color: var(--text-dim); transition: all 0.15s; }
+        .view-toggle { display: flex; gap: 3px; background: rgba(255,255,255,0.05); border-radius: 4px; padding: 2px; }
+        .toggle-option { padding: 0.2rem 0.55rem; font-size: 0.72rem; font-weight: 600; cursor: pointer; border-radius: 3px; color: var(--text-dim); transition: all 0.15s; white-space: nowrap; }
         .toggle-option:hover { color: var(--text-main); }
         .toggle-option.active { background: var(--accent-gradient); color: #fff; }
 
         .results-json { display: none; }
         .results-json.visible { display: block; max-height: unset; }
 
-        /* Empty State Hero */
         .results-empty-hero { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 2.5rem 1rem; color: var(--text-dim); gap: 1rem; min-height: 200px; }
         .results-empty-hero .hero-icon { font-size: 2rem; opacity: 0.3; }
-        .results-empty-hero p { font-size: 0.85rem; font-weight: 500; }
+        .results-empty-hero p { font-size: 0.8125rem; font-weight: 500; }
         .results-empty-hero .empty-chips { display: flex; gap: 0.4rem; flex-wrap: wrap; justify-content: center; }
         .results-empty-hero .empty-chips span { padding: 0.35rem 0.65rem; background: var(--bg-card); border: 1px solid var(--border); border-radius: 6px; cursor: pointer; font-size: 0.72rem; color: var(--text-muted); transition: all 0.15s; }
         .results-empty-hero .empty-chips span:hover { border-color: var(--accent); color: var(--text-main); background: rgba(99,102,241,0.08); }
 
-        /* Pipeline View Mode */
-        .pipeline-mode .diag-card { flex-shrink: unset; flex: unset; }
-        .pipeline-mode .results-card { flex: unset; min-height: 180px; }
-        .pipeline-mode .output-payload { max-height: 160px; }
-        .pipeline-mode .output-json { max-height: 120px; }
-
-        footer { text-align: center; padding: 0.65rem 2rem; font-size: 0.65rem; color: var(--text-dim); border-top: 1px solid var(--border); background: var(--bg-secondary); display: flex; justify-content: center; align-items: center; gap: 0.75rem; flex-wrap: wrap; margin-top: auto; }
+        footer { text-align: center; padding: 0.75rem 2rem; font-size: 0.75rem; color: var(--text-dim); border-top: 1px solid var(--border); background: var(--bg-secondary); display: flex; justify-content: center; align-items: center; gap: 0.85rem; flex-wrap: wrap; margin-top: auto; }
         footer a { color: var(--text-muted); text-decoration: none; }
         footer a:hover { color: var(--accent); }
         footer .sep { color: var(--border); }
@@ -169,7 +304,7 @@
             .left-panel { width: 100%; min-width: unset; border-right: none; border-bottom: 1px solid var(--border); max-height: 45vh; }
             header { flex-direction: column; gap: 0.5rem; padding: 0.65rem 1rem; }
             nav { flex-wrap: wrap; justify-content: center; }
-            .view-mode-toggle { margin-left: 0; }
+            .summary-grid { grid-template-columns: repeat(2, 1fr); }
         }
     </style>
 </head>
@@ -177,14 +312,14 @@
     <header>
         <div class="logo-section">
             <h1>&#9889; FlexQuery.NET</h1>
-            <p>Query Playground</p>
+            <p>Query Inspector</p>
         </div>
         <nav>
             <a href="/">Home</a>
             <a href="/aggrid.html">AG Grid</a>
             <a href="/kendo.html">Kendo UI</a>
             <a href="/comparison.html">Comparison</a>
-            <a href="/playground.html" class="active">Playground</a>
+            <a href="/playground.html" class="active">Inspector</a>
             <a href="/swagger">API Docs</a>
         </nav>
     </header>
@@ -262,11 +397,13 @@
             <div class="pipeline-banner">
                 <span class="step">DSL</span>
                 <span class="arrow">&#8594;</span>
-                <span class="step">QueryOptions</span>
+                <span class="step">Parse</span>
+                <span class="arrow">&#8594;</span>
+                <span class="step">Translate</span>
                 <span class="arrow">&#8594;</span>
                 <span class="step">SQL</span>
                 <span class="arrow">&#8594;</span>
-                <span class="step">JSON</span>
+                <span class="step">Execute</span>
                 <span class="arrow">&#8594;</span>
                 <span class="active-step">Results</span>
             </div>
@@ -278,70 +415,126 @@
                 <div class="output-meta-item"><span class="label">Response:</span> <span class="value" id="pgTime">—</span></div>
                 <div class="output-meta-item"><span class="label">Rows:</span> <span class="value" id="pgRows">—</span></div>
                 <div class="output-meta-item"><span class="label">Total:</span> <span class="value" id="pgTotal">—</span></div>
-                <div class="output-meta-item"><span class="label">Filters:</span> <span class="value" id="pgFilters">0</span></div>
-                <div class="output-meta-item"><span class="label">Sorts:</span> <span class="value" id="pgSorts">0</span></div>
-                <div class="output-meta-item" id="pgMetaGroupBy" style="display:none;"><span class="label">GroupBy:</span> <span class="value" id="pgGroupBy">—</span></div>
-                <div class="output-meta-item" id="pgMetaAggregates" style="display:none;"><span class="label">Aggregates:</span> <span class="value" id="pgAggregates">—</span></div>
-                <div class="output-meta-item" id="pgMetaHaving" style="display:none;"><span class="label">Having:</span> <span class="value" id="pgHaving">—</span></div>
                 <div class="output-meta-item"><span class="label">Cols:</span> <span class="value" id="pgColumns">—</span></div>
                 <div class="output-meta-item"><span class="label">Payload:</span> <span class="value" id="pgPayloadSize">—</span></div>
-                <div class="view-mode-toggle" id="viewModeToggle">
-                    <span class="view-mode-option active" data-mode="results" onclick="setViewMode('results')">Results Focus</span>
-                    <span class="view-mode-option" data-mode="pipeline" onclick="setViewMode('pipeline')">Pipeline Focus</span>
-                </div>
             </div>
 
-            <!-- Diagnostics Card (Tabs) -->
-            <div class="output-card diag-card" id="diagCard">
-                <div class="diag-tabs">
-                    <span class="diag-tab active" data-tab="request" onclick="switchDiagTab('request')">Request</span>
-                    <span class="diag-tab" data-tab="options" onclick="switchDiagTab('options')">QueryOptions</span>
-                    <span class="diag-tab" data-tab="sql" onclick="switchDiagTab('sql')">SQL</span>
-                    <span class="diag-tab" data-tab="payload" onclick="switchDiagTab('payload')">Payload</span>
+            <!-- Warnings Banner -->
+            <div id="warningsBanner" class="banner banner-warnings" style="display:none;" onclick="this.classList.toggle('expanded')">
+                <div class="banner-header">
+                    <span>&#9888; Warnings (<span id="warningsCount">0</span>)</span>
+                    <span class="banner-chevron">&#9660;</span>
                 </div>
-                <div class="output-card-body">
-                    <div class="diag-panel active" id="diagRequest">
-                        <div class="output-url" id="pgUrlPreview"><span class="url-muted">Type parameters on the left to build the URL...</span></div>
+                <div class="banner-body" id="warningsBody"></div>
+            </div>
+
+            <!-- Suggestions Banner -->
+            <div id="suggestionsBanner" class="banner banner-suggestions" style="display:none;" onclick="this.classList.toggle('expanded')">
+                <div class="banner-header">
+                    <span>&#128161; Optimization Suggestions (<span id="suggestionsCount">0</span>)</span>
+                    <span class="banner-chevron">&#9660;</span>
+                </div>
+                <div class="banner-body" id="suggestionsBody"></div>
+            </div>
+
+            <!-- Section Tabs: Inspector | Results -->
+            <div class="section-tabs">
+                <span class="section-tab active" data-section="inspector" onclick="switchSection('inspector')">&#128269; Inspector</span>
+                <span class="section-tab" data-section="results" onclick="switchSection('results')">&#128202; Results</span>
+            </div>
+
+            <!-- Inspector Panel -->
+            <div class="section-panel active" id="inspectorPanel">
+                <div class="output-card diag-card" id="diagCard">
+                    <div class="diag-tabs">
+                        <span class="diag-tab active" data-tab="summary" onclick="switchDiagTab('summary')">&#8851; Summary</span>
+                        <span class="diag-tab" data-tab="timeline" onclick="switchDiagTab('timeline')">&#9201; Timeline</span>
+                        <span class="diag-tab" data-tab="sql" onclick="switchDiagTab('sql')">&#9002; SQL</span>
+                        <span class="diag-tab" data-tab="options" onclick="switchDiagTab('options')">&#9881; Parsed Query</span>
+                        <span class="diag-tab" data-tab="pipeline" onclick="switchDiagTab('pipeline')">&#9679; Pipeline</span>
+                        <span class="diag-tab" data-tab="raw" onclick="switchDiagTab('raw')">{} Diagnostics JSON</span>
                     </div>
-                    <div class="diag-panel" id="diagOptions">
-                        <div class="output-json" id="pgOptions"><span class="null">Execute a query to see parsed QueryOptions...</span></div>
-                    </div>
-                    <div class="diag-panel" id="diagSql">
-                        <div class="output-sql" id="pgSql"><span style="color:var(--text-dim);font-style:italic;">Execute a query to see generated SQL...</span></div>
-                        <div class="sql-params" id="pgSqlParams"></div>
-                    </div>
-                    <div class="diag-panel" id="diagPayload">
-                        <div class="payload-header">
-                            <label><input type="checkbox" id="pgPayloadMetaToggle" onchange="togglePayloadMeta()"> Show Diagnostics Metadata</label>
+                    <div class="output-card-body">
+                        <div class="diag-panel active" id="diagSummary">
+                            <div id="summarySections"></div>
+                            <div id="summaryFooter" class="summary-footer"></div>
                         </div>
-                        <div class="output-json output-payload" id="pgPayload"><span class="null">Execute a query to see the API response...</span></div>
+                        <div class="diag-panel" id="diagTimeline">
+                            <div class="timeline-header">
+                                <h4>Execution Stages</h4>
+                                <span style="font-size:0.6rem;color:var(--text-dim);" id="timelineTotal"></span>
+                            </div>
+                            <div id="timelineChart" class="timeline-chart"></div>
+                            <div class="timeline-table-wrapper"><table class="timeline-table"><thead><tr><th>Stage</th><th>Duration</th><th>%</th><th></th></tr></thead><tbody id="timelineBody"></tbody></table></div>
+                        </div>
+                        <div class="diag-panel flex-panel" id="diagSql">
+                            <div class="sql-toolbar">
+                                <button class="toolbar-btn" onclick="copySql()">&#128203; Copy SQL</button>
+                                <button class="toolbar-btn" onclick="copySqlParams()">&#128203; Copy Parameters</button>
+                                <span class="sql-dialect" id="sqlDialect"></span>
+                            </div>
+                            <div class="sql-editor">
+                                <div class="sql-line-numbers" id="sqlLineNumbers"></div>
+                                <pre class="sql-code" id="sqlCode"><span style="color:var(--text-dim);font-style:italic;">Execute a query to see generated SQL...</span></pre>
+                            </div>
+                            <div id="sqlParamsArea" style="display:none;">
+                                <table class="sql-params-table"><thead><tr><th>Name</th><th>Value</th></tr></thead><tbody id="sqlParamsBody"></tbody></table>
+                            </div>
+                        </div>
+                        <div class="diag-panel" id="diagOptions">
+                            <div style="text-align:right;margin-bottom:0.3rem;"><button class="toolbar-btn" onclick="copyQueryOptions()">&#128203; Copy as JSON</button></div>
+                            <div id="optionsSections" class="options-sections"></div>
+                        </div>
+                        <div class="diag-panel" id="diagPipeline">
+                            <div id="pipelineStages" class="pipeline-stages"></div>
+                            <div id="pipelineFooter" class="pipeline-footer"></div>
+                        </div>
+                        <div class="diag-panel flex-panel" id="diagRaw">
+                            <div class="raw-toolbar">
+                                <button class="toolbar-btn" onclick="copyDiagnosticsJson()">&#128203; Copy JSON</button>
+                                <button class="toolbar-btn" onclick="downloadDiagnosticsJson()">&#11015; Download</button>
+                                <div class="raw-toggle-group">
+                                    <span class="raw-toggle-opt active" data-raw="diag" onclick="setRawView('diag')">Diagnostics</span>
+                                    <span class="raw-toggle-opt" data-raw="full" onclick="setRawView('full')">Full Response</span>
+                                </div>
+                            </div>
+                            <div class="raw-json-viewer"><pre class="output-json" id="rawJsonOutput"><span class="null">Execute a query to see diagnostics JSON...</span></pre></div>
+                            <div class="raw-payload-size" id="rawPayloadSize"></div>
+                        </div>
                     </div>
                 </div>
             </div>
 
-            <!-- Results Card (Hero) -->
-            <div class="output-card results-card" id="resultsCard">
-                <div class="output-card-header">
-                    <h3>&#128202; Results Preview</h3>
-                    <div class="view-toggle" id="pgViewToggle">
-                        <span class="toggle-option active" data-view="table" onclick="setResultView('table')">Table</span>
-                        <span class="toggle-option" data-view="json" onclick="setResultView('json')">JSON</span>
-                    </div>
-                </div>
-                <div class="output-card-body">
-                    <div id="pgResults">
-                        <div class="results-empty-hero">
-                            <div class="hero-icon">&#9889;</div>
-                            <p>Try one of the example queries</p>
-                            <div class="empty-chips">
-                                <span onclick="loadPreset('active')">&#128293; Active Customers</span>
-                                <span onclick="loadPreset('houston')">&#127961; Houston Customers</span>
-                                <span onclick="loadPreset('projection')">&#127919; Projection Demo</span>
-                                <span onclick="loadPreset('include-orders')">&#128230; Include Orders</span>
+            <!-- Results Panel -->
+            <div class="section-panel" id="resultsPanel">
+                <div class="output-card results-card">
+                    <div class="output-card-header">
+                        <h3>&#128202; Results Preview</h3>
+                        <div class="results-toolbar">
+                            <button class="toolbar-btn" onclick="copyResultsJson()">Copy JSON</button>
+                            <button class="toolbar-btn" onclick="exportCsv()">Export CSV</button>
+                            <span class="sep"></span>
+                            <div class="view-toggle" id="pgViewToggle">
+                                <span class="toggle-option active" data-view="table" onclick="setResultView('table')">Table</span>
+                                <span class="toggle-option" data-view="json" onclick="setResultView('json')">JSON</span>
                             </div>
                         </div>
                     </div>
-                    <div class="output-json results-json" id="pgResultsJson"><span class="null">Execute a query to see results</span></div>
+                    <div class="output-card-body">
+                        <div id="pgResults">
+                            <div class="results-empty-hero">
+                                <div class="hero-icon">&#9889;</div>
+                                <p>Try one of the example queries</p>
+                                <div class="empty-chips">
+                                    <span onclick="loadPreset('active')">&#128293; Active Customers</span>
+                                    <span onclick="loadPreset('houston')">&#127961; Houston Customers</span>
+                                    <span onclick="loadPreset('projection')">&#127919; Projection Demo</span>
+                                    <span onclick="loadPreset('include-orders')">&#128230; Include Orders</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="output-json results-json" id="pgResultsJson"><span class="null">Execute a query to see results</span></div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -359,305 +552,7 @@
         </a>
         <a href="https://nuget.org/packages/FlexQuery.NET" target="_blank">
             <img src="https://img.shields.io/nuget/v/FlexQuery.NET?style=flat&amp;label=NuGet&amp;color=6366f1" alt="NuGet">
-        </a>
-    </footer>
-
-    <script>
-        let currentProvider = 'ef';
-        let lastResponse = null;
-        let currentView = 'table';
-        let currentDiagTab = 'request';
-        let showPayloadMeta = false;
-        let cleanPayloadJson = '';
-        let fullPayloadJson = '';
-        let prevCols = null;
-        let prevPayloadBytes = null;
-
-        const ENDPOINTS = { ef: '/api/ef/customers', dapper: '/api/dapper/customers' };
-
-        const PRESETS = {
-            'active': { filter: 'Status:eq:Active', sort: '', select: '', include: '', page: '1', pageSize: '20', groupBy: '', having: '' },
-            'houston': { filter: 'City:eq:Houston', sort: '', select: '', include: '', page: '1', pageSize: '20', groupBy: '', having: '' },
-            'email-smith': { filter: 'Email:contains:smith', sort: '', select: '', include: '', page: '1', pageSize: '20', groupBy: '', having: '' },
-            'newest': { filter: '', sort: 'CreatedDate:desc', select: '', include: '', page: '1', pageSize: '20', groupBy: '', having: '' },
-            'projection': { filter: '', sort: '', select: 'id,firstName,email', include: '', page: '1', pageSize: '20', groupBy: '', having: '' },
-            'include-orders': { filter: '', sort: '', select: 'id,firstName,email', include: 'Orders', page: '1', pageSize: '10', groupBy: '', having: '' },
-            'multi-sort': { filter: '', sort: 'City:asc,CreatedDate:desc', select: '', include: '', page: '1', pageSize: '20', groupBy: '', having: '' },
-            'group-status': { filter: '', sort: '', select: 'status,count()', include: '', page: '1', pageSize: '50', groupBy: 'status', having: '' },
-            'group-city': { filter: '', sort: '', select: 'city,count()', include: '', page: '1', pageSize: '50', groupBy: 'city', having: '' },
-            'aggregates': { filter: '', sort: '', select: 'status,count(),avg(salary),max(salary)', include: '', page: '1', pageSize: '50', groupBy: 'status', having: '' },
-            'having': { filter: '', sort: '', select: 'status,count()', include: '', page: '1', pageSize: '50', groupBy: 'status', having: 'count:gt:20' }
-        };
-
-        function setProvider(prov) {
-            if (currentProvider === prov) return;
-            currentProvider = prov;
-            document.querySelectorAll('#providerSwitch .provider-option').forEach(o => o.classList.toggle('active', o.dataset.provider === prov));
-            document.getElementById('pgMetaProvider').textContent = prov === 'dapper' ? 'Dapper' : 'EF Core';
-            updateUrlPreview();
-        }
-
-        function loadPreset(name) {
-            const p = PRESETS[name];
-            if (!p) return;
-            document.getElementById('pgFilter').value = p.filter;
-            document.getElementById('pgSort').value = p.sort;
-            document.getElementById('pgPage').value = p.page;
-            document.getElementById('pgPageSize').value = p.pageSize;
-            document.getElementById('pgSelect').value = p.select;
-            document.getElementById('pgInclude').value = p.include;
-            document.getElementById('pgGroupByInput').value = p.groupBy || '';
-            document.getElementById('pgHavingInput').value = p.having || '';
-            updateUrlPreview();
-            runPlayground();
-        }
-
-        function buildQueryString() {
-            const filter = document.getElementById('pgFilter').value.trim();
-            const sort = document.getElementById('pgSort').value.trim();
-            const page = document.getElementById('pgPage').value;
-            const pageSize = document.getElementById('pgPageSize').value;
-            const select = document.getElementById('pgSelect').value.trim();
-            const include = document.getElementById('pgInclude').value.trim();
-            const groupBy = document.getElementById('pgGroupByInput').value.trim();
-            const having = document.getElementById('pgHavingInput').value.trim();
-
-            const params = new URLSearchParams();
-            if (filter) params.set('filter', filter);
-            if (sort) params.set('sort', sort);
-            if (page && page !== '1') params.set('page', page);
-            if (pageSize && pageSize !== '20') params.set('pageSize', pageSize);
-            if (select) params.set('select', select);
-            if (include) params.set('include', include);
-            if (groupBy) params.set('groupBy', groupBy);
-            if (having) params.set('having', having);
-            return params.toString();
-        }
-
-        function formatPayloadSize(bytes) {
-            return bytes < 1024 ? bytes + ' B' : (bytes / 1024).toFixed(1) + ' KB';
-        }
-
-        function updateUrlPreview() {
-            const qs = buildQueryString();
-            const url = ENDPOINTS[currentProvider] + (qs ? '?' + qs : '');
-            const el = document.getElementById('pgUrlPreview');
-            if (qs) {
-                el.innerHTML = '<span class="url-muted">' + ENDPOINTS[currentProvider] + '</span>?<br>' + highlightQueryString(qs);
-            } else {
-                el.textContent = ENDPOINTS[currentProvider];
-            }
-        }
-
-        function highlightQueryString(qs) {
-            return qs.split('&').map(pair => {
-                const [k, v] = pair.split('=');
-                return '  <span class="key">' + k + '</span>=<span class="str">' + (v || '') + '</span>';
-            }).join('<br>');
-        }
-
-        function switchDiagTab(tab) {
-            currentDiagTab = tab;
-            document.querySelectorAll('.diag-tab').forEach(t => t.classList.toggle('active', t.dataset.tab === tab));
-            document.querySelectorAll('.diag-panel').forEach(p => p.classList.toggle('active', p.id === 'diag' + tab.charAt(0).toUpperCase() + tab.slice(1)));
-        }
-
-        function setViewMode(mode) {
-            document.getElementById('rightPanel').classList.toggle('pipeline-mode', mode === 'pipeline');
-            document.querySelectorAll('#viewModeToggle .view-mode-option').forEach(o =>
-                o.classList.toggle('active', o.dataset.mode === mode));
-        }
-
-        function setResultView(view) {
-            currentView = view;
-            document.querySelectorAll('#pgViewToggle .toggle-option').forEach(o =>
-                o.classList.toggle('active', o.dataset.view === view));
-            const tableEl = document.getElementById('pgResults');
-            const jsonEl = document.getElementById('pgResultsJson');
-            if (view === 'table') {
-                tableEl.style.display = '';
-                jsonEl.style.display = 'none';
-                jsonEl.classList.remove('visible');
-            } else {
-                tableEl.style.display = 'none';
-                jsonEl.style.display = '';
-                jsonEl.classList.add('visible');
-            }
-        }
-
-        function togglePayloadMeta() {
-            showPayloadMeta = document.getElementById('pgPayloadMetaToggle').checked;
-            document.getElementById('pgPayload').innerHTML = syntaxHighlight(showPayloadMeta ? fullPayloadJson : cleanPayloadJson);
-        }
-
-        async function runPlayground() {
-            const btn = document.getElementById('pgExecuteBtn');
-            btn.disabled = true;
-            btn.textContent = 'Executing...';
-            document.getElementById('pgStatus').textContent = 'Executing...';
-            document.getElementById('pgStatusDot').className = 'status-dot ready';
-
-            const qs = buildQueryString();
-            const endpoint = ENDPOINTS[currentProvider];
-            const url = endpoint + (qs ? '?' + qs : '');
-
-            try {
-                const res = await fetch(url);
-                if (!res.ok) throw new Error('HTTP ' + res.status);
-                const data = await res.json();
-
-                lastResponse = data;
-
-                document.getElementById('pgStatus').textContent = 'Success';
-                document.getElementById('pgStatusDot').className = 'status-dot live';
-
-                const dataRows = data.data || [];
-
-                if (data.__diagnostics) {
-                    const d = data.__diagnostics;
-                    document.getElementById('pgTime').textContent = d.executionTimeMs != null ? d.executionTimeMs + 'ms' : '\u2014';
-
-                    const opts = d.parsedOptions || {};
-                    document.getElementById('pgFilters').textContent = opts.filterCount ?? 0;
-                    document.getElementById('pgSorts').textContent = opts.sortCount ?? 0;
-
-                    if (opts) {
-                        document.getElementById('pgOptions').innerHTML = syntaxHighlight(JSON.stringify(opts, null, 2));
-                    }
-
-                    const groupBy = opts.groupBy;
-                    const aggregates = opts.aggregates;
-                    const having = opts.having;
-
-                    const gbEl = document.getElementById('pgMetaGroupBy');
-                    const agEl = document.getElementById('pgMetaAggregates');
-                    const hvEl = document.getElementById('pgMetaHaving');
-
-                    if (groupBy && groupBy.length > 0) {
-                        document.getElementById('pgGroupBy').textContent = groupBy.join(', ');
-                        gbEl.style.display = '';
-                    } else { gbEl.style.display = 'none'; }
-
-                    if (aggregates && aggregates.length > 0) {
-                        document.getElementById('pgAggregates').textContent = aggregates.length;
-                        agEl.style.display = '';
-                    } else { agEl.style.display = 'none'; }
-
-                    if (having) {
-                        const hvStr = having.function + '(' + (having.field || '') + ')';
-                        document.getElementById('pgHaving').textContent = hvStr;
-                        hvEl.style.display = '';
-                    } else { hvEl.style.display = 'none'; }
-
-                    if (d.generatedSql) {
-                        document.getElementById('pgSql').textContent = d.generatedSql;
-                        let paramHtml = '';
-                        const matches = d.generatedSql.match(/@p\d+/g);
-                        if (matches) {
-                            const seen = new Set();
-                            matches.forEach(m => { if (!seen.has(m)) { seen.add(m); paramHtml += m + ' '; } });
-                            if (paramHtml) paramHtml = 'Parameters: ' + paramHtml.trim();
-                        }
-                        document.getElementById('pgSqlParams').textContent = paramHtml;
-                    } else {
-                        document.getElementById('pgSql').innerHTML = '<span style="color:var(--text-dim);font-style:italic;">SQL preview not available</span>';
-                        document.getElementById('pgSqlParams').textContent = '';
-                    }
-                }
-
-                document.getElementById('pgRows').textContent = dataRows.length || '\u2014';
-                document.getElementById('pgTotal').textContent = data.totalCount ?? '\u2014';
-
-                fullPayloadJson = JSON.stringify(data, null, 2);
-                const { __diagnostics, ...cleanData } = data;
-                cleanPayloadJson = JSON.stringify(cleanData, null, 2);
-                document.getElementById('pgPayload').innerHTML = syntaxHighlight(showPayloadMeta ? fullPayloadJson : cleanPayloadJson);
-
-                const fullBytes = new TextEncoder().encode(fullPayloadJson).length;
-                const cleanBytes = new TextEncoder().encode(cleanPayloadJson).length;
-                const displayBytes = showPayloadMeta ? fullBytes : cleanBytes;
-                document.getElementById('pgPayloadSize').textContent = formatPayloadSize(displayBytes);
-
-                if (dataRows.length > 0) {
-                    const fields = Object.keys(dataRows[0]).filter(f => f !== 'orders');
-                    const colCount = fields.length;
-                    document.getElementById('pgColumns').textContent = colCount;
-
-                    const colsEl = document.getElementById('pgColumns');
-                    if (prevCols !== null && prevCols !== colCount) {
-                        colsEl.innerHTML = colCount + ' <span class="proj-diff">&#9660; ' + prevCols + '</span>';
-                    } else if (prevCols !== null) {
-                        colsEl.textContent = colCount;
-                    }
-                    prevCols = colCount;
-
-                    const sizeEl = document.getElementById('pgPayloadSize');
-                    if (prevPayloadBytes !== null && prevPayloadBytes !== displayBytes) {
-                        const direction = displayBytes < prevPayloadBytes ? '&#9660;' : '&#9650;';
-                        const cls = displayBytes < prevPayloadBytes ? 'proj-diff' : 'proj-diff worse';
-                        sizeEl.innerHTML = formatPayloadSize(displayBytes) + ' <span class="' + cls + '">' + direction + ' ' + formatPayloadSize(prevPayloadBytes) + '</span>';
-                    }
-                    prevPayloadBytes = displayBytes;
-                } else {
-                    document.getElementById('pgColumns').textContent = '\u2014';
-                    prevCols = null;
-                    prevPayloadBytes = null;
-                }
-
-                renderResults(data);
-
-                if (dataRows.length > 0) {
-                    document.getElementById('pgResultsJson').innerHTML = syntaxHighlight(JSON.stringify(dataRows, null, 2));
-                } else {
-                    document.getElementById('pgResultsJson').innerHTML = '<span class="null">[]</span>';
-                }
-
-                if (currentView === 'json') {
-                    document.getElementById('pgResults').style.display = 'none';
-                    document.getElementById('pgResultsJson').style.display = '';
-                    document.getElementById('pgResultsJson').classList.add('visible');
-                }
-
-            } catch (err) {
-                lastResponse = null;
-                document.getElementById('pgStatus').textContent = 'Error';
-                document.getElementById('pgStatusDot').className = 'status-dot error';
-                document.getElementById('pgSql').textContent = 'Error: ' + err.message;
-                document.getElementById('pgSqlParams').textContent = '';
-                document.getElementById('pgPayload').innerHTML = '<span class="null">Error fetching response</span>';
-                document.getElementById('pgPayloadSize').textContent = '\u2014';
-                document.getElementById('pgColumns').textContent = '\u2014';
-                document.getElementById('pgMetaGroupBy').style.display = 'none';
-                document.getElementById('pgMetaAggregates').style.display = 'none';
-                document.getElementById('pgMetaHaving').style.display = 'none';
-                prevCols = null;
-                prevPayloadBytes = null;
-            }
-
-            btn.disabled = false;
-            btn.textContent = '\u25B6 Execute';
-        }
-
-        function renderResults(data) {
-            const container = document.getElementById('pgResults');
-            const rows = data?.data;
-            if (!rows || rows.length === 0) {
-                container.innerHTML = '<div class="results-empty-hero"><div class="hero-icon">&#128270;</div><p>No results found</p></div>';
-                return;
-            }
-
-            const excludeFields = new Set(['orders']);
-            const fields = Object.keys(rows[0]).filter(f => !excludeFields.has(f));
-            let html = '<table class="results-table"><thead><tr>';
-            fields.forEach(f => { html += '<th>' + f + '</th>'; });
-            html += '</tr></thead><tbody>';
-            rows.forEach(row => {
-                html += '<tr>';
-                fields.forEach(f => {
-                    let val = row[f] ?? '';
-                    if (f === 'createdDate' && val) val = new Date(val).toLocaleDateString();
-                    if (typeof val === 'object') val = JSON.stringify(val);
-                    html += '<td>' + String(val).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').substring(0, 60) + '</td>';
+        </a>    <script type="module" src="/js/pages/playground/index.js"></script>= '<td>' + String(val).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').substring(0, 60) + '</td>';
                 });
                 html += '</tr>';
             });

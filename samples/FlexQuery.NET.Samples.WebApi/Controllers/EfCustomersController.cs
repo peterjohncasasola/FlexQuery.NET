@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using FlexQuery.NET.Diagnostics;
 using FlexQuery.NET.EntityFrameworkCore;
 using FlexQuery.NET.Models;
@@ -22,6 +23,7 @@ public sealed class EfCustomersController(AppDbContext db) : ControllerBase
         var options = parameters.ToQueryOptions();
 
         var collector = new FlexQueryDiagnosticsCollector();
+        var sw = Stopwatch.StartNew();
 
         var result = await db.Customers
             .AsNoTracking()
@@ -29,40 +31,20 @@ public sealed class EfCustomersController(AppDbContext db) : ControllerBase
                 cancellationToken: cancellationToken,
                 configureExecution: cfg => cfg.Listener = collector);
 
-        var data = result.Data;
-        var totalCount = result.TotalCount;
-        var page = result.Page;
-        var pageSize = result.PageSize;
+        sw.Stop();
 
-        var report = DiagnosticsHelper.BuildReportShape(
-            collector.BuildReport(provider: "EF Core", translator: "Sqlite"));
+        var report = collector.BuildReport(provider: "EF Core", translator: "Sqlite");
+
+        var diagnostics = DiagnosticsHelper.BuildRichDiagnostics(
+            report, options, parameters, result, "/api/ef/customers", sw.Elapsed.TotalMilliseconds);
 
         return Ok(new
         {
-            data,
-            totalCount,
-            page,
-            pageSize,
-            __diagnostics = new
-            {
-                provider = "EF Core",
-                adapter = "FlexQuery",
-                report,
-                parsedOptions = new
-                {
-                    filter = options.Filter,
-                    sort = options.Sort,
-                    select = parameters.Select,
-                    include = parameters.Include,
-                    groupBy = options.GroupBy,
-                    aggregates = options.Aggregates,
-                    having = options.Having,
-                    paging = options.Paging,
-                    filterCount = DiagnosticsHelper.CountFilters(options.Filter),
-                    sortCount = options.Sort?.Count ?? 0
-                },
-                endpoint = "/api/ef/customers"
-            }
+            data = result.Data,
+            totalCount = result.TotalCount,
+            page = result.Page,
+            pageSize = result.PageSize,
+            __diagnostics = diagnostics
         });
     }
 }

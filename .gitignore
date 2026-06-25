@@ -462,3 +462,9 @@ coverage.xml
 *.db
 *.sqlite
 *.sqlite3
+
+
+#Coding AI Tools
+.claude/
+.idea/
+.kilo/

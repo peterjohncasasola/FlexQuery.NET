@@ -9,305 +9,216 @@
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
         :root {
-            --bg-primary: #0b0f19;
-            --bg-secondary: #111827;
-            --bg-card: #1f2937;
-            --accent: #6366f1;
-            --accent-gradient: linear-gradient(135deg, #6366f1 0%, #a855f7 100%);
-            --text-main: #f3f4f6;
-            --text-muted: #9ca3af;
-            --text-dim: #6b7280;
-            --border: #374151;
-            --green: #22c55e;
-            --orange: #f59e0b;
+            --bg-primary: #0b0f19; --bg-secondary: #111827; --bg-card: #1f2937;
+            --accent: #6366f1; --accent-gradient: linear-gradient(135deg, #6366f1 0%, #a855f7 100%);
+            --text-main: #f3f4f6; --text-muted: #b0b8c5; --text-dim: #7a8294;
+            --border: #374151; --accent-green: #22c55e; --accent-amber: #f59e0b; --accent-purple: #c084fc; --accent-red: #ef4444;
+            --text-body: 0.875rem; --text-sm: 0.8125rem; --text-xs: 0.75rem;
+            --card-shadow: 0 1px 3px rgba(0,0,0,0.35), 0 1px 2px rgba(0,0,0,0.2);
         }
         * { box-sizing: border-box; margin: 0; padding: 0; }
-        body {
-            font-family: 'Plus Jakarta Sans', sans-serif;
-            background: var(--bg-primary);
-            color: var(--text-main);
-            min-height: 100vh;
-            display: flex;
-            flex-direction: column;
-        }
-        header {
-            background: var(--bg-secondary);
-            border-bottom: 1px solid var(--border);
-            padding: 1rem 2rem;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            position: sticky;
-            top: 0;
-            z-index: 100;
-        }
-        .logo-section h1 {
-            font-family: 'Outfit', sans-serif;
-            font-size: 1.35rem;
-            font-weight: 700;
-            background: var(--accent-gradient);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-        }
+        html, body { height: 100%; }
+        body { font-family: 'Plus Jakarta Sans', sans-serif; background: var(--bg-primary); color: var(--text-main); font-size: var(--text-body); line-height: 1.5; display: flex; flex-direction: column; }
+        header { background: var(--bg-secondary); border-bottom: 1px solid var(--border); padding: 0.85rem 2rem; display: flex; justify-content: space-between; align-items: center; flex-shrink: 0; }
+        .logo-section h1 { font-family: 'Outfit', sans-serif; font-size: 2rem; font-weight: 700; background: var(--accent-gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
         .logo-section p { font-size: 0.75rem; color: var(--text-muted); }
         nav { display: flex; gap: 0.5rem; align-items: center; }
-        nav a {
-            color: var(--text-muted); text-decoration: none; font-weight: 500;
-            font-size: 0.875rem; padding: 0.45rem 0.9rem; border-radius: 6px;
-            transition: all 0.2s;
-        }
+        nav a { color: var(--text-muted); text-decoration: none; font-weight: 500; font-size: 0.875rem; padding: 0.4rem 0.85rem; border-radius: 6px; transition: all 0.15s; }
         nav a:hover { color: var(--text-main); background: rgba(255,255,255,0.05); }
         nav a.active { color: #fff; background: var(--accent-gradient); }
-        .badge-link { padding: 0.25rem 0.5rem; }
-        .badge-link img { height: 20px; display: block; }
 
-        main { flex: 1; padding: 2rem; max-width: 1400px; margin: 0 auto; width: 100%; }
+        main { flex: 1; display: flex; flex-direction: column; min-height: 0; padding: 1.25rem 2rem 0.65rem; gap: 0.75rem; max-width: 100%; }
 
-        .hero-bar {
-            text-align: center;
-            margin-bottom: 2rem;
-        }
-        .hero-bar h2 {
-            font-family: 'Outfit', sans-serif;
-            font-size: 1.5rem;
-            font-weight: 700;
-        }
-        .hero-bar p {
-            color: var(--text-muted);
-            font-size: 0.95rem;
-            margin-top: 0.3rem;
-        }
-
-        .query-builder {
-            background: var(--bg-secondary);
-            border: 1px solid var(--border);
-            border-radius: 12px;
-            padding: 1.25rem;
-            margin-bottom: 2rem;
-        }
-        .query-builder .row {
-            display: flex;
-            gap: 1rem;
-            flex-wrap: wrap;
-            align-items: end;
-        }
-        .query-builder .field {
-            display: flex;
-            flex-direction: column;
-            gap: 0.3rem;
-        }
-        .query-builder label {
-            font-size: 0.75rem;
-            font-weight: 600;
-            color: var(--text-dim);
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-        }
-        .query-builder input, .query-builder select {
-            background: var(--bg-card);
-            border: 1px solid var(--border);
-            color: var(--text-main);
-            padding: 0.5rem 0.75rem;
-            border-radius: 6px;
-            font-family: 'Outfit', monospace;
-            font-size: 0.85rem;
-            min-width: 140px;
-        }
-        .query-builder input:focus, .query-builder select:focus {
-            outline: none;
-            border-color: var(--accent);
-        }
-        .query-builder .execute-btn {
-            background: var(--accent-gradient);
-            color: #fff;
-            border: none;
-            padding: 0.55rem 1.5rem;
-            border-radius: 8px;
-            font-weight: 600;
-            font-size: 0.9rem;
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-        .query-builder .execute-btn:hover { transform: translateY(-1px); box-shadow: 0 4px 15px rgba(99,102,241,0.4); }
+        .query-builder { background: var(--bg-secondary); border-radius: 10px; padding: 0.75rem 1.25rem; flex-shrink: 0; }
+        .query-builder .row { display: flex; gap: 0.75rem; flex-wrap: wrap; align-items: end; }
+        .query-builder .field-group { display: flex; gap: 0.5rem; align-items: end; }
+        .query-builder .field { display: flex; flex-direction: column; gap: 0.3rem; }
+        .query-builder label { font-size: 0.7rem; font-weight: 600; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.06em; white-space: nowrap; }
+        .query-builder input, .query-builder select { background: var(--bg-card); border: 1px solid var(--border); color: var(--text-main); padding: 0.45rem 0.65rem; border-radius: 6px; font-family: 'Outfit', monospace; font-size: 0.8125rem; line-height: 1.4; }
+        .query-builder input:focus, .query-builder select:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 2px rgba(99,102,241,0.15); }
+        .query-builder .execute-btn { background: var(--accent-gradient); color: #fff; border: none; padding: 0.5rem 1.5rem; border-radius: 7px; font-weight: 600; font-size: 0.8125rem; cursor: pointer; transition: all 0.15s; align-self: end; }
+        .query-builder .execute-btn:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(99,102,241,0.4); }
         .query-builder .execute-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; box-shadow: none; }
 
-        .comparison-area {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 1.5rem;
-        }
-        .provider-card {
-            background: var(--bg-secondary);
-            border: 1px solid var(--border);
+        /* Report-Style Overview */
+        .report-container { display: flex; flex-direction: column; gap: 1rem; flex: 1; min-height: 0; overflow-y: auto; }
+        .report-container::-webkit-scrollbar { width: 6px; }
+        .report-container::-webkit-scrollbar-track { background: transparent; }
+        .report-container::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+        /* Comparison Summary */
+        .report-summary {
+            background: linear-gradient(145deg, var(--bg-card) 0%, #1a1f30 100%);
+            border: 1px solid rgba(99,102,241,0.12);
             border-radius: 12px;
-            overflow: hidden;
-            display: flex;
-            flex-direction: column;
+            padding: 1rem 1.5rem;
+            box-shadow: var(--card-shadow);
         }
-        .provider-card-header {
-            padding: 1rem 1.25rem;
-            border-bottom: 1px solid var(--border);
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            background: #1a1f2e;
-        }
-        .provider-card-header h3 {
-            font-family: 'Outfit', sans-serif;
-            font-size: 1rem;
-            font-weight: 600;
-        }
-        .provider-card-header .badge-ef {
-            font-size: 0.7rem;
-            padding: 0.25rem 0.6rem;
-            border-radius: 5px;
-            background: rgba(99,102,241,0.2);
-            color: var(--accent);
-            font-weight: 600;
-        }
-        .provider-card-header .badge-dapper {
-            font-size: 0.7rem;
-            padding: 0.25rem 0.6rem;
-            border-radius: 5px;
-            background: rgba(245,158,11,0.2);
-            color: var(--orange);
-            font-weight: 600;
-        }
-        .provider-card-body {
-            padding: 1rem 1.25rem;
-            flex: 1;
-        }
-        .provider-stats {
-            display: flex;
-            gap: 1rem;
-            margin-bottom: 1rem;
-        }
-        .stat-item {
-            background: var(--bg-card);
-            border: 1px solid var(--border);
-            border-radius: 6px;
-            padding: 0.4rem 0.75rem;
-            font-size: 0.75rem;
-        }
-        .stat-item .label { color: var(--text-dim); }
-        .stat-item .value { font-weight: 600; color: var(--text-main); }
+        .rs-header { font-size: 0.75rem; font-weight: 700; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 0.65rem; }
+        .rs-items { display: flex; flex-wrap: wrap; gap: 0.35rem 1.25rem; }
+        .rs-item { font-size: 0.8125rem; display: inline-flex; align-items: center; gap: 0.3rem; }
+        .rs-item .rs-icon { font-size: 0.9rem; }
+        .rs-item.match { color: var(--accent-green); }
+        .rs-item.diff { color: var(--accent-red); }
+        .rs-item.winner { color: var(--accent-amber); font-weight: 700; }
 
-        .sql-preview {
-            background: #0d1117;
-            border: 1px solid var(--border);
-            border-radius: 6px;
-            padding: 0.65rem 0.85rem;
-            font-family: 'Outfit', monospace;
-            font-size: 0.7rem;
-            line-height: 1.5;
-            color: #e2e8f0;
-            overflow-x: auto;
-            white-space: pre-wrap;
-            word-break: break-all;
-            max-height: 200px;
-            overflow-y: auto;
-            margin-bottom: 1rem;
-        }
-        .sql-label {
-            font-size: 0.7rem;
-            font-weight: 600;
-            color: var(--text-dim);
-            text-transform: uppercase;
-            margin-bottom: 0.3rem;
-        }
-
-        .results-table {
-            width: 100%;
-            border-collapse: collapse;
-            font-size: 0.8rem;
-        }
-        .results-table th {
-            text-align: left;
-            padding: 0.4rem 0.5rem;
-            color: var(--text-dim);
-            font-size: 0.7rem;
-            font-weight: 600;
-            text-transform: uppercase;
-            border-bottom: 1px solid var(--border);
-        }
-        .results-table td {
-            padding: 0.35rem 0.5rem;
-            border-bottom: 1px solid var(--border);
-            color: var(--text-main);
-        }
-        .results-table tr:hover td { background: rgba(255,255,255,0.02); }
-        .results-empty {
-            color: var(--text-dim);
-            font-style: italic;
-            font-size: 0.85rem;
-            text-align: center;
-            padding: 3rem 1rem;
-        }
-
-        .code-comparison {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 1.5rem;
-            margin-top: 2rem;
-        }
-        .code-block {
+        /* Report Section */
+        .report-section {
             background: var(--bg-secondary);
             border: 1px solid var(--border);
             border-radius: 10px;
-            overflow: hidden;
+            padding: 0.85rem 1.25rem;
         }
-        .code-block-header {
-            display: flex;
-            justify-content: space-between;
-            padding: 0.5rem 1rem;
-            background: #1a1f2e;
-            border-bottom: 1px solid var(--border);
-            font-size: 0.7rem;
-            color: var(--text-dim);
+        .report-section .report-header {
+            font-size: 0.6875rem; font-weight: 700; color: var(--text-dim);
+            text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 0.65rem;
+            display: flex; align-items: center; gap: 0.5rem;
         }
-        .code-block-header .file { color: var(--accent); font-family: 'Outfit', monospace; }
-        .code-block-header .copy-btn {
-            background: none; border: 1px solid var(--border); color: var(--text-muted);
-            padding: 0.2rem 0.5rem; border-radius: 4px; cursor: pointer; font-size: 0.65rem;
-        }
-        .code-block-header .copy-btn:hover { border-color: var(--accent); color: #fff; }
-        .code-block-body {
-            padding: 0.85rem;
-            font-family: 'Outfit', monospace;
-            font-size: 0.75rem;
-            line-height: 1.5;
-            color: #e2e8f0;
-            overflow-x: auto;
-        }
-        .kw { color: #c084fc; }
-        .type { color: #60a5fa; }
-        .str { color: #34d399; }
-        .cmt { color: #6b7280; font-style: italic; }
 
-        footer {
-            text-align: center;
-            padding: 1rem 2rem;
-            font-size: 0.75rem;
-            color: var(--text-dim);
-            border-top: 1px solid var(--border);
-            background: var(--bg-secondary);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            gap: 1rem;
-            flex-wrap: wrap;
-            margin-top: 2rem;
-        }
+        /* Performance Benchmark */
+        .perf-bars { display: flex; flex-direction: column; gap: 0.35rem; }
+        .perf-row { display: flex; align-items: center; gap: 0.75rem; }
+        .perf-label { width: 72px; font-size: 0.75rem; font-weight: 600; color: var(--text-muted); text-align: right; flex-shrink: 0; }
+        .perf-track { flex: 1; height: 14px; background: rgba(255,255,255,0.05); border-radius: 3px; overflow: hidden; }
+        .perf-fill { height: 100%; border-radius: 3px; transition: width 0.4s; }
+        .perf-fill.ef { background: var(--accent); }
+        .perf-fill.dapper { background: linear-gradient(90deg, var(--accent-amber), #f97316); }
+        .perf-fill.slowest { box-shadow: 0 0 6px rgba(245,158,11,0.3); }
+        .perf-value { width: 75px; font-family: 'Outfit', monospace; font-size: 0.8125rem; font-weight: 600; color: var(--text-main); text-align: right; flex-shrink: 0; }
+        .perf-result { font-size: 0.75rem; font-weight: 700; color: var(--accent-amber); margin-top: 0.4rem; }
+
+        /* Compatibility Matrix */
+        .compat-table { width: 100%; border-collapse: collapse; font-size: 0.8125rem; }
+        .compat-table th { text-align: left; padding: 0.2rem 0.4rem; color: var(--text-dim); font-weight: 600; font-size: 0.6875rem; text-transform: uppercase; letter-spacing: 0.05em; border-bottom: 1px solid var(--border); }
+        .compat-table td { padding: 0.15rem 0.4rem; border-bottom: 1px solid rgba(255,255,255,0.03); color: var(--text-muted); }
+        .compat-table td:first-child { color: var(--text-main); font-weight: 500; }
+        .compat-table td:nth-child(2), .compat-table th:nth-child(2) { text-align: center; }
+        .compat-table td:nth-child(3), .compat-table th:nth-child(3) { text-align: right; }
+        .compat-table .yes { color: var(--accent-green); }
+        .compat-table .no { color: var(--text-dim); }
+
+        /* SQL Compare (inline, overview) */
+        .sql-compare { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; }
+        .sql-col { background: #0d1117; border: 1px solid var(--border); border-radius: 6px; overflow: hidden; }
+        .sql-col-header { padding: 0.3rem 0.65rem; font-size: 0.6875rem; font-weight: 700; color: var(--text-dim); background: #1a1f2e; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 0.4rem; }
+        .sql-col-header.ef { color: var(--accent); }
+        .sql-col-header.dapper { color: var(--accent-amber); }
+        .sql-col .sql-code { margin: 0; padding: 0.5rem 0.65rem; font-family: 'Outfit', monospace; font-size: 0.75rem; line-height: 1.5; color: #e2e8f0; overflow: auto; white-space: pre-wrap; max-height: 180px; }
+        .sql-col .sql-code .sql-kw { color: #c084fc; font-weight: 600; }
+        .sql-col .sql-code .sql-str { color: #34d399; }
+        .sql-col .sql-code .sql-num { color: #f59e0b; }
+        .sql-diff-reason { font-size: 0.75rem; color: var(--text-muted); margin-top: 0.4rem; display: flex; align-items: center; gap: 0.4rem; }
+        .sql-diff-reason .sdr-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+        .sql-diff-reason .sdr-dot.diff { background: var(--accent-red); }
+        .sql-diff-reason .sdr-dot.match { background: var(--accent-green); }
+
+        /* Detail items */
+        .det-grid { display: flex; flex-wrap: wrap; gap: 0.3rem 1rem; padding-top: 0.3rem; border-top: 1px solid rgba(255,255,255,0.04); margin-top: 0.3rem; }
+        .det-item { font-size: 0.75rem; color: var(--text-muted); display: flex; align-items: center; gap: 0.3rem; }
+        .det-item .det-label { color: var(--text-dim); }
+        .det-item .det-value { color: var(--text-main); font-weight: 600; }
+        .det-item .det-badge { display: inline-block; padding: 0.05rem 0.35rem; border-radius: 3px; font-size: 0.625rem; font-weight: 700; }
+        .det-badge.match { background: rgba(34,197,94,0.15); color: var(--accent-green); }
+        .det-badge.diff { background: rgba(239,68,68,0.15); color: var(--accent-red); }
+
+        /* SQL tab diff highlighting */
+        .diff-line { padding: 0.1rem 0.65rem; }
+        .diff-line.ef { background: rgba(239,68,68,0.07); border-left: 2px solid var(--accent-red); }
+        .diff-line.dp { background: rgba(34,197,94,0.07); border-left: 2px solid var(--accent-green); }
+
+        /* Timeline comparison */
+        .tl-compare { display: flex; flex-direction: column; gap: 0.65rem; }
+        .tl-stage { background: var(--bg-card); border: 1px solid var(--border); border-radius: 6px; padding: 0.55rem 0.75rem; }
+        .tl-stage-name { font-size: 0.6875rem; font-weight: 700; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 0.4rem; }
+        .tl-provider { display: flex; align-items: center; gap: 0.5rem; padding: 0.15rem 0; }
+        .tl-provider .tlp-name { width: 50px; font-size: 0.6875rem; color: var(--text-muted); font-weight: 600; flex-shrink: 0; }
+        .tl-provider .tlp-bar { flex: 1; height: 10px; background: rgba(255,255,255,0.05); border-radius: 2px; overflow: hidden; }
+        .tl-provider .tlp-fill { height: 100%; border-radius: 2px; }
+        .tl-provider .tlp-fill.ef { background: var(--accent); }
+        .tl-provider .tlp-fill.dapper { background: linear-gradient(90deg, var(--accent-amber), #f97316); }
+        .tl-provider .tlp-dur { width: 60px; font-family: 'Outfit', monospace; font-size: 0.6875rem; color: var(--text-muted); text-align: right; flex-shrink: 0; }
+
+        /* Diff table for SQL tab */
+        .diff-toggle { font-size: 0.75rem; color: var(--text-dim); display: flex; align-items: center; gap: 0.35rem; cursor: pointer; }
+        .diff-toggle input { accent-color: var(--accent); }
+        .report-link { font-size: 0.75rem; color: var(--accent); cursor: pointer; font-weight: 600; }
+        .report-link:hover { text-decoration: underline; }
+
+        /* Section Tabs */
+        .section-tabs { display: flex; gap: 0; background: #1a1f2e; border-radius: 10px; overflow: hidden; flex-shrink: 0; }
+        .section-tab { padding: 0.45rem 1.1rem; font-size: 0.8125rem; font-weight: 600; cursor: pointer; color: var(--text-dim); transition: all 0.15s; user-select: none; display: flex; align-items: center; gap: 0.35rem; border-right: 1px solid var(--border); }
+        .section-tab:last-child { border-right: none; }
+        .section-tab:hover { color: var(--text-main); background: rgba(255,255,255,0.04); }
+        .section-tab.active { color: #fff; background: var(--accent-gradient); }
+        .section-content-panel { display: none; flex: 1; min-height: 0; overflow: hidden; }
+        .section-content-panel.active { display: flex; gap: 1rem; min-height: 0; }
+
+        /* Side-by-side grid for non-overview tabs */
+        .side-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; flex: 1; min-height: 0; }
+        .provider-col { display: flex; flex-direction: column; gap: 0.75rem; min-height: 0; }
+        .provider-col .provider-header { font-size: 0.8125rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.07em; color: var(--text-dim); display: flex; align-items: center; gap: 0.4rem; padding: 0 0.35rem; }
+        .provider-col.ef .provider-header { color: var(--accent); }
+        .provider-col.dapper .provider-header { color: var(--accent-amber); }
+
+        .results-card, .diagnostics-card, .sql-card { background: var(--bg-secondary); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; display: flex; flex-direction: column; min-height: 0; }
+        .card-header { display: flex; justify-content: space-between; align-items: center; padding: 0.5rem 0.85rem; background: #1a1f2e; border-bottom: 1px solid var(--border); flex-shrink: 0; }
+        .card-header h4 { font-family: 'Outfit', sans-serif; font-size: 0.8125rem; font-weight: 600; display: flex; align-items: center; gap: 0.4rem; }
+        .card-body { padding: 0.75rem 0.85rem; flex: 1; overflow: auto; min-height: 0; }
+        .results-card { flex: 1; min-height: 0; }
+
+        .stat-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.5rem; }
+        .stat-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 6px; padding: 0.55rem 0.65rem; border-left: 3px solid var(--accent); }
+        .stat-card .label { font-size: 0.625rem; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.05em; font-weight: 500; }
+        .stat-card .value { font-size: 0.9375rem; font-weight: 600; color: var(--text-main); font-family: 'Outfit', sans-serif; margin-top: 0.1rem; }
+        .stat-card.timing { border-left-color: var(--accent-amber); }
+        .stat-card.rows { border-left-color: var(--accent-green); }
+        .stat-card.info { border-left-color: var(--accent-blue); }
+        .stat-card.complexity { border-left-color: var(--accent-purple); }
+        .stat-card.projection { border-left-color: #06b6d4; }
+
+        .results-table { width: 100%; border-collapse: collapse; font-size: 0.8125rem; }
+        .results-table th { text-align: left; padding: 0.45rem 0.5rem; color: var(--text-dim); font-size: 0.75rem; font-weight: 600; text-transform: uppercase; border-bottom: 1px solid var(--border); position: sticky; top: 0; background: var(--bg-secondary); }
+        .results-table td { padding: 0.35rem 0.5rem; border-bottom: 1px solid var(--border); color: var(--text-main); }
+        .results-table tr:hover td { background: rgba(255,255,255,0.02); }
+
+        .sql-preview { background: #0d1117; border: 1px solid var(--border); border-radius: 6px; padding: 0.65rem 0.85rem; font-family: 'Outfit', monospace; font-size: 0.8125rem; line-height: 1.6; color: #e2e8f0; overflow: auto; white-space: pre-wrap; flex: 1; min-height: 0; }
+        .sql-preview .sql-kw { color: #c084fc; font-weight: 600; }
+        .sql-preview .sql-str { color: #34d399; }
+        .sql-preview .sql-num { color: #f59e0b; }
+
+        .mini-timeline { padding: 0.25rem 0; }
+        .mini-timeline-bar { display: flex; align-items: center; gap: 0.45rem; padding: 0.15rem 0; font-size: 0.8125rem; }
+        .mini-timeline-bar .bar-label { width: 80px; color: var(--text-muted); text-align: right; flex-shrink: 0; font-weight: 500; }
+        .mini-timeline-bar .bar-track { flex: 1; height: 16px; background: rgba(255,255,255,0.06); border-radius: 3px; overflow: hidden; }
+        .mini-timeline-bar .bar-fill { height: 100%; border-radius: 3px; background: var(--accent); }
+        .mini-timeline-bar .bar-fill.slowest { background: linear-gradient(90deg, var(--accent-amber), #f97316); box-shadow: 0 0 6px rgba(245,158,11,0.3); }
+        .mini-timeline-bar .bar-duration { width: 60px; color: var(--text-muted); text-align: right; font-family: 'Outfit', monospace; flex-shrink: 0; }
+        .mini-timeline-bar .bar-percent { width: 35px; color: var(--text-dim); text-align: right; font-size: 0.65rem; }
+        .mini-timeline-bar .bar-slowest-icon { color: var(--accent-amber); font-size: 0.8rem; }
+
+        .raw-json-toggle { font-size: 0.75rem; color: var(--text-dim); display: flex; align-items: center; gap: 0.4rem; margin-bottom: 0.4rem; }
+        .raw-json-toggle input { accent-color: var(--accent); width: 16px; height: 16px; }
+
+        .complexity-badge { display: inline-block; padding: 0.08rem 0.35rem; border-radius: 4px; font-size: 0.625rem; font-weight: 700; text-transform: uppercase; }
+        .complexity-badge.low { background: rgba(34,197,94,0.2); color: var(--accent-green); }
+        .complexity-badge.medium { background: rgba(245,158,11,0.2); color: var(--accent-amber); }
+        .complexity-badge.high { background: rgba(239,68,68,0.2); color: var(--accent-red); }
+
+        footer { text-align: center; padding: 0.65rem 2rem; font-size: 0.75rem; color: var(--text-dim); border-top: 1px solid var(--border); background: var(--bg-secondary); display: flex; justify-content: center; align-items: center; gap: 0.85rem; flex-wrap: wrap; flex-shrink: 0; }
         footer a { color: var(--text-muted); text-decoration: none; }
         footer a:hover { color: var(--accent); }
         footer .sep { color: var(--border); }
 
-        @media (max-width: 800px) {
-            .comparison-area, .code-comparison { grid-template-columns: 1fr; }
+        @media (max-width: 900px) {
+            .sql-compare { grid-template-columns: 1fr; }
+            .report-summary { padding: 0.85rem 1rem; }
+            .report-section { padding: 0.7rem 0.85rem; }
+            .compat-table { font-size: 0.75rem; }
             .query-builder .row { flex-direction: column; }
+            .query-builder .field-group { flex-wrap: wrap; }
             .query-builder .field { width: 100%; }
             .query-builder input { width: 100%; }
-            header { flex-direction: column; gap: 0.5rem; padding: 0.75rem 1rem; }
+            header { flex-direction: column; gap: 0.5rem; padding: 0.65rem 1rem; }
             nav { flex-wrap: wrap; justify-content: center; }
         }
     </style>
@@ -316,144 +227,123 @@
     <header>
         <div class="logo-section">
             <h1>&#9889; FlexQuery.NET</h1>
-            <p>Provider Comparison — EF Core vs Dapper</p>
+            <p>Provider Comparison</p>
         </div>
         <nav>
             <a href="/">Home</a>
             <a href="/aggrid.html">AG Grid</a>
             <a href="/kendo.html">Kendo UI</a>
             <a href="/comparison.html" class="active">Comparison</a>
-            <a href="/playground.html">Playground</a>
+            <a href="/playground.html">Inspector</a>
             <a href="/swagger">API Docs</a>
-            <a href="https://github.com/peterjohncasasola/FlexQuery.NET" class="badge-link" target="_blank">
-                <img src="https://img.shields.io/github/stars/peterjohncasasola/FlexQuery.NET?style=social" alt="Stars">
-            </a>
         </nav>
     </header>
 
     <main>
-        <div class="hero-bar">
-            <h2>&#9878; Same Query. Different Provider. Identical Results.</h2>
-            <p>Enter a query below and see it execute against <strong>EF Core</strong> and <strong>Dapper</strong> side-by-side. FlexQuery.NET generates provider-specific code for each.</p>
-        </div>
-
         <div class="query-builder">
             <div class="row">
-                <div class="field">
-                    <label>Filter (DSL)</label>
-                    <input type="text" id="qFilter" placeholder="e.g. Status:eq:Active" value="Status:eq:Active">
+                <div class="field-group">
+                    <div class="field"><label>Filter</label><input type="text" id="qFilter" placeholder="Status:eq:Active" value="Status:eq:Active"></div>
+                    <div class="field"><label>Sort</label><input type="text" id="qSort" placeholder="LastName:asc" value="LastName:asc"></div>
                 </div>
-                <div class="field">
-                    <label>Sort</label>
-                    <input type="text" id="qSort" placeholder="e.g. LastName:asc" value="LastName:asc">
+                <div class="field-group">
+                    <div class="field" style="min-width:70px;"><label>Page</label><input type="number" id="qPage" value="1" min="1"></div>
+                    <div class="field" style="min-width:70px;"><label>Page Size</label><input type="number" id="qPageSize" value="5" min="1" max="50"></div>
                 </div>
-                <div class="field">
-                    <label>Page</label>
-                    <input type="number" id="qPage" value="1" min="1" style="min-width:80px;">
+                <div class="field"><label>Select</label><input type="text" id="qSelect" placeholder="Id,FirstName,Email"></div>
+                <button class="execute-btn" id="executeBtn" onclick="runComparison()">&#9654; Run</button>
+            </div>
+        </div>
+
+        <div class="section-tabs">
+            <span class="section-tab active" data-section="overview" onclick="switchSection('overview')">&#128200; Overview</span>
+            <span class="section-tab" data-section="results" onclick="switchSection('results')">&#128202; Results</span>
+            <span class="section-tab" data-section="sql" onclick="switchSection('sql')">&#9002; SQL</span>
+            <span class="section-tab" data-section="timeline" onclick="switchSection('timeline')">&#9201; Timeline</span>
+            <span class="section-tab" data-section="diagnostics" onclick="switchSection('diagnostics')">&#9881; Diagnostics</span>
+            <span class="section-tab" data-section="raw" onclick="switchSection('raw')">{} Raw JSON</span>
+        </div>
+
+        <!-- Overview -->
+        <div class="section-content-panel active" id="panel-overview">
+            <div class="report-container">
+                <div id="comparisonCards"></div>
+            </div>
+        </div>
+
+        <!-- Results -->
+        <div class="section-content-panel" id="panel-results">
+            <div class="side-grid">
+                <div class="provider-col ef">
+                    <div class="provider-header">&#128083; EF Core</div>
+                    <div class="results-card" style="flex:1;">
+                        <div class="card-header">
+                            <h4>&#128202; Results</h4>
+                            <span id="efResultsInfo" style="font-size:0.75rem;color:var(--text-dim);"></span>
+                        </div>
+                        <div class="card-body"><div id="efResultsFull"><div style="color:var(--text-dim);font-style:italic;font-size:0.75rem;">Run a query to see results</div></div></div>
+                    </div>
                 </div>
-                <div class="field">
-                    <label>Page Size</label>
-                    <input type="number" id="qPageSize" value="5" min="1" max="50" style="min-width:80px;">
-                </div>
-                <div class="field">
-                    <label>Select</label>
-                    <input type="text" id="qSelect" placeholder="e.g. Id,FirstName,Email">
-                </div>
-                <div class="field">
-                    <button class="execute-btn" id="executeBtn" onclick="runComparison()">&#9654; Run Comparison</button>
+                <div class="provider-col dapper">
+                    <div class="provider-header">&#128187; Dapper</div>
+                    <div class="results-card" style="flex:1;">
+                        <div class="card-header">
+                            <h4>&#128202; Results</h4>
+                            <span id="dapperResultsInfo" style="font-size:0.75rem;color:var(--text-dim);"></span>
+                        </div>
+                        <div class="card-body"><div id="dapperResultsFull"><div style="color:var(--text-dim);font-style:italic;font-size:0.75rem;">Run a query to see results</div></div></div>
+                    </div>
                 </div>
             </div>
         </div>
 
-        <div class="comparison-area">
-            <div class="provider-card">
-                <div class="provider-card-header">
-                    <h3>&#128083; EF Core</h3>
-                    <span class="badge-ef">Provider</span>
+        <!-- SQL -->
+        <div class="section-content-panel" id="panel-sql">
+            <div class="side-grid">
+                <div class="provider-col ef">
+                    <div class="provider-header">&#128083; EF Core</div>
+                    <div class="sql-card" style="flex:1;"><div class="card-header"><h4>&#9002; SQL</h4><label class="diff-toggle"><input type="checkbox" id="sqlDiffToggle" onchange="updateSqlDiff()"> Diff</label></div><div class="card-body"><div class="sql-preview" id="efSqlFull" style="min-height:200px;"><span style="color:var(--text-dim);font-style:italic;">Run a query to see SQL</span></div></div></div>
                 </div>
-                <div class="provider-card-body">
-                    <div class="provider-stats">
-                        <div class="stat-item">
-                            <span class="label">Response:</span>
-                            <span class="value" id="efTime">—</span>
-                        </div>
-                        <div class="stat-item">
-                            <span class="label">Rows:</span>
-                            <span class="value" id="efRows">—</span>
-                        </div>
-                        <div class="stat-item">
-                            <span class="label">Total:</span>
-                            <span class="value" id="efTotal">—</span>
-                        </div>
-                    </div>
-                    <div class="sql-label">Generated SQL</div>
-                    <div class="sql-preview" id="efSql"><span style="color:var(--text-dim);font-style:italic;">Execute a query to see generated SQL...</span></div>
-                    <div id="efResults"><div class="results-empty">No results yet</div></div>
-                </div>
-            </div>
-
-            <div class="provider-card">
-                <div class="provider-card-header">
-                    <h3>&#128187; Dapper</h3>
-                    <span class="badge-dapper">Provider</span>
-                </div>
-                <div class="provider-card-body">
-                    <div class="provider-stats">
-                        <div class="stat-item">
-                            <span class="label">Response:</span>
-                            <span class="value" id="dapperTime">—</span>
-                        </div>
-                        <div class="stat-item">
-                            <span class="label">Rows:</span>
-                            <span class="value" id="dapperRows">—</span>
-                        </div>
-                        <div class="stat-item">
-                            <span class="label">Total:</span>
-                            <span class="value" id="dapperTotal">—</span>
-                        </div>
-                    </div>
-                    <div class="sql-label">Generated SQL</div>
-                    <div class="sql-preview" id="dapperSql"><span style="color:var(--text-dim);font-style:italic;">Execute a query to see generated SQL...</span></div>
-                    <div id="dapperResults"><div class="results-empty">No results yet</div></div>
+                <div class="provider-col dapper">
+                    <div class="provider-header">&#128187; Dapper</div>
+                    <div class="sql-card" style="flex:1;"><div class="card-header"><h4>&#9002; SQL</h4></div><div class="card-body"><div class="sql-preview" id="dapperSqlFull" style="min-height:200px;"><span style="color:var(--text-dim);font-style:italic;">Run a query to see SQL</span></div></div></div>
                 </div>
             </div>
         </div>
 
-        <div class="code-comparison">
-            <div class="code-block">
-                <div class="code-block-header">
-                    <span class="file">&#128196; EfCustomersController.cs</span>
-                    <button class="copy-btn" onclick="copyCode(this)">Copy</button>
-                </div>
-                <div class="code-block-body"><pre>[<span class="type">HttpGet</span>]
-<span class="kw">public async</span> <span class="type">Task</span>&lt;<span class="type">IActionResult</span>&gt; <span class="kw">GetCustomers</span>(
-    [<span class="type">FromQuery</span>] <span class="type">FlexQueryParameters</span> p)
-{
-    <span class="kw">var</span> result = <span class="kw">await</span> _db.Customers
-        .<span class="kw">AsNoTracking</span>()
-        .<span class="kw">FlexQueryAsync</span>&lt;<span class="type">Customer</span>&gt;(p);
-
-    <span class="kw">return</span> <span class="kw">Ok</span>(result);
-}</pre></div>
+        <!-- Timeline -->
+        <div class="section-content-panel" id="panel-timeline">
+            <div class="diagnostics-card" style="flex:1;">
+                <div class="card-header"><h4>&#9201; Timeline Comparison</h4></div>
+                <div class="card-body" style="overflow-y:auto;"><div id="timelineComparison" class="tl-compare"><span style="color:var(--text-dim);font-style:italic;">Run a query to see timeline</span></div></div>
             </div>
-            <div class="code-block">
-                <div class="code-block-header">
-                    <span class="file">&#128196; DapperCustomersController.cs</span>
-                    <button class="copy-btn" onclick="copyCode(this)">Copy</button>
-                </div>
-                <div class="code-block-body"><pre>[<span class="type">HttpGet</span>]
-<span class="kw">public async</span> <span class="type">Task</span>&lt;<span class="type">IActionResult</span>&gt; <span class="kw">GetCustomers</span>(
-    [<span class="type">FromQuery</span>] <span class="type">FlexQueryParameters</span> p)
-{
-    <span class="kw">var</span> result = <span class="kw">await</span> connection
-        .<span class="kw">FlexQueryAsync</span>&lt;<span class="type">Customer</span>&gt;(p, opt =&gt;
-    {
-        opt.<span class="kw">Dialect</span> = <span class="kw">new</span> <span class="type">SqliteDialect</span>();
-        opt.<span class="kw">MappingRegistry</span> = _registry;
-    });
+        </div>
 
-    <span class="kw">return</span> <span class="kw">Ok</span>(result);
-}</pre></div>
+        <!-- Diagnostics -->
+        <div class="section-content-panel" id="panel-diagnostics">
+            <div class="side-grid">
+                <div class="provider-col ef">
+                    <div class="provider-header">&#128083; EF Core</div>
+                    <div class="diagnostics-card" style="flex:1;"><div class="card-header"><h4>&#9881; Diagnostics</h4></div><div class="card-body"><div id="efStatsCards" class="stat-grid"></div></div></div>
+                </div>
+                <div class="provider-col dapper">
+                    <div class="provider-header">&#128187; Dapper</div>
+                    <div class="diagnostics-card" style="flex:1;"><div class="card-header"><h4>&#9881; Diagnostics</h4></div><div class="card-body"><div id="dapperStatsCards" class="stat-grid"></div></div></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Raw JSON -->
+        <div class="section-content-panel" id="panel-raw">
+            <div class="side-grid">
+                <div class="provider-col ef">
+                    <div class="provider-header">&#128083; EF Core</div>
+                    <div class="diagnostics-card" style="flex:1;"><div class="card-header"><h4>{} Raw JSON</h4><div class="raw-json-toggle"><label><input type="checkbox" id="efRawMetaToggle" onchange="updateEfRawJson()"> Show diagnostics</label></div></div><div class="card-body"><div class="sql-preview" id="efRawJson" style="min-height:200px;"><span style="color:var(--text-dim);font-style:italic;">Run a query to see JSON</span></div></div></div>
+                </div>
+                <div class="provider-col dapper">
+                    <div class="provider-header">&#128187; Dapper</div>
+                    <div class="diagnostics-card" style="flex:1;"><div class="card-header"><h4>{} Raw JSON</h4><div class="raw-json-toggle"><label><input type="checkbox" id="dapperRawMetaToggle" onchange="updateDapperRawJson()"> Show diagnostics</label></div></div><div class="card-body"><div class="sql-preview" id="dapperRawJson" style="min-height:200px;"><span style="color:var(--text-dim);font-style:italic;">Run a query to see JSON</span></div></div></div>
+                </div>
             </div>
         </div>
     </main>
@@ -474,91 +364,415 @@
     </footer>
 
     <script>
+        var efDiag = null, dapperDiag = null;
+        var efFullJson = '', dapperFullJson = '', efCleanJson = '', dapperCleanJson = '';
+        var currentSection = 'overview';
+
+        const SQL_KW = /\b(SELECT|FROM|WHERE|AND|OR|AS|ON|JOIN|LEFT|RIGHT|INNER|OUTER|CROSS|FULL|ORDER\s+BY|GROUP\s+BY|HAVING|LIMIT|OFFSET|INSERT|UPDATE|DELETE|SET|DISTINCT|COUNT|SUM|AVG|MAX|MIN|CASE|WHEN|THEN|ELSE|END|IN|EXISTS|BETWEEN|LIKE|IS|NULL|NOT|TRUE|FALSE|ASC|DESC|CAST|COALESCE|NULLIF|TOP|FETCH|NEXT|ROWS|ONLY|WITH|RECURSIVE|UNION|ALL|INTERSECT|EXCEPT)\b/gi;
+        const SQL_STR = /('[^']*')/g;
+        const SQL_NUM = /\b(\d+(?:\.\d+)?)\b/g;
+
+        function highlightSql(sql) {
+            if (!sql) return '';
+            var h = sql.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+            h = h.replace(SQL_KW, '<span class="sql-kw">$1</span>');
+            h = h.replace(SQL_STR, '<span class="sql-str">$1</span>');
+            h = h.replace(SQL_NUM, '<span class="sql-num">$1</span>');
+            return h;
+        }
+
+        function syntaxHighlight(json) {
+            return json.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+                .replace(/"([^"]+)"\s*:/g, '<span style="color:#60a5fa;">"$1"</span>:')
+                .replace(/: "([^"]*)"/g, ': <span class="sql-str">"$1"</span>')
+                .replace(/: (\d+(?:\.\d+)?)/g, ': <span class="sql-num">$1</span>')
+                .replace(/: (true|false)/g, ': <span style="color:#c084fc;">$1</span>')
+                .replace(/: (null)/g, ': <span style="color:#6b7280;">$1</span>');
+        }
+
+        function switchSection(section) {
+            currentSection = section;
+            document.querySelectorAll('.section-tab').forEach(t => t.classList.toggle('active', t.dataset.section === section));
+            document.querySelectorAll('.section-content-panel').forEach(p => p.classList.toggle('active', p.id === 'panel-' + section));
+        }
+
+        function buildStats(diag) {
+            var s = diag ? diag.summary || {} : {};
+            var time = s.executionTimeMs != null ? s.executionTimeMs + ' ms' : '—';
+            var rows = s.rowsReturned != null ? s.rowsReturned : '—';
+            var total = s.totalCount != null ? s.totalCount : '—';
+            var complexity = s.complexity || '—';
+            var cClass = (complexity || '').toLowerCase();
+            var compHtml = complexity !== '—' ? '<span class="complexity-badge ' + cClass + '">' + complexity + '</span>' : '—';
+            return { time: time, rows: rows, total: total, complexity: compHtml, provider: s.provider || '—', translator: s.translator || '—', filterCount: s.filterCount || 0, sortCount: s.sortCount || 0, projectionMode: s.projectionMode || '—', groupBy: s.groupBy, aggregateCount: s.aggregateCount || 0 };
+        }
+
+        function renderSummary(e, d) {
+            var s = buildStats(d);
+            var html = '<div class="stat-card timing"><div class="label">Execution</div><div class="value">' + s.time + '</div></div>' +
+                '<div class="stat-card rows"><div class="label">Rows</div><div class="value">' + s.rows + ' / ' + s.total + '</div></div>' +
+                '<div class="stat-card info"><div class="label">Provider</div><div class="value">' + s.provider + '</div></div>' +
+                '<div class="stat-card info"><div class="label">Translator</div><div class="value">' + s.translator + '</div></div>' +
+                '<div class="stat-card projection"><div class="label">Projection</div><div class="value">' + s.projectionMode + '</div></div>' +
+                '<div class="stat-card complexity"><div class="label">Complexity</div><div class="value">' + s.complexity + '</div></div>';
+            var el = document.getElementById(e);
+            if (el) el.innerHTML = html;
+        }
+
+        function renderTimeline(diag, elementId) {
+            var tl = diag ? diag.timeline || {} : {};
+            var stages = tl.stages || [];
+            var totalMs = tl.totalMs || 0;
+            if (stages.length === 0) { if (document.getElementById(elementId)) document.getElementById(elementId).innerHTML = '<span style="color:var(--text-dim);font-style:italic;">No timeline data</span>'; return; }
+            var slowestName = tl.slowestStage ? tl.slowestStage.name : null;
+            var html = '';
+            stages.forEach(function(st) {
+                var pct = totalMs > 0 ? (st.durationMs / totalMs * 100) : 0;
+                var isSlow = st.name === slowestName;
+                html += '<div class="mini-timeline-bar">' +
+                    '<span class="bar-label">' + st.name + '</span>' +
+                    '<div class="bar-track"><div class="bar-fill' + (isSlow ? ' slowest' : '') + '" style="width:' + Math.max(pct, 2) + '%"></div></div>' +
+                    '<span class="bar-duration">' + st.durationMs.toFixed(2) + ' ms</span>' +
+                    (isSlow ? '<span class="bar-slowest-icon">&#9733;</span>' : '<span class="bar-percent">' + pct.toFixed(1) + '%</span>') +
+                    '</div>';
+            });
+            if (document.getElementById(elementId)) document.getElementById(elementId).innerHTML = html;
+        }
+
+        function renderResults(prefix, data) {
+            var rows = data?.data;
+            var totalCount = data?.totalCount || 0;
+            var el = document.getElementById(prefix + 'ResultsFull');
+            var infoEl = document.getElementById(prefix + 'ResultsInfo');
+            if (!el) return;
+            if (!rows || rows.length === 0) { el.innerHTML = '<div style="color:var(--text-dim);font-style:italic;font-size:0.75rem;">No results</div>'; if (infoEl) infoEl.textContent = ''; return; }
+            var fields = Object.keys(rows[0]).filter(function(f) { return f !== 'orders'; });
+            var html = '<table class="results-table"><thead><tr>' + fields.map(function(f) { return '<th>' + f + '</th>'; }).join('') + '</tr></thead><tbody>';
+            rows.forEach(function(row) {
+                html += '<tr>' + fields.map(function(f) {
+                    var val = row[f] ?? '';
+                    if (f === 'createdDate' && val) val = new Date(val).toLocaleDateString();
+                    if (typeof val === 'object') val = JSON.stringify(val);
+                    return '<td>' + String(val).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').substring(0, 80) + '</td>';
+                }).join('') + '</tr>';
+            });
+            html += '</tbody></table>';
+            el.innerHTML = html;
+            if (infoEl) infoEl.textContent = rows.length + ' of ' + totalCount + ' rows';
+        }
+
+        function computeSqlDiffReason(efSql, dpSql) {
+            if (efSql === dpSql) return null;
+            if (!efSql || !dpSql) return 'One provider did not generate SQL';
+            var efClean = efSql.replace(/\[.*?\]|(".*?")|('.*?')/g, '').replace(/\s+/g, ' ').trim();
+            var dpClean = dpSql.replace(/\[.*?\]|(".*?")|('.*?')/g, '').replace(/\s+/g, ' ').trim();
+            if (efClean === dpClean) return 'Alias or identifier naming differences';
+            var efFrom = efSql.match(/FROM\s+("[^"]+"|`[^`]+`|\w+)/i);
+            var dpFrom = dpSql.match(/FROM\s+("[^"]+"|`[^`]+`|\w+)/i);
+            if (efFrom && dpFrom && efFrom[1] !== dpFrom[1]) return 'Different table or alias naming';
+            return 'Structural difference in generated SQL';
+        }
+
+        function computeDiffColumns(efData, dpData) {
+            if (!efData || !dpData || efData.length !== dpData.length) return [];
+            var diffs = {};
+            for (var i = 0; i < efData.length; i++) {
+                Object.keys(efData[i]).forEach(function(k) {
+                    if (efData[i][k] !== dpData[i][k]) diffs[k] = true;
+                });
+            }
+            return Object.keys(diffs);
+        }
+
+        function renderComparisonSummary(efRes, dapperRes) {
+            var ef = efRes.__diagnostics || {};
+            var dp = dapperRes.__diagnostics || {};
+            var efS = ef.summary || {}, dpS = dp.summary || {};
+            var efTime = efS.executionTimeMs, dpTime = dpS.executionTimeMs;
+            var efRows = efRes.data ? efRes.data.length : 0;
+            var dpRows = dapperRes.data ? dapperRes.data.length : 0;
+            var efTotal = efS.totalCount, dpTotal = dpS.totalCount;
+            var efSql = ef.sql?.generated || '', dpSql = dp.sql?.generated || '';
+            var efProj = efS.projectionMode || '—', dpProj = dpS.projectionMode || '—';
+            var efCplx = efS.complexity || '—', dpCplx = dpS.complexity || '—';
+            var efTrans = efS.translator || '—', dpTrans = dpS.translator || '—';
+
+            var resultsMatch = JSON.stringify(efRes.data) === JSON.stringify(dapperRes.data);
+            var sqlMatch = efSql === dpSql;
+            var winner = efTime != null && dpTime != null ? (efTime < dpTime ? 'ef' : (dpTime < efTime ? 'dapper' : 'tie')) : null;
+            var speedPct = efTime != null && dpTime != null && efTime !== dpTime ? Math.abs(efTime - dpTime) / Math.max(efTime, dpTime) * 100 : 0;
+            var rowsMatch = efRows === dpRows;
+            var projMatch = efProj === dpProj;
+            var cplxMatch = efCplx === dpCplx;
+            var efCplxClass = (efCplx || '').toLowerCase();
+            var totalStr = efTotal != null ? efTotal : '—';
+            var diffCols = resultsMatch ? [] : computeDiffColumns(efRes.data || [], dapperRes.data || []);
+            var colCount = (efRes.data && efRes.data.length > 0) ? Object.keys(efRes.data[0]).filter(function(f) { return f !== 'orders'; }).length : 0;
+
+            var maxTime = Math.max(efTime || 0, dpTime || 0);
+            var efBarPct = maxTime > 0 ? Math.max((efTime / maxTime) * 100, 2) : 0;
+            var dpBarPct = maxTime > 0 ? Math.max((dpTime / maxTime) * 100, 2) : 0;
+            var efTimeStr = efTime != null ? efTime.toFixed(2) + ' ms' : '—';
+            var dpTimeStr = dpTime != null ? dpTime.toFixed(2) + ' ms' : '—';
+            var winnerName = winner === 'ef' ? 'EF Core' : (winner === 'dapper' ? 'Dapper' : null);
+            var speedMult = speedPct > 0 ? (speedPct < 10 ? speedPct.toFixed(1) : speedPct.toFixed(0)) : 0;
+
+            var html = '';
+
+            // --- 1. Comparison Summary ---
+            html += '<div class="report-summary">';
+            html += '<div class="rs-header">Comparison Result</div>';
+            html += '<div class="rs-items">';
+            html += '<span class="rs-item ' + (resultsMatch ? 'match' : 'diff') + '"><span class="rs-icon">' + (resultsMatch ? '&#10003;' : '&#10007;') + '</span> ' + (resultsMatch ? 'Same Results' : 'Results Differ') + ' <span style="color:var(--text-dim);font-weight:400;">(' + efRows + ' rows' + (colCount ? ', ' + colCount + ' cols' : '') + ')</span></span>';
+            html += '<span class="rs-item ' + (projMatch ? 'match' : 'diff') + '"><span class="rs-icon">' + (projMatch ? '&#10003;' : '&#10007;') + '</span> ' + (projMatch ? 'Same Projection' : 'Projection Differs') + '</span>';
+            html += '<span class="rs-item ' + (rowsMatch ? 'match' : 'diff') + '"><span class="rs-icon">' + (rowsMatch ? '&#10003;' : '&#10007;') + '</span> ' + (rowsMatch ? 'Same Paging' : 'Paging Differs') + '</span>';
+            if (!sqlMatch && efSql) {
+                var sqlReason = computeSqlDiffReason(efSql, dpSql);
+                html += '<span class="rs-item diff"><span class="rs-icon">&#10007;</span> SQL Generated Differently' + (sqlReason ? ' <span style="color:var(--text-dim);font-weight:400;">(' + sqlReason + ')</span>' : '') + '</span>';
+            } else if (efSql) {
+                html += '<span class="rs-item match"><span class="rs-icon">&#10003;</span> SQL Equivalent</span>';
+            }
+            if (winnerName && speedPct > 0) {
+                var speedLabel = speedMult >= 1 ? speedMult + 'x' : speedPct.toFixed(0) + '%';
+                html += '<span class="rs-item winner"><span class="rs-icon">&#127942;</span> ' + winnerName + ' Faster <span style="font-weight:400;">(' + speedLabel + ')</span></span>';
+            } else if (winner === 'tie' && efTime != null) {
+                html += '<span class="rs-item winner" style="color:var(--accent);"><span class="rs-icon">&#9878;&#65039;</span> Tie</span>';
+            }
+            html += '</div></div>';
+
+            // --- 2. Performance Benchmark ---
+            html += '<div class="report-section">';
+            html += '<div class="report-header">Performance</div>';
+            html += '<div class="perf-bars">';
+            html += '<div class="perf-row"><span class="perf-label">EF Core</span><div class="perf-track"><div class="perf-fill ef' + (winner === 'dapper' ? ' slowest' : '') + '" style="width:' + efBarPct + '%"></div></div><span class="perf-value">' + efTimeStr + '</span></div>';
+            html += '<div class="perf-row"><span class="perf-label">Dapper</span><div class="perf-track"><div class="perf-fill dapper' + (winner === 'ef' ? ' slowest' : '') + '" style="width:' + dpBarPct + '%"></div></div><span class="perf-value">' + dpTimeStr + '</span></div>';
+            html += '</div>';
+            if (winnerName && speedPct > 0) {
+                var perfLabel = speedMult >= 1 ? speedMult + 'x faster' : speedPct.toFixed(0) + '% faster';
+                html += '<div class="perf-result">Winner: ' + winnerName + ' (' + perfLabel + ')</div>';
+            } else if (winner === 'tie' && efTime != null) {
+                html += '<div class="perf-result" style="color:var(--accent);">Tie</div>';
+            }
+            html += '</div>';
+
+            // --- 3. Compatibility Matrix ---
+            var efFilt = efS.filterCount || 0;
+            var dpFilt = dpS.filterCount || 0;
+            var efSort = efS.sortCount || 0;
+            var dpSort = dpS.sortCount || 0;
+            var efAggr = efS.aggregateCount || 0;
+            var dpAggr = dpS.aggregateCount || 0;
+            var efGrp = efS.groupBy || null;
+            var dpGrp = dpS.groupBy || null;
+
+            function compatCell(v, label) { return v ? '<span class="yes">&#10003; ' + label + '</span>' : '<span class="no">—</span>'; }
+
+            html += '<div class="report-section">';
+            html += '<div class="report-header">Compatibility Matrix</div>';
+            html += '<table class="compat-table">';
+            html += '<tr><th>Feature</th><th>EF Core</th><th>Dapper</th></tr>';
+            html += '<tr><td>Filters</td><td>' + compatCell(efFilt > 0 || efFilt === 0, efFilt > 0 ? efFilt + ' filter' + (efFilt > 1 ? 's' : '') : 'Applied') + '</td><td>' + compatCell(dpFilt > 0 || dpFilt === 0, dpFilt > 0 ? dpFilt + ' filter' + (dpFilt > 1 ? 's' : '') : 'Applied') + '</td></tr>';
+            html += '<tr><td>Sorting</td><td>' + compatCell(efSort > 0 || efSort === 0, efSort > 0 ? efSort + ' sort' + (efSort > 1 ? 's' : '') : 'Applied') + '</td><td>' + compatCell(dpSort > 0 || dpSort === 0, dpSort > 0 ? dpSort + ' sort' + (dpSort > 1 ? 's' : '') : 'Applied') + '</td></tr>';
+            html += '<tr><td>Paging</td><td>' + compatCell(efRows <= 50, efRows + ' rows') + '</td><td>' + compatCell(dpRows <= 50, dpRows + ' rows') + '</td></tr>';
+            html += '<tr><td>Projection</td><td>' + compatCell(efProj !== '—', efProj) + '</td><td>' + compatCell(dpProj !== '—', dpProj) + '</td></tr>';
+            html += '<tr><td>Group By</td><td>' + compatCell(!!efGrp, efGrp || 'Applied') + '</td><td>' + compatCell(!!dpGrp, dpGrp || 'Applied') + '</td></tr>';
+            html += '<tr><td>Aggregates</td><td>' + compatCell(efAggr > 0, efAggr + ' aggregate' + (efAggr > 1 ? 's' : '')) + '</td><td>' + compatCell(dpAggr > 0, dpAggr + ' aggregate' + (dpAggr > 1 ? 's' : '')) + '</td></tr>';
+            html += '<tr><td>Results</td><td class="' + (efRes.data ? 'yes' : 'no') + '">' + (efRes.data ? '&#10003; ' + efRes.data.length + ' rows' : '—') + '</td><td class="' + (dapperRes.data ? 'yes' : 'no') + '">' + (dapperRes.data ? '&#10003; ' + dapperRes.data.length + ' rows' : '—') + '</td></tr>';
+            html += '</table>';
+
+            html += '<div class="det-grid">';
+            html += '<span class="det-item"><span class="det-label">Complexity:</span> <span class="det-value"><span class="complexity-badge ' + efCplxClass + '">' + efCplx + '</span></span> <span class="det-badge ' + (cplxMatch ? 'match' : 'diff') + '">' + (cplxMatch ? '&#10003; Match' : '&#10007; Different') + '</span></span>';
+            html += '<span class="det-item"><span class="det-label">Projection Shape:</span> <span class="det-value">' + efProj + '</span> <span class="det-badge ' + (projMatch ? 'match' : 'diff') + '">' + (projMatch ? '&#10003; Match' : '&#10007; Different') + '</span></span>';
+            html += '<span class="det-item"><span class="det-label">Translator:</span> <span class="det-value">' + efTrans + '</span></span>';
+            if (diffCols.length > 0) { html += '<span class="det-item"><span class="det-label">Diff columns:</span> <span class="det-value" style="color:var(--accent-amber);">' + diffCols.join(', ') + '</span></span>'; }
+            html += '</div>';
+
+            html += '</div>';
+
+            // --- 4. SQL Comparison (inline) ---
+            var sqlDiffReason = efSql !== dpSql ? computeSqlDiffReason(efSql, dpSql) : null;
+            html += '<div class="report-section">';
+            html += '<div class="report-header">SQL Comparison' + (sqlMatch ? ' <span class="det-badge match">&#10003; Equivalent</span>' : ' <span class="det-badge diff">&#10007; Different</span>') + '</div>';
+            if (efSql || dpSql) {
+                html += '<div class="sql-compare">';
+                html += '<div class="sql-col"><div class="sql-col-header ef">&#128083; EF Core</div><pre class="sql-code">' + (efSql ? highlightSql(efSql) : '<span style="color:var(--text-dim);font-style:italic;">No SQL</span>') + '</pre></div>';
+                html += '<div class="sql-col"><div class="sql-col-header dapper">&#128187; Dapper</div><pre class="sql-code">' + (dpSql ? highlightSql(dpSql) : '<span style="color:var(--text-dim);font-style:italic;">No SQL</span>') + '</pre></div>';
+                html += '</div>';
+                if (sqlDiffReason) {
+                    html += '<div class="sql-diff-reason"><span class="sdr-dot diff"></span> ' + sqlDiffReason + '</div>';
+                }
+                if (!sqlMatch) {
+                    html += '<div style="margin-top:0.4rem;"><span class="report-link" onclick="switchSection(\'sql\')">&#9002; View full diff &rarr;</span></div>';
+                }
+            } else {
+                html += '<div style="color:var(--text-dim);font-style:italic;font-size:0.8125rem;">Run a query to see SQL</div>';
+            }
+            html += '</div>';
+
+            document.getElementById('comparisonCards').innerHTML = html;
+        }
+
+        var lastEfSql = '', lastDpSql = '';
+
+        function computeSqlDiff(efSql, dpSql) {
+            var efLines = (efSql || '').split('\n');
+            var dpLines = (dpSql || '').split('\n');
+            var maxLen = Math.max(efLines.length, dpLines.length);
+            var result = [];
+            for (var i = 0; i < maxLen; i++) {
+                var efLine = efLines[i] || '';
+                var dpLine = dpLines[i] || '';
+                if (!dpLine && !efLine) continue;
+                result.push(efLine === dpLine ? { type: 'same', ef: efLine, dp: dpLine } : { type: 'diff', ef: efLine, dp: dpLine });
+            }
+            return result;
+        }
+
+        function updateSqlDiff() {
+            var show = document.getElementById('sqlDiffToggle').checked;
+            var efEl = document.getElementById('efSqlFull');
+            var dpEl = document.getElementById('dapperSqlFull');
+            if (!show || !lastEfSql) {
+                efEl.innerHTML = lastEfSql ? highlightSql(lastEfSql) : '<span style="color:var(--text-dim);font-style:italic;">No SQL</span>';
+                dpEl.innerHTML = lastDpSql ? highlightSql(lastDpSql) : '<span style="color:var(--text-dim);font-style:italic;">No SQL</span>';
+                efEl.querySelectorAll('.diff-line').forEach(function(e) { e.style.padding = ''; });
+                dpEl.querySelectorAll('.diff-line').forEach(function(e) { e.style.padding = ''; });
+                return;
+            }
+            var diff = computeSqlDiff(lastEfSql, lastDpSql);
+            var efHtml = '', dpHtml = '';
+            diff.forEach(function(line) {
+                if (line.type === 'diff') {
+                    efHtml += '<div class="diff-line ef">' + (line.ef ? highlightSql(line.ef) : '&nbsp;') + '</div>';
+                    dpHtml += '<div class="diff-line dp">' + (line.dp ? highlightSql(line.dp) : '&nbsp;') + '</div>';
+                } else {
+                    efHtml += '<div>' + (line.ef ? highlightSql(line.ef) : '&nbsp;') + '</div>';
+                    dpHtml += '<div>' + (line.dp ? highlightSql(line.dp) : '&nbsp;') + '</div>';
+                }
+            });
+            efEl.innerHTML = efHtml;
+            dpEl.innerHTML = dpHtml;
+        }
+
+        function renderTimelineComparison(efDiag, dapperDiag) {
+            var efTl = efDiag ? efDiag.timeline || {} : {};
+            var dpTl = dapperDiag ? dapperDiag.timeline || {} : {};
+            var efStages = efTl.stages || [];
+            var dpStages = dpTl.stages || [];
+
+            var stageMap = {};
+            efStages.forEach(function(s) { if (!stageMap[s.name]) stageMap[s.name] = {}; stageMap[s.name].ef = s.durationMs; });
+            dpStages.forEach(function(s) { if (!stageMap[s.name]) stageMap[s.name] = {}; stageMap[s.name].dp = s.durationMs; });
+
+            var names = Object.keys(stageMap);
+            if (names.length === 0) {
+                document.getElementById('timelineComparison').innerHTML = '<span style="color:var(--text-dim);font-style:italic;">No timeline data</span>';
+                return;
+            }
+
+            var html = '';
+            names.forEach(function(name) {
+                var efDur = stageMap[name].ef, dpDur = stageMap[name].dp;
+                var maxDur = Math.max(efDur || 0, dpDur || 0);
+                var efPct = maxDur > 0 ? Math.max((efDur / maxDur) * 100, 3) : 0;
+                var dpPct = maxDur > 0 ? Math.max((dpDur / maxDur) * 100, 3) : 0;
+                var efStr = efDur != null ? efDur.toFixed(2) + ' ms' : '—';
+                var dpStr = dpDur != null ? dpDur.toFixed(2) + ' ms' : '—';
+                var totalMs = (efDur || 0) + (dpDur || 0);
+
+                html += '<div class="tl-stage">';
+                html += '<div class="tl-stage-name">' + name + ' <span style="color:var(--text-dim);font-weight:400;text-transform:none;">(' + totalMs.toFixed(2) + ' ms total)</span></div>';
+                html += '<div class="tl-provider"><span class="tlp-name">EF</span><div class="tlp-bar"><div class="tlp-fill ef" style="width:' + efPct + '%"></div></div><span class="tlp-dur">' + efStr + '</span></div>';
+                html += '<div class="tl-provider"><span class="tlp-name">DP</span><div class="tlp-bar"><div class="tlp-fill dapper" style="width:' + dpPct + '%"></div></div><span class="tlp-dur">' + dpStr + '</span></div>';
+                html += '</div>';
+            });
+
+            document.getElementById('timelineComparison').innerHTML = html;
+        }
+
+        function clearErrors() {
+            ['efSqlFull', 'dapperSqlFull', 'efRawJson', 'dapperRawJson'].forEach(function(id) {
+                var el = document.getElementById(id);
+                if (el && el.innerHTML.includes('Error')) el.innerHTML = '<span style="color:var(--text-dim);font-style:italic;">Run a query to see results</span>';
+            });
+        }
+
         async function runComparison() {
-            const btn = document.getElementById('executeBtn');
+            var btn = document.getElementById('executeBtn');
             btn.disabled = true;
             btn.textContent = 'Running...';
+            clearErrors();
 
-            const filter = document.getElementById('qFilter').value;
-            const sort = document.getElementById('qSort').value;
-            const page = document.getElementById('qPage').value;
-            const pageSize = document.getElementById('qPageSize').value;
-            const select = document.getElementById('qSelect').value;
+            var filter = document.getElementById('qFilter').value;
+            var sort = document.getElementById('qSort').value;
+            var page = document.getElementById('qPage').value;
+            var pageSize = document.getElementById('qPageSize').value;
+            var select = document.getElementById('qSelect').value;
 
-            const params = new URLSearchParams();
+            var params = new URLSearchParams();
             if (filter) params.set('filter', filter);
             if (sort) params.set('sort', sort);
             if (page) params.set('page', page);
             if (pageSize) params.set('pageSize', pageSize);
             if (select) params.set('select', select);
-
-            const queryString = params.toString();
+            var qs = params.toString();
 
             try {
-                const [efRes, dapperRes] = await Promise.all([
-                    fetch('/api/ef/customers?' + queryString).then(r => r.json()),
-                    fetch('/api/dapper/customers?' + queryString).then(r => r.json())
+                var [efRes, dapperRes] = await Promise.all([
+                    fetch('/api/ef/customers?' + qs).then(function(r) { if (!r.ok) throw new Error('EF Core HTTP ' + r.status); return r.json(); }),
+                    fetch('/api/dapper/customers?' + qs).then(function(r) { if (!r.ok) throw new Error('Dapper HTTP ' + r.status); return r.json(); })
                 ]);
 
-                renderResults('ef', efRes, ['Id', 'FirstName', 'LastName', 'Email', 'Status', 'City']);
-                renderResults('dapper', dapperRes, ['Id', 'FirstName', 'LastName', 'Email', 'Status', 'City']);
+                efDiag = efRes.__diagnostics;
+                dapperDiag = dapperRes.__diagnostics;
 
-                if (efRes.__diagnostics) {
-                    document.getElementById('efTime').textContent = efRes.__diagnostics.executionTimeMs + 'ms';
-                    document.getElementById('efRows').textContent = efRes.data ? efRes.data.length : '\u2014';
-                    document.getElementById('efTotal').textContent = efRes.totalCount ?? '\u2014';
-                    document.getElementById('efSql').textContent = efRes.__diagnostics.generatedSql || 'No SQL preview available';
-                }
-                if (dapperRes.__diagnostics) {
-                    document.getElementById('dapperTime').textContent = dapperRes.__diagnostics.executionTimeMs + 'ms';
-                    document.getElementById('dapperRows').textContent = dapperRes.data ? dapperRes.data.length : '\u2014';
-                    document.getElementById('dapperTotal').textContent = dapperRes.totalCount ?? '\u2014';
-                    document.getElementById('dapperSql').textContent = dapperRes.__diagnostics.generatedSql || 'No SQL preview available';
-                }
+                renderComparisonSummary(efRes, dapperRes);
+
+                renderSummary('efStatsCards', efDiag);
+                renderSummary('dapperStatsCards', dapperDiag);
+
+                var efSqlGen = efDiag && efDiag.sql ? efDiag.sql.generated : null;
+                var dpSqlGen = dapperDiag && dapperDiag.sql ? dapperDiag.sql.generated : null;
+                lastEfSql = efSqlGen || '';
+                lastDpSql = dpSqlGen || '';
+                document.getElementById('sqlDiffToggle').checked = false;
+                ['efSqlFull'].forEach(function(id) { var el = document.getElementById(id); if (el) el.innerHTML = efSqlGen ? highlightSql(efSqlGen) : '<span style="color:var(--text-dim);font-style:italic;">No SQL</span>'; });
+                ['dapperSqlFull'].forEach(function(id) { var el = document.getElementById(id); if (el) el.innerHTML = dpSqlGen ? highlightSql(dpSqlGen) : '<span style="color:var(--text-dim);font-style:italic;">No SQL</span>'; });
+
+                renderTimelineComparison(efDiag, dapperDiag);
+
+                renderResults('ef', efRes);
+                renderResults('dapper', dapperRes);
+
+                efFullJson = JSON.stringify(efRes, null, 2);
+                dapperFullJson = JSON.stringify(dapperRes, null, 2);
+                var efc = Object.assign({}, efRes); delete efc.__diagnostics; efCleanJson = JSON.stringify(efc, null, 2);
+                var dapc = Object.assign({}, dapperRes); delete dapc.__diagnostics; dapperCleanJson = JSON.stringify(dapc, null, 2);
+                updateEfRawJson();
+                updateDapperRawJson();
+
             } catch (err) {
                 console.error('Comparison error:', err);
-                document.getElementById('efSql').textContent = 'Error: ' + err.message;
-                document.getElementById('dapperSql').textContent = 'Error: ' + err.message;
+                ['efSqlFull', 'dapperSqlFull'].forEach(function(id) {
+                    var el = document.getElementById(id);
+                    if (el) el.innerHTML = '<span style="color:var(--accent-red);">Error: ' + err.message + '</span>';
+                });
             }
 
             btn.disabled = false;
-            btn.textContent = '\u25B6 Run Comparison';
+            btn.textContent = '\u25B6 Run';
         }
 
-        function renderResults(prefix, data, fields) {
-            const container = document.getElementById(prefix + 'Results');
-            const rows = data?.data;
-            if (!rows || rows.length === 0) {
-                container.innerHTML = '<div class="results-empty">No results</div>';
-                return;
-            }
-
-            let html = '<table class="results-table"><thead><tr>';
-            fields.forEach(f => { html += '<th>' + f + '</th>'; });
-            html += '</tr></thead><tbody>';
-            rows.forEach(row => {
-                html += '<tr>';
-                fields.forEach(f => {
-                    let val = row[f] ?? '';
-                    if (f === 'createdDate' && val) val = new Date(val).toLocaleDateString();
-                    html += '<td>' + val + '</td>';
-                });
-                html += '</tr>';
-            });
-            html += '</tbody></table>';
-            container.innerHTML = html;
+        function updateEfRawJson() {
+            var showMeta = document.getElementById('efRawMetaToggle').checked;
+            document.getElementById('efRawJson').innerHTML = syntaxHighlight(showMeta ? efFullJson : efCleanJson);
+        }
+        function updateDapperRawJson() {
+            var showMeta = document.getElementById('dapperRawMetaToggle').checked;
+            document.getElementById('dapperRawJson').innerHTML = syntaxHighlight(showMeta ? dapperFullJson : dapperCleanJson);
         }
 
-        function copyCode(btn) {
-            const pre = btn.closest('.code-block').querySelector('pre');
-            navigator.clipboard.writeText(pre.textContent);
-            const orig = btn.textContent;
-            btn.textContent = 'Copied!';
-            setTimeout(() => btn.textContent = orig, 1500);
-        }
-
-        // Auto-run on load with default query
-        window.addEventListener('DOMContentLoaded', () => runComparison());
+        window.addEventListener('DOMContentLoaded', runComparison);
     </script>
 </body>
 </html>

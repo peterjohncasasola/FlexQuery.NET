@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using FlexQuery.NET.Dapper;
 using FlexQuery.NET.Dapper.Dialects;
 using FlexQuery.NET.Dapper.Mapping;
@@ -26,6 +27,7 @@ public sealed class DapperCustomersController(AppDbContext db, IMappingRegistry 
         var connection = db.Database.GetDbConnection();
 
         var collector = new FlexQueryDiagnosticsCollector();
+        var sw = Stopwatch.StartNew();
 
         var result = await connection.FlexQueryAsync<Customer>(parameters,
             configureDapper: opt =>
@@ -36,40 +38,20 @@ public sealed class DapperCustomersController(AppDbContext db, IMappingRegistry 
             },
             configureExecution: cfg => cfg.Listener = collector);
 
-        var data = result.Data;
-        var totalCount = result.TotalCount;
-        var page = result.Page;
-        var pageSize = result.PageSize;
+        sw.Stop();
 
-        var report = DiagnosticsHelper.BuildReportShape(
-            collector.BuildReport(provider: "Dapper", translator: "Sqlite"));
+        var report = collector.BuildReport(provider: "Dapper", translator: "Sqlite");
+
+        var diagnostics = DiagnosticsHelper.BuildRichDiagnostics(
+            report, options, parameters, result, "/api/dapper/customers", sw.Elapsed.TotalMilliseconds);
 
         return Ok(new
         {
-            data,
-            totalCount,
-            page,
-            pageSize,
-            __diagnostics = new
-            {
-                provider = "Dapper",
-                adapter = "FlexQuery",
-                report,
-                parsedOptions = new
-                {
-                    filter = options.Filter,
-                    sort = options.Sort,
-                    select = parameters.Select,
-                    include = parameters.Include,
-                    groupBy = options.GroupBy,
-                    aggregates = options.Aggregates,
-                    having = options.Having,
-                    paging = options.Paging,
-                    filterCount = DiagnosticsHelper.CountFilters(options.Filter),
-                    sortCount = options.Sort?.Count ?? 0
-                },
-                endpoint = "/api/dapper/customers"
-            }
+            data = result.Data,
+            totalCount = result.TotalCount,
+            page = result.Page,
+            pageSize = result.PageSize,
+            __diagnostics = diagnostics
         });
     }
 }
