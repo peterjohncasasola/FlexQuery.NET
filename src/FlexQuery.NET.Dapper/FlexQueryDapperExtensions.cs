@@ -22,6 +22,13 @@ public static class FlexQueryDapperExtensions
     /// <summary>
     /// Executes a FlexQuery using FlexQueryParameters with validation.
     /// </summary>
+    /// <remarks>
+    /// If the connection is closed, it is opened automatically before query execution.
+    /// The connection is NEVER closed by this method — the caller retains full lifecycle ownership.
+    /// When using EF Core's <c>Database.GetDbConnection()</c>, opening the connection
+    /// directly bypasses EF Core's connection interceptors. Call <c>Database.OpenConnectionAsync()</c>
+    /// before FlexQueryAsync if interceptors are needed.
+    /// </remarks>
     public static async Task<QueryResult<T>> FlexQueryAsync<T>(
         this DbConnection connection,
         FlexQueryParameters parameters,
@@ -43,6 +50,13 @@ public static class FlexQueryDapperExtensions
     /// <summary>
     /// Executes a FlexQuery using FlexQueryParameters with full options.
     /// </summary>
+    /// <remarks>
+    /// If the connection is closed, it is opened automatically before query execution.
+    /// The connection is NEVER closed by this method — the caller retains full lifecycle ownership.
+    /// When using EF Core's <c>Database.GetDbConnection()</c>, opening the connection
+    /// directly bypasses EF Core's connection interceptors. Call <c>Database.OpenConnectionAsync()</c>
+    /// before FlexQueryAsync if interceptors are needed.
+    /// </remarks>
     public static async Task<QueryResult<T>> FlexQueryAsync<T>(
         this DbConnection connection,
         FlexQueryParameters parameters,
@@ -62,6 +76,13 @@ public static class FlexQueryDapperExtensions
     /// <summary>
     /// Executes a FlexQuery using raw query string parameters.
     /// </summary>
+    /// <remarks>
+    /// If the connection is closed, it is opened automatically before query execution.
+    /// The connection is NEVER closed by this method — the caller retains full lifecycle ownership.
+    /// When using EF Core's <c>Database.GetDbConnection()</c>, opening the connection
+    /// directly bypasses EF Core's connection interceptors. Call <c>Database.OpenConnectionAsync()</c>
+    /// before FlexQueryAsync if interceptors are needed.
+    /// </remarks>
     public static async Task<QueryResult<T>> FlexQueryAsync<T>(
         this DbConnection connection,
         IDictionary<string, StringValues> parameters,
@@ -96,6 +117,11 @@ public static class FlexQueryDapperExtensions
     /// // Step 2: Execute (Dapper package)
     /// var result = await connection.FlexQueryAsync&lt;User&gt;(options);
     /// </code>
+    /// If the connection is closed, it is opened automatically before query execution.
+    /// The connection is NEVER closed by this method — the caller retains full lifecycle ownership.
+    /// When using EF Core's <c>Database.GetDbConnection()</c>, opening the connection
+    /// directly bypasses EF Core's connection interceptors. Call <c>Database.OpenConnectionAsync()</c>
+    /// before FlexQueryAsync if interceptors are needed.
     /// </remarks>
     /// <param name="connection">The database connection.</param>
     /// <param name="options">Pre-parsed query options from any adapter or manual construction.</param>
@@ -114,6 +140,13 @@ public static class FlexQueryDapperExtensions
     /// <summary>
     /// Executes a pre-parsed <see cref="QueryOptions"/> using Dapper with full options.
     /// </summary>
+    /// <remarks>
+    /// If the connection is closed, it is opened automatically before query execution.
+    /// The connection is NEVER closed by this method — the caller retains full lifecycle ownership.
+    /// When using EF Core's <c>Database.GetDbConnection()</c>, opening the connection
+    /// directly bypasses EF Core's connection interceptors. Call <c>Database.OpenConnectionAsync()</c>
+    /// before FlexQueryAsync if interceptors are needed.
+    /// </remarks>
     /// <param name="connection">The database connection.</param>
     /// <param name="options">Pre-parsed query options from any adapter or manual construction.</param>
     /// <param name="dapperQueryOptions">Dapper-specific execution options.</param>
@@ -138,8 +171,14 @@ public static class FlexQueryDapperExtensions
     private static async Task<QueryResult<T>> ExecuteQueryAsync<T>(
         DbConnection connection,
         QueryOptions options,
-        DapperQueryOptions execOptions) where T : class
+        DapperQueryOptions execOptions,
+        CancellationToken cancellationToken = default) where T : class
     {
+        if (connection.State == ConnectionState.Closed)
+        {
+            await connection.OpenAsync(cancellationToken);
+        }
+
         var dialect = execOptions.Dialect 
             ?? DapperQueryOptions.GlobalDefaultDialect 
             ?? DapperQueryOptions.GlobalDialectResolver.Resolve(connection);
