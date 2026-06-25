@@ -205,11 +205,12 @@ public static class FlexQueryDapperExtensions
                 commandType: CommandType.Text)).Cast<object>().ToList();
         }
 
+        bool shouldIncludeCount = execOptions.IncludeTotalCount && (options.IncludeCount ?? true);
+
         int? totalCount = null;
-        int? resultCount = items.Count;
-        if (execOptions.IncludeTotalCount)
+        int? resultCount = null;
+        if (shouldIncludeCount)
         {
-            totalCount = items.Count;
             var sourceCountCommand = translator.TranslateSourceCount(options);
             var sourceCountParameters = new DynamicParameters();
             foreach (var param in sourceCountCommand.Parameters)
