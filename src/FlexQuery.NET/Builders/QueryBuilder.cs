@@ -2,6 +2,7 @@ using System.Linq.Expressions;
 using System.Reflection;
 using FlexQuery.NET.Caching;
 using FlexQuery.NET.Models;
+using FlexQuery.NET.Projection;
 using FlexQuery.NET.Security;
 using FlexQuery.NET.Expressions;
 
@@ -140,7 +141,7 @@ public static class QueryBuilder
             return FlatProjectionBuilder.BuildAndApplyMixed(query, tree, options);
         }
 
-        var projection = ProjectionBuilder.Build<T>(tree, options);
+        var projection = ProjectionExpressionBuilder.BuildExpression<T>(tree, options);
         return query.Select(projection);
     }
 

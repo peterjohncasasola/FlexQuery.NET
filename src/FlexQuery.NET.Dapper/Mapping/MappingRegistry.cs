@@ -49,6 +49,14 @@ public sealed class MappingRegistry : IMappingRegistry
 
     private EntityMapping CreateAndApplyConventions(Type entityType)
     {
+        if (entityType == typeof(object))
+        {
+            throw new InvalidOperationException(
+                "Entity type 'Object' is not a valid entity type. " +
+                "Set EntityType in DapperQueryOptions or use a concrete type parameter " +
+                "when calling FlexQueryAsync<T>().");
+        }
+
         var mapping = new EntityMapping(entityType, entityType.Name);
         
         _entityConvention.Apply(mapping);

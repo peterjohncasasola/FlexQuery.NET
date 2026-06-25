@@ -1,6 +1,7 @@
 using System.Collections.Concurrent;
 using System.Linq.Expressions;
 using FlexQuery.NET.Models;
+using FlexQuery.NET.Projection;
 
 namespace FlexQuery.NET.Caching;
 
@@ -25,7 +26,7 @@ public static class ProjectionExpressionCache
 
         return _projectionCache.GetOrAdd(cacheKey, _ =>
         {
-            var expression = Builders.ProjectionBuilder.BuildFromSelectionFields(entityType, selectionFields, options);
+            var expression = ProjectionExpressionBuilder.BuildFromSelectionFields(entityType, selectionFields, options);
             return factory(expression, entityType);
         });
     }

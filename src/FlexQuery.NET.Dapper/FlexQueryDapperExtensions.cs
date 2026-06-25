@@ -2,8 +2,10 @@ using System.Data;
 using System.Data.Common;
 using System.Text.RegularExpressions;
 using Dapper;
+using FlexQuery.NET.Helpers;
 using FlexQuery.NET.Models;
 using FlexQuery.NET.Parsers;
+using FlexQuery.NET.Projection;
 using FlexQuery.NET.Dapper.Sql;
 using FlexQuery.NET.Dapper.Sql.Translators;
 using FlexQuery.NET.Dapper.Dialects;
@@ -14,82 +16,66 @@ using FlexQuery.NET.Dapper.Materialization;
 
 namespace FlexQuery.NET.Dapper;
 
-/// <summary>
-/// Extension methods for executing FlexQuery requests with Dapper.
-/// </summary>
 public static class FlexQueryDapperExtensions
 {
-    /// <summary>
-    /// Executes a FlexQuery using FlexQueryParameters with validation.
-    /// </summary>
-    /// <remarks>
-    /// If the connection is closed, it is opened automatically before query execution.
-    /// The connection is NEVER closed by this method — the caller retains full lifecycle ownership.
-    /// When using EF Core's <c>Database.GetDbConnection()</c>, opening the connection
-    /// directly bypasses EF Core's connection interceptors. Call <c>Database.OpenConnectionAsync()</c>
-    /// before FlexQueryAsync if interceptors are needed.
-    /// </remarks>
-    public static async Task<QueryResult<T>> FlexQueryAsync<T>(
+    private static void ValidateEntityType(Type t, Type? entityType)
+    {
+        var resolved = entityType ?? t;
+        if (resolved == typeof(object))
+        {
+            throw new InvalidOperationException(
+                "Entity type could not be resolved. Set EntityType in DapperQueryOptions " +
+                "or use a concrete type parameter when calling FlexQueryAsync<T>().");
+        }
+    }
+
+    private static void SetEntityType(QueryOptions options, Type t, DapperQueryOptions dapperOptions)
+    {
+        options.Items[ContextKeys.EntityType] = dapperOptions.EntityType ?? t;
+    }
+
+    public static async Task<QueryResult<object>> FlexQueryAsync<T>(
         this DbConnection connection,
         FlexQueryParameters parameters,
         Action<DapperQueryOptions>? configureDapper = null) where T : class
     {
         var dapperOptions = new DapperQueryOptions();
         configureDapper?.Invoke(dapperOptions);
+        ValidateEntityType(typeof(T), dapperOptions.EntityType);
 
         var parsedOptions = QueryOptionsParser.Parse(parameters);
-        parsedOptions.Items[ContextKeys.EntityType] = dapperOptions.EntityType ?? typeof(T);
+        SetEntityType(parsedOptions, typeof(T), dapperOptions);
 
         var execOptions = dapperOptions.ToQueryExecutionOptions();
-
         parsedOptions.ValidateOrThrow(dapperOptions.EntityType ?? typeof(T), execOptions);
 
         return await ExecuteQueryAsync<T>(connection, parsedOptions, dapperOptions);
     }
 
-    /// <summary>
-    /// Executes a FlexQuery using FlexQueryParameters with full options.
-    /// </summary>
-    /// <remarks>
-    /// If the connection is closed, it is opened automatically before query execution.
-    /// The connection is NEVER closed by this method — the caller retains full lifecycle ownership.
-    /// When using EF Core's <c>Database.GetDbConnection()</c>, opening the connection
-    /// directly bypasses EF Core's connection interceptors. Call <c>Database.OpenConnectionAsync()</c>
-    /// before FlexQueryAsync if interceptors are needed.
-    /// </remarks>
-    public static async Task<QueryResult<T>> FlexQueryAsync<T>(
+    public static async Task<QueryResult<object>> FlexQueryAsync<T>(
         this DbConnection connection,
         FlexQueryParameters parameters,
         DapperQueryOptions? dapperQueryOptions = null) where T : class
     {
         var dapperOptions = dapperQueryOptions ?? new DapperQueryOptions();
-        var parsedOptions = QueryOptionsParser.Parse(parameters);
-        parsedOptions.Items[ContextKeys.EntityType] = dapperOptions.EntityType ?? typeof(T);
-       
-        var execOptions = dapperOptions.ToQueryExecutionOptions();
+        ValidateEntityType(typeof(T), dapperOptions.EntityType);
 
+        var parsedOptions = QueryOptionsParser.Parse(parameters);
+        SetEntityType(parsedOptions, typeof(T), dapperOptions);
+
+        var execOptions = dapperOptions.ToQueryExecutionOptions();
         parsedOptions.ValidateOrThrow(dapperOptions.EntityType ?? typeof(T), execOptions);
 
         return await ExecuteQueryAsync<T>(connection, parsedOptions, dapperOptions);
     }
 
-    /// <summary>
-    /// Executes a FlexQuery using raw query string parameters.
-    /// </summary>
-    /// <remarks>
-    /// If the connection is closed, it is opened automatically before query execution.
-    /// The connection is NEVER closed by this method — the caller retains full lifecycle ownership.
-    /// When using EF Core's <c>Database.GetDbConnection()</c>, opening the connection
-    /// directly bypasses EF Core's connection interceptors. Call <c>Database.OpenConnectionAsync()</c>
-    /// before FlexQueryAsync if interceptors are needed.
-    /// </remarks>
-    public static async Task<QueryResult<T>> FlexQueryAsync<T>(
+    public static async Task<QueryResult<object>> FlexQueryAsync<T>(
         this DbConnection connection,
         IDictionary<string, StringValues> parameters,
         Action<DapperQueryOptions>? configureDapper = null) where T : class
     {
         var dict = parameters.ToDictionary(k => k.Key, v => v.Value.ToString(), StringComparer.OrdinalIgnoreCase);
-        
+
         var flexParams = new FlexQueryParameters
         {
             Filter = dict.GetValueOrDefault(QueryOptionKeys.Filter) ?? dict.GetValueOrDefault($"${QueryOptionKeys.Filter}"),
@@ -104,29 +90,7 @@ public static class FlexQueryDapperExtensions
         return await FlexQueryAsync<T>(connection, flexParams, configureDapper);
     }
 
-    /// <summary>
-    /// Executes a pre-parsed <see cref="QueryOptions"/> using Dapper with validation.
-    /// </summary>
-    /// <remarks>
-    /// Use this overload when composing with adapter packages (e.g. FlexQuery.NET.Adapters.AgGrid,
-    /// FlexQuery.NET.Parsers.MiniOData) that parse external formats into <see cref="QueryOptions"/>.
-    /// <code>
-    /// // Step 1: Parse (adapter package)
-    /// var options = AgGridQueryOptionsParser.Parse(agGridRequest);
-    ///
-    /// // Step 2: Execute (Dapper package)
-    /// var result = await connection.FlexQueryAsync&lt;User&gt;(options);
-    /// </code>
-    /// If the connection is closed, it is opened automatically before query execution.
-    /// The connection is NEVER closed by this method — the caller retains full lifecycle ownership.
-    /// When using EF Core's <c>Database.GetDbConnection()</c>, opening the connection
-    /// directly bypasses EF Core's connection interceptors. Call <c>Database.OpenConnectionAsync()</c>
-    /// before FlexQueryAsync if interceptors are needed.
-    /// </remarks>
-    /// <param name="connection">The database connection.</param>
-    /// <param name="options">Pre-parsed query options from any adapter or manual construction.</param>
-    /// <param name="configureDapper">Optional configuration for Dapper-specific execution options.</param>
-    public static async Task<QueryResult<T>> FlexQueryAsync<T>(
+    public static async Task<QueryResult<object>> FlexQueryAsync<T>(
         this DbConnection connection,
         QueryOptions options,
         Action<DapperQueryOptions>? configureDapper = null) where T : class
@@ -137,20 +101,7 @@ public static class FlexQueryDapperExtensions
         return await connection.FlexQueryAsync<T>(options, dapperOptions);
     }
 
-    /// <summary>
-    /// Executes a pre-parsed <see cref="QueryOptions"/> using Dapper with full options.
-    /// </summary>
-    /// <remarks>
-    /// If the connection is closed, it is opened automatically before query execution.
-    /// The connection is NEVER closed by this method — the caller retains full lifecycle ownership.
-    /// When using EF Core's <c>Database.GetDbConnection()</c>, opening the connection
-    /// directly bypasses EF Core's connection interceptors. Call <c>Database.OpenConnectionAsync()</c>
-    /// before FlexQueryAsync if interceptors are needed.
-    /// </remarks>
-    /// <param name="connection">The database connection.</param>
-    /// <param name="options">Pre-parsed query options from any adapter or manual construction.</param>
-    /// <param name="dapperQueryOptions">Dapper-specific execution options.</param>
-    public static async Task<QueryResult<T>> FlexQueryAsync<T>(
+    public static async Task<QueryResult<object>> FlexQueryAsync<T>(
         this DbConnection connection,
         QueryOptions options,
         DapperQueryOptions? dapperQueryOptions = null) where T : class
@@ -159,16 +110,17 @@ public static class FlexQueryDapperExtensions
         ArgumentNullException.ThrowIfNull(options);
 
         var dapperOptions = dapperQueryOptions ?? new DapperQueryOptions();
-        options.Items[ContextKeys.EntityType] = dapperOptions.EntityType ?? typeof(T);
+        ValidateEntityType(typeof(T), dapperOptions.EntityType);
+
+        SetEntityType(options, typeof(T), dapperOptions);
 
         var execOptions = dapperOptions.ToQueryExecutionOptions();
-
         options.ValidateOrThrow(dapperOptions.EntityType ?? typeof(T), execOptions);
 
         return await ExecuteQueryAsync<T>(connection, options, dapperOptions);
     }
 
-    private static async Task<QueryResult<T>> ExecuteQueryAsync<T>(
+    private static async Task<QueryResult<object>> ExecuteQueryAsync<T>(
         DbConnection connection,
         QueryOptions options,
         DapperQueryOptions execOptions,
@@ -179,19 +131,19 @@ public static class FlexQueryDapperExtensions
             await connection.OpenAsync(cancellationToken);
         }
 
-        var dialect = execOptions.Dialect 
-            ?? DapperQueryOptions.GlobalDefaultDialect 
+        var dialect = execOptions.Dialect
+            ?? DapperQueryOptions.GlobalDefaultDialect
             ?? DapperQueryOptions.GlobalDialectResolver.Resolve(connection);
-        
+
         var registry = execOptions.MappingRegistry ?? new Mapping.MappingRegistry();
-        
-        // Propagate EntityType to options for translator
+
         if (execOptions.EntityType != null)
             options.Items[ContextKeys.EntityType] = execOptions.EntityType;
 
         var translator = new SqlTranslator(registry, dialect);
         var command = translator.Translate(options);
-        var mapping = registry.GetMapping(execOptions.EntityType ?? typeof(T));
+        var entityType = execOptions.EntityType ?? typeof(T);
+        var mapping = registry.GetMapping(entityType);
 
         var parameters = new DynamicParameters();
         foreach (var param in command.Parameters)
@@ -200,7 +152,13 @@ public static class FlexQueryDapperExtensions
             parameters.Add(cleanName, param.Value);
         }
 
-        IReadOnlyList<T> items;
+        var metadata = ProjectionMetadataBuilder.Build(entityType, options);
+        var useDynamicType = metadata.IsProjected
+            && options.GroupBy == null
+            && options.Aggregates.Count == 0
+            && typeof(T) != typeof(object);
+
+        IReadOnlyList<object> items;
         if (options.Includes?.Count > 0)
         {
             var dynamicItems = await connection.QueryAsync(
@@ -209,19 +167,34 @@ public static class FlexQueryDapperExtensions
                 commandTimeout: execOptions.CommandTimeoutSeconds,
                 commandType: CommandType.Text);
 
-            items = DapperRowHydrator.HydrateIncludes<T>(dynamicItems, mapping, registry, options.Includes);
+            var hydrated = DapperRowHydrator.HydrateIncludes<T>(dynamicItems, mapping, registry, options.Includes);
+            items = hydrated.Cast<object>().ToList();
         }
-        else if (typeof(T) == typeof(object) || options.GroupBy?.Count > 0)
+        else if (useDynamicType)
+        {
+            var projectedType = DynamicTypeBuilder.GetDynamicType(
+                new Dictionary<string, Type>(metadata.FieldTypes));
+
+            var dynamicItems = await connection.QueryAsync(
+                projectedType,
+                command.Sql,
+                parameters,
+                commandTimeout: execOptions.CommandTimeoutSeconds,
+                commandType: CommandType.Text);
+
+            items = dynamicItems.Cast<object>().ToList();
+        }
+        else if (typeof(T) == typeof(object) || options.GroupBy?.Count > 0 || options.Aggregates.Count > 0)
         {
             var dynamicItems = await connection.QueryAsync(
                 command.Sql,
                 parameters,
                 commandTimeout: execOptions.CommandTimeoutSeconds,
                 commandType: CommandType.Text);
-            
+
             items = dynamicItems
-                .Select(d => (T)(object)new Dictionary<string, object>((IDictionary<string, object>)d, StringComparer.OrdinalIgnoreCase))
-                .AsList();
+                .Select(d => (object)new Dictionary<string, object>((IDictionary<string, object>)d, StringComparer.OrdinalIgnoreCase))
+                .ToList();
         }
         else
         {
@@ -229,7 +202,7 @@ public static class FlexQueryDapperExtensions
                 command.Sql,
                 parameters,
                 commandTimeout: execOptions.CommandTimeoutSeconds,
-                commandType: CommandType.Text)).AsList();
+                commandType: CommandType.Text)).Cast<object>().ToList();
         }
 
         int? totalCount = null;
@@ -298,7 +271,7 @@ public static class FlexQueryDapperExtensions
             }
         }
 
-        return new QueryResult<T>
+        return new QueryResult<object>
         {
             Data = items,
             TotalCount = totalCount,
@@ -311,9 +284,6 @@ public static class FlexQueryDapperExtensions
 
     private static string ExtractCountSql(string sql)
     {
-        // Match ORDER BY, LIMIT, and OFFSET with word boundaries to avoid matching
-        // inside identifiers or aliases (e.g. "myOffset" or "order_by_field").
-        // Skip matches nested inside parentheses (subqueries) by tracking depth.
         var patterns = new[] { @"\bORDER\s+BY\b", @"\bLIMIT\b", @"\bOFFSET\b" };
         var minIdx = sql.Length;
 
