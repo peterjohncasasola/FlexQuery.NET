@@ -42,7 +42,7 @@ public static class ProjectionEfCoreExtensions
         Action<QueryExecutionOptions>? configure = null)
         where T : class
     {
-        var options = QueryOptionsParser.Parse(parameters);
+        var options = parameters.ToQueryOptions();
         var projected = query.ApplySelect(options);
         return projected.ToSqlPreview();
     }

@@ -94,7 +94,7 @@ public static class QueryableEfCoreExtensions
         Action<FlexQueryExecutionConfig>? configureExecution = null)
         where T : class
     {
-        var options = QueryOptionsParser.Parse(parameters);
+        var options = parameters.ToQueryOptions();
 
         QueryOptionsEfCoreExtensions.EnsureEfCoreOperatorsRegistered();
 

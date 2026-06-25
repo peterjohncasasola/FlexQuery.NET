@@ -57,7 +57,7 @@ public static class FlexQueryDapperExtensions
         var dapperOptions = dapperQueryOptions ?? new DapperQueryOptions();
         ValidateEntityType(typeof(T), dapperOptions.EntityType);
 
-        var parsedOptions = QueryOptionsParser.Parse(parameters);
+        var parsedOptions = parameters.ToQueryOptions();
         SetEntityType(parsedOptions, typeof(T), dapperOptions);
 
         var execOptions = dapperOptions.ToQueryExecutionOptions();

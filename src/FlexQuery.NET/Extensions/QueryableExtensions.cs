@@ -80,7 +80,7 @@ public static class QueryableExtensions
         var exec = new QueryExecutionOptions();
         configure?.Invoke(exec);
 
-        var options = QueryOptionsParser.Parse(parameters);
+        var options = parameters.ToQueryOptions();
 
         options.ValidateOrThrow<T>(exec);
 

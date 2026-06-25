@@ -19,7 +19,7 @@ public static class QueryOptionsParser
 
     static QueryOptionsParser()
     {
-        RegisterIfAvailable("FlexQuery.NET.MiniOData.Parsers.MiniODataParser, FlexQuery.NET.MiniOData");
+        RegisterIfAvailable("FlexQuery.NET.MiniOData.Parsers.MiniODataParser, FlexQuery.NET.Parsers.MiniOData");
         RegisterIfAvailable("FlexQuery.NET.Parsers.Jql.JqlQueryParser, FlexQuery.NET.Parsers.Jql");
     }
 
