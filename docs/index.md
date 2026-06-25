@@ -164,4 +164,22 @@ FlexQuery.NET auto-detects the input format:
 | `FlexQuery.NET.EntityFrameworkCore` | EF Core async execution — `FlexQueryAsync`, `ApplyFilteredIncludes` |
 | `FlexQuery.NET.AspNetCore` | ASP.NET Core integration — `FieldAccessFilter`, `[FieldAccess]` attribute |
 
+---
+
+## Package Reference
+
+Detailed documentation for each NuGet package:
+
+| Package | README |
+| :--- | :--- |
+| `FlexQuery.NET` | [README](https://github.com/peterjohncasasola/FlexQuery.NET/blob/main/src/FlexQuery.NET/README.md) |
+| `FlexQuery.NET.EntityFrameworkCore` | [README](https://github.com/peterjohncasasola/FlexQuery.NET/blob/main/src/FlexQuery.NET.EntityFrameworkCore/README.md) |
+| `FlexQuery.NET.Dapper` | [README](https://github.com/peterjohncasasola/FlexQuery.NET/blob/main/src/FlexQuery.NET.Dapper/README.md) |
+| `FlexQuery.NET.AspNetCore` | [README](https://github.com/peterjohncasasola/FlexQuery.NET/blob/main/src/FlexQuery.NET.AspNetCore/README.md) |
+| `FlexQuery.NET.Diagnostics` | [README](https://github.com/peterjohncasasola/FlexQuery.NET/blob/main/src/FlexQuery.NET.Diagnostics/README.md) |
+| `FlexQuery.NET.Adapters.AgGrid` | [README](https://github.com/peterjohncasasola/FlexQuery.NET/blob/main/src/FlexQuery.NET.Adapters.AgGrid/README.md) |
+| `FlexQuery.NET.Adapters.Kendo` | [README](https://github.com/peterjohncasasola/FlexQuery.NET/blob/main/src/FlexQuery.NET.Adapters.Kendo/README.md) |
+| `FlexQuery.NET.Parsers.Jql` | [README](https://github.com/peterjohncasasola/FlexQuery.NET/blob/main/src/FlexQuery.NET.Parsers.Jql/README.md) |
+| `FlexQuery.NET.Parsers.MiniOData` | [README](https://github.com/peterjohncasasola/FlexQuery.NET/blob/main/src/FlexQuery.NET.Parsers.MiniOData/README.md) |
+
 </div>
