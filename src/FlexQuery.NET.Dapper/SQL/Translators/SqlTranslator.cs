@@ -191,10 +191,38 @@ public sealed class SqlTranslator : ISqlTranslator
     private string BuildHavingClause(HavingCondition? having, IEntityMapping mapping, SqlParameterContext parameters)
     {
         if (having == null) return string.Empty;
-        var column = SqlDialectHelper.QuoteColumn(_dialect, mapping.GetColumnName(having.Field ?? "*"), mapping);
+
+        var isCountStar = having.Function.Equals("count", StringComparison.OrdinalIgnoreCase)
+            && string.IsNullOrWhiteSpace(having.Field);
+
+        string aggregateExpression;
+        if (isCountStar)
+        {
+            aggregateExpression = "COUNT(*)";
+        }
+        else
+        {
+            var column = SqlDialectHelper.QuoteColumn(_dialect, mapping.GetColumnName(having.Field!), mapping);
+            aggregateExpression = $"{having.Function.ToUpperInvariant()}({column})";
+        }
 
         var valStr = having.Value?.ToString()?.Trim('"');
-        var convertedValue = SqlValueConverter.Convert(having.Field ?? string.Empty, valStr, mapping);
+
+        object? convertedValue;
+        if (isCountStar || string.IsNullOrWhiteSpace(having.Field))
+        {
+            if (long.TryParse(valStr, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out var longVal))
+                convertedValue = longVal;
+            else if (double.TryParse(valStr, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out var doubleVal))
+                convertedValue = doubleVal;
+            else
+                convertedValue = valStr;
+        }
+        else
+        {
+            convertedValue = SqlValueConverter.Convert(having.Field!, valStr, mapping);
+        }
+
         if (_dialect is SqliteDialect && convertedValue is decimal decimalValue)
         {
             convertedValue = (double)decimalValue;
@@ -213,7 +241,7 @@ public sealed class SqlTranslator : ISqlTranslator
             _ => having.Operator
         };
 
-        return $"HAVING {having.Function.ToUpperInvariant()}({column}) {sqlOp} {paramName}";
+        return $"HAVING {aggregateExpression} {sqlOp} {paramName}";
     }
 
     private string BuildOrderByClause(IReadOnlyList<SortNode>? sorts, IEntityMapping mapping)

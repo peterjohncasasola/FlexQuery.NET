@@ -72,20 +72,24 @@ internal static class ParserUtilities
         => d.TryGetValue(key, out var raw) && int.TryParse(raw, out var val) ? val : defaultValue;
     
     /// <summary>
-    /// Builds a camelCase alias for aggregate functions (e.g., "totalSum" or "allCount").
+    /// Builds a camelCase alias for aggregate functions (e.g., "totalSum" or "Count").
+    /// For field-less aggregates (e.g. count()) the alias is just the function name (e.g. "Count").
     /// </summary>
     public static string BuildAggregateAlias(string function, string? field)
     {
-        var normalized = string.IsNullOrWhiteSpace(field)
-            ? "All"
-            : string.Join("", field.Replace('.', '_')
-                .Split('_', StringSplitOptions.RemoveEmptyEntries)
-                .Select((part, i) => i == 0
-                    ? char.ToLowerInvariant(part[0]) + part[1..]
-                    : char.ToUpperInvariant(part[0]) + part[1..]));
-
         var fn = function.ToLowerInvariant();
-        return $"{normalized}{char.ToUpperInvariant(fn[0])}{fn[1..]}";
+        var functionName = $"{char.ToUpperInvariant(fn[0])}{fn[1..]}";
+
+        if (string.IsNullOrWhiteSpace(field))
+            return functionName;
+
+        var normalized = string.Join("", field.Replace('.', '_')
+            .Split('_', StringSplitOptions.RemoveEmptyEntries)
+            .Select((part, i) => i == 0
+                ? char.ToLowerInvariant(part[0]) + part[1..]
+                : char.ToUpperInvariant(part[0]) + part[1..]));
+
+        return $"{normalized}{functionName}";
     }
 
     private static bool TryParseIndexedKey(

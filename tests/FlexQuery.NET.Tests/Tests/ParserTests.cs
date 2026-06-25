@@ -936,4 +936,121 @@ public class ParserTests
         filter.Filters[0].Value.Should().Be("john");
         filter.Filters[0].ScopedFilter.Should().BeNull();
     }
+
+    // ════════════════════════════════════════════════════════════════════
+    // HAVING Parser Tests
+    // ════════════════════════════════════════════════════════════════════
+
+    [Fact]
+    public void Having_Parse_FieldLessCount_ColonFormat()
+    {
+        var opts = Parse(new()
+        {
+            ["group"] = "status",
+            ["select"] = "status,count()",
+            ["having"] = "count:gt:20"
+        });
+
+        opts.Having.Should().NotBeNull();
+        opts.Having!.Function.Should().Be("count");
+        opts.Having.Field.Should().BeNull();
+        opts.Having.Operator.Should().Be(FilterOperators.GreaterThan);
+        opts.Having.Value.Should().Be("20");
+    }
+
+    [Fact]
+    public void Having_Parse_FieldLessCount_ParenthesisFormat()
+    {
+        var opts = Parse(new()
+        {
+            ["group"] = "status",
+            ["select"] = "status,count()",
+            ["having"] = "count():gt:20"
+        });
+
+        opts.Having.Should().NotBeNull();
+        opts.Having!.Function.Should().Be("count");
+        opts.Having.Field.Should().BeNull();
+        opts.Having.Operator.Should().Be(FilterOperators.GreaterThan);
+        opts.Having.Value.Should().Be("20");
+    }
+
+    [Fact]
+    public void Having_Parse_WithField_ColonFormat()
+    {
+        var opts = Parse(new()
+        {
+            ["group"] = "status",
+            ["select"] = "status,sum(total)",
+            ["having"] = "sum:total:gt:100"
+        });
+
+        opts.Having.Should().NotBeNull();
+        opts.Having!.Function.Should().Be("sum");
+        opts.Having.Field.Should().Be("total");
+        opts.Having.Operator.Should().Be(FilterOperators.GreaterThan);
+        opts.Having.Value.Should().Be("100");
+    }
+
+    [Fact]
+    public void Having_Parse_WithField_ParenthesisFormat()
+    {
+        var opts = Parse(new()
+        {
+            ["group"] = "status",
+            ["select"] = "status,sum(total)",
+            ["having"] = "sum(total):gt:100"
+        });
+
+        opts.Having.Should().NotBeNull();
+        opts.Having!.Function.Should().Be("sum");
+        opts.Having.Field.Should().Be("total");
+        opts.Having.Operator.Should().Be(FilterOperators.GreaterThan);
+        opts.Having.Value.Should().Be("100");
+    }
+
+    [Fact]
+    public void Having_Parse_CountField_ColonFormat()
+    {
+        var opts = Parse(new()
+        {
+            ["group"] = "status",
+            ["select"] = "status,count(id)",
+            ["having"] = "count:id:gt:5"
+        });
+
+        opts.Having.Should().NotBeNull();
+        opts.Having!.Function.Should().Be("count");
+        opts.Having.Field.Should().Be("id");
+        opts.Having.Operator.Should().Be(FilterOperators.GreaterThan);
+        opts.Having.Value.Should().Be("5");
+    }
+
+    [Fact]
+    public void Having_AggregateAlias_FieldLessCount_ReturnsCount()
+    {
+        var alias = ParserUtilities.BuildAggregateAlias("count", null);
+        alias.Should().Be("Count");
+    }
+
+    [Fact]
+    public void Having_AggregateAlias_FieldLessSum_ReturnsSum()
+    {
+        var alias = ParserUtilities.BuildAggregateAlias("sum", null);
+        alias.Should().Be("Sum");
+    }
+
+    [Fact]
+    public void Having_AggregateAlias_WithField_ReturnsFieldPrefixPlusFunction()
+    {
+        var alias = ParserUtilities.BuildAggregateAlias("sum", "total");
+        alias.Should().Be("totalSum");
+    }
+
+    [Fact]
+    public void Having_AggregateAlias_WithMultiWordField_ReturnsCamelCase()
+    {
+        var alias = ParserUtilities.BuildAggregateAlias("sum", "grand_total");
+        alias.Should().Be("grandTotalSum");
+    }
 }

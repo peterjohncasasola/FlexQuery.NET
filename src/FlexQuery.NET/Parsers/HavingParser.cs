@@ -11,7 +11,7 @@ namespace FlexQuery.NET.Parsers;
 internal static class HavingParser
 {
     private static readonly Regex HavingPattern = new(
-        @"^(?<fn>sum|count|avg|average|min|max)(?:\((?<field>[A-Za-z_][A-Za-z0-9_\.]*)?\)|:(?<field2>[A-Za-z_][A-Za-z0-9_\.]*)):(?<op>[A-Za-z_][A-Za-z0-9_]*):(?<value>.+)$",
+        @"^(?<fn>sum|count|avg|average|min|max)(?:\((?<field>[A-Za-z_][A-Za-z0-9_\.]*)?\)|:(?<field2>[A-Za-z_][A-Za-z0-9_\.]+))?:(?<op>[A-Za-z_][A-Za-z0-9_]*):(?<value>.+)$",
         RegexOptions.Compiled | RegexOptions.IgnoreCase);
 
     /// <summary>

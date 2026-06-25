@@ -289,6 +289,73 @@ public class SqlTranslatorTests
     }
 
     [Fact]
+    public void Translate_Having_FieldLessCount_GeneratesCountStar()
+    {
+        var options = NoPaging(new QueryOptions
+        {
+            GroupBy = ["Status"],
+            Aggregates = [new AggregateModel { Function = "count", Alias = "Count" }],
+            Having = new HavingCondition
+            {
+                Function = "count",
+                Operator = "gt",
+                Value = "20"
+            }
+        });
+        options.Items[ContextKeys.EntityType] = typeof(TestEntity);
+
+        var translator = new SqlTranslator(_registry, new SqlServerDialect());
+        var command = translator.Translate(options);
+
+        command.Sql.Should().Contain("GROUP BY");
+        command.Sql.Should().Contain("HAVING");
+        command.Sql.Should().Contain("COUNT(*)");
+        command.Sql.Should().NotContain("[*]");
+    }
+
+    [Fact]
+    public void Translate_Having_ClauseOrdering_GroupByBeforeHaving()
+    {
+        var options = NoPaging(new QueryOptions
+        {
+            GroupBy = ["Status"],
+            Aggregates = [new AggregateModel { Function = "count", Alias = "Count" }],
+            Having = new HavingCondition
+            {
+                Function = "count",
+                Operator = "gt",
+                Value = "20"
+            }
+        });
+        options.Items[ContextKeys.EntityType] = typeof(TestEntity);
+
+        var translator = new SqlTranslator(_registry, new SqlServerDialect());
+        var command = translator.Translate(options);
+
+        var groupByPos = command.Sql.IndexOf("GROUP BY", StringComparison.OrdinalIgnoreCase);
+        var havingPos = command.Sql.IndexOf("HAVING", StringComparison.OrdinalIgnoreCase);
+
+        groupByPos.Should().BeGreaterThanOrEqualTo(0);
+        havingPos.Should().BeGreaterThan(groupByPos);
+    }
+
+    [Fact]
+    public void Translate_Having_SelectBuildsAggregateSelectWithNewAlias()
+    {
+        var options = NoPaging(new QueryOptions
+        {
+            GroupBy = ["Status"],
+            Aggregates = [new AggregateModel { Function = "count", Alias = "Count" }],
+        });
+        options.Items[ContextKeys.EntityType] = typeof(TestEntity);
+
+        var translator = new SqlTranslator(_registry, new SqlServerDialect());
+        var command = translator.Translate(options);
+
+        command.Sql.Should().Contain("COUNT(1) AS [Count]");
+    }
+
+    [Fact]
     public void Translate_Includes_GeneratesJoinClause()
     {
         var options = NoPaging(new QueryOptions

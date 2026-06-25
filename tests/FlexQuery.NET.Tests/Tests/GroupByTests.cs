@@ -499,6 +499,210 @@ public class GroupByTests : IDisposable
             .Should().OnlyContain(properties => properties.SequenceEqual(new[] { "CustomerId" }));
     }
 
+    [Fact]
+    public async Task FlexQueryAsync_GroupedHaving_Count_FiltersByCount()
+    {
+        var options = new QueryOptions
+        {
+            GroupBy = ["CustomerId"],
+            Aggregates = [new AggregateModel { Function = "count", Alias = "Count" }],
+            Having = new HavingCondition
+            {
+                Function = "count",
+                Operator = FilterOperators.GreaterThan,
+                Value = "1"
+            },
+            Paging = { Page = 1, PageSize = 10 }
+        };
+
+        var result = await _db.Orders.FlexQueryAsync(options);
+        result.Data.Should().ContainSingle();
+        Read<int>(result.Data[0], "CustomerId").Should().Be(1);
+        Read<int>(result.Data[0], "Count").Should().Be(2);
+    }
+
+    [Fact]
+    public async Task FlexQueryAsync_GroupedHaving_Sum_FiltersBySum()
+    {
+        var options = new QueryOptions
+        {
+            GroupBy = ["CustomerId"],
+            Aggregates = [new AggregateModel { Field = "Total", Function = "sum", Alias = "totalSum" }],
+            Having = new HavingCondition
+            {
+                Field = "Total",
+                Function = "sum",
+                Operator = FilterOperators.GreaterThan,
+                Value = "100"
+            },
+            Paging = { Page = 1, PageSize = 10 }
+        };
+
+        var result = await _db.Orders.FlexQueryAsync(options);
+        result.Data.Should().ContainSingle();
+        Read<int>(result.Data[0], "CustomerId").Should().Be(1);
+    }
+
+    [Fact]
+    public async Task FlexQueryAsync_GroupedHaving_Avg_FiltersByAverage()
+    {
+        var options = new QueryOptions
+        {
+            GroupBy = ["CustomerId"],
+            Aggregates = [new AggregateModel { Field = "Total", Function = "avg", Alias = "totalAvg" }],
+            Having = new HavingCondition
+            {
+                Field = "Total",
+                Function = "avg",
+                Operator = FilterOperators.GreaterThan,
+                Value = "50"
+            },
+            Paging = { Page = 1, PageSize = 10 }
+        };
+
+        var result = await _db.Orders.FlexQueryAsync(options);
+        result.Data.Should().HaveCount(2);
+    }
+
+    [Fact]
+    public async Task FlexQueryAsync_GroupedHaving_Max_FiltersByMax()
+    {
+        var options = new QueryOptions
+        {
+            GroupBy = ["CustomerId"],
+            Aggregates = [new AggregateModel { Field = "Total", Function = "max", Alias = "totalMax" }],
+            Having = new HavingCondition
+            {
+                Field = "Total",
+                Function = "max",
+                Operator = FilterOperators.GreaterThan,
+                Value = "100"
+            },
+            Paging = { Page = 1, PageSize = 10 }
+        };
+
+        var result = await _db.Orders.FlexQueryAsync(options);
+        result.Data.Should().ContainSingle();
+        Read<int>(result.Data[0], "CustomerId").Should().Be(1);
+    }
+
+    [Fact]
+    public async Task FlexQueryAsync_GroupedHaving_Min_FiltersByMin()
+    {
+        var options = new QueryOptions
+        {
+            GroupBy = ["CustomerId"],
+            Aggregates = [new AggregateModel { Field = "Total", Function = "min", Alias = "totalMin" }],
+            Having = new HavingCondition
+            {
+                Field = "Total",
+                Function = "min",
+                Operator = FilterOperators.GreaterThan,
+                Value = "45"
+            },
+            Paging = { Page = 1, PageSize = 10 }
+        };
+
+        var result = await _db.Orders.FlexQueryAsync(options);
+        result.Data.Should().ContainSingle();
+        Read<int>(result.Data[0], "CustomerId").Should().Be(2);
+    }
+
+    [Fact]
+    public async Task FlexQueryAsync_GroupedHaving_CountWithSort_SortsAfterHaving()
+    {
+        await AddOrdersAsync(
+            (201, 2, "2026-05-01", 5m));
+
+        var options = new QueryOptions
+        {
+            GroupBy = ["CustomerId"],
+            Aggregates = [new AggregateModel { Function = "count", Alias = "Count" }],
+            Having = new HavingCondition
+            {
+                Function = "count",
+                Operator = FilterOperators.GreaterThanOrEq,
+                Value = "2"
+            },
+            Sort = [new SortNode { Field = "CustomerId", Descending = true }],
+            Paging = { Page = 1, PageSize = 10 }
+        };
+
+        var result = await _db.Orders.FlexQueryAsync(options);
+        result.Data.Should().HaveCount(2);
+        Read<int>(result.Data[0], "CustomerId").Should().Be(2);
+        Read<int>(result.Data[1], "CustomerId").Should().Be(1);
+    }
+
+    [Fact]
+    public async Task FlexQueryAsync_GroupedHaving_WithPaging_PagesAfterHaving()
+    {
+        await AddOrdersAsync(
+            (300, 1, "2026-06-01", 5m));
+
+        var options = new QueryOptions
+        {
+            GroupBy = ["CustomerId"],
+            Aggregates = [new AggregateModel { Function = "count", Alias = "Count" }],
+            Having = new HavingCondition
+            {
+                Function = "count",
+                Operator = FilterOperators.GreaterThanOrEq,
+                Value = "1"
+            },
+            Sort = [new SortNode { Field = "CustomerId" }],
+            Paging = { Page = 1, PageSize = 2 }
+        };
+
+        var result = await _db.Orders.FlexQueryAsync(options);
+        result.Data.Should().HaveCount(2);
+    }
+
+    [Fact]
+    public async Task FlexQueryAsync_GroupedHaving_WithProjection_SelectsOnlyProjectedFields()
+    {
+        var options = new QueryOptions
+        {
+            GroupBy = ["CustomerId"],
+            Aggregates = [new AggregateModel { Function = "count", Alias = "Count" }],
+            Having = new HavingCondition
+            {
+                Function = "count",
+                Operator = FilterOperators.GreaterThan,
+                Value = "1"
+            },
+            Paging = { Page = 1, PageSize = 10 }
+        };
+
+        var result = await _db.Orders.FlexQueryAsync(options);
+        result.Data.Should().ContainSingle();
+
+        var row = result.Data[0];
+        Read<int>(row, "CustomerId").Should().Be(1);
+        Read<int>(row, "Count").Should().Be(2);
+    }
+
+    [Fact]
+    public async Task FlexQueryAsync_GroupedHaving_HavingFiltersOutAllRows_ReturnsEmpty()
+    {
+        var options = new QueryOptions
+        {
+            GroupBy = ["CustomerId"],
+            Aggregates = [new AggregateModel { Function = "count", Alias = "Count" }],
+            Having = new HavingCondition
+            {
+                Function = "count",
+                Operator = FilterOperators.GreaterThan,
+                Value = "999"
+            },
+            Sort = [new SortNode { Field = "CustomerId" }],
+            Paging = { Page = 1, PageSize = 10 }
+        };
+
+        var result = await _db.Orders.FlexQueryAsync(options);
+        result.Data.Should().BeEmpty();
+    }
+
     private static QueryOptions GroupedOptions(int page, int pageSize)
     {
         return new QueryOptions
