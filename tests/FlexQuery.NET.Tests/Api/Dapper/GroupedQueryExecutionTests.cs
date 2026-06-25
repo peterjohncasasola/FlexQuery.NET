@@ -1,4 +1,5 @@
 using System.Data.Common;
+using System.Reflection;
 using FlexQuery.NET.Dapper;
 using FlexQuery.NET.Dapper.Dialects;
 using FlexQuery.NET.Dapper.Mapping;
@@ -134,7 +135,7 @@ public class GroupedQueryExecutionTests : IDisposable
         firstPage.Data.Select(row => Read<int>(row, "CustomerId")).Should().Equal(3, 2);
         secondPage.Data.Select(row => Read<int>(row, "CustomerId")).Should().Equal(1);
         firstPage.Data.Concat(secondPage.Data)
-            .Select(row => ((IReadOnlyDictionary<string, object?>)row).Keys)
+            .Select(row => ToDictionary(row).Keys)
             .Should().OnlyContain(keys => keys.SequenceEqual(new[] { "CustomerId" }));
     }
 
@@ -297,16 +298,41 @@ public class GroupedQueryExecutionTests : IDisposable
     private static string CompositeKey(object row)
         => $"{Read<int>(row, "CustomerId")}|{Read<DateTime>(row, "OrderDate"):yyyy-MM-dd}";
 
+    private static Dictionary<string, object?> ToDictionary(object row)
+    {
+        if (row is Dictionary<string, object?> dict)
+            return dict;
+        if (row is IReadOnlyDictionary<string, object?> readOnlyDict)
+            return new Dictionary<string, object?>(readOnlyDict, StringComparer.OrdinalIgnoreCase);
+
+        var props = row.GetType().GetProperties(BindingFlags.Public | BindingFlags.Instance);
+        var result = new Dictionary<string, object?>(StringComparer.OrdinalIgnoreCase);
+        foreach (var prop in props)
+            result[prop.Name] = prop.GetValue(row);
+        return result;
+    }
+
     private static T Read<T>(object row, string propertyName)
     {
-        var dictionary = (IReadOnlyDictionary<string, object?>)row;
-        dictionary.TryGetValue(propertyName, out var value).Should().BeTrue(
-            $"the Dapper row should contain {propertyName}; available keys are {string.Join(", ", dictionary.Keys)}");
+        if (row is IReadOnlyDictionary<string, object?> dictionary)
+        {
+            dictionary.TryGetValue(propertyName, out var value).Should().BeTrue(
+                $"the Dapper row should contain {propertyName}; available keys are {string.Join(", ", dictionary.Keys)}");
 
-        if (value is null)
+            if (value is null)
+                return default!;
+
+            return (T)Convert.ChangeType(value, typeof(T))!;
+        }
+
+        var prop = row.GetType().GetProperty(propertyName,
+            BindingFlags.Public | BindingFlags.Instance | BindingFlags.IgnoreCase);
+        prop.Should().NotBeNull($"the Dapper row should have a property named {propertyName}");
+        var propValue = prop!.GetValue(row);
+        if (propValue is null)
             return default!;
 
-        return (T)Convert.ChangeType(value, typeof(T))!;
+        return (T)Convert.ChangeType(propValue, typeof(T))!;
     }
 
     private static MappingRegistry CreateRegistry()

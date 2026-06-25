@@ -186,15 +186,50 @@ public static class FlexQueryDapperExtensions
         }
         else if (typeof(T) == typeof(object) || options.GroupBy?.Count > 0 || options.Aggregates.Count > 0)
         {
+            var useDynamicForGrouping = options.GroupBy?.Count > 0 || options.Aggregates.Count > 0;
+
             var dynamicItems = await connection.QueryAsync(
                 command.Sql,
                 parameters,
                 commandTimeout: execOptions.CommandTimeoutSeconds,
                 commandType: CommandType.Text);
 
-            items = dynamicItems
-                .Select(d => (object)new Dictionary<string, object>((IDictionary<string, object>)d, StringComparer.OrdinalIgnoreCase))
-                .ToList();
+            if (useDynamicForGrouping)
+            {
+                var rows = dynamicItems
+                    .Select(d => (IDictionary<string, object>)d)
+                    .ToList();
+
+                if (rows.Count == 0)
+                {
+                    items = [];
+                }
+                else
+                {
+                    var colTypes = rows[0].Keys
+                        .ToDictionary(k => k, _ => typeof(object), StringComparer.OrdinalIgnoreCase);
+                    var projectedType = DynamicTypeBuilder.GetDynamicType(
+                        new Dictionary<string, Type>(colTypes));
+
+                    items = rows.Select(row =>
+                    {
+                        var instance = Activator.CreateInstance(projectedType)!;
+                        foreach (var kvp in row)
+                        {
+                            var prop = projectedType.GetProperty(kvp.Key);
+                            if (prop is { CanWrite: true })
+                                prop.SetValue(instance, kvp.Value);
+                        }
+                        return instance;
+                    }).Cast<object>().ToList();
+                }
+            }
+            else
+            {
+                items = dynamicItems
+                    .Select(d => (object)new Dictionary<string, object>((IDictionary<string, object>)d, StringComparer.OrdinalIgnoreCase))
+                    .ToList();
+            }
         }
         else
         {

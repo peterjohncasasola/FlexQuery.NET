@@ -744,8 +744,14 @@ public class SecurityGovernanceDapperIntegrationTests
 
     private static Dictionary<string, object?> AssertDictionary(object row)
     {
-        row.Should().BeAssignableTo<Dictionary<string, object?>>();
-        return (Dictionary<string, object?>)row;
+        if (row is Dictionary<string, object?> dict)
+            return dict;
+
+        var props = row.GetType().GetProperties(BindingFlags.Public | BindingFlags.Instance);
+        var result = new Dictionary<string, object?>(StringComparer.OrdinalIgnoreCase);
+        foreach (var prop in props)
+            result[prop.Name] = prop.GetValue(row);
+        return result;
     }
 
     private static MappingRegistry CreateOrderRegistry()
