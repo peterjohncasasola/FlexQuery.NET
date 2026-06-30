@@ -231,6 +231,40 @@ public static class IncludeBuilder
     private static readonly MethodInfo _applyChildRefNodeMethod = typeof(IncludeBuilder)
         .GetMethod(nameof(ApplyChildReferenceNode), BindingFlags.NonPublic | BindingFlags.Static)!;
 
+    private static readonly MethodInfo _includeMethod = typeof(EntityFrameworkQueryableExtensions)
+        .GetMethods(BindingFlags.Public | BindingFlags.Static)
+        .First(m => m.Name == nameof(EntityFrameworkQueryableExtensions.Include)
+            && m.GetParameters().Length == 2
+            && m.GetParameters()[1].ParameterType.IsGenericType
+            && m.GetParameters()[1].ParameterType.GetGenericTypeDefinition() == typeof(Expression<>));
+
+    private static readonly MethodInfo _thenIncludeAfterCollectionMethod = typeof(EntityFrameworkQueryableExtensions)
+        .GetMethods(BindingFlags.Public | BindingFlags.Static)
+        .First(m =>
+        {
+            if (m.Name != nameof(EntityFrameworkQueryableExtensions.ThenInclude)) return false;
+            var ps = m.GetParameters();
+            if (ps.Length != 2) return false;
+            if (!ps[0].ParameterType.IsGenericType) return false;
+            var args = ps[0].ParameterType.GetGenericArguments();
+            return args.Length == 2 && args[1].IsGenericType
+                && args[1].GetGenericTypeDefinition() == typeof(IEnumerable<>);
+        });
+
+    private static readonly MethodInfo _thenIncludeAfterReferenceMethod = typeof(EntityFrameworkQueryableExtensions)
+        .GetMethods(BindingFlags.Public | BindingFlags.Static)
+        .First(m =>
+        {
+            if (m.Name != nameof(EntityFrameworkQueryableExtensions.ThenInclude)) return false;
+            var ps = m.GetParameters();
+            if (ps.Length != 2) return false;
+            if (!ps[0].ParameterType.IsGenericType) return false;
+            var args = ps[0].ParameterType.GetGenericArguments();
+            return args.Length == 2
+                && !(args[1].IsGenericType
+                     && args[1].GetGenericTypeDefinition() == typeof(IEnumerable<>));
+        });
+
     private static object InvokeApplyChildNode(object source, Type rootType, Type prevElementType, IncludeNode node, QueryOptions options)
     {
         return _applyChildNodeMethod
@@ -269,103 +303,22 @@ public static class IncludeBuilder
     // ── Reflection helpers for EF Core Include / ThenInclude ─────────────
 
     private static MethodInfo GetIncludeCollectionMethod<T>(Type elementType) where T : class
-    {
-        // EntityFrameworkQueryableExtensions.Include<TEntity, TRelated>(
-        //   IQueryable<TEntity>, Expression<Func<TEntity, IEnumerable<TRelated>>>)
-        return typeof(EntityFrameworkQueryableExtensions)
-            .GetMethods(BindingFlags.Public | BindingFlags.Static)
-            .First(m =>
-            {
-                if (m.Name != nameof(EntityFrameworkQueryableExtensions.Include)) return false;
-                var ps = m.GetParameters();
-                if (ps.Length != 2) return false;
-                // second param should be Expression<Func<TEntity, IEnumerable<TRelated>>>
-                return ps[1].ParameterType.IsGenericType
-                    && ps[1].ParameterType.GetGenericTypeDefinition() == typeof(Expression<>);
-            })
-            .MakeGenericMethod(typeof(T), typeof(IEnumerable<>).MakeGenericType(elementType));
-    }
+        => _includeMethod.MakeGenericMethod(typeof(T), typeof(IEnumerable<>).MakeGenericType(elementType));
 
     private static MethodInfo GetIncludeReferenceMethod<T>(Type navType) where T : class
-    {
-        return typeof(EntityFrameworkQueryableExtensions)
-            .GetMethods(BindingFlags.Public | BindingFlags.Static)
-            .First(m =>
-            {
-                if (m.Name != nameof(EntityFrameworkQueryableExtensions.Include)) return false;
-                var ps = m.GetParameters();
-                if (ps.Length != 2) return false;
-                return ps[1].ParameterType.IsGenericType
-                    && ps[1].ParameterType.GetGenericTypeDefinition() == typeof(Expression<>);
-            })
-            .MakeGenericMethod(typeof(T), navType);
-    }
+        => _includeMethod.MakeGenericMethod(typeof(T), navType);
 
     private static MethodInfo GetThenIncludeAfterCollectionMethod<T, TPrev>(Type elementType)
         where T : class
-    {
-        // ThenInclude<TEntity, TPreviousProperty, TProperty>(
-        //   IIncludableQueryable<TEntity, IEnumerable<TPreviousProperty>>, ...)
-        return typeof(EntityFrameworkQueryableExtensions)
-            .GetMethods(BindingFlags.Public | BindingFlags.Static)
-            .First(m =>
-            {
-                if (m.Name != nameof(EntityFrameworkQueryableExtensions.ThenInclude)) return false;
-                var ps = m.GetParameters();
-                if (ps.Length != 2) return false;
-                var firstParamType = ps[0].ParameterType;
-                if (!firstParamType.IsGenericType) return false;
-                var args = firstParamType.GetGenericArguments();
-                // IIncludableQueryable<TEntity, IEnumerable<T>>
-                return args.Length == 2
-                    && args[1].IsGenericType
-                    && args[1].GetGenericTypeDefinition() == typeof(IEnumerable<>);
-            })
-            .MakeGenericMethod(typeof(T), typeof(TPrev), typeof(IEnumerable<>).MakeGenericType(elementType));
-    }
+        => _thenIncludeAfterCollectionMethod.MakeGenericMethod(typeof(T), typeof(TPrev), typeof(IEnumerable<>).MakeGenericType(elementType));
 
     private static MethodInfo GetThenIncludeAfterCollectionRefMethod<T, TPrev>(Type navType)
         where T : class
-    {
-        return typeof(EntityFrameworkQueryableExtensions)
-            .GetMethods(BindingFlags.Public | BindingFlags.Static)
-            .First(m =>
-            {
-                if (m.Name != nameof(EntityFrameworkQueryableExtensions.ThenInclude)) return false;
-                var ps = m.GetParameters();
-                if (ps.Length != 2) return false;
-                var firstParamType = ps[0].ParameterType;
-                if (!firstParamType.IsGenericType) return false;
-                var args = firstParamType.GetGenericArguments();
-                return args.Length == 2
-                    && args[1].IsGenericType
-                    && args[1].GetGenericTypeDefinition() == typeof(IEnumerable<>);
-            })
-            .MakeGenericMethod(typeof(T), typeof(TPrev), navType);
-    }
+        => _thenIncludeAfterCollectionMethod.MakeGenericMethod(typeof(T), typeof(TPrev), navType);
 
     private static MethodInfo GetThenIncludeAfterReferenceMethod<T, TPrev>(Type navType)
         where T : class
-    {
-        // ThenInclude<TEntity, TPreviousProperty, TProperty>(
-        //   IIncludableQueryable<TEntity, TPreviousProperty>, ...)
-        return typeof(EntityFrameworkQueryableExtensions)
-            .GetMethods(BindingFlags.Public | BindingFlags.Static)
-            .First(m =>
-            {
-                if (m.Name != nameof(EntityFrameworkQueryableExtensions.ThenInclude)) return false;
-                var ps = m.GetParameters();
-                if (ps.Length != 2) return false;
-                var firstParamType = ps[0].ParameterType;
-                if (!firstParamType.IsGenericType) return false;
-                var args = firstParamType.GetGenericArguments();
-                // IIncludableQueryable<TEntity, TPrev>  — NOT IEnumerable<>
-                return args.Length == 2
-                    && !(args[1].IsGenericType
-                         && args[1].GetGenericTypeDefinition() == typeof(IEnumerable<>));
-            })
-            .MakeGenericMethod(typeof(T), typeof(TPrev), navType);
-    }
+        => _thenIncludeAfterReferenceMethod.MakeGenericMethod(typeof(T), typeof(TPrev), navType);
 
     // ── Private helper ────────────────────────────────────────────────────
 
