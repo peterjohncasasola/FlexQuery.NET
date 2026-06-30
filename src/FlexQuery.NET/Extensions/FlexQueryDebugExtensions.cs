@@ -30,12 +30,9 @@ public static class FlexQueryDebugExtensions
         };
     }
 
-    private sealed class DebugQueryProvider : IQueryProvider
+    private sealed class DebugQueryProvider(IQueryProvider inner) : IQueryProvider
     {
-        private readonly IQueryProvider _inner;
         public Expression? LastExpression { get; private set; }
-
-        public DebugQueryProvider(IQueryProvider inner) => _inner = inner;
 
         public IQueryable CreateQuery(Expression expression)
         {
@@ -50,8 +47,8 @@ public static class FlexQueryDebugExtensions
             return new DebugQueryable<TElement>(expression, this);
         }
 
-        public object? Execute(Expression expression) => _inner.Execute(expression);
-        public TResult Execute<TResult>(Expression expression) => _inner.Execute<TResult>(expression);
+        public object? Execute(Expression expression) => inner.Execute(expression);
+        public TResult Execute<TResult>(Expression expression) => inner.Execute<TResult>(expression);
 
         private static Type GetElementType(Type type)
         {
@@ -61,17 +58,11 @@ public static class FlexQueryDebugExtensions
         }
     }
 
-    private sealed class DebugQueryable<T> : IQueryable<T>
+    private sealed class DebugQueryable<T>(Expression expression, IQueryProvider provider) : IQueryable<T>
     {
-        public DebugQueryable(Expression expression, IQueryProvider provider)
-        {
-            Expression = expression;
-            Provider = provider;
-        }
-
         public Type ElementType => typeof(T);
-        public Expression Expression { get; }
-        public IQueryProvider Provider { get; }
+        public Expression Expression { get; } = expression;
+        public IQueryProvider Provider { get; } = provider;
 
         public System.Collections.IEnumerator GetEnumerator() => Enumerable.Empty<T>().GetEnumerator();
         IEnumerator<T> IEnumerable<T>.GetEnumerator() => Enumerable.Empty<T>().GetEnumerator();

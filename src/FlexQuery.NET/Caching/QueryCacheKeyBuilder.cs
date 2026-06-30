@@ -8,8 +8,7 @@ namespace FlexQuery.NET.Caching;
 
 internal static class QueryCacheKeyBuilder
 {
-    public static bool CanCache(QueryOptions options)
-        => !TryGetExpressionMappings(options, out var mappings) || mappings.Count == 0;
+    public static bool CanCache(QueryOptions options) => true;
 
     public static string Build(QueryOptions options, Type entityType, string operation)
     {
@@ -28,14 +27,21 @@ internal static class QueryCacheKeyBuilder
             .Append("aggregates=").Append(AggregateKey(options.Aggregates)).Append('|')
             .Append("having=").Append(HavingKey(options.Having)).Append('|')
             .Append("distinct=").Append(options.Distinct).Append('|')
-            .Append("skip=").Append(options.Skip).Append('|')
-            .Append("top=").Append(options.Top).Append('|')
-            .Append("page=").Append(options.Paging.Page).Append('|')
-            .Append("pageSize=").Append(options.Paging.PageSize).Append('|')
-            .Append("pagingDisabled=").Append(options.Paging.Disabled)
-            .Append("|efCoreOperators=").Append(options.Items.ContainsKey("__EfCoreOperators"));
+            .Append("efCoreOperators=").Append(options.Items.ContainsKey("__EfCoreOperators")).Append('|')
+            .Append("exprMappings=").Append(ExpressionMappingsKey(options));
 
         return sb.ToString();
+    }
+
+    private static string ExpressionMappingsKey(QueryOptions options)
+    {
+        if (!TryGetExpressionMappings(options, out var mappings))
+            return string.Empty;
+
+        var entries = mappings
+            .OrderBy(m => m.Key, StringComparer.Ordinal)
+            .Select(m => $"{Escape(m.Key)}:{Escape(m.Value.ToString())}");
+        return string.Join(",", entries);
     }
 
     private static bool TryGetExpressionMappings(

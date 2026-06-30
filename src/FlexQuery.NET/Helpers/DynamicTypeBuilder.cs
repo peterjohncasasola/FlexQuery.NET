@@ -14,7 +14,6 @@ public static class DynamicTypeBuilder
     private static readonly ModuleBuilder _moduleBuilder;
     private static readonly ConcurrentDictionary<string, Lazy<Type>> _builtTypes = new();
     private static readonly ConcurrentQueue<string> _insertionOrder = new();
-    private static readonly object _trimLock = new();
 
     static DynamicTypeBuilder()
     {

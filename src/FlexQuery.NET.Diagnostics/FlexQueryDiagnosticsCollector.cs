@@ -2,6 +2,16 @@ using FlexQuery.NET.Models;
 
 namespace FlexQuery.NET.Diagnostics;
 
+/// <summary>
+/// Collects diagnostic events emitted during the lifecycle of a FlexQuery query
+/// (parsing, translation, database execution, and materialization) and assembles
+/// them into a consolidated <see cref="FlexQueryDiagnosticsReport"/> on demand.
+/// </summary>
+/// <remarks>
+/// All public members are thread-safe; internal state is guarded by a single lock.
+/// Each event stream is stored in full history, but <see cref="BuildReport"/> only
+/// considers the most recently recorded event of each kind when building a report.
+/// </remarks>
 public sealed class FlexQueryDiagnosticsCollector : IFlexQueryExecutionListener
 {
     private readonly object _lock = new();
@@ -11,50 +21,96 @@ public sealed class FlexQueryDiagnosticsCollector : IFlexQueryExecutionListener
     private readonly List<QueryExecutedEvent> _executed = [];
     private readonly List<QueryMaterializedEvent> _materialized = [];
 
+    /// <summary>
+    /// Gets a snapshot of all <see cref="QueryParsedEvent"/> instances recorded so far.
+    /// </summary>
     public IReadOnlyList<QueryParsedEvent> ParsedEvents
     {
         get { lock (_lock) return _parsed.ToArray(); }
     }
 
+    /// <summary>
+    /// Gets a snapshot of all <see cref="QueryTranslatedEvent"/> instances recorded so far.
+    /// </summary>
     public IReadOnlyList<QueryTranslatedEvent> TranslatedEvents
     {
         get { lock (_lock) return _translated.ToArray(); }
     }
 
+    /// <summary>
+    /// Gets a snapshot of all <see cref="QueryExecutedEvent"/> instances recorded so far.
+    /// </summary>
     public IReadOnlyList<QueryExecutedEvent> ExecutedEvents
     {
         get { lock (_lock) return _executed.ToArray(); }
     }
 
+    /// <summary>
+    /// Gets a snapshot of all <see cref="QueryMaterializedEvent"/> instances recorded so far.
+    /// </summary>
     public IReadOnlyList<QueryMaterializedEvent> MaterializedEvents
     {
         get { lock (_lock) return _materialized.ToArray(); }
     }
 
+    /// <summary>
+    /// Records a query-parsed event.
+    /// </summary>
+    /// <param name="e">The event raised after a query string has been parsed.</param>
+    /// <param name="ct">A token used to observe cancellation requests.</param>
     public ValueTask QueryParsedAsync(QueryParsedEvent e, CancellationToken ct)
     {
         lock (_lock) _parsed.Add(e);
         return ValueTask.CompletedTask;
     }
 
+    /// <summary>
+    /// Records a query-translated event.
+    /// </summary>
+    /// <param name="e">The event raised after a parsed query has been translated (e.g. into SQL).</param>
+    /// <param name="ct">A token used to observe cancellation requests.</param>
     public ValueTask QueryTranslatedAsync(QueryTranslatedEvent e, CancellationToken ct)
     {
         lock (_lock) _translated.Add(e);
         return ValueTask.CompletedTask;
     }
 
+    /// <summary>
+    /// Records a query-executed event.
+    /// </summary>
+    /// <param name="e">The event raised after a translated query has been executed against the database.</param>
+    /// <param name="ct">A token used to observe cancellation requests.</param>
     public ValueTask QueryExecutedAsync(QueryExecutedEvent e, CancellationToken ct)
     {
         lock (_lock) _executed.Add(e);
         return ValueTask.CompletedTask;
     }
 
+    /// <summary>
+    /// Records a query-materialized event.
+    /// </summary>
+    /// <param name="e">The event raised after query results have been materialized into their final form.</param>
+    /// <param name="ct">A token used to observe cancellation requests.</param>
     public ValueTask QueryMaterializedAsync(QueryMaterializedEvent e, CancellationToken ct)
     {
         lock (_lock) _materialized.Add(e);
         return ValueTask.CompletedTask;
     }
 
+    /// <summary>
+    /// Builds a consolidated diagnostics report from the most recently recorded
+    /// parsed, translated, executed, and materialized events.
+    /// </summary>
+    /// <param name="provider">
+    /// An optional label identifying the data provider (e.g. "EFCore", "Dapper") to attach to the report.
+    /// </param>
+    /// <param name="translator">
+    /// An optional label identifying the translator implementation used, to attach to the report.
+    /// </param>
+    /// <returns>
+    /// A <see cref="FlexQueryDiagnosticsReport"/> summarizing the query's identifier, generated SQL,
+    /// row count, any exception encountered, total duration, and a per-stage timeline.
+    /// </returns>
     public FlexQueryDiagnosticsReport BuildReport(string? provider = null, string? translator = null)
     {
         lock (_lock)
@@ -85,6 +141,16 @@ public sealed class FlexQueryDiagnosticsCollector : IFlexQueryExecutionListener
         }
     }
 
+    /// <summary>
+    /// Constructs an ordered list of per-stage timeline entries from the latest events of each kind,
+    /// deriving each stage's start time and duration from the cumulative duration recorded by the
+    /// previous stage.
+    /// </summary>
+    /// <param name="parsed">The most recent parse event, if any.</param>
+    /// <param name="translated">The most recent translation event, if any.</param>
+    /// <param name="executed">The most recent execution event, if any.</param>
+    /// <param name="materialized">The most recent materialization event, if any.</param>
+    /// <returns>An ordered list of timeline entries, one per stage that has a recorded event.</returns>
     private static List<TimelineEntry> BuildTimeline(
         QueryParsedEvent? parsed,
         QueryTranslatedEvent? translated,
@@ -168,6 +234,15 @@ public sealed class FlexQueryDiagnosticsCollector : IFlexQueryExecutionListener
         return entries;
     }
 
+    /// <summary>
+    /// Aggregates a list of timeline entries into a <see cref="DiagnosticsDuration"/> summary,
+    /// computing the overall elapsed time plus the individual duration of each named stage.
+    /// </summary>
+    /// <param name="timeline">The ordered timeline entries produced by <see cref="BuildTimeline"/>.</param>
+    /// <returns>
+    /// A <see cref="DiagnosticsDuration"/> containing the total elapsed milliseconds (from the start
+    /// of the first entry to the end of the last) and the duration of each recognized stage, if present.
+    /// </returns>
     private static DiagnosticsDuration BuildDuration(IReadOnlyList<TimelineEntry> timeline)
     {
         var total = timeline.Count > 0
@@ -187,6 +262,9 @@ public sealed class FlexQueryDiagnosticsCollector : IFlexQueryExecutionListener
         };
     }
 
+    /// <summary>
+    /// Clears all recorded events, discarding the full history for every stage.
+    /// </summary>
     public void Clear()
     {
         lock (_lock)

@@ -77,7 +77,7 @@ public class CacheKeyCorrectnessTests
     }
 
     [Fact]
-    public void CanCache_WithExpressionMappings_ReturnsFalse()
+    public void CanCache_WithExpressionMappings_ReturnsTrue()
     {
         var options = new QueryOptions
         {
@@ -91,14 +91,49 @@ public class CacheKeyCorrectnessTests
         // Without ExpressionMappings, caching is allowed
         QueryCacheKeyBuilder.CanCache(options).Should().BeTrue();
 
-        // With ExpressionMappings set, caching should be disabled
+        // With ExpressionMappings set, caching is still allowed (mappings are part of the cache key)
         var mappings = new Dictionary<string, LambdaExpression>
         {
             ["DerivedStatus"] = Expression.Lambda(Expression.Constant("active"))
         };
         options.Items[ContextKeys.ExpressionMappings] = mappings;
 
-        QueryCacheKeyBuilder.CanCache(options).Should().BeFalse();
+        QueryCacheKeyBuilder.CanCache(options).Should().BeTrue();
+    }
+
+    [Fact]
+    public void ExpressionMappings_DifferentMappings_DifferentCacheKey()
+    {
+        var options1 = new QueryOptions
+        {
+            Filter = new FilterGroup
+            {
+                Logic = LogicOperator.And,
+                Filters = [new FilterCondition { Field = "Status", Operator = "eq", Value = "active" }]
+            }
+        };
+        options1.Items[ContextKeys.ExpressionMappings] = new Dictionary<string, LambdaExpression>
+        {
+            ["Status"] = Expression.Lambda(Expression.Property(Expression.Parameter(typeof(string)), "Length"))
+        };
+
+        var options2 = new QueryOptions
+        {
+            Filter = new FilterGroup
+            {
+                Logic = LogicOperator.And,
+                Filters = [new FilterCondition { Field = "Status", Operator = "eq", Value = "active" }]
+            }
+        };
+        options2.Items[ContextKeys.ExpressionMappings] = new Dictionary<string, LambdaExpression>
+        {
+            ["Status"] = Expression.Lambda(Expression.Constant("active"))
+        };
+
+        var key1 = QueryCacheKeyBuilder.Build(options1, typeof(object), "test");
+        var key2 = QueryCacheKeyBuilder.Build(options2, typeof(object), "test");
+
+        key1.Should().NotBe(key2);
     }
 
     [Fact]

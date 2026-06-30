@@ -11,20 +11,3 @@ public sealed class FlexQueryDiagnosticsReport
     public DiagnosticsDuration Duration { get; init; } = new();
     public IReadOnlyList<TimelineEntry> Timeline { get; init; } = [];
 }
-
-public sealed class DiagnosticsDuration
-{
-    public double TotalMs { get; init; }
-    public double? ParseMs { get; init; }
-    public double? TranslateMs { get; init; }
-    public double? DatabaseMs { get; init; }
-    public double? MaterializeMs { get; init; }
-}
-
-public sealed class TimelineEntry
-{
-    public string Stage { get; init; } = string.Empty;
-    public DateTimeOffset StartUtc { get; init; }
-    public DateTimeOffset EndUtc { get; init; }
-    public double DurationMs { get; init; }
-}

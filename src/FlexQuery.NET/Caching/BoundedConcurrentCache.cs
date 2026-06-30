@@ -11,20 +11,13 @@ internal sealed class BoundedConcurrentCache<TKey, TValue> where TKey : notnull
 
     public TValue GetOrAdd(TKey key, Func<TKey, TValue> factory)
     {
-        if (_values.TryGetValue(key, out var existing))
-        {
-            return existing;
-        }
-
-        var value = _values.GetOrAdd(key, k =>
+        return _values.GetOrAdd(key, k =>
         {
             var created = factory(k);
             _insertionOrder.Enqueue(k);
+            Trim();
             return created;
         });
-
-        Trim();
-        return value;
     }
 
     public bool TryGetValue(TKey key, out TValue? value)
