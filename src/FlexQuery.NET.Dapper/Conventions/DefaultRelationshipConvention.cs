@@ -13,6 +13,10 @@ public class DefaultRelationshipConvention : IRelationshipConvention
 {
     private readonly IForeignKeyConvention _foreignKeyConvention;
 
+    /// <summary>
+    /// Creates a new relationship convention that uses the specified <paramref name="foreignKeyConvention"/>
+    /// for inferring foreign key column names.
+    /// </summary>
     public DefaultRelationshipConvention(IForeignKeyConvention foreignKeyConvention)
     {
         _foreignKeyConvention = foreignKeyConvention;

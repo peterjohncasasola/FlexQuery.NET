@@ -31,6 +31,11 @@ public sealed class QueryValidationException : Exception
         Result.Errors.Add(new ValidationError(message, "VALIDATION_ERROR"));
     }
 
+    /// <summary>
+    /// Creates a new validation exception with a custom message and a full validation result.
+    /// </summary>
+    /// <param name="message">The error message describing the validation failure.</param>
+    /// <param name="result">The validation result containing detailed error information.</param>
     public QueryValidationException(string message, ValidationResult result)
         : base(message)
     {

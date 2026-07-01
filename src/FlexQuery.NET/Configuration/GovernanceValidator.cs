@@ -5,8 +5,20 @@ using FlexQuery.NET.Validation.Rules;
 
 namespace FlexQuery.NET.Configuration;
 
+/// <summary>
+/// Validates the internal consistency of governance configuration (AllowedFields, BlockedFields,
+/// operation-specific field lists, and DefaultSortField) at application startup.
+/// Throws <see cref="QueryValidationException"/> when configuration errors are detected.
+/// </summary>
 public static class GovernanceValidator
 {
+    /// <summary>
+    /// Validates the complete governance configuration, checking for overlapping field lists,
+    /// subset violations between operation-specific lists and AllowedFields, and DefaultSortField
+    /// compatibility with the governance rules.
+    /// </summary>
+    /// <param name="execOptions">The execution options containing governance configuration to validate.</param>
+    /// <exception cref="QueryValidationException">Thrown when configuration errors are found.</exception>
     public static void ValidateConfiguration(QueryExecutionOptions execOptions)
     {
         if (execOptions.AllowedFields?.Count > 0 && execOptions.BlockedFields?.Count > 0)

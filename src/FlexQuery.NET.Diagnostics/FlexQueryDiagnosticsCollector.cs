@@ -3,15 +3,10 @@ using FlexQuery.NET.Models;
 namespace FlexQuery.NET.Diagnostics;
 
 /// <summary>
-/// Collects diagnostic events emitted during the lifecycle of a FlexQuery query
-/// (parsing, translation, database execution, and materialization) and assembles
-/// them into a consolidated <see cref="FlexQueryDiagnosticsReport"/> on demand.
+/// Collects and retains FlexQuery execution events in memory, providing thread-safe access to
+/// recorded events and the ability to build a consolidated <see cref="FlexQueryDiagnosticsReport"/>.
+/// Implements <see cref="IFlexQueryExecutionListener"/> to receive query lifecycle notifications.
 /// </summary>
-/// <remarks>
-/// All public members are thread-safe; internal state is guarded by a single lock.
-/// Each event stream is stored in full history, but <see cref="BuildReport"/> only
-/// considers the most recently recorded event of each kind when building a report.
-/// </remarks>
 public sealed class FlexQueryDiagnosticsCollector : IFlexQueryExecutionListener
 {
     private readonly object _lock = new();
@@ -22,7 +17,7 @@ public sealed class FlexQueryDiagnosticsCollector : IFlexQueryExecutionListener
     private readonly List<QueryMaterializedEvent> _materialized = [];
 
     /// <summary>
-    /// Gets a snapshot of all <see cref="QueryParsedEvent"/> instances recorded so far.
+    /// Gets a thread-safe snapshot of all recorded <see cref="QueryParsedEvent"/> instances.
     /// </summary>
     public IReadOnlyList<QueryParsedEvent> ParsedEvents
     {
@@ -30,7 +25,7 @@ public sealed class FlexQueryDiagnosticsCollector : IFlexQueryExecutionListener
     }
 
     /// <summary>
-    /// Gets a snapshot of all <see cref="QueryTranslatedEvent"/> instances recorded so far.
+    /// Gets a thread-safe snapshot of all recorded <see cref="QueryTranslatedEvent"/> instances.
     /// </summary>
     public IReadOnlyList<QueryTranslatedEvent> TranslatedEvents
     {
@@ -38,7 +33,7 @@ public sealed class FlexQueryDiagnosticsCollector : IFlexQueryExecutionListener
     }
 
     /// <summary>
-    /// Gets a snapshot of all <see cref="QueryExecutedEvent"/> instances recorded so far.
+    /// Gets a thread-safe snapshot of all recorded <see cref="QueryExecutedEvent"/> instances.
     /// </summary>
     public IReadOnlyList<QueryExecutedEvent> ExecutedEvents
     {
@@ -46,7 +41,7 @@ public sealed class FlexQueryDiagnosticsCollector : IFlexQueryExecutionListener
     }
 
     /// <summary>
-    /// Gets a snapshot of all <see cref="QueryMaterializedEvent"/> instances recorded so far.
+    /// Gets a thread-safe snapshot of all recorded <see cref="QueryMaterializedEvent"/> instances.
     /// </summary>
     public IReadOnlyList<QueryMaterializedEvent> MaterializedEvents
     {

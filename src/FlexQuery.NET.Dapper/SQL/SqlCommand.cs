@@ -14,6 +14,6 @@ public sealed class SqlCommand
     /// <summary>List of navigation paths used for flat projection (Flat/FlatMixed mode).</summary>
     public List<string>? FlatJoins { get; init; }
 
-    /// <summary>Creates an empty SQL command.</summary>
+    /// <summary>Gets a singleton, empty SQL command with no SQL text and no parameters.</summary>
     public static SqlCommand Empty { get; } = new() { Sql = string.Empty };
 }

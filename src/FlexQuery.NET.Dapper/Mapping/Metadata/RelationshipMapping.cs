@@ -43,6 +43,7 @@ public sealed class RelationshipMapping
     /// </summary>
     public string? JoinTableTargetKey { get; set; }
 
+    /// <summary>Creates a new relationship mapping for the given navigation property.</summary>
     public RelationshipMapping(PropertyInfo navigationProperty, Type targetType, RelationshipType type)
     {
         NavigationProperty = navigationProperty;

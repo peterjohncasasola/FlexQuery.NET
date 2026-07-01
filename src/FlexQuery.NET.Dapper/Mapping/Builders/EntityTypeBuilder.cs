@@ -50,7 +50,7 @@ public class EntityTypeBuilder<TEntity> where TEntity : class
 
     /// <summary>Begins configuration for a reference navigation property (many-to-one or one-to-one from the dependent side).</summary>
     public RelationshipBuilder HasOne<TRelatedEntity>(Expression<Func<TEntity, TRelatedEntity>> navigationExpression)
-        where TRelatedEntity : class
+        where TRelatedEntity : class?
     {
         var propertyInfo = GetPropertyInfo(navigationExpression);
         var relMapping = _mapping.GetOrAddRelationship(propertyInfo, typeof(TRelatedEntity), RelationshipType.ManyToOne);

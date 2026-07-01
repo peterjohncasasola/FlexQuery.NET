@@ -20,6 +20,9 @@ public static class ExpressionBuilder
     /// Builds a combined predicate expression for the given <see cref="FilterGroupNode"/>.
     /// Returns null if the group is empty (caller should skip the Where clause).
     /// </summary>
+    /// <typeparam name="T">The entity type.</typeparam>
+    /// <param name="options">The query options containing the filter to build a predicate from.</param>
+    /// <returns>An expression predicate, or null if the filter is empty.</returns>
     public static Expression<Func<T, bool>>? BuildPredicate<T>(QueryOptions options)
     {
         if (options.Filter is null) return null;
@@ -44,14 +47,20 @@ public static class ExpressionBuilder
     /// Backward-compatible overload. Builds a predicate from a <see cref="FilterGroupNode"/>
     /// using default options (CaseInsensitive = true).
     /// </summary>
+    /// <typeparam name="T">The entity type.</typeparam>
+    /// <param name="group">The filter group node to build a predicate from.</param>
+    /// <returns>An expression predicate, or null if the group is empty.</returns>
     public static Expression<Func<T, bool>>? BuildPredicate<T>(FilterGroupNode? group)
         => BuildPredicate<T>(new QueryOptions { Filter = group });
 
     /// <summary>
     /// Runtime-type variant used by the Include Pipeline when the element
-    /// type is only known via reflection.  Returns a <see cref="LambdaExpression"/>
+    /// type is only known via reflection. Returns a <see cref="LambdaExpression"/>
     /// whose delegate type is <c>Func&lt;elementType, bool&gt;</c>.
     /// </summary>
+    /// <param name="elementType">The runtime type of the collection element.</param>
+    /// <param name="options">The query options containing the filter to build a predicate from.</param>
+    /// <returns>A lambda expression predicate, or null if the filter is empty.</returns>
     public static LambdaExpression? BuildPredicate(Type elementType, QueryOptions options)
     {
         if (options.Filter is null) return null;
@@ -79,10 +88,11 @@ public static class ExpressionBuilder
     /// Backward-compatible overload for the runtime-type variant.
     /// Uses default options (CaseInsensitive = true).
     /// </summary>
+    /// <param name="elementType">The runtime type of the collection element.</param>
+    /// <param name="group">The filter group node to build a predicate from.</param>
+    /// <returns>A lambda expression predicate, or null if the group is empty.</returns>
     public static LambdaExpression? BuildPredicate(Type elementType, FilterGroupNode? group)
         => BuildPredicate(elementType, new QueryOptions { Filter = group });
-
-    // ── Internal recursion ───────────────────────────────────────────────
 
     private static Expression? BuildGroupExpression(
         ParameterExpression param, FilterGroupNode group, Type entityType, QueryOptions options)
@@ -138,9 +148,6 @@ public static class ExpressionBuilder
 
         if (!SafePropertyResolver.TryResolveChain(entityType, condition.Field, out var chain)) return null;
 
-        // ── Scoped collection filter (orders.any(...) / orders[...]) ──────────
-        // When ScopedFilter is set, the inner FilterGroupNode is applied to each
-        // element as a single compound predicate (true "scoped" semantics).
         if (condition.ScopedFilter is not null)
         {
             var collectionAccess = ResolvePath(param, chain, out var collectionType);
@@ -159,12 +166,6 @@ public static class ExpressionBuilder
         return condition.IsNegated ? Expression.Not(expression) : expression;
     }
 
-    /// <summary>
-    /// Builds a scoped <c>Any</c> or <c>All</c> LINQ call where the inner
-    /// <see cref="FilterGroupNode"/> is translated recursively and applied as a
-    /// single lambda to each collection element — guaranteeing that every
-    /// condition inside the group refers to the <strong>same</strong> element.
-    /// </summary>
     private static Expression? BuildScopedCollectionExpression(
         Expression? collectionAccess,
         Type? collectionType,
@@ -184,13 +185,10 @@ public static class ExpressionBuilder
             var allMethod = ExpressionMethodCache.EnumerableAll(elementType);
 
             var allCall = Expression.Call(allMethod, collectionAccess, Expression.Lambda(predicate, itemParam));
-            // null collection -> true (vacuous truth for All) or we can just say if null then false?
-            // Usually, if collection is null, All should be false or true. Let's do (collection == null) || collection.All(...)
             var isNull = Expression.Equal(collectionAccess, Expression.Constant(null, collectionType));
             return Expression.OrElse(isNull, allCall);
         }
 
-        // "any" is the default
         var anyMethod = ExpressionMethodCache.EnumerableAnyWithPredicate(elementType);
 
         var anyCall = Expression.Call(anyMethod, collectionAccess, Expression.Lambda(predicate, itemParam));

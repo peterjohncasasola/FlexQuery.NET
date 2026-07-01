@@ -26,8 +26,9 @@ public static class QueryOptionsParser
     /// <summary>
     /// Registers a new query parser implementation.
     /// New parsers are given priority over existing ones.
-    /// Thread-safe: uses copy-on-write so in-progress <see cref="Parse"/> calls are not affected.
+    /// Thread-safe: uses copy-on-write so in-progress Parse calls are not affected.
     /// </summary>
+    /// <param name="parser">The parser instance to register.</param>
     public static void RegisterParser(IQueryParser parser)
     {
         var updated = new List<IQueryParser>(_parsers);
@@ -50,6 +51,10 @@ public static class QueryOptionsParser
     /// <summary>
     /// Parses a strongly typed <see cref="FlexQueryParameters"/> into <see cref="QueryOptions"/>.
     /// </summary>
+    /// <param name="parameters">The query parameters to parse.</param>
+    /// <param name="syntax">The expected query syntax. Defaults to AutoDetect.</param>
+    /// <returns>The parsed <see cref="QueryOptions"/>.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="parameters"/> is null.</exception>
     public static QueryOptions Parse(FlexQueryParameters parameters, QuerySyntax syntax = QuerySyntax.AutoDetect)
     {
         ArgumentNullException.ThrowIfNull(parameters);
@@ -80,8 +85,6 @@ public static class QueryOptionsParser
             return options;
         }
 
-        // Snapshot the parser list to avoid "Collection was modified" when RegisterParser
-        // is called concurrently from another thread (e.g., parallel test execution).
         var parsers = _parsers;
         IQueryParser? parser = null;
 
@@ -102,6 +105,8 @@ public static class QueryOptionsParser
     /// Auto-detects the query-string format and parses into <see cref="QueryOptions"/>.
     /// Resilient: invalid or unrecognized keys are silently ignored.
     /// </summary>
+    /// <param name="queryString">The raw query string key-value pairs.</param>
+    /// <returns>The parsed <see cref="QueryOptions"/>.</returns>
     public static QueryOptions Parse(IEnumerable<KeyValuePair<string, StringValues>> queryString)
     {
         var grouped = queryString.GroupBy(kv => kv.Key, StringComparer.OrdinalIgnoreCase)
@@ -161,7 +166,6 @@ public static class QueryOptionsParser
         }
         catch
         {
-            // optional package not installed
         }
     }
 }

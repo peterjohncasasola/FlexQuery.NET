@@ -11,9 +11,6 @@ namespace FlexQuery.NET.Dapper.Sql.Translators;
 /// </summary>
 public class SqlExistsTranslator(ISqlDialect dialect)
 {
-    /// <summary>
-    /// Translates an ANY condition into an EXISTS subquery.
-    /// </summary>
     /// <summary>Translates an AnyExpressionNode into an EXISTS subquery fragment.</summary>
     public string TranslateAny(AnyExpressionNode node, IEntityMapping mapping, Func<FilterGroup, string> filterBuilder, IMappingRegistry registry)
     {
@@ -31,9 +28,6 @@ public class SqlExistsTranslator(ISqlDialect dialect)
         return $"EXISTS (SELECT 1 FROM {dialect.QuoteIdentifier(targetMapping.TableName)} WHERE {subqueryWhere})";
     }
 
-    /// <summary>
-    /// Translates an ALL condition into a NOT EXISTS subquery.
-    /// </summary>
     /// <summary>Translates an AllExpressionNode into a NOT EXISTS subquery fragment.</summary>
     public string TranslateAll(AllExpressionNode node, IEntityMapping mapping, Func<FilterGroup, string> filterBuilder, IMappingRegistry registry)
     {

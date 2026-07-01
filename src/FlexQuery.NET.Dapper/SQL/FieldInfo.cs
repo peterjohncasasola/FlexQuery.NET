@@ -14,6 +14,6 @@ public sealed class FieldInfo
     /// <summary>Table alias.</summary>
     public string? TableAlias { get; init; }
 
-    /// <summary>Full qualified column name (alias.column).</summary>
+    /// <summary>Fully qualified column name in the form "Alias.Column" or just "Column" when no alias is set.</summary>
     public string QualifiedName => string.IsNullOrEmpty(TableAlias) ? ColumnName : $"{TableAlias}.{ColumnName}";
 }

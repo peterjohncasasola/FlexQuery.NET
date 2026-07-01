@@ -17,6 +17,11 @@ using FlexQuery.NET.Dapper.Materialization;
 
 namespace FlexQuery.NET.Dapper;
 
+/// <summary>
+/// Extension methods for executing FlexQuery operations against a <see cref="System.Data.Common.DbConnection"/>
+/// using Dapper as the materialization engine. Provides overloads accepting <see cref="FlexQueryParameters"/>,
+/// raw query-string dictionaries, or pre-parsed <see cref="QueryOptions"/>.
+/// </summary>
 public static class FlexQueryDapperExtensions
 {
     private static void ValidateEntityType(Type t, Type? entityType)
@@ -35,6 +40,16 @@ public static class FlexQueryDapperExtensions
         options.Items[ContextKeys.EntityType] = dapperOptions.EntityType ?? t;
     }
 
+    /// <summary>
+    /// Parses <paramref name="parameters"/>, applies Dapper-specific options, and executes the query
+    /// against the database connection, returning a paged result set.
+    /// </summary>
+    /// <typeparam name="T">The entity type used for mapping resolution.</typeparam>
+    /// <param name="connection">The database connection.</param>
+    /// <param name="parameters">The OpenAPI-friendly DTO containing user query parameters.</param>
+    /// <param name="configureDapper">Optional delegate to configure Dapper-specific options (dialect, mapping registry, etc.).</param>
+    /// <param name="configureExecution">Optional delegate to configure execution listeners.</param>
+    /// <returns>A paged query result.</returns>
     public static async Task<QueryResult<object>> FlexQueryAsync<T>(
         this DbConnection connection,
         FlexQueryParameters parameters,
@@ -48,6 +63,16 @@ public static class FlexQueryDapperExtensions
         return await connection.FlexQueryAsync<T>(parameters, dapperOptions, configureExecution);
     }
 
+    /// <summary>
+    /// Parses <paramref name="parameters"/> and executes the query with the provided <paramref name="dapperQueryOptions"/>,
+    /// returning a paged result set.
+    /// </summary>
+    /// <typeparam name="T">The entity type used for mapping resolution.</typeparam>
+    /// <param name="connection">The database connection.</param>
+    /// <param name="parameters">The OpenAPI-friendly DTO containing user query parameters.</param>
+    /// <param name="dapperQueryOptions">Dapper-specific execution options (dialect, mapping, security rules, etc.).</param>
+    /// <param name="configureExecution">Optional delegate to configure execution listeners.</param>
+    /// <returns>A paged query result.</returns>
     public static async Task<QueryResult<object>> FlexQueryAsync<T>(
         this DbConnection connection,
         FlexQueryParameters parameters,
@@ -68,15 +93,28 @@ public static class FlexQueryDapperExtensions
         FlexQueryExecutionContext? ctx = null;
         if (execConfig.Listener is not null)
         {
-            ctx = new FlexQueryExecutionContext(execConfig, default);
-            await ctx.Listener.QueryParsedAsync(
-                new QueryParsedEvent(ctx.QueryId, parsedOptions, ctx.Stopwatch.Elapsed, DateTimeOffset.UtcNow),
-                ctx.CancellationToken);
+            ctx = new FlexQueryExecutionContext(execConfig, CancellationToken.None);
+            if (ctx.Listener != null)
+            {
+                await ctx.Listener.QueryParsedAsync(
+                    new QueryParsedEvent(ctx.QueryId, parsedOptions, ctx.Stopwatch.Elapsed, DateTimeOffset.UtcNow),
+                    ctx.CancellationToken);
+            }
         }
 
         return await ExecuteQueryAsync<T>(connection, parsedOptions, dapperOptions, ctx);
     }
 
+    /// <summary>
+    /// Parses a raw dictionary of query-string values (e.g., from <c>IQueryCollection</c>), converts them
+    /// into <see cref="FlexQueryParameters"/>, and executes the query against the connection.
+    /// </summary>
+    /// <typeparam name="T">The entity type used for mapping resolution.</typeparam>
+    /// <param name="connection">The database connection.</param>
+    /// <param name="parameters">Raw query-string key/value pairs (e.g., filter, sort, select, page, pageSize).</param>
+    /// <param name="configureDapper">Optional delegate to configure Dapper-specific options.</param>
+    /// <param name="configureExecution">Optional delegate to configure execution listeners.</param>
+    /// <returns>A paged query result.</returns>
     public static async Task<QueryResult<object>> FlexQueryAsync<T>(
         this DbConnection connection,
         IDictionary<string, StringValues> parameters,
@@ -99,6 +137,16 @@ public static class FlexQueryDapperExtensions
         return await FlexQueryAsync<T>(connection, flexParams, configureDapper, configureExecution);
     }
 
+    /// <summary>
+    /// Executes a pre-parsed <see cref="QueryOptions"/> against the connection, using the provided
+    /// configuration delegate to set Dapper-specific options.
+    /// </summary>
+    /// <typeparam name="T">The entity type used for mapping resolution.</typeparam>
+    /// <param name="connection">The database connection.</param>
+    /// <param name="options">Pre-parsed query options (from any adapter or manual construction).</param>
+    /// <param name="configureDapper">Optional delegate to configure Dapper-specific options.</param>
+    /// <param name="configureExecution">Optional delegate to configure execution listeners.</param>
+    /// <returns>A paged query result.</returns>
     public static async Task<QueryResult<object>> FlexQueryAsync<T>(
         this DbConnection connection,
         QueryOptions options,
@@ -111,6 +159,16 @@ public static class FlexQueryDapperExtensions
         return await connection.FlexQueryAsync<T>(options, dapperOptions, configureExecution);
     }
 
+    /// <summary>
+    /// Executes a pre-parsed <see cref="QueryOptions"/> against the connection with full control over
+    /// Dapper options and execution configuration, returning a paged result set.
+    /// </summary>
+    /// <typeparam name="T">The entity type used for mapping resolution.</typeparam>
+    /// <param name="connection">The database connection.</param>
+    /// <param name="options">Pre-parsed query options.</param>
+    /// <param name="dapperQueryOptions">Dapper-specific execution options (dialect, mapping, security rules, etc.).</param>
+    /// <param name="configureExecution">Optional delegate to configure execution listeners.</param>
+    /// <returns>A paged query result.</returns>
     public static async Task<QueryResult<object>> FlexQueryAsync<T>(
         this DbConnection connection,
         QueryOptions options,
@@ -133,10 +191,13 @@ public static class FlexQueryDapperExtensions
         FlexQueryExecutionContext? ctx = null;
         if (execConfig.Listener is not null)
         {
-            ctx = new FlexQueryExecutionContext(execConfig, default);
-            await ctx.Listener.QueryParsedAsync(
-                new QueryParsedEvent(ctx.QueryId, options, ctx.Stopwatch.Elapsed, DateTimeOffset.UtcNow),
-                ctx.CancellationToken);
+            ctx = new FlexQueryExecutionContext(execConfig, CancellationToken.None);
+            if (ctx.Listener != null)
+            {
+                await ctx.Listener.QueryParsedAsync(
+                    new QueryParsedEvent(ctx.QueryId, options, ctx.Stopwatch.Elapsed, DateTimeOffset.UtcNow),
+                    ctx.CancellationToken);
+            }
         }
 
         return await ExecuteQueryAsync<T>(connection, options, dapperOptions, ctx);
@@ -148,7 +209,7 @@ public static class FlexQueryDapperExtensions
         DapperQueryOptions execOptions,
         FlexQueryExecutionContext? ctx = null) where T : class
     {
-        var ct = ctx?.CancellationToken ?? default;
+        var ct = ctx?.CancellationToken ?? CancellationToken.None;
 
         if (connection.State == ConnectionState.Closed)
         {
@@ -179,9 +240,12 @@ public static class FlexQueryDapperExtensions
         // Emit translation event
         if (ctx?.Listener is not null)
         {
-            var paramDict = command.Parameters.ToDictionary(k => k.Key, v => v.Value);
+            var queryParameters = command.Parameters
+                .Select(p => new QueryParameter(p.Key, p.Value))
+                .ToList()
+                .AsReadOnly();
             await ctx.Listener.QueryTranslatedAsync(
-                new QueryTranslatedEvent(ctx.QueryId, command.Sql, paramDict, ctx.Stopwatch.Elapsed, DateTimeOffset.UtcNow),
+                new QueryTranslatedEvent(ctx.QueryId, command.Sql, queryParameters, ctx.Stopwatch.Elapsed, DateTimeOffset.UtcNow),
                 ctx.CancellationToken);
         }
 

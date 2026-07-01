@@ -45,6 +45,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\FlexQuery.NET\FlexQuery.NET.csproj" />
+    <InternalsVisibleTo Include="FlexQuery.NET.Tests" />
   </ItemGroup>
 
   <ItemGroup>

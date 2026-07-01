@@ -6,12 +6,18 @@ using FlexQuery.NET.Security;
 
 namespace FlexQuery.NET.Projection;
 
+/// <summary>
+/// Builds projection metadata by resolving field types and normalizing the selection tree.
+/// </summary>
 public static class ProjectionMetadataBuilder
 {
     /// <summary>
     /// Builds complete projection metadata from QueryOptions.
     /// Entry point for all providers.
     /// </summary>
+    /// <param name="entityType">The entity type being projected.</param>
+    /// <param name="options">The query options containing select, include, and projection settings.</param>
+    /// <returns>A <see cref="ProjectionMetadata"/> instance describing the projection.</returns>
     public static ProjectionMetadata Build(Type entityType, QueryOptions options)
     {
         var tree = SelectTreeBuilder.Build(options);
@@ -20,9 +26,13 @@ public static class ProjectionMetadataBuilder
     }
 
     /// <summary>
-    /// Resolves projected field names → CLR types from a SelectionNode.
+    /// Resolves projected field names to CLR types from a SelectionNode.
     /// Returns empty dictionary when no projection is active.
     /// </summary>
+    /// <param name="entityType">The entity type being projected.</param>
+    /// <param name="selectTree">The selection node tree.</param>
+    /// <param name="options">The query options for governance-aware field resolution.</param>
+    /// <returns>A dictionary mapping field/output names to their CLR types.</returns>
     public static IReadOnlyDictionary<string, Type> ResolveFieldTypes(
         Type entityType,
         SelectionNode selectTree,
@@ -69,6 +79,11 @@ public static class ProjectionMetadataBuilder
         }
     }
 
+    /// <summary>Normalizes a selection tree by expanding scalar wildcards and merging nodes.</summary>
+    /// <param name="sourceType">The source type for property resolution.</param>
+    /// <param name="selectTree">The selection node tree to normalize.</param>
+    /// <param name="governedSelectFields">Optional governance-restricted field list for root-level expansion.</param>
+    /// <returns>A normalized <see cref="SelectionNode"/> with all implicit scalars expanded.</returns>
     public static SelectionNode NormalizeSelection(
         Type sourceType,
         SelectionNode selectTree,
@@ -170,3 +185,4 @@ public static class ProjectionMetadataBuilder
         return SafePropertyResolver.TryGetCollectionElementType(type, out itemType);
     }
 }
+

@@ -17,12 +17,16 @@ public sealed class MappingRegistry : IMappingRegistry
     private readonly IEntityConvention _entityConvention;
     private readonly IRelationshipConvention _relationshipConvention;
 
+    /// <summary>Initializes a new instance with default conventions.</summary>
     public MappingRegistry() : this(
         new DefaultPluralizer(), 
         new DefaultForeignKeyConvention())
     {
     }
 
+    /// <summary>Initializes a new instance with custom pluralizer and foreign key convention.</summary>
+    /// <param name="pluralizer">The pluralizer for entity/table name conventions.</param>
+    /// <param name="foreignKeyConvention">The foreign key naming convention.</param>
     public MappingRegistry(IPluralizer pluralizer, IForeignKeyConvention foreignKeyConvention)
     {
         _pluralizer = pluralizer;
@@ -31,13 +35,13 @@ public sealed class MappingRegistry : IMappingRegistry
     }
 
     /// <summary>Returns or creates the entity mapping for the given type.</summary>
-    /// <summary>Returns or creates the entity mapping for the given type.</summary>
     public IEntityMapping GetMapping(Type entityType)
         => _mappings.GetOrAdd(entityType, CreateAndApplyConventions);
 
+    /// <summary>Returns or creates the entity mapping for the type <typeparamref name="T"/>.</summary>
     public IEntityMapping GetMapping<T>() => GetMapping(typeof(T));
 
-    /// <summary>Registers an existing entity mapping.</summary>
+    /// <summary>Registers an existing entity mapping, overwriting any previously registered mapping for the same type.</summary>
     public void Register(EntityMapping mapping) => _mappings[mapping.Type] = mapping;
 
     /// <summary>Returns a fluent builder for the given entity type.</summary>
@@ -65,6 +69,6 @@ public sealed class MappingRegistry : IMappingRegistry
         return mapping;
     }
 
-    // For testing/internal configuration
+    /// <summary>Returns all registered entity mappings. Intended for testing and internal diagnostics.</summary>
     public IEnumerable<EntityMapping> GetAllMappings() => _mappings.Values;
 }

@@ -14,7 +14,6 @@ public class BaseQueryOptions
     /// </summary>
     public BaseQueryOptions()
     {
-        // Set default values for execution options
         IncludeTotalCount = true;
         DefaultPageSize = 20;
     }
@@ -38,6 +37,10 @@ public class BaseQueryOptions
     /// <summary>
     /// Maps an exposed DTO field to an entity expression for server-side evaluation.
     /// </summary>
+    /// <typeparam name="TEntity">The entity type.</typeparam>
+    /// <typeparam name="TProperty">The property type of the mapped field.</typeparam>
+    /// <param name="alias">The DTO field name (alias) to map.</param>
+    /// <param name="expression">An expression that resolves the field from the entity.</param>
     public void MapField<TEntity, TProperty>(string alias, System.Linq.Expressions.Expression<Func<TEntity, TProperty>> expression)
     {
         ExpressionMappings ??= new Dictionary<string, System.Linq.Expressions.LambdaExpression>(StringComparer.OrdinalIgnoreCase);
@@ -55,6 +58,8 @@ public class BaseQueryOptions
     /// Ergonomic helper to configure allowed operators for a specific field.
     /// Use <see cref="Constants.FilterOperators"/> constants for the operator arguments.
     /// </summary>
+    /// <param name="field">The field name to restrict operators for.</param>
+    /// <param name="operators">The canonical operator strings to allow for this field.</param>
     public void AllowOperators(string field, params string[] operators)
     {
         AllowedOperators ??= new Dictionary<string, HashSet<string>>(StringComparer.OrdinalIgnoreCase);

@@ -27,6 +27,9 @@ public static class DynamicTypeBuilder
     /// Uses a bounded cache (MaxCacheSize) with FIFO eviction to prevent
     /// unbounded memory growth in long-running applications.
     /// </summary>
+    /// <param name="properties">A dictionary mapping property names to their CLR types.</param>
+    /// <returns>A dynamically created type with the specified properties.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="properties"/> is null.</exception>
     public static Type GetDynamicType(Dictionary<string, Type> properties)
     {
         ArgumentNullException.ThrowIfNull(properties);

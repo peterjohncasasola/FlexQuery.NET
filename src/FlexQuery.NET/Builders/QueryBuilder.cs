@@ -19,9 +19,11 @@ public static class QueryBuilder
     private static readonly MethodInfo ThenByMethod = ExpressionMethodCache.QueryableThenBy();
     private static readonly MethodInfo ThenByDescendingMethod = ExpressionMethodCache.QueryableThenByDescending();
 
-    // ── Filter ───────────────────────────────────────────────────────────
-
     /// <summary>Applies the filter group from <paramref name="options"/> to the query.</summary>
+    /// <typeparam name="T">The entity type.</typeparam>
+    /// <param name="query">The source queryable.</param>
+    /// <param name="options">The query options containing the filter to apply.</param>
+    /// <returns>The filtered queryable.</returns>
     public static IQueryable<T> ApplyFilter<T>(IQueryable<T> query, QueryOptions options)
     {
         if (options.Filter is null) return query;
@@ -31,13 +33,20 @@ public static class QueryBuilder
         return predicate is null ? query : query.Where(predicate);
     }
 
-    // ── Sort ─────────────────────────────────────────────────────────────
-
     /// <summary>Applies ordered sorting from <paramref name="options"/> to the query.</summary>
+    /// <typeparam name="T">The entity type.</typeparam>
+    /// <param name="query">The source queryable.</param>
+    /// <param name="options">The query options containing the sort instructions.</param>
+    /// <returns>The sorted queryable.</returns>
     public static IQueryable<T> ApplySort<T>(IQueryable<T> query, QueryOptions options)
         => ApplySort(query, options.Sort, options);
 
     /// <summary>Applies ordered sorting from <paramref name="sorts"/> to the query.</summary>
+    /// <typeparam name="T">The entity type.</typeparam>
+    /// <param name="query">The source queryable.</param>
+    /// <param name="sorts">The list of sort nodes to apply.</param>
+    /// <param name="options">The query options containing expression mappings.</param>
+    /// <returns>The sorted queryable.</returns>
     public static IQueryable<T> ApplySort<T>(IQueryable<T> query, List<SortNode>? sorts, QueryOptions options)
     {
         if (sorts is null || sorts.Count == 0) return query;
@@ -72,17 +81,17 @@ public static class QueryBuilder
         return ordered ?? query;
     }
 
-    // ── Paging ───────────────────────────────────────────────────────────
-
     /// <summary>Applies skip/take paging from <paramref name="options"/>.</summary>
+    /// <typeparam name="T">The entity type.</typeparam>
+    /// <param name="query">The source queryable.</param>
+    /// <param name="options">The query options containing paging parameters.</param>
+    /// <returns>The paged queryable.</returns>
     public static IQueryable<T> ApplyPaging<T>(IQueryable<T> query, QueryOptions options)
     {
         if (options?.Paging == null || options.Paging.Disabled) return query;
 
-        // Add a default OrderBy to prevent EF Core errors when calling Skip() on unordered queries.
         if (options.Paging.Skip > 0 && query is not IOrderedQueryable<T>)
         {
-            // Prefer the first governance-compliant select field (already validated)
             string? fieldName = options.Select?.FirstOrDefault(f => !string.IsNullOrWhiteSpace(f) && !f.Contains('.'));
             if (fieldName == null)
             {
@@ -109,13 +118,15 @@ public static class QueryBuilder
         return query.Skip(options.Paging.Skip).Take(options.Paging.PageSize);
     }
 
-    // ── Select / Projection ──────────────────────────────────────────────
-
     /// <summary>
     /// Applies dynamic projection to the query.
     /// If Select is null or empty and no Includes are present, returns the original query cast to object.
     /// If Select or Includes have fields, builds a dynamic projection that includes only those fields.
     /// </summary>
+    /// <typeparam name="T">The entity type.</typeparam>
+    /// <param name="query">The source queryable.</param>
+    /// <param name="options">The query options containing projection settings.</param>
+    /// <returns>A queryable of projected objects.</returns>
     public static IQueryable<object> ApplySelect<T>(
         IQueryable<T> query, QueryOptions options)
     {
@@ -145,12 +156,14 @@ public static class QueryBuilder
         return query.Select(projection);
     }
 
-    // ── All-in-one ───────────────────────────────────────────────────────
-
     /// <summary>
-    /// Applies filter → sort → paging sequentially and returns the paged queryable.
+    /// Applies filter, sort, and paging sequentially and returns the paged queryable.
     /// Does NOT apply projection. Use <see cref="ApplySelect{T}"/> on the result to project.
     /// </summary>
+    /// <typeparam name="T">The entity type.</typeparam>
+    /// <param name="query">The source queryable.</param>
+    /// <param name="options">The query options to apply.</param>
+    /// <returns>The filtered, sorted, and paged queryable.</returns>
     public static IQueryable<T> Apply<T>(IQueryable<T> query, QueryOptions options)
     {
         query = ApplyFilter(query, options);
@@ -158,8 +171,6 @@ public static class QueryBuilder
         query = ApplyPaging(query, options);
         return query;
     }
-
-    // ── Private helpers ──────────────────────────────────────────────────
 
     private static bool HasAggregate(SortNode sort)
         => !string.IsNullOrWhiteSpace(sort.Aggregate);
@@ -184,7 +195,6 @@ public static class QueryBuilder
         if (chain.Count == 0)
             return false;
 
-        // Sorting on collection navigations is not supported.
         if (chain.Any(p => IsCollectionType(p.PropertyType)))
             return false;
 
@@ -227,7 +237,6 @@ public static class QueryBuilder
             if (!IsCollectionType(collectionProp.PropertyType))
                 return false;
 
-            // Aggregate sorting only supports a collection at the final segment.
             if (chain.Take(chain.Count - 1).Any(p => IsCollectionType(p.PropertyType)))
                 return false;
 
@@ -277,7 +286,6 @@ public static class QueryBuilder
     private static Expression BuildCountExpression(Expression collectionAccess, Type elementType)
     {
         var countMethod = ExpressionMethodCache.EnumerableCount(elementType);
-
         return Expression.Call(countMethod, collectionAccess);
     }
 
@@ -324,8 +332,6 @@ public static class QueryBuilder
         var effectiveSelectorType = selectorType;
         var effectiveSelectorLambda = selectorLambda;
 
-        // SQLite cannot translate decimal collection aggregates directly.
-        // Promote decimal aggregates to double while keeping the query server-translatable.
         if (selectorType == typeof(decimal))
         {
             effectiveSelectorType = typeof(double);
@@ -394,3 +400,4 @@ public static class QueryBuilder
     private static bool HasAnyCondition(FilterGroup group)
         => group.Filters.Count > 0 || group.Groups.Any(g => HasAnyCondition(g));
 }
+

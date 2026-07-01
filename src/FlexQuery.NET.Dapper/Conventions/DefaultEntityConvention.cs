@@ -12,6 +12,10 @@ public class DefaultEntityConvention : IEntityConvention
 {
     private readonly IPluralizer _pluralizer;
 
+    /// <summary>
+    /// Creates a new entity convention that uses the specified <paramref name="pluralizer"/>
+    /// for table name generation.
+    /// </summary>
     public DefaultEntityConvention(IPluralizer pluralizer)
     {
         _pluralizer = pluralizer;

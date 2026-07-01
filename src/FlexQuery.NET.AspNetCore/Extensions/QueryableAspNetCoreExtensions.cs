@@ -16,10 +16,12 @@ public static class QueryableAspNetCoreExtensions
     /// Parses a <see cref="FlexQueryParameters"/>, resolves server-owned <see cref="QueryExecutionOptions"/> 
     /// from the <see cref="HttpContext"/>, and applies it to the query to return a paged result set asynchronously.
     /// </summary>
+    /// <typeparam name="T">The entity type of the queryable source.</typeparam>
     /// <param name="query">The source queryable.</param>
     /// <param name="parameters">The OpenAPI-friendly DTO containing user parameters.</param>
     /// <param name="context">The HTTP context containing the resolved execution options (populated by [FieldAccess]).</param>
     /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>A task that represents the asynchronous operation, containing the paged query result.</returns>
     public static async Task<QueryResult<object>> FlexQueryAsync<T>(
         this IQueryable<T> query,
         FlexQueryParameters parameters,

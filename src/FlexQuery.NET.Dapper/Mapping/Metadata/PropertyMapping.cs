@@ -16,6 +16,7 @@ public sealed class PropertyMapping
     /// <summary>Whether this property is the primary key.</summary>
     public bool IsPrimaryKey { get; set; }
     
+    /// <summary>Creates a new property mapping for the given CLR property and database column name.</summary>
     public PropertyMapping(PropertyInfo propertyInfo, string columnName)
     {
         PropertyInfo = propertyInfo;

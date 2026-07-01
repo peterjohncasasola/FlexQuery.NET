@@ -19,6 +19,8 @@ public static class OperatorHandlerRegistry
     }
 
     /// <summary>Registers or replaces a handler for its operator.</summary>
+    /// <param name="handler">The operator handler to register. Must not be null.</param>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="handler"/> is null.</exception>
     public static void Register(IOperatorHandler handler)
     {
         ArgumentNullException.ThrowIfNull(handler);
@@ -26,6 +28,9 @@ public static class OperatorHandlerRegistry
     }
 
     /// <summary>Tries to get a handler for a canonical operator name.</summary>
+    /// <param name="op">The canonical operator name to look up.</param>
+    /// <param name="handler">When this method returns, contains the registered handler if found.</param>
+    /// <returns>true if a handler was found; otherwise, false.</returns>
     public static bool TryGet(string op, out IOperatorHandler? handler)
     {
         var ok = Handlers.TryGetValue(op, out var resolved);
@@ -61,7 +66,6 @@ public static class OperatorHandlerRegistry
             if (endsWithWildcard)
                 return CallString(member, nameof(string.StartsWith), token);
 
-            // EF-agnostic fallback for non-wildcard patterns.
             return CallString(member, nameof(string.Contains), token);
         }
 
@@ -73,3 +77,4 @@ public static class OperatorHandlerRegistry
         }
     }
 }
+

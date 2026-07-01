@@ -5,8 +5,14 @@ using FlexQuery.NET.Security;
 
 namespace FlexQuery.NET.Validation.Rules;
 
+/// <summary>
+/// Injects a default projection when the user has not specified explicit select fields.
+/// Uses configured security options (SelectableFields, AllowedFields, BlockedFields)
+/// to determine which fields to include by default.
+/// </summary>
 public sealed class DefaultProjectionRule : IValidationRule
 {
+    /// <inheritdoc />
     public void Validate(QueryOptions options, QueryContext context, ValidationResult result)
     {
         var execOptions = context.ExecutionOptions;

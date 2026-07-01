@@ -57,3 +57,4 @@ public sealed class OperatorValidityRule : IValidationRule
         }
     }
 }
+

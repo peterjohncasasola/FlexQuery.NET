@@ -14,6 +14,10 @@ public static class FlexQueryDebugExtensions
     /// Analyzes the query application process and returns a detailed debug result.
     /// Does not execute the query.
     /// </summary>
+    /// <typeparam name="T">The entity type.</typeparam>
+    /// <param name="query">The source queryable to analyze.</param>
+    /// <param name="options">The query options to apply for analysis.</param>
+    /// <returns>A <see cref="DebugResult"/> containing the AST, expression tree, and LINQ lambda string.</returns>
     public static DebugResult ToFlexQueryDebug<T>(this IQueryable<T> query, QueryOptions options)
     {
         var provider = new DebugQueryProvider(query.Provider);
@@ -69,4 +73,3 @@ public static class FlexQueryDebugExtensions
     }
 }
 
-// DebugResult is defined in FlexQuery.NET.Models

@@ -22,9 +22,8 @@ public sealed class DapperQueryOptions : BaseQueryOptions
     }
 
     /// <summary>
-    /// Copy constructor - creates a new instance by copying all properties from source.
+    /// Copy constructor - creates a new instance by copying all properties from <paramref name="source"/>.
     /// </summary>
-    /// <summary>Creates default Dapper query options.</summary>
     public DapperQueryOptions(QueryExecutionOptions source)
     {
         ArgumentNullException.ThrowIfNull(source);
@@ -67,9 +66,10 @@ public sealed class DapperQueryOptions : BaseQueryOptions
     }
 
     /// <summary>
-    /// Scans the given assembly for entity types.
+    /// Scans the given assembly for public, non-abstract class types and registers them as entity mappings
+    /// if they have a primary key candidate (Id, TypeNameId, or <see cref="System.ComponentModel.DataAnnotations.KeyAttribute"/>)
+    /// or a <see cref="System.ComponentModel.DataAnnotations.Schema.TableAttribute"/>.
     /// </summary>
-    /// <summary>Scans the given assembly for entity types and registers them.</summary>
     public void ScanEntitiesFromAssembly(System.Reflection.Assembly assembly)
     {
         var registry = MappingRegistry ?? new Mapping.MappingRegistry();

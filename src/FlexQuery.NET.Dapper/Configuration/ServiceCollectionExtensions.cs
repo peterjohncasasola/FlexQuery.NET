@@ -3,7 +3,7 @@ using Microsoft.Extensions.DependencyInjection;
 namespace FlexQuery.NET.Dapper.Configuration;
 
 /// <summary>
-/// 
+/// Extension methods for registering FlexQuery.NET Dapper services in the Microsoft DI container.
 /// </summary>
 public static class ServiceCollectionExtensions
 {

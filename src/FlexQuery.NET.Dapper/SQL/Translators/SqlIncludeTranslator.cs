@@ -12,6 +12,7 @@ public class SqlIncludeTranslator
 {
     private readonly ISqlDialect _dialect;
 
+    /// <summary>Creates a new include translator using the specified dialect for SQL generation.</summary>
     public SqlIncludeTranslator(ISqlDialect dialect)
     {
         _dialect = dialect;

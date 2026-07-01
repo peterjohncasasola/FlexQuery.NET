@@ -1,4 +1,5 @@
 using FlexQuery.NET.Builders;
+using FlexQuery.NET.EntityFrameworkCore.SqlFormatting;
 using FlexQuery.NET.Extensions;
 using FlexQuery.NET.Internal;
 using FlexQuery.NET.Models;
@@ -32,7 +33,7 @@ public static class QueryableEfCoreExtensions
     ///
     /// <para>
     /// This pipeline is <b>completely independent</b> of the WHERE pipeline
-    /// (<see cref="QueryableEfCoreExtensions.ToQueryResultAsync{T}"/>).
+    /// (<c>FlexQueryAsync</c>).
     /// It must be called <em>before</em> any materialisation (e.g.
     /// <c>ToListAsync</c>) but after <c>ApplyQueryOptions</c>.
     /// </para>
@@ -64,6 +65,7 @@ public static class QueryableEfCoreExtensions
     /// <param name="parameters">The OpenAPI-friendly DTO containing user parameters.</param>
     /// <param name="configure">Optional configuration for server-side security and execution rules.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
+    /// <param name="configureExecution">Optional configuration for the execution pipeline (e.g. event listeners).</param>
     public static async Task<QueryResult<object>> FlexQueryAsync<T>(
         this IQueryable<T> query,
         FlexQueryParameters parameters,
@@ -86,6 +88,7 @@ public static class QueryableEfCoreExtensions
     /// <param name="parameters">The OpenAPI-friendly DTO containing user parameters.</param>
     /// <param name="execOptions">Server-side security and execution rules.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
+    /// <param name="configureExecution">Optional configuration for the execution pipeline (e.g. event listeners).</param>
     public static async Task<QueryResult<object>> FlexQueryAsync<T>(
         this IQueryable<T> query,
         FlexQueryParameters parameters,
@@ -106,9 +109,12 @@ public static class QueryableEfCoreExtensions
         if (execConfig.Listener is not null)
         {
             ctx = new FlexQueryExecutionContext(execConfig, cancellationToken);
-            await ctx.Listener.QueryParsedAsync(
-                new QueryParsedEvent(ctx.QueryId, options, ctx.Stopwatch.Elapsed, DateTimeOffset.UtcNow),
-                ctx.CancellationToken);
+            if (ctx.Listener != null)
+            {
+                await ctx.Listener.QueryParsedAsync(
+                    new QueryParsedEvent(ctx.QueryId, options, ctx.Stopwatch.Elapsed, DateTimeOffset.UtcNow),
+                    ctx.CancellationToken);
+            }
         }
 
         var hasProjection = options.HasProjection();
@@ -135,6 +141,7 @@ public static class QueryableEfCoreExtensions
     /// <param name="options">Pre-parsed query options from any adapter or manual construction.</param>
     /// <param name="configure">Optional configuration for server-side security and execution rules.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
+    /// <param name="configureExecution">Optional configuration for the execution pipeline (e.g. event listeners).</param>
     public static async Task<QueryResult<object>> FlexQueryAsync<T>(
         this IQueryable<T> query,
         QueryOptions options,
@@ -157,6 +164,7 @@ public static class QueryableEfCoreExtensions
     /// <param name="options">Pre-parsed query options from any adapter or manual construction.</param>
     /// <param name="execOptions">Server-side security and execution rules.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
+    /// <param name="configureExecution">Optional configuration for the execution pipeline (e.g. event listeners).</param>
     public static async Task<QueryResult<object>> FlexQueryAsync<T>(
         this IQueryable<T> query,
         QueryOptions options,
@@ -179,9 +187,12 @@ public static class QueryableEfCoreExtensions
         if (execConfig.Listener is not null)
         {
             ctx = new FlexQueryExecutionContext(execConfig, cancellationToken);
-            await ctx.Listener.QueryParsedAsync(
-                new QueryParsedEvent(ctx.QueryId, options, ctx.Stopwatch.Elapsed, DateTimeOffset.UtcNow),
-                ctx.CancellationToken);
+            if (ctx.Listener != null)
+            {
+                await ctx.Listener.QueryParsedAsync(
+                    new QueryParsedEvent(ctx.QueryId, options, ctx.Stopwatch.Elapsed, DateTimeOffset.UtcNow),
+                    ctx.CancellationToken);
+            }
         }
 
         var hasProjection = options.HasProjection();
@@ -193,7 +204,7 @@ public static class QueryableEfCoreExtensions
         QueryOptions options, bool hasProjection, QueryExecutionOptions? execOptions = null, FlexQueryExecutionContext? ctx = null)
         where T : class
     {
-        var ct = ctx?.CancellationToken ?? default;
+        var ct = ctx?.CancellationToken ?? CancellationToken.None;
         QueryOptionsEfCoreExtensions.EnsureEfCoreOperatorsRegistered();
 
         if (execOptions?.UseNoTracking == true)
@@ -210,9 +221,9 @@ public static class QueryableEfCoreExtensions
 
             if (ctx?.Listener is not null)
             {
-                var tsql = TryGetSql(groupedQuery);
+                var (generatedQuery, queryParameters) = TryGetSqlWithParameters(groupedQuery);
                 await ctx.Listener.QueryTranslatedAsync(
-                    new QueryTranslatedEvent(ctx.QueryId, tsql, null, ctx.Stopwatch.Elapsed, DateTimeOffset.UtcNow),
+                    new QueryTranslatedEvent(ctx.QueryId, generatedQuery, queryParameters, ctx.Stopwatch.Elapsed, DateTimeOffset.UtcNow),
                     ctx.CancellationToken);
             }
 
@@ -262,9 +273,9 @@ public static class QueryableEfCoreExtensions
         // Capture SQL for translation event
         if (ctx?.Listener is not null)
         {
-            var sql = TryGetSql(filtered);
+            var (sql, sparams) = TryGetSqlWithParameters(filtered);
             await ctx.Listener.QueryTranslatedAsync(
-                new QueryTranslatedEvent(ctx.QueryId, sql, null, ctx.Stopwatch.Elapsed, DateTimeOffset.UtcNow),
+                new QueryTranslatedEvent(ctx.QueryId, sql, sparams, ctx.Stopwatch.Elapsed, DateTimeOffset.UtcNow),
                 ctx.CancellationToken);
         }
 
@@ -333,10 +344,16 @@ public static class QueryableEfCoreExtensions
         return result!;
     }
 
-    private static string? TryGetSql(IQueryable query)
+    private static (string? Sql, IReadOnlyList<QueryParameter>? Parameters) TryGetSqlWithParameters(IQueryable query)
     {
-        try { return query.ToQueryString(); }
-        catch { return null; }
+        try
+        {
+            var rawSql = query.ToQueryString();
+            var (cleanSql, parameters) = SqlParameterExtractor.Extract(rawSql);
+            try { return (SqlFormatter.Format(cleanSql), parameters); }
+            catch { return (cleanSql, parameters); }
+        }
+        catch { return (null, null); }
     }
 
     private static Task<IReadOnlyList<object>> ExecuteGroupedQuery(

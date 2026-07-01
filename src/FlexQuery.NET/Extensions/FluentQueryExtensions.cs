@@ -16,6 +16,7 @@ public static class FluentQueryExtensions
     /// <param name="options">The query options to modify.</param>
     /// <param name="configure">A function that configures a filter builder and returns it.</param>
     /// <returns>The modified <see cref="QueryOptions"/> instance.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="options"/> or <paramref name="configure"/> is null.</exception>
     public static QueryOptions Filter(this QueryOptions options, Func<FilterBuilder, FilterBuilder> configure)
     {
         ArgumentNullException.ThrowIfNull(options);
@@ -32,6 +33,7 @@ public static class FluentQueryExtensions
     /// <param name="options">The query options to modify.</param>
     /// <param name="configure">An action that configures a filter builder.</param>
     /// <returns>The modified <see cref="QueryOptions"/> instance.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="options"/> or <paramref name="configure"/> is null.</exception>
     public static QueryOptions Filter(this QueryOptions options, Action<FilterBuilder> configure)
     {
         ArgumentNullException.ThrowIfNull(options);
@@ -50,6 +52,7 @@ public static class FluentQueryExtensions
     /// <param name="options">The query options to modify.</param>
     /// <param name="configure">A function that configures a typed filter builder and returns it.</param>
     /// <returns>The modified <see cref="QueryOptions"/> instance.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="options"/> or <paramref name="configure"/> is null.</exception>
     public static QueryOptions Filter<T>(this QueryOptions options, Func<FilterBuilder<T>, FilterBuilder<T>> configure)
     {
         ArgumentNullException.ThrowIfNull(options);
@@ -67,6 +70,7 @@ public static class FluentQueryExtensions
     /// <param name="options">The query options to modify.</param>
     /// <param name="configure">An action that configures a typed filter builder.</param>
     /// <returns>The modified <see cref="QueryOptions"/> instance.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="options"/> or <paramref name="configure"/> is null.</exception>
     public static QueryOptions Filter<T>(this QueryOptions options, Action<FilterBuilder<T>> configure)
     {
         ArgumentNullException.ThrowIfNull(options);
@@ -85,6 +89,7 @@ public static class FluentQueryExtensions
     /// <param name="query">The source queryable.</param>
     /// <param name="configure">A function that configures a typed filter builder and returns it.</param>
     /// <returns>A filtered <see cref="IQueryable{T}"/>.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="query"/> or <paramref name="configure"/> is null.</exception>
     public static IQueryable<T> Filter<T>(this IQueryable<T> query, Func<FilterBuilder<T>, FilterBuilder<T>> configure)
     {
         ArgumentNullException.ThrowIfNull(query);
@@ -102,6 +107,7 @@ public static class FluentQueryExtensions
     /// <param name="query">The source queryable.</param>
     /// <param name="configure">An action that configures a typed filter builder.</param>
     /// <returns>A filtered <see cref="IQueryable{T}"/>.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="query"/> or <paramref name="configure"/> is null.</exception>
     public static IQueryable<T> Filter<T>(this IQueryable<T> query, Action<FilterBuilder<T>> configure)
     {
         ArgumentNullException.ThrowIfNull(query);
@@ -113,3 +119,4 @@ public static class FluentQueryExtensions
         return query.ApplyFilter(options);
     }
 }
+

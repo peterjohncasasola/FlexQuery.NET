@@ -8,17 +8,21 @@ namespace FlexQuery.NET.Helpers;
 /// </summary>
 public static class SelectTreeBuilder
 {
+    /// <summary>
+    /// Builds a merged <see cref="SelectionNode"/> tree from all select-related properties
+    /// in <paramref name="options"/>: SelectTree, Select, Includes, and FilteredIncludes.
+    /// </summary>
+    /// <param name="options">The query options to build the selection tree from.</param>
+    /// <returns>A merged <see cref="SelectionNode"/> representing the full selection.</returns>
     public static SelectionNode Build(QueryOptions options)
     {
         var root = new SelectionNode();
 
-        // 1. JSON Select Tree
         if (options.SelectTree != null)
         {
             MergeTree(root, options.SelectTree);
         }
 
-        // 2. Flat dot-notation paths (e.g. "Id", "Profile.Name")
         if (options.Select != null)
         {
             foreach (var path in options.Select)
@@ -27,7 +31,6 @@ public static class SelectTreeBuilder
             }
         }
 
-        // 3. Includes (e.g. "Orders", "Profile")
         if (options.Includes != null)
         {
             foreach (var include in options.Includes)
@@ -35,14 +38,12 @@ public static class SelectTreeBuilder
                 MergePath(root, include, includeAllScalarsAtLeaf: true);
             }
             
-            // If only includes are present (no Select), mark root to include all root scalars
             if (options.Select == null && options.SelectTree == null)
             {
                 root.MarkIncludeAllScalars();
             }
         }
 
-        // 4. Filtered Includes (e.g. "Orders(status = 'cancelled')")
         if (options.FilteredIncludes != null)
         {
             foreach (var node in options.FilteredIncludes)
@@ -58,12 +59,10 @@ public static class SelectTreeBuilder
     {
         if (string.IsNullOrWhiteSpace(path)) return;
         
-        // Handle alias: e.g., "orders.orderItems.productName as name"
         var aliasParts = System.Text.RegularExpressions.Regex.Split(path, @"\s+as\s+", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
         var actualPath = aliasParts[0].Trim();
         var alias = aliasParts.Length > 1 ? aliasParts[1].Trim() : null;
 
-        // Handle wildcard: "Orders.*"
         bool isWildcard = actualPath.EndsWith(".*");
         if (isWildcard)
         {
@@ -89,7 +88,6 @@ public static class SelectTreeBuilder
         }
         else if (includeAllScalarsAtLeaf)
         {
-            // Only include all scalars if the user hasn't already specified a subset of fields for this navigation
             if (!node.HasChildren)
             {
                 node.MarkIncludeAllScalars();
@@ -115,8 +113,6 @@ public static class SelectTreeBuilder
     {
         var node = target.GetOrAddChild(source.Path);
         
-        // If the user hasn't provided a select for this node, default to including all scalars.
-        // If they HAVE provided a select, respect their explicit field list.
         if (!node.HasChildren)
         {
             node.MarkIncludeAllScalars();
@@ -133,6 +129,9 @@ public static class SelectTreeBuilder
         }
     }
 
+    /// <summary>Parses a JSON select element into a <see cref="SelectionNode"/> tree.</summary>
+    /// <param name="element">The JSON element to parse.</param>
+    /// <returns>A <see cref="SelectionNode"/> representing the JSON selection.</returns>
     public static SelectionNode ParseJsonSelect(JsonElement element)
     {
         var node = new SelectionNode();

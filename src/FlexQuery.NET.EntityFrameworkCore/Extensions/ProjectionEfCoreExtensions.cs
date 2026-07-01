@@ -195,6 +195,7 @@ public sealed class ProjectionExplanation
     /// </summary>
     public int EstimatedColumns { get; set; }
 
+    /// <summary>Returns a formatted string representation of the projection explanation.</summary>
     public override string ToString()
     {
         var sb = new System.Text.StringBuilder();

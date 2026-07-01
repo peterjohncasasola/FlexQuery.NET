@@ -5,6 +5,9 @@ namespace FlexQuery.NET.Validation;
 /// <summary>
 /// Detailed error information for a failed validation rule.
 /// </summary>
+/// <param name="Message">A human-readable description of the validation error.</param>
+/// <param name="Code">A machine-readable error code identifying the type of error.</param>
+/// <param name="Field">The field that caused the validation error, if applicable.</param>
 public sealed record ValidationError(string Message, string Code, string? Field = null);
 
 /// <summary>
@@ -28,6 +31,9 @@ public sealed class ValidationResult
 public interface IQueryValidator
 {
     /// <summary>Validates the provided query options.</summary>
+    /// <param name="options">The query options to validate.</param>
+    /// <param name="context">The validation context containing metadata and entity type.</param>
+    /// <returns>A <see cref="ValidationResult"/> indicating success or failure with details.</returns>
     ValidationResult Validate(QueryOptions options, QueryContext context);
 }
 
@@ -37,5 +43,9 @@ public interface IQueryValidator
 public interface IValidationRule
 {
     /// <summary>Executes the validation rule.</summary>
+    /// <param name="options">The query options to validate.</param>
+    /// <param name="context">The validation context containing metadata and entity type.</param>
+    /// <param name="result">The validation result to populate with errors.</param>
     void Validate(QueryOptions options, QueryContext context, ValidationResult result);
 }
+

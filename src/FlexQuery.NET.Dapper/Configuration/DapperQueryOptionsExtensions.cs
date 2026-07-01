@@ -1,5 +1,8 @@
 namespace FlexQuery.NET.Dapper.Configuration;
 
+/// <summary>
+/// Extension methods for configuring <see cref="DapperQueryOptions"/> with SQL dialect and mapping registry settings.
+/// </summary>
 public static class DapperQueryOptionsExtensions
 {
     /// <summary>

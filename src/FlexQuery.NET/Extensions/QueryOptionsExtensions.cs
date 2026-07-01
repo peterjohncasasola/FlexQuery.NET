@@ -91,6 +91,8 @@ public static class QueryOptionsExtensions
     /// <param name="options">The query options that contributed to the result.</param>
     /// <param name="data">The collection of result items.</param>
     /// <param name="totalCount">Optional total count of all items before paging.</param>
+    /// <param name="aggregates">Optional grand total aggregate results.</param>
+    /// <param name="resultCount">Optional count of rows after shaping, before paging.</param>
     /// <returns>A <see cref="QueryResult{T}"/> containing the data and pagination metadata.</returns>
     public static QueryResult<T> BuildQueryResult<T>(
         this QueryOptions options,
@@ -142,6 +144,8 @@ public static class QueryOptionsExtensions
     /// Normalizes the filter AST structural ordering while preserving original casing.
     /// Useful for UI display scenarios.
     /// </summary>
+    /// <param name="options">The query options to normalize.</param>
+    /// <returns>The same <see cref="QueryOptions"/> instance with its filter order normalized.</returns>
     public static QueryOptions NormalizeOrder(this QueryOptions options)
     {
         if (options.Filter is not null)
@@ -155,6 +159,10 @@ public static class QueryOptionsExtensions
     /// <summary>
     /// Generates a stable cache key for the query execution pipeline.
     /// </summary>
+    /// <param name="options">The query options to generate a key for.</param>
+    /// <param name="entityType">The entity type being queried.</param>
+    /// <param name="operation">The name of the query operation (e.g., "predicate", "projection").</param>
+    /// <returns>A string representing the cache key for this query configuration.</returns>
     public static string GetCacheKey(
         this QueryOptions options,
         Type entityType,
@@ -166,6 +174,8 @@ public static class QueryOptionsExtensions
     /// <summary>
     /// Generates SHA256 fingerprint for distributed cache scenarios.
     /// </summary>
+    /// <param name="options">The query options to generate a hash for.</param>
+    /// <returns>A hex string representing the SHA256 hash of the normalized filter.</returns>
     public static string GetQueryHash(this QueryOptions options)
     {
         return FilterNormalizer.GenerateHash(options.Filter);

@@ -1,32 +1,5 @@
 namespace FlexQuery.NET.Models;
 
-public readonly record struct QueryParsedEvent(
-    Guid QueryId,
-    QueryOptions ParsedOptions,
-    TimeSpan Duration,
-    DateTimeOffset Timestamp);
-
-public readonly record struct QueryTranslatedEvent(
-    Guid QueryId,
-    string? GeneratedQuery,
-    IReadOnlyDictionary<string, object?>? Parameters,
-    TimeSpan Duration,
-    DateTimeOffset Timestamp);
-
-public readonly record struct QueryExecutedEvent(
-    Guid QueryId,
-    int? RowCount,
-    Exception? Exception,
-    TimeSpan Duration,
-    DateTimeOffset Timestamp);
-
-public readonly record struct QueryMaterializedEvent(
-    Guid QueryId,
-    object? Result,
-    Exception? Exception,
-    TimeSpan Duration,
-    DateTimeOffset Timestamp);
-
 /// <summary>
 /// Observes read-only execution events during a FlexQuery pipeline run.
 /// Implementations receive immutable event records at each stage boundary.
