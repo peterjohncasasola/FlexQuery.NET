@@ -62,6 +62,12 @@ internal static class ProjectionExpressionBuilder
         QueryOptions options,
         bool isRoot = true)
     {
+        // For collection navigation properties, this builds a projection expression
+        // using AsQueryable() + Select() + Enumerable.ToList(). EF Core 6+ translates
+        // this pattern into correlated subqueries or split queries. EF Core 3.1 will
+        // throw InvalidOperationException (client evaluation is blocked by default)
+        // because Enumerable.ToList() cannot be translated by that version.
+
         var governedSelectFields = isRoot ? options.Select : null;
         var effectiveNode = ProjectionMetadataBuilder.NormalizeSelection(sourceType, selectTree, governedSelectFields);
 

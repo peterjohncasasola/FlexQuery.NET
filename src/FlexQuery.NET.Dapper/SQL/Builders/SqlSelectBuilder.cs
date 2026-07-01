@@ -44,7 +44,13 @@ internal sealed class SqlSelectBuilder(IMappingRegistry mappingRegistry, ISqlDia
         return selectParts;
     }
 
-    /// <summary>Builds the SELECT clause by recursively walking the SelectionNode AST.</summary>
+    /// <summary>
+    /// Builds the SELECT clause by recursively walking the SelectionNode AST.
+    /// When the AST is empty (no explicit <c>Select</c> or <c>Includes</c> specified),
+    /// falls back to all columns from the entity mapping — which can produce a large payload
+    /// for tables with many columns. Specify explicit <c>Select</c> fields to reduce the
+    /// result set to only the columns actually needed.
+    /// </summary>
     public string BuildSelectClause(QueryOptions options, IEntityMapping mapping, string distinctClause, SelectionNode selectTree)
     {
         var distinctPrefix = !string.IsNullOrEmpty(distinctClause) ? $"{distinctClause} " : string.Empty;
@@ -74,7 +80,9 @@ internal sealed class SqlSelectBuilder(IMappingRegistry mappingRegistry, ISqlDia
 
         if (selectParts.Count == 0)
         {
-            // Fallback if AST is totally empty
+            // Fallback when no explicit Select or Includes specified:
+            // returns ALL columns from the entity. Specifying explicit Select
+            // fields reduces payload and improves performance.
             var governedProps = GetGovernedProperties(mapping, options.Select);
             foreach (var p in governedProps)
             {

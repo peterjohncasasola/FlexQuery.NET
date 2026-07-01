@@ -408,6 +408,45 @@ public class SqlTranslatorRegressionTests
         command.Sql.Should().Contain("LIMIT @PageSize OFFSET @Offset");
     }
 
+    [Fact]
+    public void Translate_Sqlite_Paging_WithoutSort_AutoGeneratesOrderBy()
+    {
+        var registry = new MappingRegistry();
+        registry.Entity<TestEntity>().ToTable("Users");
+
+        var options = new QueryOptions
+        {
+            Paging = { Page = 1, PageSize = 10 },
+            Items = { [ContextKeys.EntityType] = typeof(TestEntity) }
+        };
+
+        var translator = new SqlTranslator(registry, new SqliteDialect());
+        var command = translator.Translate(options);
+
+        command.Sql.Should().Contain("ORDER BY");
+        command.Sql.Should().Contain("\"Id\"");
+        command.Sql.Should().Contain("LIMIT @PageSize OFFSET @Offset");
+    }
+
+    [Fact]
+    public void Translate_SqlServer_Paging_WithoutSort_Throws()
+    {
+        var registry = new MappingRegistry();
+        registry.Entity<TestEntity>().ToTable("Users");
+
+        var options = new QueryOptions
+        {
+            Paging = { Page = 1, PageSize = 10 },
+            Items = { [ContextKeys.EntityType] = typeof(TestEntity) }
+        };
+
+        var translator = new SqlTranslator(registry, new SqlServerDialect());
+        var act = () => translator.Translate(options);
+
+        act.Should().Throw<InvalidOperationException>()
+            .WithMessage("*ORDER BY*SqlServer*");
+    }
+
     #endregion
 
     #region F. Deep Nested Any & Logic Tests

@@ -88,12 +88,16 @@ public sealed class SqlTranslator : ISqlTranslator
             : options.Sort;
 
         if (!options.Paging.Disabled
-            && _dialect.RequiresOrderByForPaging
             && sortForOrderBy is { Count: 0 })
         {
-            throw new InvalidOperationException(
-                $"Paging requires an ORDER BY clause when using the {_dialect.GetType().Name} dialect. "
-                + "Add at least one Sort field to QueryOptions.Sort, or set Paging.Disabled = true.");
+            if (_dialect.RequiresOrderByForPaging)
+            {
+                throw new InvalidOperationException(
+                    $"Paging requires an ORDER BY clause when using the {_dialect.GetType().Name} dialect. "
+                    + "Add at least one Sort field to QueryOptions.Sort, or set Paging.Disabled = true.");
+            }
+
+            sortForOrderBy = [new SortNode { Field = ResolveDefaultSortProperty(mapping) }];
         }
 
         var orderByClause = BuildOrderByClause(sortForOrderBy, mapping);
@@ -276,5 +280,17 @@ public sealed class SqlTranslator : ISqlTranslator
         parameters.AddNamed(limitParam, paging.PageSize);
 
         return _dialect.GetPagingClause(offsetParam, limitParam);
+    }
+
+    private static string ResolveDefaultSortProperty(IEntityMapping mapping)
+    {
+        var properties = mapping.GetProperties().ToList();
+
+        var pkProperty = properties.FirstOrDefault(p =>
+            p.Equals("Id", StringComparison.OrdinalIgnoreCase)
+            || p.Equals("Key", StringComparison.OrdinalIgnoreCase)
+            || p.EndsWith("Id", StringComparison.OrdinalIgnoreCase));
+
+        return pkProperty ?? properties.FirstOrDefault() ?? "Id";
     }
 }

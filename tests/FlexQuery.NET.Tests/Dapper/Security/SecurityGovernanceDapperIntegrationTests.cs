@@ -346,7 +346,7 @@ public class SecurityGovernanceDapperIntegrationTests
     }
 
     [Fact]
-    public void PagingFallbackSort_NoDefaultSort_ShouldSkipOrderBy()
+    public void PagingFallbackSort_NoDefaultSort_UsesIdAsDefaultOrderBy()
     {
         var options = new QueryOptions
         {
@@ -365,7 +365,8 @@ public class SecurityGovernanceDapperIntegrationTests
         var translator = new SqlTranslator(_registry, Dialect);
         var command = translator.Translate(options);
 
-        command.Sql.Should().NotContain("ORDER BY");
+        command.Sql.Should().Contain("ORDER BY");
+        command.Sql.Should().Contain("\"Id\"");
         command.Sql.Should().Contain("LIMIT");
     }
 

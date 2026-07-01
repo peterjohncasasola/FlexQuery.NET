@@ -1,4 +1,5 @@
 using System.Linq.Expressions;
+using FlexQuery.NET.Builders;
 using FlexQuery.NET.Constants;
 using FlexQuery.NET.Models;
 using FlexQuery.NET.Parsers;
@@ -181,5 +182,126 @@ public class CacheKeyCorrectnessTests
         var keyB = optionsB.GetCacheKey(typeof(object), "test");
 
         keyA.Should().Be(keyB);
+    }
+
+    [Fact]
+    public void ProjectionCacheKey_DifferentFilterValues_DifferentKeys()
+    {
+        var options1 = new QueryOptions
+        {
+            Select = ["Id", "Name"],
+            Filter = new FilterGroup
+            {
+                Filters = [new FilterCondition { Field = "Status", Operator = "eq", Value = "Active" }]
+            }
+        };
+        options1.Items[ContextKeys.EntityType] = typeof(string);
+
+        var options2 = new QueryOptions
+        {
+            Select = ["Id", "Name"],
+            Filter = new FilterGroup
+            {
+                Filters = [new FilterCondition { Field = "Status", Operator = "eq", Value = "Inactive" }]
+            }
+        };
+        options2.Items[ContextKeys.EntityType] = typeof(string);
+
+        var key1 = QueryCacheKeyBuilder.Build(options1, typeof(string), "projection");
+        var key2 = QueryCacheKeyBuilder.Build(options2, typeof(string), "projection");
+
+        key1.Should().NotBe(key2);
+    }
+
+    [Fact]
+    public void ProjectionCacheKey_DifferentIncludeNodes_DifferentKeys()
+    {
+        var options1 = new QueryOptions
+        {
+            Select = ["Id"],
+            FilteredIncludes =
+            [
+                new IncludeNode
+                {
+                    Path = "Orders",
+                    Filter = new FilterGroup
+                    {
+                        Filters = [new FilterCondition { Field = "Total", Operator = "gt", Value = "100" }]
+                    }
+                }
+            ]
+        };
+        options1.Items[ContextKeys.EntityType] = typeof(string);
+
+        var options2 = new QueryOptions
+        {
+            Select = ["Id"],
+            FilteredIncludes =
+            [
+                new IncludeNode
+                {
+                    Path = "Orders",
+                    Filter = new FilterGroup
+                    {
+                        Filters = [new FilterCondition { Field = "Total", Operator = "gt", Value = "500" }]
+                    }
+                }
+            ]
+        };
+        options2.Items[ContextKeys.EntityType] = typeof(string);
+
+        var key1 = QueryCacheKeyBuilder.Build(options1, typeof(string), "projection");
+        var key2 = QueryCacheKeyBuilder.Build(options2, typeof(string), "projection");
+
+        key1.Should().NotBe(key2);
+    }
+
+    [Fact]
+    public void ProjectionCacheKey_IncludesSelect_Tree_AllDimensionsCovered()
+    {
+        var options1 = new QueryOptions
+        {
+            Select = ["Id"],
+            Includes = ["Orders"],
+            Filter = new FilterGroup
+            {
+                Filters = [new FilterCondition { Field = "Status", Operator = "eq", Value = "Active" }]
+            }
+        };
+        options1.Items[ContextKeys.EntityType] = typeof(string);
+
+        var options2 = new QueryOptions
+        {
+            Select = ["Id", "Name"],
+            Includes = ["Orders"],
+            Filter = new FilterGroup
+            {
+                Filters = [new FilterCondition { Field = "Status", Operator = "eq", Value = "Active" }]
+            }
+        };
+        options2.Items[ContextKeys.EntityType] = typeof(string);
+
+        var key1 = QueryCacheKeyBuilder.Build(options1, typeof(string), "projection");
+        var key2 = QueryCacheKeyBuilder.Build(options2, typeof(string), "projection");
+
+        // Different Select fields produce different cache keys even when
+        // all other dimensions (Includes, Filter) are identical
+        key1.Should().NotBe(key2);
+    }
+
+    [Theory]
+    [InlineData("Name:eq:alice", "Name:eq:bob")]
+    [InlineData("Name:eq:alice", "Name:contains:alice")]
+    [InlineData("Name:eq:alice,Age:gt:25", "Name:eq:alice,Age:lt:25")]
+    [InlineData("Orders.any(Total:gt:100)", "Orders.any(Total:gt:500)")]
+    public void FilterCondition_EveryDimension_AffectsCacheKey(string filter1, string filter2)
+    {
+        var options1 = QueryOptionsParser.Parse(new Dictionary<string, StringValues> { { "filter", filter1 } });
+        var options2 = QueryOptionsParser.Parse(new Dictionary<string, StringValues> { { "filter", filter2 } });
+
+        var key1 = options1.GetCacheKey(typeof(object), "test");
+        var key2 = options2.GetCacheKey(typeof(object), "test");
+
+        key1.Should().NotBe(key2);
     }
 }
