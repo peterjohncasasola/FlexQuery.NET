@@ -4,6 +4,32 @@ All notable changes to this project will be documented in this file.
 
 ---
 
+## [3.1.1] - 2026-07-04
+
+### Fixed
+
+- **Execution pipeline ordering:** EF Core pipeline reordered to canonical sequence (Filter → Distinct → Count → Sort → GroupBy → GrandTotals → Paging → Includes → Select). COUNT now executes before ORDER BY, fixing SQLite decimal type errors in grouped count queries. Pre-GroupBy ORDER BY removed from grouped path (sort is internal via `BuildGroupedSorts`). Base pipeline similarly reordered.
+- **Auto-generate ORDER BY for paging without sort:** Queries with paging but no explicit ORDER BY now auto-generate an ORDER BY on the first selected field (or `Id`/`Key`/first property), preventing non-deterministic paging and SQL Server/Oracle OFFSET/FETCH errors.
+- **Dapper CaseInsensitive support:** `SqlWhereBuilder` now wraps string-type field comparisons with `LOWER()` when `CaseInsensitive == true`, matching EF Core behavior. Previously the option was ignored in Dapper SQL generation.
+- **Dapper FilteredIncludes hydration:** `DapperRowHydrator.HydrateFilteredIncludes<T>()` now extracts include paths from the `IncludeNode` tree and populates child entities with filtered data. Previously `FilteredIncludes` were silently ignored by the Dapper provider.
+- **SelectTreeBuilder root scalars for FilteredIncludes:** `Build()` now calls `root.MarkIncludeAllScalars()` after processing `FilteredIncludes`, fixing empty root rows in Dapper include-only queries.
+- **Validation rules for grouped queries:** Four new rules — `HavingWithoutGroupByRule` (rejects HAVING without GROUP BY or aggregates), `HavingAliasIntegrityRule` (rejects HAVING aliases not matching declared aggregates), `GroupByIncludeConflictRule` (rejects GROUP BY + Include/Expand), `ExpandPathValidationRule` (validates all Include/Expand paths exist on entity type).
+
+### Performance
+
+- **IsScalarType cache:** `ReflectionCache.IsScalarType()` now caches type classification results, reducing CPU overhead for projection-heavy queries.
+- **IncludeBuilder MethodInfo cache:** MethodInfo lookups for `EF.Property` cached instead of rebuilt on every include path evaluation.
+
+### Changed
+
+- **Legacy projection engine removed:** Old `ProjectionEngineTests.cs` and related dead code removed. Modern `ProjectionMetadata`/`ProjectionMetadataBuilder` architecture now handles all projection scenarios.
+- **XML documentation:** Added descriptive XML comments to 4 new validation rules; resolved 125+ code analysis warnings across Core, EF Core, and Dapper projects.
+- **ProjectionExecutionPlan model:** New model class separating projection plan from execution logic.
+- **SqlFormatter and SqlParameterExtractor:** New utility classes in EF Core for SQL formatting and parameter introspection (used by diagnostics).
+- **Query diagnostics enhancements:** `FlexQueryDiagnosticsCollector` improved with timeline tracking and console execution listener.
+- **GovernanceValidator startup validation:** `ValidateConfiguration()` detects `BlockedFields` ∩ `AllowedFields` overlap at startup.
+- **Azure deployment workflow:** Automated build and deployment to Azure App Service.
+
 ## [3.1.0] - 2026-06-25
 
 ### Breaking
