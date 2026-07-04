@@ -1,5 +1,9 @@
 namespace FlexQuery.NET.Diagnostics;
 
+/// <summary>
+/// Represents the execution time spent in each stage of a FlexQuery request.
+/// All durations are measured in milliseconds.
+/// </summary>
 public sealed class DiagnosticsDuration
 {
     /// <summary>
