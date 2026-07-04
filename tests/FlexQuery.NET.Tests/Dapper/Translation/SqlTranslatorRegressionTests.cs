@@ -15,6 +15,7 @@ public class SqlTranslatorRegressionTests
     private static QueryOptions NoPaging(QueryOptions options)
     {
         options.Paging.Disabled = true;
+        options.CaseInsensitive = false;
         return options;
     }
 
@@ -102,6 +103,7 @@ public class SqlTranslatorRegressionTests
                 ]
             },
             Paging = { Page = 1, PageSize = 10 },
+            CaseInsensitive = false,
             Items = { [ContextKeys.EntityType] = typeof(TestEntityForParamOrder) }
         };
 
@@ -151,6 +153,7 @@ public class SqlTranslatorRegressionTests
                 ]
             },
             Paging = { Page = 2, PageSize = 5 },
+            CaseInsensitive = false,
             Items = { [ContextKeys.EntityType] = typeof(SqlCustomer) }
         };
 

@@ -1065,6 +1065,7 @@ public class DialectTests
         var options = new QueryOptions
         {
             Paging = { Disabled = true },
+            CaseInsensitive = false,
             Filter = new FilterGroup
             {
                 Filters = [new FilterCondition { Field = "Name", Operator = "eq", Value = "Test" }]
@@ -1079,6 +1080,7 @@ public class DialectTests
         var options = new QueryOptions
         {
             Paging = { Disabled = true },
+            CaseInsensitive = false,
             Filter = new FilterGroup
             {
                 Filters = [new FilterCondition { Field = "Name", Operator = "contains", Value = "test" }]
@@ -1093,6 +1095,7 @@ public class DialectTests
         var options = new QueryOptions
         {
             Paging = { Disabled = true },
+            CaseInsensitive = false,
             Filter = new FilterGroup
             {
                 Filters = [new FilterCondition { Field = "Status", Operator = "in", Value = "Active,Pending" }]

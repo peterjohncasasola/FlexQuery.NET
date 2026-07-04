@@ -22,12 +22,29 @@ internal sealed class SqlWhereBuilder(
     SqlExistsTranslator existsTranslator,
     SqlCountTranslator countTranslator)
 {
+    private bool _caseInsensitive;
+
+    /// <summary>
+    /// Sets whether string comparisons should be case-insensitive.
+    /// When enabled, string columns are wrapped with LOWER() on both sides.
+    /// </summary>
+    public SqlWhereBuilder WithCaseInsensitive(bool value)
+    {
+        _caseInsensitive = value;
+        return this;
+    }
+
     /// <summary>Builds a full "WHERE ..." clause, or an empty string if the filter is empty/null.</summary>
-    public string BuildWhereClause(FilterGroup? filter, IEntityMapping mapping, SqlParameterContext parameters)
+    public string BuildWhereClause(FilterGroup? filter, IEntityMapping mapping, SqlParameterContext parameters, bool? caseInsensitive = null)
     {
         if (filter == null) return string.Empty;
 
+        var prev = _caseInsensitive;
+        if (caseInsensitive.HasValue) _caseInsensitive = caseInsensitive.Value;
+
         var where = BuildFilterGroupExpression(filter, mapping, parameters);
+
+        if (caseInsensitive.HasValue) _caseInsensitive = prev;
         return string.IsNullOrEmpty(where) ? string.Empty : $"WHERE {where}";
     }
 
@@ -36,9 +53,13 @@ internal sealed class SqlWhereBuilder(
     /// into nested groups. Public entry point used by callers that need a bare expression, such as
     /// join-condition fragments and the Any/All/Count translator callbacks.
     /// </summary>
-    public string BuildFilterGroupExpression(FilterGroup? group, IEntityMapping mapping, SqlParameterContext parameters)
+    public string BuildFilterGroupExpression(FilterGroup? group, IEntityMapping mapping, SqlParameterContext parameters, bool? caseInsensitive = null)
     {
         if (group == null) return string.Empty;
+
+        var prev = _caseInsensitive;
+        if (caseInsensitive.HasValue) _caseInsensitive = caseInsensitive.Value;
+
         var parts = new List<string>();
 
         foreach (var filter in group.Filters)
@@ -59,6 +80,8 @@ internal sealed class SqlWhereBuilder(
                     parts.Add(expr);
             }
         }
+
+        if (caseInsensitive.HasValue) _caseInsensitive = prev;
 
         if (parts.Count == 0) return string.Empty;
         var result = string.Join($" {(group.Logic == LogicOperator.And ? "AND" : "OR")} ", parts);
@@ -126,11 +149,17 @@ internal sealed class SqlWhereBuilder(
             FilterOperators.IsNotNull or "isnotnull" => $"{quotedColumn} IS NOT NULL",
             FilterOperators.In => BuildInExpression(quotedColumn, condition.Field, condition.Value, mapping, parameters),
             FilterOperators.Between => BuildBetweenExpression(quotedColumn, condition.Field, condition.Value, mapping, parameters),
-            FilterOperators.Contains => BuildLikeExpression(quotedColumn, condition.Value, parameters, "%", "%"),
-            FilterOperators.StartsWith => BuildLikeExpression(quotedColumn, condition.Value, parameters, "", "%"),
-            FilterOperators.EndsWith => BuildLikeExpression(quotedColumn, condition.Value, parameters, "%", ""),
+            FilterOperators.Contains => BuildLikeExpression(quotedColumn, condition.Value, mapping, parameters, "%", "%"),
+            FilterOperators.StartsWith => BuildLikeExpression(quotedColumn, condition.Value, mapping, parameters, "", "%"),
+            FilterOperators.EndsWith => BuildLikeExpression(quotedColumn, condition.Value, mapping, parameters, "%", ""),
             _ => BuildComparisonExpression(quotedColumn, condition.Field, condition.Value, op, mapping, parameters)
         };
+    }
+
+    private static bool IsStringField(IEntityMapping mapping, string field)
+    {
+        var prop = mapping.Type.GetProperty(field, System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.IgnoreCase);
+        return prop?.PropertyType == typeof(string);
     }
 
     private string BuildComparisonExpression(string quotedColumn, string field, string? value, string op, IEntityMapping mapping, SqlParameterContext parameters)
@@ -146,6 +175,12 @@ internal sealed class SqlWhereBuilder(
             FilterOperators.LessThanOrEq => "<=",
             _ => "="
         };
+
+        if (_caseInsensitive && IsStringField(mapping, field))
+        {
+            return $"LOWER({quotedColumn}) {sqlOp} LOWER({paramName})";
+        }
+
         return $"{quotedColumn} {sqlOp} {paramName}";
     }
 
@@ -158,6 +193,12 @@ internal sealed class SqlWhereBuilder(
         {
             paramNames[i] = parameters.Add(SqlValueConverter.Convert(field, values[i], mapping));
         }
+
+        if (_caseInsensitive && IsStringField(mapping, field))
+        {
+            return $"LOWER({quotedColumn}) IN ({string.Join(", ", paramNames.Select(p => $"LOWER({p})"))})";
+        }
+
         return $"{quotedColumn} IN ({string.Join(", ", paramNames)})";
     }
 
@@ -168,12 +209,25 @@ internal sealed class SqlWhereBuilder(
         if (values.Length != 2) return "1 = 1";
         var fromParam = parameters.Add(SqlValueConverter.Convert(field, values[0], mapping));
         var toParam = parameters.Add(SqlValueConverter.Convert(field, values[1], mapping));
+
+        if (_caseInsensitive && IsStringField(mapping, field))
+        {
+            return $"LOWER({quotedColumn}) BETWEEN LOWER({fromParam}) AND LOWER({toParam})";
+        }
+
         return $"{quotedColumn} BETWEEN {fromParam} AND {toParam}";
     }
 
-    private string BuildLikeExpression(string quotedColumn, string? value, SqlParameterContext parameters, string prefix, string suffix)
+    private string BuildLikeExpression(string quotedColumn, string? value, IEntityMapping mapping, SqlParameterContext parameters, string prefix, string suffix)
     {
-        var paramName = parameters.Add($"{prefix}{value}{suffix}");
+        var paramValue = $"{prefix}{value}{suffix}";
+        var paramName = parameters.Add(paramValue);
+
+        if (_caseInsensitive && value != null)
+        {
+            return $"LOWER({quotedColumn}) LIKE LOWER({paramName})";
+        }
+
         return $"{quotedColumn} LIKE {paramName}";
     }
 }

@@ -50,6 +50,11 @@ public static class SelectTreeBuilder
             {
                 MergeIncludeNode(root, node);
             }
+
+            if (options.Select == null && options.SelectTree == null)
+            {
+                root.MarkIncludeAllScalars();
+            }
         }
 
         return root;

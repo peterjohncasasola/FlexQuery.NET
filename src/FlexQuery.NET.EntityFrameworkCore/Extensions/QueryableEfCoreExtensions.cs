@@ -101,6 +101,7 @@ public static class QueryableEfCoreExtensions
 
         QueryOptionsEfCoreExtensions.EnsureEfCoreOperatorsRegistered();
 
+        options.Normalize();
         options.ValidateOrThrow<T>(execOptions);
 
         var execConfig = new FlexQueryExecutionConfig();
@@ -117,7 +118,9 @@ public static class QueryableEfCoreExtensions
             }
         }
 
-        var hasProjection = options.HasProjection();
+        var hasProjection = options.HasProjection()
+            || (options.Includes?.Count ?? 0) > 0
+            || (options.FilteredIncludes?.Count ?? 0) > 0;
 
         return await query.ApplyFlexQueryAsync(options, hasProjection, execOptions, ctx);
     }
@@ -179,6 +182,7 @@ public static class QueryableEfCoreExtensions
 
         QueryOptionsEfCoreExtensions.EnsureEfCoreOperatorsRegistered();
 
+        options.Normalize();
         options.ValidateOrThrow<T>(execOptions);
 
         var execConfig = new FlexQueryExecutionConfig();
@@ -195,7 +199,9 @@ public static class QueryableEfCoreExtensions
             }
         }
 
-        var hasProjection = options.HasProjection();
+        var hasProjection = options.HasProjection()
+            || (options.Includes?.Count ?? 0) > 0
+            || (options.FilteredIncludes?.Count ?? 0) > 0;
 
         return await query.ApplyFlexQueryAsync(options, hasProjection, execOptions, ctx);
     }
@@ -213,6 +219,9 @@ public static class QueryableEfCoreExtensions
         }
 
         var filtered = QueryBuilder.ApplyFilter(query, options);
+        if (options.Distinct == true)
+            filtered = filtered.Distinct();
+
         var total = options.IncludeCount == true ? await filtered.CountAsync(ct) : (int?)null;
 
         if (options.GroupBy is { Count: > 0 })
@@ -248,7 +257,7 @@ public static class QueryableEfCoreExtensions
         }
 
         filtered = QueryBuilder.ApplySort(filtered, options);
-        
+
         Dictionary<string, Dictionary<string, object>>? grandTotals = null;
 
         if (options.Aggregates.Count > 0 &&

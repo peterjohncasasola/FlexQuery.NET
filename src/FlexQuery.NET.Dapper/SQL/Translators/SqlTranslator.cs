@@ -79,7 +79,7 @@ public sealed class SqlTranslator : ISqlTranslator
         }
 
         var fromClause = BuildFromClause(mapping);
-        var whereClause = _whereBuilder.BuildWhereClause(options.Filter, mapping, parameters);
+        var whereClause = _whereBuilder.BuildWhereClause(options.Filter, mapping, parameters, options.CaseInsensitive);
         var groupByClause = BuildGroupByClause(options.GroupBy, mapping);
         var havingClause = BuildHavingClause(options.Having, mapping, parameters);
 
@@ -126,7 +126,7 @@ public sealed class SqlTranslator : ISqlTranslator
 
         var fromClause = BuildFromClause(mapping);
         var joinClause = _joinBuilder.BuildJoinClause(options, mapping, parameters, selectTree);
-        var whereClause = _whereBuilder.BuildWhereClause(options.Filter, mapping, parameters);
+        var whereClause = _whereBuilder.BuildWhereClause(options.Filter, mapping, parameters, options.CaseInsensitive);
 
         var clauses = new List<string> { selectClause, fromClause, joinClause, whereClause };
         var sql = string.Join(" ", clauses.Where(c => !string.IsNullOrEmpty(c)));
@@ -147,7 +147,7 @@ public sealed class SqlTranslator : ISqlTranslator
 
         var fromClause = BuildFromClause(mapping);
         var joinClause = _joinBuilder.BuildJoinClause(options, mapping, parameters, selectTree);
-        var whereClause = _whereBuilder.BuildWhereClause(options.Filter, mapping, parameters);
+        var whereClause = _whereBuilder.BuildWhereClause(options.Filter, mapping, parameters, options.CaseInsensitive);
 
         var clauses = new List<string> { $"SELECT {_dialect.GetCountExpression}", fromClause, joinClause, whereClause };
         var sql = string.Join(" ", clauses.Where(c => !string.IsNullOrEmpty(c)));

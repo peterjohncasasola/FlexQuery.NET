@@ -11,7 +11,7 @@ public sealed class QueryValidator : IQueryValidator
     private readonly List<IValidationRule> _rules = [];
 
     /// <summary>
-    /// Initializes a new validator with default rules (Field, Operator, Type).
+    /// Initializes a new validator with default rules.
     /// </summary>
     public QueryValidator()
     {
@@ -19,8 +19,12 @@ public sealed class QueryValidator : IQueryValidator
         _rules.Add(new FieldAccessValidator());
         _rules.Add(new IncludeAccessValidator());
         _rules.Add(new FieldExistenceRule());
+        _rules.Add(new ExpandPathValidationRule());
         _rules.Add(new OperatorValidityRule());
         _rules.Add(new TypeCompatibilityRule());
+        _rules.Add(new HavingWithoutGroupByRule());
+        _rules.Add(new HavingAliasIntegrityRule());
+        _rules.Add(new GroupByIncludeConflictRule());
     }
 
     /// <summary>

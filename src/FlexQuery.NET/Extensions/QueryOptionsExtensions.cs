@@ -128,15 +128,64 @@ public static class QueryOptionsExtensions
     }
 
     /// <summary>
-    /// Normalizes the filter AST into a canonical form for deterministic cache keys
-    /// and semantic comparison of equivalent expressions.
+    /// Normalizes the query options into a canonical form for deterministic cache keys,
+    /// semantic comparison, and consistent pipeline processing.
     /// </summary>
-    /// <param name="options">The query options whose filter should be normalized.</param>
-    /// <returns>The same <see cref="QueryOptions"/> instance with its filter normalized.</returns>
+    /// <remarks>
+    /// Performs the following normalizations:
+    /// <list type="bullet">
+    ///   <item>Filter AST canonicalization (existing)</item>
+    ///   <item>Skip/Top → Paging merge (Skip and Top are deprecated)</item>
+    ///   <item>Includes → FilteredIncludes consolidation (Includes is deprecated)</item>
+    /// </list>
+    /// </remarks>
+    /// <param name="options">The query options to normalize.</param>
+    /// <returns>The same <see cref="QueryOptions"/> instance with normalized state.</returns>
     public static QueryOptions Normalize(this QueryOptions options)
     {
         ArgumentNullException.ThrowIfNull(options);
+
+        // 1. Filter AST normalization (existing)
         options.Filter = FilterNormalizer.Normalize(options.Filter);
+
+        // 2. Skip/Top → Paging merge
+        if (options.Top.HasValue)
+        {
+            options.Paging.PageSize = options.Top.Value;
+            options.Top = null;
+        }
+        if (options.Skip.HasValue)
+        {
+            options.Paging.Page = (options.Skip.Value / options.Paging.PageSize) + 1;
+            options.Skip = null;
+        }
+
+        // 3. Includes → FilteredIncludes consolidation
+        if (options.Includes?.Count > 0)
+        {
+            if (options.FilteredIncludes == null)
+            {
+                options.FilteredIncludes = options.Includes
+                    .Select(path => new IncludeNode { Path = path })
+                    .ToList();
+            }
+            else
+            {
+                var existing = new HashSet<string>(
+                    options.FilteredIncludes.Select(i => i.Path),
+                    StringComparer.OrdinalIgnoreCase);
+                foreach (var inc in options.Includes)
+                {
+                    if (!existing.Contains(inc))
+                    {
+                        options.FilteredIncludes.Add(new IncludeNode { Path = inc });
+                        existing.Add(inc);
+                    }
+                }
+            }
+            options.Includes = null;
+        }
+
         return options;
     }
 
@@ -146,6 +195,7 @@ public static class QueryOptionsExtensions
     /// </summary>
     /// <param name="options">The query options to normalize.</param>
     /// <returns>The same <see cref="QueryOptions"/> instance with its filter order normalized.</returns>
+    [Obsolete("Use Normalize() instead. NormalizeOrder is unused by any pipeline.", error: false)]
     public static QueryOptions NormalizeOrder(this QueryOptions options)
     {
         if (options.Filter is not null)
@@ -154,6 +204,17 @@ public static class QueryOptionsExtensions
         }
 
         return options;
+    }
+
+    /// <summary>
+    /// Generates SHA256 fingerprint for distributed cache scenarios.
+    /// </summary>
+    /// <param name="options">The query options to generate a hash for.</param>
+    /// <returns>A hex string representing the SHA256 hash of the normalized filter.</returns>
+    [Obsolete("Use GetCacheKey() instead for distributed cache scenarios.", error: false)]
+    public static string GetQueryHash(this QueryOptions options)
+    {
+        return FilterNormalizer.GenerateHash(options.Filter);
     }
 
     /// <summary>
@@ -169,15 +230,5 @@ public static class QueryOptionsExtensions
         string operation)
     {
         return QueryCacheKeyBuilder.Build(options, entityType, operation);
-    }
-
-    /// <summary>
-    /// Generates SHA256 fingerprint for distributed cache scenarios.
-    /// </summary>
-    /// <param name="options">The query options to generate a hash for.</param>
-    /// <returns>A hex string representing the SHA256 hash of the normalized filter.</returns>
-    public static string GetQueryHash(this QueryOptions options)
-    {
-        return FilterNormalizer.GenerateHash(options.Filter);
     }
 }

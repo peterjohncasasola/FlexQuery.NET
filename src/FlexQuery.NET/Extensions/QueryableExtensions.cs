@@ -81,9 +81,12 @@ public static class QueryableExtensions
 
         var options = parameters.ToQueryOptions();
 
+        options.Normalize();
         options.ValidateOrThrow<T>(exec);
 
-        var hasProjection = options.HasProjection();
+        var hasProjection = options.HasProjection()
+            || (options.Includes?.Count ?? 0) > 0
+            || (options.FilteredIncludes?.Count ?? 0) > 0;
 
         return query.ApplyFlexQuery(options, hasProjection);
 
@@ -105,9 +108,12 @@ public static class QueryableExtensions
         var exec = new QueryExecutionOptions();
         configure?.Invoke(exec);
 
+        options.Normalize();
         options.ValidateOrThrow<T>(exec);
 
-        var hasProjection = options.HasProjection();
+        var hasProjection = options.HasProjection()
+            || (options.Includes?.Count ?? 0) > 0
+            || (options.FilteredIncludes?.Count ?? 0) > 0;
 
         return query.ApplyFlexQuery(options, hasProjection);
 
@@ -115,7 +121,11 @@ public static class QueryableExtensions
 
     private static QueryResult<object> ApplyFlexQuery<T>(this IQueryable<T> query, QueryOptions options, bool hasProjection)
     {
-        var filtered = ApplyFilterAndSort(query, options);
+        var filtered = ApplyFilter(query, options);
+        if (options.Distinct == true)
+            filtered = Queryable.Distinct(filtered);
+
+        filtered = ApplySort(filtered, options);
         var total = filtered.TryGetTotalCount(options);
 
         Dictionary<string, Dictionary<string, object>>? grandTotals = null;
@@ -124,9 +134,7 @@ public static class QueryableExtensions
             (options.GroupBy == null || options.GroupBy.Count == 0))
         {
             var aggregateQuery = GroupByBuilder.Apply(filtered, options);
-
             var aggRow = aggregateQuery.FirstOrDefault();
-
             grandTotals = AggregateResultBuilder.Build(
                 aggRow,
                 options.Aggregates);

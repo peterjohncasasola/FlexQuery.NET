@@ -86,6 +86,7 @@ public static class FlexQueryDapperExtensions
         SetEntityType(parsedOptions, typeof(T), dapperOptions);
 
         var execOptions = dapperOptions.ToQueryExecutionOptions();
+        parsedOptions.Normalize();
         parsedOptions.ValidateOrThrow(dapperOptions.EntityType ?? typeof(T), execOptions);
 
         var execConfig = new FlexQueryExecutionConfig();
@@ -184,6 +185,7 @@ public static class FlexQueryDapperExtensions
         SetEntityType(options, typeof(T), dapperOptions);
 
         var execOptions = dapperOptions.ToQueryExecutionOptions();
+        options.Normalize();
         options.ValidateOrThrow(dapperOptions.EntityType ?? typeof(T), execOptions);
 
         var execConfig = new FlexQueryExecutionConfig();
@@ -256,7 +258,7 @@ public static class FlexQueryDapperExtensions
             && typeof(T) != typeof(object);
 
         IReadOnlyList<object> items;
-        if (options.Includes?.Count > 0)
+        if (options.Includes?.Count > 0 || options.FilteredIncludes?.Count > 0)
         {
             var dynamicItems = await connection.QueryAsync(
                 command.Sql,
@@ -264,7 +266,15 @@ public static class FlexQueryDapperExtensions
                 commandTimeout: execOptions.CommandTimeoutSeconds,
                 commandType: CommandType.Text);
 
-            var hydrated = DapperRowHydrator.HydrateIncludes<T>(dynamicItems, mapping, registry, options.Includes);
+            IReadOnlyList<T> hydrated;
+            if (options.FilteredIncludes?.Count > 0)
+            {
+                hydrated = DapperRowHydrator.HydrateFilteredIncludes<T>(dynamicItems, mapping, registry, options.FilteredIncludes);
+            }
+            else
+            {
+                hydrated = DapperRowHydrator.HydrateIncludes<T>(dynamicItems, mapping, registry, options.Includes!);
+            }
             items = hydrated.Cast<object>().ToList();
         }
         else if (useDynamicType)

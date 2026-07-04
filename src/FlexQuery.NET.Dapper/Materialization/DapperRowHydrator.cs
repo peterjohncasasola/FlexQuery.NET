@@ -1,10 +1,50 @@
 using FlexQuery.NET.Dapper.Mapping;
+using FlexQuery.NET.Models;
 
 namespace FlexQuery.NET.Dapper.Materialization;
 
 internal static class DapperRowHydrator
 {
     public static IReadOnlyList<T> HydrateIncludes<T>(
+        IEnumerable<dynamic> rows,
+        IEntityMapping mapping,
+        IMappingRegistry registry,
+        IReadOnlyList<string>? includes)
+        where T : class
+    {
+        if (includes == null || includes.Count == 0)
+            return rows.Cast<T>().ToList();
+
+        return HydrateCore<T>(rows, mapping, registry, includes);
+    }
+
+    public static IReadOnlyList<T> HydrateFilteredIncludes<T>(
+        IEnumerable<dynamic> rows,
+        IEntityMapping mapping,
+        IMappingRegistry registry,
+        List<IncludeNode>? filteredIncludes)
+        where T : class
+    {
+        if (filteredIncludes == null || filteredIncludes.Count == 0)
+            return rows.Cast<T>().ToList();
+
+        var paths = ExtractIncludePaths(filteredIncludes);
+        return HydrateCore<T>(rows, mapping, registry, paths);
+    }
+
+    private static List<string> ExtractIncludePaths(List<IncludeNode> nodes)
+    {
+        var paths = new List<string>();
+        foreach (var node in nodes)
+        {
+            paths.Add(node.Path);
+            if (node.Children.Count > 0)
+                paths.AddRange(ExtractIncludePaths(node.Children));
+        }
+        return paths;
+    }
+
+    private static IReadOnlyList<T> HydrateCore<T>(
         IEnumerable<dynamic> rows,
         IEntityMapping mapping,
         IMappingRegistry registry,

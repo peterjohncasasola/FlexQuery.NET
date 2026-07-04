@@ -38,7 +38,7 @@ internal sealed class SqlJoinBuilder
         var joinedPaths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
         // 1. Infer joins from deep projection tree
-        TraverseJoinTree(selectTree, mapping, mapping.TableAlias, joins, joinedPaths, parameters);
+        TraverseJoinTree(selectTree, mapping, mapping.TableAlias, joins, joinedPaths, parameters, options.CaseInsensitive);
 
         // 2. Explicit Includes and Filtered Includes
         if (options.FilteredIncludes != null)
@@ -56,10 +56,11 @@ internal sealed class SqlJoinBuilder
                     Filter = filteredInclude.Filter
                 };
 
+                var ci = options.CaseInsensitive;
                 var sql = _includeTranslator.Translate(node, mapping, filterGroup =>
                 {
                     var targetMapping = _mappingRegistry.GetMapping(rel.TargetType!);
-                    return _whereBuilder.BuildFilterGroupExpression(filterGroup, targetMapping, parameters);
+                    return _whereBuilder.BuildFilterGroupExpression(filterGroup, targetMapping, parameters, ci);
                 }, _mappingRegistry);
 
                 if (!string.IsNullOrEmpty(sql)) joins.Add(sql);
@@ -81,8 +82,8 @@ internal sealed class SqlJoinBuilder
 
         return string.Join(" ", joins);
     }
-
-    private void TraverseJoinTree(SelectionNode node, IEntityMapping currentMapping, string? parentAlias, List<string> joins, HashSet<string> joinedPaths, SqlParameterContext parameters)
+    
+    private void TraverseJoinTree(SelectionNode node, IEntityMapping currentMapping, string? parentAlias, List<string> joins, HashSet<string> joinedPaths, SqlParameterContext parameters, bool caseInsensitive = false)
     {
         foreach (var child in node.EnumerateChildren())
         {
@@ -100,7 +101,7 @@ internal sealed class SqlJoinBuilder
 
                 if (child.Value.Filter != null)
                 {
-                    var filterSql = _whereBuilder.BuildFilterGroupExpression(child.Value.Filter, targetMapping, parameters);
+                    var filterSql = _whereBuilder.BuildFilterGroupExpression(child.Value.Filter, targetMapping, parameters, caseInsensitive);
                     if (!string.IsNullOrEmpty(filterSql))
                         sql += $" AND ({filterSql})";
                 }
@@ -108,10 +109,7 @@ internal sealed class SqlJoinBuilder
                 joins.Add(sql);
             }
 
-            // Recurse exactly once regardless of whether this alias was newly joined or already
-            // visited via another path — matches the original behavior of recursing in both the
-            // "new join" and "already joined" branches with identical arguments.
-            TraverseJoinTree(child.Value, targetMapping, childAlias, joins, joinedPaths, parameters);
+            TraverseJoinTree(child.Value, targetMapping, childAlias, joins, joinedPaths, parameters, caseInsensitive);
         }
     }
 }
