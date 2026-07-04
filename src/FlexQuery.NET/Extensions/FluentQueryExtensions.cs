@@ -1,6 +1,4 @@
-using System;
-using System.Linq;
-using FlexQuery.NET.Builders;
+using FlexQuery.NET.Builders.Fluent;
 using FlexQuery.NET.Models;
 
 namespace FlexQuery.NET;

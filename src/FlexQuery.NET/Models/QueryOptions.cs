@@ -47,10 +47,12 @@ public class QueryOptions
     /// <summary>Pagination parameters (Page, PageSize, Disabled).</summary>
     public PagingOptions Paging { get; set; } = new();
 
-    /// <summary>Legacy/Internal: Explicit skip count (if set, overrides Paging.Skip).</summary>
+    /// <summary>Legacy/Internal: Explicit skip count. Use Paging instead.</summary>
+    [Obsolete("Use Paging.Skip instead. Will be removed in v4.0.", error: false)]
     public int? Skip { get; set; }
 
-    /// <summary>Legacy/Internal: Explicit take count (if set, overrides Paging.PageSize).</summary>
+    /// <summary>Legacy/Internal: Explicit take count. Use Paging.PageSize instead.</summary>
+    [Obsolete("Use Paging.PageSize instead. Will be removed in v4.0.", error: false)]
     public int? Top { get; set; }
 
     /// <summary>Whether to include the total count in the result.</summary>
@@ -74,6 +76,7 @@ public class QueryOptions
     public Dictionary<string, object> Items { get; } = new();
 
     /// <summary>Internal representation of the parsed query for debugging.</summary>
+    [Obsolete("Debug property. Use Items dictionary for custom metadata. Will be removed in v4.0.", error: false)]
     public object? Ast { get; set; }
 
     /// <summary>Internal: Merged selection tree from JSON select format.</summary>
