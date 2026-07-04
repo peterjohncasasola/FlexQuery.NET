@@ -16,6 +16,7 @@ public class ValidationTests
     {
         public int Id { get; set; }
         public string Name { get; set; } = string.Empty;
+        public string Email { get; set; } = string.Empty;
         public List<Order> Orders { get; set; } = new();
     }
 
@@ -23,6 +24,15 @@ public class ValidationTests
     {
         public int Id { get; set; }
         public decimal Total { get; set; }
+        public string Status { get; set; } = string.Empty;
+        public int CustomerId { get; set; }
+        public Customer Customer { get; set; } = null!;
+    }
+
+    private class Product
+    {
+        public int Id { get; set; }
+        public string Name { get; set; } = string.Empty;
     }
 
     [Fact]
@@ -102,6 +112,194 @@ public class ValidationTests
     {
         var options = QueryOptionsParser.Parse(new Dictionary<string, StringValues> { { "filter", "name:eq:john" } });
         var query = new List<Customer>().AsQueryable();
+
+        Action act = () => options.ValidateOrThrow<Customer>();
+
+        act.Should().NotThrow();
+    }
+
+    [Fact]
+    public void HavingWithoutGroupBy_RejectsHavingWithoutGroupByOrAggregates()
+    {
+        var options = new QueryOptions
+        {
+            Having = new HavingCondition { Function = "count", Field = null, Operator = "gt", Value = "5" }
+        };
+
+        Action act = () => options.ValidateOrThrow<Customer>();
+
+        act.Should().Throw<QueryValidationException>()
+           .Which.Result.Errors.Should().Contain(e => e.Code == ValidationErrorCodes.HavingWithoutGroupBy);
+    }
+
+    [Fact]
+    public void HavingWithoutGroupBy_AllowsHavingWithGroupBy()
+    {
+        var options = new QueryOptions
+        {
+            GroupBy = ["Status"],
+            Having = new HavingCondition { Function = "count", Field = null, Operator = "gt", Value = "5" }
+        };
+
+        Action act = () => options.ValidateOrThrow<Customer>();
+
+        act.Should().NotThrow();
+    }
+
+    [Fact]
+    public void HavingWithoutGroupBy_AllowsHavingWithAggregates()
+    {
+        var options = new QueryOptions
+        {
+            Aggregates = [new AggregateModel { Function = "count", Field = "Id", Alias = "idCount" }],
+            Having = new HavingCondition { Function = "count", Field = "Id", Operator = "gt", Value = "5" }
+        };
+
+        Action act = () => options.ValidateOrThrow<Customer>();
+
+        act.Should().NotThrow();
+    }
+
+    [Fact]
+    public void HavingAliasIntegrity_RejectsAliasMismatch()
+    {
+        var options = new QueryOptions
+        {
+            Aggregates = [new AggregateModel { Function = "sum", Field = "Total", Alias = "totalSum" }],
+            Having = new HavingCondition { Function = "count", Field = "Id", Operator = "gt", Value = "5" }
+        };
+
+        Action act = () => options.ValidateOrThrow<Customer>();
+
+        act.Should().Throw<QueryValidationException>()
+           .Which.Result.Errors.Should().Contain(e => e.Code == ValidationErrorCodes.HavingAliasMismatch);
+    }
+
+    [Fact]
+    public void HavingAliasIntegrity_AllowsMatchingAlias()
+    {
+        var options = new QueryOptions
+        {
+            Aggregates = [new AggregateModel { Function = "sum", Field = "Total", Alias = "totalSum" }],
+            Having = new HavingCondition { Function = "sum", Field = "Total", Operator = "gt", Value = "100" }
+        };
+
+        Action act = () => options.ValidateOrThrow<Customer>();
+
+        act.Should().NotThrow();
+    }
+
+    [Fact]
+    public void GroupByIncludeConflict_RejectsGroupByWithIncludes()
+    {
+        var options = new QueryOptions
+        {
+            GroupBy = ["Status"],
+            Includes = ["Orders"]
+        };
+
+        Action act = () => options.ValidateOrThrow<Customer>();
+
+        act.Should().Throw<QueryValidationException>()
+           .Which.Result.Errors.Should().Contain(e => e.Code == ValidationErrorCodes.GroupByIncludeConflict);
+    }
+
+    [Fact]
+    public void GroupByIncludeConflict_RejectsGroupByWithFilteredIncludes()
+    {
+        var options = new QueryOptions
+        {
+            GroupBy = ["Status"],
+            FilteredIncludes = [new IncludeNode { Path = "Orders" }]
+        };
+
+        Action act = () => options.ValidateOrThrow<Customer>();
+
+        act.Should().Throw<QueryValidationException>()
+           .Which.Result.Errors.Should().Contain(e => e.Code == ValidationErrorCodes.GroupByIncludeConflict);
+    }
+
+    [Fact]
+    public void GroupByIncludeConflict_AllowsGroupByWithoutIncludes()
+    {
+        var options = new QueryOptions
+        {
+            GroupBy = ["Status"]
+        };
+
+        Action act = () => options.ValidateOrThrow<Customer>();
+
+        act.Should().NotThrow();
+    }
+
+    [Fact]
+    public void ExpandPathValidation_RejectsInvalidIncludePath()
+    {
+        var options = new QueryOptions
+        {
+            Includes = ["NonExistentPath"]
+        };
+
+        Action act = () => options.ValidateOrThrow<Customer>();
+
+        act.Should().Throw<QueryValidationException>()
+           .Which.Result.Errors.Should().Contain(e => e.Code == ValidationErrorCodes.IncludePathNotFound);
+    }
+
+    [Fact]
+    public void ExpandPathValidation_AllowsValidIncludePath()
+    {
+        var options = new QueryOptions
+        {
+            Includes = ["Orders"]
+        };
+
+        Action act = () => options.ValidateOrThrow<Customer>();
+
+        act.Should().NotThrow();
+    }
+
+    [Fact]
+    public void ExpandPathValidation_RejectsNestedInvalidIncludePath()
+    {
+        var options = new QueryOptions
+        {
+            FilteredIncludes =
+            [
+                new IncludeNode
+                {
+                    Path = "Orders",
+                    Children =
+                    [
+                        new IncludeNode { Path = "NonExistentChild" }
+                    ]
+                }
+            ]
+        };
+
+        Action act = () => options.ValidateOrThrow<Customer>();
+
+        act.Should().Throw<QueryValidationException>()
+           .Which.Result.Errors.Should().Contain(e => e.Code == ValidationErrorCodes.IncludePathNotFound);
+    }
+
+    [Fact]
+    public void ExpandPathValidation_AllowsDeeplyNestedValidIncludePath()
+    {
+        var options = new QueryOptions
+        {
+            FilteredIncludes =
+            [
+                new IncludeNode
+                {
+                    Path = "Orders",
+                    Children =
+                    [
+                        new IncludeNode { Path = "Customer" }
+                    ]
+                }
+            ]
+        };
 
         Action act = () => options.ValidateOrThrow<Customer>();
 

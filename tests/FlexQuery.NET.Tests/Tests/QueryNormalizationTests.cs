@@ -205,4 +205,118 @@ public class QueryNormalizationTests
 
         jsonSelect.HasProjection().Should().BeTrue();
     }
+
+    [Fact]
+    public void Normalize_Top_MovesToPagingPageSize()
+    {
+        var options = new QueryOptions { Top = 25 };
+
+        options.Normalize();
+
+        options.Paging.PageSize.Should().Be(25);
+        options.Top.Should().BeNull();
+    }
+
+    [Fact]
+    public void Normalize_Skip_ComputesCorrectPagingPage()
+    {
+        var options = new QueryOptions { Skip = 50, Paging = { PageSize = 10 } };
+
+        options.Normalize();
+
+        options.Paging.Page.Should().Be(6);
+        options.Paging.PageSize.Should().Be(10);
+        options.Skip.Should().BeNull();
+    }
+
+    [Fact]
+    public void Normalize_SkipWithoutExplicitPageSize_UsesDefaultPageSize()
+    {
+        var options = new QueryOptions { Skip = 20 };
+
+        options.Normalize();
+
+        options.Paging.Page.Should().Be(2);
+        options.Skip.Should().BeNull();
+    }
+
+    [Fact]
+    public void Normalize_SkipAndTop_MergeIntoPaging()
+    {
+        var options = new QueryOptions { Skip = 10, Top = 50 };
+
+        options.Normalize();
+
+        options.Paging.Page.Should().Be(1);
+        options.Paging.PageSize.Should().Be(50);
+        options.Skip.Should().BeNull();
+        options.Top.Should().BeNull();
+    }
+
+    [Fact]
+    public void Normalize_Includes_ConsolidatesIntoFilteredIncludes()
+    {
+        var options = new QueryOptions { Includes = ["Orders", "Details"] };
+
+        options.Normalize();
+
+        options.FilteredIncludes.Should().HaveCount(2);
+        options.FilteredIncludes.Should().Contain(i => i.Path == "Orders");
+        options.FilteredIncludes.Should().Contain(i => i.Path == "Details");
+        options.Includes.Should().BeNull();
+    }
+
+    [Fact]
+    public void Normalize_IncludesWithExistingFilteredIncludes_MergesDeduplicated()
+    {
+        var options = new QueryOptions
+        {
+            Includes = ["Orders", "Details"],
+            FilteredIncludes = [new IncludeNode { Path = "Orders", Filter = new FilterGroup { Filters = [new FilterCondition { Field = "Status", Operator = "eq", Value = "Open" }] } }]
+        };
+
+        options.Normalize();
+
+        options.FilteredIncludes.Should().HaveCount(2);
+        options.FilteredIncludes.Should().ContainSingle(i => i.Path == "Orders" && i.Filter != null);
+        options.FilteredIncludes.Should().Contain(i => i.Path == "Details" && i.Filter == null);
+        options.Includes.Should().BeNull();
+    }
+
+    [Fact]
+    public void Normalize_IsIdempotent()
+    {
+        var options = new QueryOptions
+        {
+            Top = 20,
+            Skip = 10,
+            Includes = ["Orders"]
+        };
+
+        options.Normalize();
+        var pageSizeAfterFirst = options.Paging.PageSize;
+        var pageAfterFirst = options.Paging.Page;
+
+        options.Normalize();
+
+        options.Paging.PageSize.Should().Be(pageSizeAfterFirst);
+        options.Paging.Page.Should().Be(pageAfterFirst);
+        options.Top.Should().BeNull();
+        options.Skip.Should().BeNull();
+        options.Includes.Should().BeNull();
+    }
+
+    [Fact]
+    public void Normalize_WithoutTopSkipIncludes_DoesNotMutatePaging()
+    {
+        var options = new QueryOptions
+        {
+            Paging = { Page = 3, PageSize = 25 }
+        };
+
+        options.Normalize();
+
+        options.Paging.Page.Should().Be(3);
+        options.Paging.PageSize.Should().Be(25);
+    }
 }

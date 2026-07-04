@@ -865,4 +865,50 @@ public class GroupByTests : IDisposable
 
         return (T)Convert.ChangeType(propertyValue, typeof(T))!;
     }
+
+    [Fact]
+    public async Task ExecutePipeline_EFCore_OrdersClausesCorrectly()
+    {
+        await AddOrdersWithNumberPrefixAsync(
+            "ORDER",
+            (100, 1, "2026-12-01", 100m),
+            (101, 1, "2026-12-02", 50m));
+
+        var options = new QueryOptions
+        {
+            Filter = new FilterGroup
+            {
+                Filters = [new FilterCondition { Field = "Number", Operator = "startswith", Value = "ORDER-" }]
+            },
+            GroupBy = ["CustomerId"],
+            Aggregates = [new AggregateModel { Function = "sum", Field = "Total", Alias = "totalSum" }],
+            Having = new HavingCondition { Function = "sum", Field = "Total", Operator = "gt", Value = "0" },
+            Sort = [new SortNode { Field = "totalSum", Descending = true }],
+            Paging = { Page = 1, PageSize = 10 }
+        };
+
+        var result = await _db.Orders.FlexQueryAsync(options);
+
+        result.Data.Should().NotBeEmpty();
+        result.Data.Should().HaveCount(1);
+        Read<int>(result.Data[0], "CustomerId").Should().Be(1);
+    }
+
+    [Fact]
+    public void Normalize_SkipTopMerge_IncludesConsolidation_PipelineProducesCorrectQuery()
+    {
+        var options = new QueryOptions
+        {
+            Top = 10,
+            Skip = 20,
+            Includes = ["Orders"]
+        };
+
+        options.Normalize();
+
+        options.Paging.PageSize.Should().Be(10);
+        options.Paging.Page.Should().Be(3);
+        options.Includes.Should().BeNull();
+        options.FilteredIncludes.Should().ContainSingle(i => i.Path == "Orders");
+    }
 }
