@@ -22,6 +22,18 @@ namespace FlexQuery.NET.Dapper;
 /// using Dapper as the materialization engine. Provides overloads accepting <see cref="FlexQueryParameters"/>,
 /// raw query-string dictionaries, or pre-parsed <see cref="QueryOptions"/>.
 /// </summary>
+/// <remarks>
+/// <para>Cancellation is observed at the following stages:</para>
+/// <list type="bullet">
+///   <item><term>Connection open</term> <description>via <see cref="DbConnection.OpenAsync(System.Threading.CancellationToken)"/></description></item>
+///   <item><term>Diagnostics events</term> <description>listener callbacks (<see cref="IFlexQueryExecutionListener"/>)</description></item>
+///   <item><term>Result materialization</term> <description>a single check before the synchronous materialization loop</description></item>
+/// </list>
+/// <para>Note: Dapper's <c>QueryAsync</c> does not accept a <see cref="System.Threading.CancellationToken"/>.
+/// The token is threaded through connection open, diagnostics, and materialization stages,
+/// but not into the Dapper query execution itself. A future version may support this via
+/// <c>CommandDefinition</c>.</para>
+/// </remarks>
 public static class FlexQueryDapperExtensions
 {
     private static void ValidateEntityType(Type t, Type? entityType)
@@ -49,18 +61,21 @@ public static class FlexQueryDapperExtensions
     /// <param name="parameters">The OpenAPI-friendly DTO containing user query parameters.</param>
     /// <param name="configureDapper">Optional delegate to configure Dapper-specific options (dialect, mapping registry, etc.).</param>
     /// <param name="configureExecution">Optional delegate to configure execution listeners.</param>
+    /// <param name="cancellationToken">A <see cref="CancellationToken" /> to observe while waiting for the task to complete.</param>
     /// <returns>A paged query result.</returns>
+    /// <exception cref="OperationCanceledException">If the <see cref="CancellationToken" /> is canceled.</exception>
     public static async Task<QueryResult<object>> FlexQueryAsync<T>(
         this DbConnection connection,
         FlexQueryParameters parameters,
         Action<DapperQueryOptions>? configureDapper = null,
-        Action<FlexQueryExecutionConfig>? configureExecution = null) where T : class
+        Action<FlexQueryExecutionConfig>? configureExecution = null,
+        CancellationToken cancellationToken = default) where T : class
     {
         var dapperOptions = new DapperQueryOptions();
         configureDapper?.Invoke(dapperOptions);
         ValidateEntityType(typeof(T), dapperOptions.EntityType);
 
-        return await connection.FlexQueryAsync<T>(parameters, dapperOptions, configureExecution);
+        return await connection.FlexQueryAsync<T>(parameters, dapperOptions, configureExecution, cancellationToken);
     }
 
     /// <summary>
@@ -72,12 +87,15 @@ public static class FlexQueryDapperExtensions
     /// <param name="parameters">The OpenAPI-friendly DTO containing user query parameters.</param>
     /// <param name="dapperQueryOptions">Dapper-specific execution options (dialect, mapping, security rules, etc.).</param>
     /// <param name="configureExecution">Optional delegate to configure execution listeners.</param>
+    /// <param name="cancellationToken">A <see cref="CancellationToken" /> to observe while waiting for the task to complete.</param>
     /// <returns>A paged query result.</returns>
+    /// <exception cref="OperationCanceledException">If the <see cref="CancellationToken" /> is canceled.</exception>
     public static async Task<QueryResult<object>> FlexQueryAsync<T>(
         this DbConnection connection,
         FlexQueryParameters parameters,
         DapperQueryOptions? dapperQueryOptions = null,
-        Action<FlexQueryExecutionConfig>? configureExecution = null) where T : class
+        Action<FlexQueryExecutionConfig>? configureExecution = null,
+        CancellationToken cancellationToken = default) where T : class
     {
         var dapperOptions = dapperQueryOptions ?? new DapperQueryOptions();
         ValidateEntityType(typeof(T), dapperOptions.EntityType);
@@ -94,7 +112,7 @@ public static class FlexQueryDapperExtensions
         FlexQueryExecutionContext? ctx = null;
         if (execConfig.Listener is not null)
         {
-            ctx = new FlexQueryExecutionContext(execConfig, CancellationToken.None);
+            ctx = new FlexQueryExecutionContext(execConfig, cancellationToken);
             if (ctx.Listener != null)
             {
                 await ctx.Listener.QueryParsedAsync(
@@ -115,12 +133,15 @@ public static class FlexQueryDapperExtensions
     /// <param name="parameters">Raw query-string key/value pairs (e.g., filter, sort, select, page, pageSize).</param>
     /// <param name="configureDapper">Optional delegate to configure Dapper-specific options.</param>
     /// <param name="configureExecution">Optional delegate to configure execution listeners.</param>
+    /// <param name="cancellationToken">A <see cref="CancellationToken" /> to observe while waiting for the task to complete.</param>
     /// <returns>A paged query result.</returns>
+    /// <exception cref="OperationCanceledException">If the <see cref="CancellationToken" /> is canceled.</exception>
     public static async Task<QueryResult<object>> FlexQueryAsync<T>(
         this DbConnection connection,
         IDictionary<string, StringValues> parameters,
         Action<DapperQueryOptions>? configureDapper = null,
-        Action<FlexQueryExecutionConfig>? configureExecution = null) where T : class
+        Action<FlexQueryExecutionConfig>? configureExecution = null,
+        CancellationToken cancellationToken = default) where T : class
     {
         var dict = parameters.ToDictionary(k => k.Key, v => v.Value.ToString(), StringComparer.OrdinalIgnoreCase);
 
@@ -135,29 +156,7 @@ public static class FlexQueryDapperExtensions
             RawParameters = dict
         };
 
-        return await FlexQueryAsync<T>(connection, flexParams, configureDapper, configureExecution);
-    }
-
-    /// <summary>
-    /// Executes a pre-parsed <see cref="QueryOptions"/> against the connection, using the provided
-    /// configuration delegate to set Dapper-specific options.
-    /// </summary>
-    /// <typeparam name="T">The entity type used for mapping resolution.</typeparam>
-    /// <param name="connection">The database connection.</param>
-    /// <param name="options">Pre-parsed query options (from any adapter or manual construction).</param>
-    /// <param name="configureDapper">Optional delegate to configure Dapper-specific options.</param>
-    /// <param name="configureExecution">Optional delegate to configure execution listeners.</param>
-    /// <returns>A paged query result.</returns>
-    public static async Task<QueryResult<object>> FlexQueryAsync<T>(
-        this DbConnection connection,
-        QueryOptions options,
-        Action<DapperQueryOptions>? configureDapper = null,
-        Action<FlexQueryExecutionConfig>? configureExecution = null) where T : class
-    {
-        var dapperOptions = new DapperQueryOptions();
-        configureDapper?.Invoke(dapperOptions);
-
-        return await connection.FlexQueryAsync<T>(options, dapperOptions, configureExecution);
+        return await FlexQueryAsync<T>(connection, flexParams, configureDapper, configureExecution, cancellationToken);
     }
 
     /// <summary>
@@ -169,12 +168,16 @@ public static class FlexQueryDapperExtensions
     /// <param name="options">Pre-parsed query options.</param>
     /// <param name="dapperQueryOptions">Dapper-specific execution options (dialect, mapping, security rules, etc.).</param>
     /// <param name="configureExecution">Optional delegate to configure execution listeners.</param>
+    /// <param name="cancellationToken">A <see cref="CancellationToken" /> to observe while waiting for the task to complete.</param>
     /// <returns>A paged query result.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="connection"/> or <paramref name="options"/> is null.</exception>
+    /// <exception cref="OperationCanceledException">If the <see cref="CancellationToken" /> is canceled.</exception>
     public static async Task<QueryResult<object>> FlexQueryAsync<T>(
         this DbConnection connection,
         QueryOptions options,
         DapperQueryOptions? dapperQueryOptions = null,
-        Action<FlexQueryExecutionConfig>? configureExecution = null) where T : class
+        Action<FlexQueryExecutionConfig>? configureExecution = null,
+        CancellationToken cancellationToken = default) where T : class
     {
         ArgumentNullException.ThrowIfNull(connection);
         ArgumentNullException.ThrowIfNull(options);
@@ -193,7 +196,7 @@ public static class FlexQueryDapperExtensions
         FlexQueryExecutionContext? ctx = null;
         if (execConfig.Listener is not null)
         {
-            ctx = new FlexQueryExecutionContext(execConfig, CancellationToken.None);
+            ctx = new FlexQueryExecutionContext(execConfig, cancellationToken);
             if (ctx.Listener != null)
             {
                 await ctx.Listener.QueryParsedAsync(
@@ -317,6 +320,8 @@ public static class FlexQueryDapperExtensions
                         .ToDictionary(k => k, _ => typeof(object), StringComparer.OrdinalIgnoreCase);
                     var projectedType = DynamicTypeBuilder.GetDynamicType(
                         new Dictionary<string, Type>(colTypes));
+
+                    ct.ThrowIfCancellationRequested();
 
                     items = rows.Select(row =>
                     {

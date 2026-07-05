@@ -3,19 +3,12 @@ using FlexQuery.NET.Models;
 
 namespace FlexQuery.NET.Internal;
 
-internal sealed class FlexQueryExecutionContext
+internal sealed class FlexQueryExecutionContext(
+    FlexQueryExecutionConfig config,
+    CancellationToken cancellationToken)
 {
-    public FlexQueryExecutionContext(
-        FlexQueryExecutionConfig config,
-        CancellationToken cancellationToken)
-    {
-        Listener = config.Listener;
-        CancellationToken = cancellationToken;
-        QueryId = Guid.NewGuid();
-    }
-
-    public IFlexQueryExecutionListener? Listener { get; }
-    public Guid QueryId { get; }
-    public CancellationToken CancellationToken { get; }
+    public IFlexQueryExecutionListener? Listener { get; } = config.Listener;
+    public Guid QueryId { get; } = Guid.NewGuid();
+    public CancellationToken CancellationToken { get; } = cancellationToken;
     public Stopwatch Stopwatch { get; } = Stopwatch.StartNew();
 }

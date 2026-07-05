@@ -25,7 +25,7 @@ namespace FlexQuery.NET.Samples.WebApi.Controllers;
 [ApiController]
 [Route("api/aggrid-dapper/customers")]
 [Produces("application/json")]
-public sealed class AgGridDapperController(AppDbContext db, IMappingRegistry registry) : ControllerBase
+public sealed class AgGridDapperController(AppDbContext db) : ControllerBase
 {
     [HttpPost]
     [ProducesResponseType(typeof(AgGridServerSideResponse), 200)]
@@ -44,10 +44,8 @@ public sealed class AgGridDapperController(AppDbContext db, IMappingRegistry reg
             var connectionString = db.Database.GetConnectionString();
             var connection = new SqliteConnection(connectionString);
             
-            result = await connection.FlexQueryAsync<Customer>(options, 
-                cfg => cfg.DefaultPageSize = 50);
-
-
+            result = await connection.FlexQueryAsync<Customer>(options, cancellationToken: cancellationToken);
+            
         } 
         catch
         {

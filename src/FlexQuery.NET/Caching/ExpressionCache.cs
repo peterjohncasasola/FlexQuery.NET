@@ -55,7 +55,7 @@ public static class ExpressionCache
     {
         if (_expressionCache.TryGetValue(key, out var lambda))
         {
-            expression = (Expression<Func<T, bool>>)lambda;
+            expression = (Expression<Func<T, bool>>)lambda!;
             return true;
         }
 

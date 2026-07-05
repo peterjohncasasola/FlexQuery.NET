@@ -30,7 +30,6 @@ public sealed class EfCustomersController(AppDbContext db) : ControllerBase
             .FlexQueryAsync(parameters,
                 cancellationToken: cancellationToken,
                 configureExecution: cfg => cfg.Listener = collector);
-
         sw.Stop();
 
         var report = collector.BuildReport(provider: "EF Core", translator: "Sqlite");

@@ -35,7 +35,7 @@ public class FluentQueryBuilderTests
     public void Where_SetsFilterGroup()
     {
         var options = Query.Create()
-            .Where(f => f.Equal("Name", "John").GreaterThan("Age", 18))
+            .Filter(f => f.Equal("Name", "John").GreaterThan("Age", 18))
             .Build();
 
         options.Filter.Should().NotBeNull();
@@ -52,7 +52,7 @@ public class FluentQueryBuilderTests
     public void Where_WithNestedGroups_SetsFilterStructure()
     {
         var options = Query.Create()
-            .Where(f => f
+            .Filter(f => f
                 .And(gb =>
                 {
                     gb.Equal("Country", "USA");
@@ -76,7 +76,7 @@ public class FluentQueryBuilderTests
     public void Where_WithAllFilterOperators_BuildsConditions()
     {
         var options = Query.Create()
-            .Where(f => f
+            .Filter(f => f
                 .Equal("A", "x")
                 .NotEqual("B", "y")
                 .GreaterThan("C", 1)
@@ -312,7 +312,7 @@ public class FluentQueryBuilderTests
     public void FluentQueryBuilder_FullPipeline_BuildsCompleteOptions()
     {
         var options = Query.Create()
-            .Where(f => f.Equal("Status", "Active").GreaterThan("Age", 21))
+            .Filter(f => f.Equal("Status", "Active").GreaterThan("Age", 21))
             .Sort(s => s.Ascending("Name"))
             .Select("Id", "Name", "Email")
             .Include("Orders")

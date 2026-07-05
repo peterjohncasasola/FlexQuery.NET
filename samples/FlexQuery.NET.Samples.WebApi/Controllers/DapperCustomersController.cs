@@ -36,6 +36,7 @@ public sealed class DapperCustomersController(AppDbContext db, IMappingRegistry 
                 opt.MappingRegistry = registry;
                 opt.EntityType = typeof(Customer);
             },
+            cancellationToken: cancellationToken,
             configureExecution: cfg => cfg.Listener = collector);
 
         sw.Stop();

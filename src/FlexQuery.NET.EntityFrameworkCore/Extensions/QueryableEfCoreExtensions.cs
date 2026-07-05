@@ -44,11 +44,11 @@ public static class QueryableEfCoreExtensions
     ///
     /// var result = await _context.Customers
     ///     .ApplyQueryOptions(options)           // WHERE pipeline
-    ///     .ApplyFilteredIncludes(options)       // INCLUDE pipeline
+    ///     .ApplyExpandIncludes(options)       // INCLUDE pipeline
     ///     .ToListAsync();
     /// </code>
     /// </example>
-    public static IQueryable<T> ApplyFilteredIncludes<T>(
+    public static IQueryable<T> ApplyExpandIncludes<T>(
         this IQueryable<T> query,
         QueryOptions options)
         where T : class
@@ -64,8 +64,10 @@ public static class QueryableEfCoreExtensions
     /// <param name="query">The source queryable.</param>
     /// <param name="parameters">The OpenAPI-friendly DTO containing user parameters.</param>
     /// <param name="configure">Optional configuration for server-side security and execution rules.</param>
-    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <param name="cancellationToken">A <see cref="CancellationToken" /> to observe while waiting for the task to complete.</param>
     /// <param name="configureExecution">Optional configuration for the execution pipeline (e.g. event listeners).</param>
+    /// <returns>A paged query result.</returns>
+    /// <exception cref="OperationCanceledException">If the <see cref="CancellationToken" /> is canceled.</exception>
     public static async Task<QueryResult<object>> FlexQueryAsync<T>(
         this IQueryable<T> query,
         FlexQueryParameters parameters,
@@ -87,8 +89,10 @@ public static class QueryableEfCoreExtensions
     /// <param name="query">The source queryable.</param>
     /// <param name="parameters">The OpenAPI-friendly DTO containing user parameters.</param>
     /// <param name="execOptions">Server-side security and execution rules.</param>
-    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <param name="cancellationToken">A <see cref="CancellationToken" /> to observe while waiting for the task to complete.</param>
     /// <param name="configureExecution">Optional configuration for the execution pipeline (e.g. event listeners).</param>
+    /// <returns>A paged query result.</returns>
+    /// <exception cref="OperationCanceledException">If the <see cref="CancellationToken" /> is canceled.</exception>
     public static async Task<QueryResult<object>> FlexQueryAsync<T>(
         this IQueryable<T> query,
         FlexQueryParameters parameters,
@@ -143,8 +147,10 @@ public static class QueryableEfCoreExtensions
     /// <param name="query">The source queryable.</param>
     /// <param name="options">Pre-parsed query options from any adapter or manual construction.</param>
     /// <param name="configure">Optional configuration for server-side security and execution rules.</param>
-    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <param name="cancellationToken">A <see cref="CancellationToken" /> to observe while waiting for the task to complete.</param>
     /// <param name="configureExecution">Optional configuration for the execution pipeline (e.g. event listeners).</param>
+    /// <returns>A paged query result.</returns>
+    /// <exception cref="OperationCanceledException">If the <see cref="CancellationToken" /> is canceled.</exception>
     public static async Task<QueryResult<object>> FlexQueryAsync<T>(
         this IQueryable<T> query,
         QueryOptions options,
@@ -166,8 +172,10 @@ public static class QueryableEfCoreExtensions
     /// <param name="query">The source queryable.</param>
     /// <param name="options">Pre-parsed query options from any adapter or manual construction.</param>
     /// <param name="execOptions">Server-side security and execution rules.</param>
-    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <param name="cancellationToken">A <see cref="CancellationToken" /> to observe while waiting for the task to complete.</param>
     /// <param name="configureExecution">Optional configuration for the execution pipeline (e.g. event listeners).</param>
+    /// <returns>A paged query result.</returns>
+    /// <exception cref="OperationCanceledException">If the <see cref="CancellationToken" /> is canceled.</exception>
     public static async Task<QueryResult<object>> FlexQueryAsync<T>(
         this IQueryable<T> query,
         QueryOptions options,
@@ -275,9 +283,9 @@ public static class QueryableEfCoreExtensions
         filtered = QueryBuilder.ApplyPaging(filtered, options);
 
         // Note: ApplySelect already incorporates FilteredIncludes filters into the projection tree,
-        // so calling ApplyFilteredIncludes here is technically redundant but ensures consistency
+        // so calling ApplyExpandIncludes here is technically redundant but ensures consistency
         // if the projection engine behavior changes.
-        filtered = filtered.ApplyFilteredIncludes(options);
+        filtered = filtered.ApplyExpandIncludes(options);
 
         // Capture SQL for translation event
         if (ctx?.Listener is not null)

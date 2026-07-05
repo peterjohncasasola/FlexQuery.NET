@@ -14,7 +14,7 @@ public sealed class FluentQueryBuilder
     public static implicit operator QueryOptions?(FluentQueryBuilder? builder) => builder?._options;
 
     /// <summary>Sets the filter condition using a <see cref="FilterGroupBuilder"/> lambda.</summary>
-    public FluentQueryBuilder Where(Action<FilterGroupBuilder> configure)
+    public FluentQueryBuilder Filter(Action<FilterGroupBuilder> configure)
     {
         var builder = new FilterGroupBuilder();
         configure(builder);

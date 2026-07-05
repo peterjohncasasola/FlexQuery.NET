@@ -20,8 +20,9 @@ public static class QueryableAspNetCoreExtensions
     /// <param name="query">The source queryable.</param>
     /// <param name="parameters">The OpenAPI-friendly DTO containing user parameters.</param>
     /// <param name="context">The HTTP context containing the resolved execution options (populated by [FieldAccess]).</param>
-    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <param name="cancellationToken">A <see cref="CancellationToken" /> to observe while waiting for the task to complete.</param>
     /// <returns>A task that represents the asynchronous operation, containing the paged query result.</returns>
+    /// <exception cref="OperationCanceledException">If the <see cref="CancellationToken" /> is canceled.</exception>
     public static async Task<QueryResult<object>> FlexQueryAsync<T>(
         this IQueryable<T> query,
         FlexQueryParameters parameters,
