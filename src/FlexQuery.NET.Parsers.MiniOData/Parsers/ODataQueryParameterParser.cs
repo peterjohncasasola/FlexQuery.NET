@@ -55,22 +55,16 @@ public static class ODataQueryParameterParser
             options.Select = ParseSelect(selectValue);
         }
 
-        // $top
+        // $top → page size
         if (normalized.TryGetValue("top", out var topValue) && int.TryParse(topValue, out var top))
         {
             options.Paging.PageSize = top;
-            options.Top = top;
         }
 
-        // $skip
+        // $skip → page number
         if (normalized.TryGetValue("skip", out var skipValue) && int.TryParse(skipValue, out var skip))
         {
-            options.Skip = skip;
-            // Convert skip + top to page number if top is available
-            if (options.Top.HasValue && options.Top.Value > 0)
-            {
-                options.Paging.Page = (skip / options.Top.Value) + 1;
-            }
+            options.Paging.Page = (skip / options.Paging.PageSize) + 1;
         }
 
         // $expand

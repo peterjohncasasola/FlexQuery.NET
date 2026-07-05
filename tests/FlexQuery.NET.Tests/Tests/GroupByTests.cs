@@ -895,12 +895,11 @@ public class GroupByTests : IDisposable
     }
 
     [Fact]
-    public void Normalize_SkipTopMerge_IncludesConsolidation_PipelineProducesCorrectQuery()
+    public void Normalize_IncludesConsolidation_PipelineProducesCorrectQuery()
     {
         var options = new QueryOptions
         {
-            Top = 10,
-            Skip = 20,
+            Paging = { Page = 3, PageSize = 10 },
             Includes = ["Orders"]
         };
 

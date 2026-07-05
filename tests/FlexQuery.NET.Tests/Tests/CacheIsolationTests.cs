@@ -48,7 +48,7 @@ public class CacheIsolationTests
         var options = QueryOptionsParser.Parse(new Dictionary<string, StringValues> { { "filter", "Name:eq:john" } });
         
         // Clone the options
-        var clone = options.Clone();
+        var clone = QueryOptionsExtensions.CopyQueryOptions(options);
         
         // Mutate the clone
         if (clone.Filter != null && clone.Filter.Filters.Count > 0)
@@ -70,7 +70,7 @@ public class CacheIsolationTests
         var options = QueryOptionsParser.Parse(new Dictionary<string, StringValues> { { "filter", "Orders.any(Total:gt:0)" } });
         
         // Clone the options
-        var clone = options.Clone();
+        var clone = QueryOptionsExtensions.CopyQueryOptions(options);
         
         // Mutate the clone's scoped filter if present
         if (clone.Filter?.Filters.Count > 0)

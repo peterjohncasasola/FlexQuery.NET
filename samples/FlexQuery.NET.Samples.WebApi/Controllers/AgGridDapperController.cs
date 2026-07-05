@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Dapper;
+using FlexQuery.NET;
 using FlexQuery.NET.Adapters.AgGrid;
 using FlexQuery.NET.Adapters.AgGrid.Models;
 using FlexQuery.NET.Models;
@@ -52,7 +53,7 @@ public sealed class AgGridDapperController : ControllerBase
             var dataCommand = translator.Translate(options);
             generatedSql = dataCommand.Sql;
 
-            var countOptions = options.Clone();
+            var countOptions = QueryOptionsExtensions.CopyQueryOptions(options);
             countOptions.Paging = new PagingOptions { Disabled = true };
             var countCommand = translator.Translate(countOptions);
 

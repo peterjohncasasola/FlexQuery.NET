@@ -80,7 +80,13 @@ public static class IncludeBuilder
             if (node.Filter is not null)
             {
                 // Build predicate for the element type, then wrap with Where().
-                var predicate = ExpressionBuilder.BuildPredicate(elementType, options.CloneWithFilter(node.Filter));
+                var predicate = ExpressionBuilder.BuildPredicate(elementType, new QueryOptions
+                {
+                    Filter = node.Filter,
+                    CaseInsensitive = options.CaseInsensitive,
+                    EnableCache = options.EnableCache,
+                    UseEfCoreOperators = options.UseEfCoreOperators
+                });
                 if (predicate is not null)
                     navBody = BuildWhereCall(collAccess, navType, elementType, predicate);
             }
@@ -148,7 +154,13 @@ public static class IncludeBuilder
 
             if (node.Filter is not null)
             {
-                var predicate = ExpressionBuilder.BuildPredicate(elementType, options.CloneWithFilter(node.Filter));
+                var predicate = ExpressionBuilder.BuildPredicate(elementType, new QueryOptions
+                {
+                    Filter = node.Filter,
+                    CaseInsensitive = options.CaseInsensitive,
+                    EnableCache = options.EnableCache,
+                    UseEfCoreOperators = options.UseEfCoreOperators
+                });
                 if (predicate is not null)
                     navBody = BuildWhereCall(collAccess, navType, elementType, predicate);
             }

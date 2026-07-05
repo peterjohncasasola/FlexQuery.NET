@@ -25,7 +25,13 @@ internal static class ProjectionEnhancer
     {
         if (collectionFilter is null) return sourceQueryable;
 
-        var predicate = BuildPredicateLambda(elementType, options.CloneWithFilter(collectionFilter));
+        var predicate = BuildPredicateLambda(elementType, new QueryOptions
+        {
+            Filter = collectionFilter,
+            CaseInsensitive = options.CaseInsensitive,
+            EnableCache = options.EnableCache,
+            UseEfCoreOperators = options.UseEfCoreOperators
+        });
         if (predicate is null) return sourceQueryable;
 
         var whereMethod = QueryableWhere.MakeGenericMethod(elementType);

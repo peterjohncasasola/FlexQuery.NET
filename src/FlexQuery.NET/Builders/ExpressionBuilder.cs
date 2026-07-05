@@ -77,7 +77,7 @@ public static class ExpressionBuilder
         if (QueryCacheManager.ShouldCache(options.EnableCache)
             && QueryCacheKeyBuilder.CanCache(options))
         {
-            var key = options.GetCacheKey(elementType, "predicate_dynamic");
+            var key = QueryCacheKeyBuilder.Build(options, elementType, "predicate_dynamic");
             return QueryCacheManager.GetOrAddExpression(key, () => lambda);
         }
 

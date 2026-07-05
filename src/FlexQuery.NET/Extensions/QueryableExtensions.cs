@@ -88,7 +88,7 @@ public static class QueryableExtensions
             || (options.Includes?.Count ?? 0) > 0
             || (options.FilteredIncludes?.Count ?? 0) > 0;
 
-        return query.ApplyFlexQuery(options, hasProjection);
+        return query.ApplyFlexQuery(options, hasProjection, exec);
 
     }
 
@@ -115,18 +115,18 @@ public static class QueryableExtensions
             || (options.Includes?.Count ?? 0) > 0
             || (options.FilteredIncludes?.Count ?? 0) > 0;
 
-        return query.ApplyFlexQuery(options, hasProjection);
+        return query.ApplyFlexQuery(options, hasProjection, exec);
 
     }
 
-    private static QueryResult<object> ApplyFlexQuery<T>(this IQueryable<T> query, QueryOptions options, bool hasProjection)
+    private static QueryResult<object> ApplyFlexQuery<T>(this IQueryable<T> query, QueryOptions options, bool hasProjection, QueryExecutionOptions? execOptions = null)
     {
         var filtered = ApplyFilter(query, options);
         if (options.Distinct == true)
             filtered = Queryable.Distinct(filtered);
 
         filtered = ApplySort(filtered, options);
-        var total = filtered.TryGetTotalCount(options);
+        var total = filtered.TryGetTotalCount(options, execOptions);
 
         Dictionary<string, Dictionary<string, object>>? grandTotals = null;
 
@@ -163,9 +163,9 @@ public static class QueryableExtensions
     }
 
     private static int? TryGetTotalCount<T>(
-        this IQueryable<T> filteredQuery, QueryOptions options)
+        this IQueryable<T> filteredQuery, QueryOptions options, QueryExecutionOptions? execOptions = null)
     {
-        return options.IncludeCount == true 
+        return (options.IncludeCount == true && (execOptions?.IncludeTotalCount ?? true))
             ? filteredQuery.Count() 
             : null;
     }

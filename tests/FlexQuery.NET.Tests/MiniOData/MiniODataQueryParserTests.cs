@@ -153,7 +153,6 @@ public class MiniODataQueryParserTests
         var result = ODataQueryParameterParser.Parse(queryParams);
 
         result.Paging.PageSize.Should().Be(10);
-        result.Top.Should().Be(10);
     }
 
     // ========================
@@ -170,7 +169,7 @@ public class MiniODataQueryParserTests
 
         var result = ODataQueryParameterParser.Parse(queryParams);
 
-        result.Skip.Should().Be(20);
+        result.Paging.Page.Should().Be(2);
     }
 
     [Fact]
@@ -276,7 +275,7 @@ public class MiniODataQueryParserTests
         result.Sort.Should().HaveCount(2);
         result.Select.Should().HaveCount(3);
         result.Paging.PageSize.Should().Be(25);
-        result.Skip.Should().Be(50);
+        result.Paging.Page.Should().Be(3);
         result.Includes.Should().HaveCount(2);
         result.IncludeCount.Should().BeTrue();
     }
@@ -323,6 +322,6 @@ public class MiniODataQueryParserTests
 
         var result = ODataQueryParameterParser.Parse(queryParams);
 
-        result.Top.Should().BeNull();
+        result.Paging.PageSize.Should().Be(20);
     }
 }

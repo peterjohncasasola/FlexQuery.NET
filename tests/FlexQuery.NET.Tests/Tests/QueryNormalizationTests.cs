@@ -209,53 +209,6 @@ public class QueryNormalizationTests
     }
 
     [Fact]
-    public void Normalize_Top_MovesToPagingPageSize()
-    {
-        var options = new QueryOptions { Top = 25 };
-
-        options = options.Normalize();
-
-        options.Paging.PageSize.Should().Be(25);
-        options.Top.Should().BeNull();
-    }
-
-    [Fact]
-    public void Normalize_Skip_ComputesCorrectPagingPage()
-    {
-        var options = new QueryOptions { Skip = 50, Paging = { PageSize = 10 } };
-
-        options = options.Normalize();
-
-        options.Paging.Page.Should().Be(6);
-        options.Paging.PageSize.Should().Be(10);
-        options.Skip.Should().BeNull();
-    }
-
-    [Fact]
-    public void Normalize_SkipWithoutExplicitPageSize_UsesDefaultPageSize()
-    {
-        var options = new QueryOptions { Skip = 20 };
-
-        options = options.Normalize();
-
-        options.Paging.Page.Should().Be(2);
-        options.Skip.Should().BeNull();
-    }
-
-    [Fact]
-    public void Normalize_SkipAndTop_MergeIntoPaging()
-    {
-        var options = new QueryOptions { Skip = 10, Top = 50 };
-
-        options = options.Normalize();
-
-        options.Paging.Page.Should().Be(1);
-        options.Paging.PageSize.Should().Be(50);
-        options.Skip.Should().BeNull();
-        options.Top.Should().BeNull();
-    }
-
-    [Fact]
     public void Normalize_Includes_ConsolidatesIntoFilteredIncludes()
     {
         var options = new QueryOptions { Includes = ["Orders", "Details"] };
@@ -290,21 +243,15 @@ public class QueryNormalizationTests
     {
         var options = new QueryOptions
         {
-            Top = 20,
-            Skip = 10,
             Includes = ["Orders"]
         };
 
         options = options.Normalize();
         var pageSizeAfterFirst = options.Paging.PageSize;
-        var pageAfterFirst = options.Paging.Page;
 
         options = options.Normalize();
 
         options.Paging.PageSize.Should().Be(pageSizeAfterFirst);
-        options.Paging.Page.Should().Be(pageAfterFirst);
-        options.Top.Should().BeNull();
-        options.Skip.Should().BeNull();
         options.Includes.Should().BeNull();
     }
 

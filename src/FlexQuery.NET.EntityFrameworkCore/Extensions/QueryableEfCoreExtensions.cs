@@ -222,7 +222,7 @@ public static class QueryableEfCoreExtensions
         if (options.Distinct == true)
             filtered = filtered.Distinct();
 
-        var total = options.IncludeCount == true ? await filtered.CountAsync(ct) : (int?)null;
+        var total = execOptions?.IncludeTotalCount == true ? await filtered.CountAsync(ct) : (int?)null;
 
         if (options.GroupBy is { Count: > 0 })
         {
@@ -236,7 +236,7 @@ public static class QueryableEfCoreExtensions
                     ctx.CancellationToken);
             }
 
-            var resultCount = options.IncludeCount == true
+            var resultCount = execOptions?.IncludeTotalCount == true
                 ? await CountGroupedQuery(groupedQuery, ct)
                 : (int?)null;
             var data = await ExecuteGroupedQuery(groupedQuery, options, ct);

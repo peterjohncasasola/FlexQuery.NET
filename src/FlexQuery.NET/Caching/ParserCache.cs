@@ -22,7 +22,7 @@ public static class ParserCache
     {
         if (_cache.TryGetValue(key, out var cached))
         {
-            options = cached!.Clone();
+            options = QueryOptionsExtensions.CopyQueryOptions(cached!);
             return true;
         }
 
@@ -38,7 +38,7 @@ public static class ParserCache
     /// <param name="options">The query options to cache.</param>
     public static void Set(ParsedQueryCacheKey key, QueryOptions options)
     {
-        _cache.Set(key, options.Clone());
+        _cache.Set(key, QueryOptionsExtensions.CopyQueryOptions(options));
     }
 
     /// <summary>

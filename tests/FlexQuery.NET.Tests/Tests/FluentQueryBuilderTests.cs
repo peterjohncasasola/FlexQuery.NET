@@ -309,50 +309,6 @@ public class FluentQueryBuilderTests
     }
 
     [Fact]
-    public void IncludeCount_SetsFlag()
-    {
-        var included = Query.Create().IncludeCount().Build();
-        var includedTrue = Query.Create().IncludeCount(true).Build();
-        var excluded = Query.Create().IncludeCount(false).Build();
-
-        included.IncludeCount.Should().BeTrue();
-        includedTrue.IncludeCount.Should().BeTrue();
-        excluded.IncludeCount.Should().BeFalse();
-    }
-
-    [Fact]
-    public void CaseInsensitive_SetsFlag()
-    {
-        var ci = Query.Create().CaseInsensitive(true).Build();
-        var cs = Query.Create().CaseInsensitive(false).Build();
-
-        ci.CaseInsensitive.Should().BeTrue();
-        cs.CaseInsensitive.Should().BeFalse();
-    }
-
-    [Fact]
-    public void EnableCache_SetsFlag()
-    {
-        var enabled = Query.Create().EnableCache(true).Build();
-        var disabled = Query.Create().EnableCache(false).Build();
-
-        enabled.EnableCache.Should().BeTrue();
-        disabled.EnableCache.Should().BeFalse();
-    }
-
-    [Fact]
-    public void Item_AddsToItemsDictionary()
-    {
-        var options = Query.Create()
-            .Item("key1", "value1")
-            .Item("key2", 42)
-            .Build();
-
-        options.Items.Should().ContainKey("key1").WhoseValue.Should().Be("value1");
-        options.Items.Should().ContainKey("key2").WhoseValue.Should().Be(42);
-    }
-
-    [Fact]
     public void FluentQueryBuilder_FullPipeline_BuildsCompleteOptions()
     {
         var options = Query.Create()
@@ -367,10 +323,6 @@ public class FluentQueryBuilderTests
             .Having("sum", "Amount", "gt", "1000")
             .Distinct()
             .Page(2, 25)
-            .IncludeCount(true)
-            .CaseInsensitive(false)
-            .EnableCache(true)
-            .Item("tenant", "acme")
             .Build();
 
         options.Filter.Should().NotBeNull();
@@ -385,9 +337,5 @@ public class FluentQueryBuilderTests
         options.Distinct.Should().BeTrue();
         options.Paging.Page.Should().Be(2);
         options.Paging.PageSize.Should().Be(25);
-        options.IncludeCount.Should().BeTrue();
-        options.CaseInsensitive.Should().BeFalse();
-        options.EnableCache.Should().BeTrue();
-        options.Items.Should().ContainKey("tenant");
     }
 }

@@ -136,9 +136,8 @@ public static class QueryOptionsExtensions
     /// The original instance is not modified.
     /// Performs the following normalizations:
     /// <list type="bullet">
-    ///   <item>Filter AST canonicalization (existing)</item>
-    ///   <item>Skip/Top → Paging merge (Skip and Top are deprecated)</item>
-    ///   <item>Includes → FilteredIncludes consolidation (Includes is deprecated)</item>
+    ///   <item>Filter AST canonicalization</item>
+    ///   <item>Includes → FilteredIncludes consolidation</item>
     /// </list>
     /// </remarks>
     /// <param name="options">The query options to normalize.</param>
@@ -149,22 +148,10 @@ public static class QueryOptionsExtensions
 
         var result = CopyQueryOptions(options);
 
-        // 1. Filter AST normalization (existing)
+        // 1. Filter AST normalization
         result.Filter = FilterNormalizer.Normalize(result.Filter);
 
-        // 2. Skip/Top → Paging merge
-        if (result.Top.HasValue)
-        {
-            result.Paging.PageSize = result.Top.Value;
-            result.Top = null;
-        }
-        if (result.Skip.HasValue)
-        {
-            result.Paging.Page = (result.Skip.Value / result.Paging.PageSize) + 1;
-            result.Skip = null;
-        }
-
-        // 3. Includes → FilteredIncludes consolidation
+        // 2. Includes → FilteredIncludes consolidation
         if (result.Includes?.Count > 0)
         {
             if (result.FilteredIncludes == null)
@@ -193,7 +180,7 @@ public static class QueryOptionsExtensions
         return result;
     }
 
-    private static QueryOptions CopyQueryOptions(QueryOptions source)
+    public static QueryOptions CopyQueryOptions(QueryOptions source)
     {
         var copy = new QueryOptions
         {
@@ -207,8 +194,6 @@ public static class QueryOptionsExtensions
             Aggregates = source.Aggregates.Select(CloneAggregateModel).ToList(),
             Having = CloneHavingCondition(source.Having),
             Distinct = source.Distinct,
-            Top = source.Top,
-            Skip = source.Skip,
             SelectTree = source.SelectTree,
             Paging = new PagingOptions { Page = source.Paging.Page, PageSize = source.Paging.PageSize, Disabled = source.Paging.Disabled },
             IncludeCount = source.IncludeCount,
@@ -279,4 +264,19 @@ public static class QueryOptionsExtensions
                 Operator = having.Operator,
                 Value = having.Value
             };
+
+    /// <summary>
+    /// Generates a stable cache key for the query execution pipeline.
+    /// </summary>
+    /// <param name="options">The query options to generate a key for.</param>
+    /// <param name="entityType">The entity type being queried.</param>
+    /// <param name="operation">The name of the query operation (e.g., "predicate", "projection").</param>
+    /// <returns>A string representing the cache key for this query configuration.</returns>
+    public static string GetCacheKey(
+        this QueryOptions options,
+        Type entityType,
+        string operation)
+    {
+        return QueryCacheKeyBuilder.Build(options, entityType, operation);
+    }
 }
