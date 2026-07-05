@@ -1,5 +1,4 @@
 using FlexQuery.NET.Models;
-using Microsoft.Extensions.Primitives;
 
 namespace FlexQuery.NET.Parsers.MiniOData;
 
@@ -28,82 +27,37 @@ public static class ODataQueryParameterParser
     /// Parses OData-style query string parameters into a <see cref="QueryOptions"/>.
     /// Accepts both <c>$filter</c> and <c>filter</c> key formats.
     /// </summary>
-    /// <param name="queryParams">Dictionary of query string parameter key-value pairs.</param>
+    /// <param name="request">Dictionary of query string parameter key-value pairs.</param>
     /// <returns>A <see cref="QueryOptions"/> populated from the OData-style parameters.</returns>
-    public static QueryOptions Parse(IDictionary<string, string> queryParams)
+    public static QueryOptions Parse(MiniODataRequest request)
     {
-        ArgumentNullException.ThrowIfNull(queryParams);
+        ArgumentNullException.ThrowIfNull(request);
 
         var options = new QueryOptions();
-        var normalized = NormalizeKeys(queryParams);
 
-        // $filter
-        if (normalized.TryGetValue("filter", out var filterValue) && !string.IsNullOrWhiteSpace(filterValue))
-        {
-            options.Filter = ODataFilterParser.Parse(filterValue);
-        }
+        if (!string.IsNullOrWhiteSpace(request.Filter))
+            options.Filter = ODataFilterParser.Parse(request.Filter);
 
-        // $orderby
-        if (normalized.TryGetValue("orderby", out var orderByValue) && !string.IsNullOrWhiteSpace(orderByValue))
-        {
-            options.Sort = ParseOrderBy(orderByValue);
-        }
+        if (!string.IsNullOrWhiteSpace(request.OrderBy))
+            options.Sort = ParseOrderBy(request.OrderBy);
 
-        // $select
-        if (normalized.TryGetValue("select", out var selectValue) && !string.IsNullOrWhiteSpace(selectValue))
-        {
-            options.Select = ParseSelect(selectValue);
-        }
+        if (!string.IsNullOrWhiteSpace(request.Select))
+            options.Select = ParseSelect(request.Select);
 
-        // $top → page size
-        if (normalized.TryGetValue("top", out var topValue) && int.TryParse(topValue, out var top))
-        {
-            options.Paging.PageSize = top;
-        }
+        if (!string.IsNullOrWhiteSpace(request.Expand))
+            options.Includes = ParseExpand(request.Expand);
 
-        // $skip → page number
-        if (normalized.TryGetValue("skip", out var skipValue) && int.TryParse(skipValue, out var skip))
-        {
-            options.Paging.Page = (skip / options.Paging.PageSize) + 1;
-        }
+        if (request.Top.HasValue)
+            options.Paging.PageSize = request.Top.Value;
 
-        // $expand
-        if (normalized.TryGetValue("expand", out var expandValue) && !string.IsNullOrWhiteSpace(expandValue))
-        {
-            options.Includes = ParseExpand(expandValue);
-        }
+        if (request is { Skip: not null, Top: not null })
+            options.Paging.Page = (request.Skip.Value / request.Top.Value) + 1;
 
-        // $count
-        if (normalized.TryGetValue("count", out var countValue))
-        {
-            if (bool.TryParse(countValue, out var includeCount))
-            {
-                options.IncludeCount = includeCount;
-            }
-        }
+        if (request.Count.HasValue)
+            options.IncludeCount = request.Count.Value;
 
         return options;
     }
-
-    /// <summary>
-    /// Parses OData-style query string from <see cref="StringValues"/> (ASP.NET Core compatible).
-    /// </summary>
-    public static QueryOptions Parse(IDictionary<string, StringValues> queryParams)
-    {
-        ArgumentNullException.ThrowIfNull(queryParams);
-
-        var dict = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-        foreach (var kv in queryParams)
-        {
-            var value = kv.Value.ToString();
-            if (!string.IsNullOrEmpty(value))
-                dict[kv.Key] = value;
-        }
-
-        return Parse(dict);
-    }
-
-    // ── OrderBy Parsing ─────────────────────────────────────────────────
 
     private static List<SortNode> ParseOrderBy(string orderBy)
     {
@@ -114,7 +68,7 @@ public static class ODataQueryParameterParser
             var parts = segment.Split(' ', StringSplitOptions.RemoveEmptyEntries);
             if (parts.Length == 0) continue;
 
-            var field = parts[0].Replace('/', '.'); // OData uses / for path separators
+            var field = parts[0].Replace('/', '.');
 
             var descending = parts.Length > 1
                              && parts[1].Equals("desc", StringComparison.OrdinalIgnoreCase);
@@ -129,8 +83,6 @@ public static class ODataQueryParameterParser
         return sorts;
     }
 
-    // ── Select Parsing ──────────────────────────────────────────────────
-
     private static List<string> ParseSelect(string select)
     {
         return select
@@ -139,33 +91,11 @@ public static class ODataQueryParameterParser
             .ToList();
     }
 
-    // ── Expand Parsing ──────────────────────────────────────────────────
-
     private static List<string> ParseExpand(string expand)
     {
         return expand
             .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
             .Select(e => e.Replace('/', '.'))
             .ToList();
-    }
-
-    // ── Key Normalization ───────────────────────────────────────────────
-
-    /// <summary>
-    /// Normalizes query parameter keys by stripping the <c>$</c> prefix
-    /// and converting to lowercase for consistent lookup.
-    /// </summary>
-    private static Dictionary<string, string> NormalizeKeys(IDictionary<string, string> source)
-    {
-        var result = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-
-        foreach (var kv in source)
-        {
-            var key = kv.Key.TrimStart('$').Trim();
-            if (!string.IsNullOrEmpty(key))
-                result[key] = kv.Value;
-        }
-
-        return result;
     }
 }

@@ -117,7 +117,7 @@ public static class QueryOptionsExtensions
     /// </summary>
     /// <param name="options">The query options to check.</param>
     /// <returns><c>true</c> if the options specify a projection; otherwise, <c>false</c>.</returns>
-    public static bool HasProjection(this QueryOptions options)
+    internal static bool HasProjection(this QueryOptions options)
     {
         return (options.Select?.Count ?? 0) > 0
                || options.SelectTree is not null

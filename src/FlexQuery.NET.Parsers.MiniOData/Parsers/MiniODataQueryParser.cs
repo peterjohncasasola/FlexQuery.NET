@@ -2,18 +2,12 @@ using FlexQuery.NET.Models;
 
 namespace FlexQuery.NET.Parsers.MiniOData;
 
-/// <summary>
-/// Implementation of <see cref="IQueryParser"/> for OData-compatible syntax.
-/// </summary>
 public sealed class MiniODataQueryParser : IQueryParser
 {
-    /// <inheritdoc />
     public QuerySyntax Syntax => QuerySyntax.MiniOData;
 
-    /// <inheritdoc />
     public bool CanParse(FlexQueryParameters parameters)
     {
-        // Detect OData by checking for $ prefix in any raw parameter keys.
         if (parameters.RawParameters != null)
         {
             foreach (var key in parameters.RawParameters.Keys)
@@ -22,12 +16,10 @@ public sealed class MiniODataQueryParser : IQueryParser
             }
         }
 
-        // Also check if Filter string looks like OData (e.g., contains ' eq ')
-        // though this is less reliable than key detection.
         if (!string.IsNullOrWhiteSpace(parameters.Filter))
         {
             var f = parameters.Filter;
-            if (f.Contains(" eq ", StringComparison.OrdinalIgnoreCase) || 
+            if (f.Contains(" eq ", StringComparison.OrdinalIgnoreCase) ||
                 f.Contains(" ne ", StringComparison.OrdinalIgnoreCase) ||
                 f.Contains("contains(", StringComparison.OrdinalIgnoreCase))
             {
@@ -38,32 +30,47 @@ public sealed class MiniODataQueryParser : IQueryParser
         return false;
     }
 
-    /// <inheritdoc />
     public QueryOptions Parse(FlexQueryParameters parameters)
     {
-        // If we have raw parameters (ideal for OData), use them.
-        if (parameters.RawParameters != null && parameters.RawParameters.Count > 0)
-        {
-            return ODataQueryParameterParser.Parse(parameters.RawParameters);
-        }
+        var request = CreateRequest(parameters);
+        return ODataQueryParameterParser.Parse(request);
+    }
 
-        // Otherwise, map from FlexQueryParameters properties.
-        var dict = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-        
-        if (!string.IsNullOrWhiteSpace(parameters.Filter)) dict["filter"] = parameters.Filter;
-        if (!string.IsNullOrWhiteSpace(parameters.Sort)) dict["orderby"] = parameters.Sort;
-        if (!string.IsNullOrWhiteSpace(parameters.Select)) dict["select"] = parameters.Select;
-        if (!string.IsNullOrWhiteSpace(parameters.Include)) dict["expand"] = parameters.Include;
-        
-        if (parameters.PageSize.HasValue) dict["top"] = parameters.PageSize.Value.ToString();
-        if (parameters.Page.HasValue && parameters.PageSize.HasValue)
+    private static MiniODataRequest CreateRequest(FlexQueryParameters parameters)
+    {
+        var raw = parameters.RawParameters;
+        if (raw is not { Count: > 0 })
+            return new MiniODataRequest
+            {
+                Filter = parameters.Filter,
+                OrderBy = parameters.Sort,
+                Select = parameters.Select,
+                Expand = parameters.Include,
+                Top = parameters.PageSize,
+                Skip = parameters.Page.HasValue && parameters.PageSize.HasValue
+                    ? (parameters.Page.Value - 1) * parameters.PageSize.Value
+                    : null,
+                Count = parameters.IncludeCount
+            };
+        var request = new MiniODataRequest
         {
-            var skip = (parameters.Page.Value - 1) * parameters.PageSize.Value;
-            dict["skip"] = skip.ToString();
-        }
-        
-        if (parameters.IncludeCount.HasValue) dict["count"] = parameters.IncludeCount.Value.ToString().ToLowerInvariant();
+            Filter = raw.TryGetValue("$filter", out var f) ? f : null,
+            OrderBy = raw.TryGetValue("$orderby", out var ob) ? ob : null,
+            Select = raw.TryGetValue("$select", out var s) ? s : null,
+            Expand = raw.TryGetValue("$expand", out var e) ? e : null,
+            Apply = raw.TryGetValue("$apply", out var a) ? a : null
+        };
 
-        return ODataQueryParameterParser.Parse(dict);
+        if (raw.TryGetValue("$top", out var topStr) && int.TryParse(topStr, out var top))
+            request.Top = top;
+
+        if (raw.TryGetValue("$skip", out var skipStr) && int.TryParse(skipStr, out var skip))
+            request.Skip = skip;
+
+        if (raw.TryGetValue("$count", out var countStr) && bool.TryParse(countStr, out var count))
+            request.Count = count;
+
+        return request;
+
     }
 }

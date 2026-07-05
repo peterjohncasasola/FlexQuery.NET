@@ -172,7 +172,7 @@ public class GroupedQueryExecutionTests : IDisposable
     {
         return _connection.FlexQueryAsync<object>(
             options,
-            new DapperQueryOptions
+            dapperQueryOptions: new DapperQueryOptions
             {
                 Dialect = new SqliteDialect(),
                 MappingRegistry = _registry,

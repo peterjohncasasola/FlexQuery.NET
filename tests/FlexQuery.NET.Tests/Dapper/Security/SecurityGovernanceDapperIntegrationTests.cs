@@ -445,7 +445,7 @@ public class SecurityGovernanceDapperIntegrationTests
 
         var result = await connection.FlexQueryAsync<object>(
             options,
-            new DapperQueryOptions(execOptions)
+            dapperQueryOptions: new DapperQueryOptions(execOptions)
             {
                 Dialect = new SqliteDialect(),
                 MappingRegistry = CreateOrderRegistry(),
@@ -507,7 +507,7 @@ public class SecurityGovernanceDapperIntegrationTests
 
         var result = await connection.FlexQueryAsync<object>(
             options,
-            new DapperQueryOptions(execOptions)
+            dapperQueryOptions: new DapperQueryOptions(execOptions)
             {
                 Dialect = new SqliteDialect(),
                 MappingRegistry = CreateOrderRegistry(),
@@ -544,7 +544,7 @@ public class SecurityGovernanceDapperIntegrationTests
 
         var act = async () => await connection.FlexQueryAsync<object>(
             options,
-            new DapperQueryOptions(execOptions)
+            dapperQueryOptions: new DapperQueryOptions(execOptions)
             {
                 Dialect = new SqliteDialect(),
                 MappingRegistry = CreateOrderRegistry(),
@@ -574,7 +574,7 @@ public class SecurityGovernanceDapperIntegrationTests
 
         var act = async () => await connection.FlexQueryAsync<object>(
             options,
-            new DapperQueryOptions(execOptions)
+            dapperQueryOptions: new DapperQueryOptions(execOptions)
             {
                 Dialect = new SqliteDialect(),
                 MappingRegistry = CreateOrderRegistry(),
@@ -606,7 +606,7 @@ public class SecurityGovernanceDapperIntegrationTests
 
         var act = async () => await connection.FlexQueryAsync<object>(
             options,
-            new DapperQueryOptions(execOptions)
+            dapperQueryOptions: new DapperQueryOptions(execOptions)
             {
                 Dialect = new SqliteDialect(),
                 MappingRegistry = CreateOrderRegistry(),
@@ -639,7 +639,7 @@ public class SecurityGovernanceDapperIntegrationTests
 
         var act = async () => await connection.FlexQueryAsync<object>(
             options,
-            new DapperQueryOptions(execOptions)
+            dapperQueryOptions: new DapperQueryOptions(execOptions)
             {
                 Dialect = new SqliteDialect(),
                 MappingRegistry = CreateOrderRegistry(),
@@ -674,7 +674,7 @@ public class SecurityGovernanceDapperIntegrationTests
 
         var result = await connection.FlexQueryAsync<object>(
             options,
-            new DapperQueryOptions(execOptions)
+            dapperQueryOptions: new DapperQueryOptions(execOptions)
             {
                 Dialect = new SqliteDialect(),
                 MappingRegistry = CreateOrderRegistry(),
@@ -721,7 +721,7 @@ public class SecurityGovernanceDapperIntegrationTests
 
         var result = await conn.FlexQueryAsync<object>(
             options,
-            new DapperQueryOptions(execOptions)
+            dapperQueryOptions: new DapperQueryOptions(execOptions)
             {
                 Dialect = new SqliteDialect(),
                 MappingRegistry = reg,

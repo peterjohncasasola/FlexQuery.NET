@@ -23,7 +23,7 @@ public sealed class DapperCustomersController(AppDbContext db, IMappingRegistry 
         [FromQuery] FlexQueryParameters parameters,
         CancellationToken cancellationToken)
     {
-        var options = QueryOptionsParser.Parse(parameters);
+        var options = parameters.ToQueryOptions();
         var connection = db.Database.GetDbConnection();
 
         var collector = new FlexQueryDiagnosticsCollector();

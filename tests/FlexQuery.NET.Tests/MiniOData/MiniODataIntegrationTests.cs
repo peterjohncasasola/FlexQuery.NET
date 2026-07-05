@@ -1,9 +1,6 @@
 using FlexQuery.NET.Models;
 using FlexQuery.NET.Parsers;
 using FlexQuery.NET.Parsers.MiniOData;
-using FluentAssertions;
-using Microsoft.Extensions.DependencyInjection;
-using FlexQuery.NET.Parsers.MiniOData.Extensions;
 
 namespace FlexQuery.NET.Tests.MiniOData;
 

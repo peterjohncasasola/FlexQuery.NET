@@ -1,7 +1,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using FlexQuery.NET.Parsers;
 
-namespace FlexQuery.NET.Parsers.MiniOData.Extensions;
+namespace FlexQuery.NET.Parsers.MiniOData;
 
 /// <summary>
 /// Extension methods for registering FlexQuery.NET Mini OData services.
