@@ -51,7 +51,6 @@ public sealed class DslQueryParser : IQueryParser
         {
             var ast = DslAstParser.Parse(filterVal);
             options.Filter = DslFilterConverter.ToFilterGroup(ast);
-            options.Ast = ast;
 
             if (parameters.RawParameters is null)
             {

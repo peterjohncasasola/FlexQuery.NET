@@ -101,7 +101,7 @@ public static class QueryableEfCoreExtensions
 
         QueryOptionsEfCoreExtensions.EnsureEfCoreOperatorsRegistered();
 
-        options.Normalize();
+        options = options.Normalize();
         options.ValidateOrThrow<T>(execOptions);
 
         var execConfig = new FlexQueryExecutionConfig();
@@ -182,7 +182,7 @@ public static class QueryableEfCoreExtensions
 
         QueryOptionsEfCoreExtensions.EnsureEfCoreOperatorsRegistered();
 
-        options.Normalize();
+        options = options.Normalize();
         options.ValidateOrThrow<T>(execOptions);
 
         var execConfig = new FlexQueryExecutionConfig();

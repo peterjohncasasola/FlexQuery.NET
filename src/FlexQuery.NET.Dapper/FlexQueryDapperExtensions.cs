@@ -86,7 +86,7 @@ public static class FlexQueryDapperExtensions
         SetEntityType(parsedOptions, typeof(T), dapperOptions);
 
         var execOptions = dapperOptions.ToQueryExecutionOptions();
-        parsedOptions.Normalize();
+        parsedOptions = parsedOptions.Normalize();
         parsedOptions.ValidateOrThrow(dapperOptions.EntityType ?? typeof(T), execOptions);
 
         var execConfig = new FlexQueryExecutionConfig();
@@ -185,7 +185,7 @@ public static class FlexQueryDapperExtensions
         SetEntityType(options, typeof(T), dapperOptions);
 
         var execOptions = dapperOptions.ToQueryExecutionOptions();
-        options.Normalize();
+        options = options.Normalize();
         options.ValidateOrThrow(dapperOptions.EntityType ?? typeof(T), execOptions);
 
         var execConfig = new FlexQueryExecutionConfig();

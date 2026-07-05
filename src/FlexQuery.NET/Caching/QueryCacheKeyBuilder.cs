@@ -27,7 +27,7 @@ internal static class QueryCacheKeyBuilder
             .Append("aggregates=").Append(AggregateKey(options.Aggregates)).Append('|')
             .Append("having=").Append(HavingKey(options.Having)).Append('|')
             .Append("distinct=").Append(options.Distinct).Append('|')
-            .Append("efCoreOperators=").Append(options.Items.ContainsKey("__EfCoreOperators")).Append('|')
+            .Append("efCoreOperators=").Append(options.UseEfCoreOperators).Append('|')
             .Append("exprMappings=").Append(ExpressionMappingsKey(options));
 
         return sb.ToString();

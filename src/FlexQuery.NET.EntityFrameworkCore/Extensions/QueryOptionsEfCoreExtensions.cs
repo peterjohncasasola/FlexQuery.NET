@@ -10,8 +10,6 @@ namespace FlexQuery.NET.EntityFrameworkCore;
 /// </summary>
 public static class QueryOptionsEfCoreExtensions
 {
-    private const string EfCoreOperatorsMarker = "__EfCoreOperators";
-
     /// <summary>
     /// Registers EF Core-specific operator handlers (e.g., LIKE via EF.Functions.Like)
     /// on the current options instance and returns it for chaining.
@@ -19,7 +17,7 @@ public static class QueryOptionsEfCoreExtensions
     public static QueryOptions UseEfCoreOperators(this QueryOptions options)
     {
         EnsureEfCoreOperatorsRegistered();
-        options.Items[EfCoreOperatorsMarker] = true;
+        options.UseEfCoreOperators = true;
         return options;
     }
 

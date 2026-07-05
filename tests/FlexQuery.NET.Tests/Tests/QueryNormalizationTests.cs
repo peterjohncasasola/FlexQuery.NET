@@ -27,7 +27,9 @@ public class QueryNormalizationTests
             {
                 Filters = [new FilterCondition { Field = "name", Operator = "eq", Value = "John" }, new FilterCondition { Field = "age", Operator = "gt", Value = "18" }]
             }
-        }.Normalize();
+        };
+
+        first = first.Normalize();
 
         var second = new QueryOptions
         {
@@ -93,7 +95,7 @@ public class QueryNormalizationTests
             }
         };
 
-        options.Normalize();
+        options = options.Normalize();
 
         options.Filter.Should().NotBeNull();
         options.Filter!.Filters.Select(f => f.Field).Should().ContainInOrder("age", "name");
@@ -211,7 +213,7 @@ public class QueryNormalizationTests
     {
         var options = new QueryOptions { Top = 25 };
 
-        options.Normalize();
+        options = options.Normalize();
 
         options.Paging.PageSize.Should().Be(25);
         options.Top.Should().BeNull();
@@ -222,7 +224,7 @@ public class QueryNormalizationTests
     {
         var options = new QueryOptions { Skip = 50, Paging = { PageSize = 10 } };
 
-        options.Normalize();
+        options = options.Normalize();
 
         options.Paging.Page.Should().Be(6);
         options.Paging.PageSize.Should().Be(10);
@@ -234,7 +236,7 @@ public class QueryNormalizationTests
     {
         var options = new QueryOptions { Skip = 20 };
 
-        options.Normalize();
+        options = options.Normalize();
 
         options.Paging.Page.Should().Be(2);
         options.Skip.Should().BeNull();
@@ -245,7 +247,7 @@ public class QueryNormalizationTests
     {
         var options = new QueryOptions { Skip = 10, Top = 50 };
 
-        options.Normalize();
+        options = options.Normalize();
 
         options.Paging.Page.Should().Be(1);
         options.Paging.PageSize.Should().Be(50);
@@ -258,7 +260,7 @@ public class QueryNormalizationTests
     {
         var options = new QueryOptions { Includes = ["Orders", "Details"] };
 
-        options.Normalize();
+        options = options.Normalize();
 
         options.FilteredIncludes.Should().HaveCount(2);
         options.FilteredIncludes.Should().Contain(i => i.Path == "Orders");
@@ -275,7 +277,7 @@ public class QueryNormalizationTests
             FilteredIncludes = [new IncludeNode { Path = "Orders", Filter = new FilterGroup { Filters = [new FilterCondition { Field = "Status", Operator = "eq", Value = "Open" }] } }]
         };
 
-        options.Normalize();
+        options = options.Normalize();
 
         options.FilteredIncludes.Should().HaveCount(2);
         options.FilteredIncludes.Should().ContainSingle(i => i.Path == "Orders" && i.Filter != null);
@@ -293,11 +295,11 @@ public class QueryNormalizationTests
             Includes = ["Orders"]
         };
 
-        options.Normalize();
+        options = options.Normalize();
         var pageSizeAfterFirst = options.Paging.PageSize;
         var pageAfterFirst = options.Paging.Page;
 
-        options.Normalize();
+        options = options.Normalize();
 
         options.Paging.PageSize.Should().Be(pageSizeAfterFirst);
         options.Paging.Page.Should().Be(pageAfterFirst);
@@ -314,7 +316,7 @@ public class QueryNormalizationTests
             Paging = { Page = 3, PageSize = 25 }
         };
 
-        options.Normalize();
+        options = options.Normalize();
 
         options.Paging.Page.Should().Be(3);
         options.Paging.PageSize.Should().Be(25);

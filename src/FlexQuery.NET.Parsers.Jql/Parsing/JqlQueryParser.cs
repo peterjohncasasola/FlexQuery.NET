@@ -97,7 +97,6 @@ public sealed class JqlQueryParser : IQueryParser
         {
             var ast = JqlAstParser.Parse(parameters.Filter);
             options.Filter = JqlFilterConverter.ToFilterGroup(ast);
-            options.Ast = ast;
             options.Filter = FilterNormalizer.NormalizeOrder(options.Filter);
         }
         return options;

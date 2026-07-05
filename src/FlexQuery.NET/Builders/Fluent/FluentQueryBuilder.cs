@@ -132,6 +132,7 @@ public sealed class FluentQueryBuilder
     }
 
     /// <summary>Controls whether the total count is included in the result.</summary>
+    [Obsolete("Use WithOptions(o => o.UseQueryExecutionOptions(...)) instead. Will be removed in a future version.")]
     public FluentQueryBuilder IncludeCount(bool value = true)
     {
         _options.IncludeCount = value;
@@ -139,6 +140,7 @@ public sealed class FluentQueryBuilder
     }
 
     /// <summary>Sets whether string comparisons are case-insensitive.</summary>
+    [Obsolete("Use WithOptions(o => o.UseQueryExecutionOptions(...)) instead. Will be removed in a future version.")]
     public FluentQueryBuilder CaseInsensitive(bool value)
     {
         _options.CaseInsensitive = value;
@@ -146,6 +148,7 @@ public sealed class FluentQueryBuilder
     }
 
     /// <summary>Enables or disables expression caching.</summary>
+    [Obsolete("Use WithOptions(o => o.UseQueryExecutionOptions(...)) instead. Will be removed in a future version.")]
     public FluentQueryBuilder EnableCache(bool value)
     {
         _options.EnableCache = value;
@@ -153,17 +156,11 @@ public sealed class FluentQueryBuilder
     }
 
     /// <summary>Adds a metadata item to the Items dictionary.</summary>
+    [Obsolete("Use WithOptions(o => o.Item(key, value)) instead. Will be removed in a future version.")]
     public FluentQueryBuilder Item(string key, object? value)
     {
         _options.Items[key] = value!;
         return this;
     }
 
-    /// <summary>Sets the debug AST object. Use Item() instead.</summary>
-    [Obsolete("Use Item(key, value) instead. Will be removed in v1.0.", error: false)]
-    public FluentQueryBuilder Ast(object? value)
-    {
-        _options.Ast = value;
-        return this;
-    }
 }

@@ -132,6 +132,8 @@ public static class QueryOptionsExtensions
     /// semantic comparison, and consistent pipeline processing.
     /// </summary>
     /// <remarks>
+    /// Returns a new <see cref="QueryOptions"/> instance with normalized state.
+    /// The original instance is not modified.
     /// Performs the following normalizations:
     /// <list type="bullet">
     ///   <item>Filter AST canonicalization (existing)</item>
@@ -140,95 +142,141 @@ public static class QueryOptionsExtensions
     /// </list>
     /// </remarks>
     /// <param name="options">The query options to normalize.</param>
-    /// <returns>The same <see cref="QueryOptions"/> instance with normalized state.</returns>
+    /// <returns>A new <see cref="QueryOptions"/> instance with normalized state.</returns>
     public static QueryOptions Normalize(this QueryOptions options)
     {
         ArgumentNullException.ThrowIfNull(options);
 
+        var result = CopyQueryOptions(options);
+
         // 1. Filter AST normalization (existing)
-        options.Filter = FilterNormalizer.Normalize(options.Filter);
+        result.Filter = FilterNormalizer.Normalize(result.Filter);
 
         // 2. Skip/Top → Paging merge
-        if (options.Top.HasValue)
+        if (result.Top.HasValue)
         {
-            options.Paging.PageSize = options.Top.Value;
-            options.Top = null;
+            result.Paging.PageSize = result.Top.Value;
+            result.Top = null;
         }
-        if (options.Skip.HasValue)
+        if (result.Skip.HasValue)
         {
-            options.Paging.Page = (options.Skip.Value / options.Paging.PageSize) + 1;
-            options.Skip = null;
+            result.Paging.Page = (result.Skip.Value / result.Paging.PageSize) + 1;
+            result.Skip = null;
         }
 
         // 3. Includes → FilteredIncludes consolidation
-        if (options.Includes?.Count > 0)
+        if (result.Includes?.Count > 0)
         {
-            if (options.FilteredIncludes == null)
+            if (result.FilteredIncludes == null)
             {
-                options.FilteredIncludes = options.Includes
+                result.FilteredIncludes = result.Includes
                     .Select(path => new IncludeNode { Path = path })
                     .ToList();
             }
             else
             {
-                var existing = new HashSet<string>(
-                    options.FilteredIncludes.Select(i => i.Path),
+                var existingPathSet = new HashSet<string>(
+                    result.FilteredIncludes.Select(i => i.Path),
                     StringComparer.OrdinalIgnoreCase);
-                foreach (var inc in options.Includes)
+                foreach (var inc in result.Includes)
                 {
-                    if (!existing.Contains(inc))
+                    if (!existingPathSet.Contains(inc))
                     {
-                        options.FilteredIncludes.Add(new IncludeNode { Path = inc });
-                        existing.Add(inc);
+                        result.FilteredIncludes.Add(new IncludeNode { Path = inc });
+                        existingPathSet.Add(inc);
                     }
                 }
             }
-            options.Includes = null;
+            result.Includes = null;
         }
 
-        return options;
+        return result;
     }
 
-    /// <summary>
-    /// Normalizes the filter AST structural ordering while preserving original casing.
-    /// Useful for UI display scenarios.
-    /// </summary>
-    /// <param name="options">The query options to normalize.</param>
-    /// <returns>The same <see cref="QueryOptions"/> instance with its filter order normalized.</returns>
-    [Obsolete("Use Normalize() instead. NormalizeOrder is unused by any pipeline.", error: false)]
-    public static QueryOptions NormalizeOrder(this QueryOptions options)
+    private static QueryOptions CopyQueryOptions(QueryOptions source)
     {
-        if (options.Filter is not null)
+        var copy = new QueryOptions
         {
-            options.Filter = FilterNormalizer.NormalizeOrder(options.Filter);
+            Filter = CopyFilterGroup(source.Filter),
+            Sort = source.Sort.Select(CloneSortNode).ToList(),
+            Select = source.Select?.ToList(),
+            Includes = source.Includes?.ToList(),
+            FilteredIncludes = source.FilteredIncludes?.Select(CloneIncludeNode).ToList(),
+            ProjectionMode = source.ProjectionMode,
+            GroupBy = source.GroupBy?.ToList(),
+            Aggregates = source.Aggregates.Select(CloneAggregateModel).ToList(),
+            Having = CloneHavingCondition(source.Having),
+            Distinct = source.Distinct,
+            Top = source.Top,
+            Skip = source.Skip,
+            SelectTree = source.SelectTree,
+            Paging = new PagingOptions { Page = source.Paging.Page, PageSize = source.Paging.PageSize, Disabled = source.Paging.Disabled },
+            IncludeCount = source.IncludeCount,
+            CaseInsensitive = source.CaseInsensitive,
+            EnableCache = source.EnableCache,
+            UseEfCoreOperators = source.UseEfCoreOperators
+        };
+
+        foreach (var kv in source.Items)
+        {
+            copy.Items[kv.Key] = kv.Value;
         }
 
-        return options;
+        return copy;
     }
 
-    /// <summary>
-    /// Generates SHA256 fingerprint for distributed cache scenarios.
-    /// </summary>
-    /// <param name="options">The query options to generate a hash for.</param>
-    /// <returns>A hex string representing the SHA256 hash of the normalized filter.</returns>
-    [Obsolete("Use GetCacheKey() instead for distributed cache scenarios.", error: false)]
-    public static string GetQueryHash(this QueryOptions options)
+    private static FilterGroup? CopyFilterGroup(FilterGroup? group)
     {
-        return FilterNormalizer.GenerateHash(options.Filter);
+        if (group is null) return null;
+        return new FilterGroup
+        {
+            Logic = group.Logic,
+            IsNegated = group.IsNegated,
+            Filters = group.Filters.Select(f => new FilterCondition
+            {
+                Field = f.Field,
+                Operator = f.Operator,
+                Value = f.Value,
+                IsNegated = f.IsNegated,
+                ScopedFilter = CopyFilterGroup(f.ScopedFilter)
+            }).ToList(),
+            Groups = group.Groups.Select(g => CopyFilterGroup(g)!).ToList()
+        };
     }
 
-    /// <summary>
-    /// Generates a stable cache key for the query execution pipeline.
-    /// </summary>
-    /// <param name="options">The query options to generate a key for.</param>
-    /// <param name="entityType">The entity type being queried.</param>
-    /// <param name="operation">The name of the query operation (e.g., "predicate", "projection").</param>
-    /// <returns>A string representing the cache key for this query configuration.</returns>
-    public static string GetCacheKey(
-        this QueryOptions options,
-        Type entityType,
-        string operation)
-    {
-        return QueryCacheKeyBuilder.Build(options, entityType, operation);
-    }
+    private static SortNode CloneSortNode(SortNode sort)
+        => new()
+        {
+            Field = sort.Field,
+            Aggregate = sort.Aggregate,
+            AggregateField = sort.AggregateField,
+            Descending = sort.Descending
+        };
+
+    private static IncludeNode CloneIncludeNode(IncludeNode include)
+        => new()
+        {
+            Path = include.Path,
+            Filter = CopyFilterGroup(include.Filter),
+            Children = include.Children.Select(CloneIncludeNode).ToList()
+        };
+
+    private static AggregateModel CloneAggregateModel(AggregateModel aggregate)
+        => new()
+        {
+            Function = aggregate.Function,
+            Field = aggregate.Field,
+            Alias = aggregate.Alias
+        };
+
+    private static HavingCondition? CloneHavingCondition(HavingCondition? having)
+        => having is null
+            ? null
+            : new HavingCondition
+            {
+                Function = having.Function,
+                Field = having.Field,
+                Operator = having.Operator,
+                Value = having.Value
+            };
 }

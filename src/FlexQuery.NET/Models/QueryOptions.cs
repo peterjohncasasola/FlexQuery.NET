@@ -55,48 +55,54 @@ public class QueryOptions
     [Obsolete("Use Paging.PageSize instead. Will be removed in v4.0.", error: false)]
     public int? Top { get; set; }
 
-    /// <summary>Whether to include the total count in the result.</summary>
+    /// <summary>
+    /// Whether to include the total count in the result.
+    /// Configure via <see cref="Models.QueryExecutionOptions.IncludeTotalCount"/> instead.
+    /// </summary>
+    [Obsolete("Configure via QueryExecutionOptions.IncludeTotalCount instead. Will be removed in a future version.", error: false)]
     public bool? IncludeCount { get; set; } = true;
 
-    // --- Execution Configuration ---
+    // --- Internal: registration markers (moved from Items dictionary) ---
 
-    /// <summary>
-    /// If true (default), string comparisons will be case-insensitive using database collation.
-    /// </summary>
-    public bool CaseInsensitive { get; set; } = true;
-
-    /// <summary>
-    /// If true, enables expression caching for this query.
-    /// </summary>
-    public bool? EnableCache { get; set; }
+    /// <summary>Internal: whether EF Core-specific operator handlers are registered for this instance.</summary>
+    internal bool UseEfCoreOperators { get; set; }
 
     // --- Metadata & Internal State ---
 
     /// <summary>Custom metadata or items passed through the validation pipeline.</summary>
     public Dictionary<string, object> Items { get; } = new();
 
-    /// <summary>Internal representation of the parsed query for debugging.</summary>
-    [Obsolete("Debug property. Use Items dictionary for custom metadata. Will be removed in v4.0.", error: false)]
-    public object? Ast { get; set; }
-
     /// <summary>Internal: Merged selection tree from JSON select format.</summary>
     internal SelectionNode? SelectTree { get; set; }
 
+    // --- Execution Configuration (deprecated — use QueryExecutionOptions instead) ---
+
+    /// <summary>
+    /// If true (default), string comparisons will be case-insensitive using database collation.
+    /// Configure via <see cref="QueryExecutionOptions.CaseInsensitive"/> instead.
+    /// </summary>
+    [Obsolete("Configure via QueryExecutionOptions.CaseInsensitive instead. Will be removed in a future version.", error: false)]
+    public bool CaseInsensitive { get; set; } = true;
+
+    /// <summary>
+    /// If true, enables expression caching for this query.
+    /// Configure via <see cref="QueryExecutionOptions.EnableCache"/> instead.
+    /// </summary>
+    [Obsolete("Configure via QueryExecutionOptions.EnableCache instead. Will be removed in a future version.", error: false)]
+    public bool? EnableCache { get; set; }
+
     /// <summary>
     /// Generates a stable cache key for the current query configuration.
-    /// This key combines the entity type, operation name, case-sensitivity setting,
-    /// and normalized filter structure to produce a deterministic identifier.
+    /// Use <see cref="Caching.QueryCacheKeyBuilder.Build(QueryOptions, Type, string)"/> directly instead.
     /// </summary>
-    /// <param name="entityType">The type of entity being queried.</param>
-    /// <param name="operation">The name of the query operation (e.g., "predicate", "projection").</param>
-    /// <returns>A string representing the cache key for this query configuration.</returns>
+    [Obsolete("Use QueryCacheKeyBuilder.Build() directly instead. Will be removed in a future version.", error: false)]
     public string GetCacheKey(Type entityType, string operation)
-        => QueryCacheKeyBuilder.Build(this, entityType, operation);
+        => Caching.QueryCacheKeyBuilder.Build(this, entityType, operation);
 
     /// <summary>
     /// Creates a deep-ish clone of the options to support safe caching.
-    /// Collections are newly instantiated, but node elements are shared (assumed immutable).
     /// </summary>
+    [Obsolete("Construct a new QueryOptions instead. Will be removed in a future version.", error: false)]
     public QueryOptions Clone()
     {
         var clone = new QueryOptions
@@ -117,7 +123,6 @@ public class QueryOptions
             IncludeCount = IncludeCount,
             CaseInsensitive = CaseInsensitive,
             EnableCache = EnableCache,
-            Ast = Ast,
             SelectTree = CloneSelection(SelectTree)
         };
 
@@ -129,8 +134,7 @@ public class QueryOptions
     /// <summary>
     /// Creates a shallow clone of the options with a new filter.
     /// </summary>
-    /// <param name="filter">The new filter group to apply.</param>
-    /// <returns>A new <see cref="QueryOptions"/> instance with the specified filter and all other properties copied.</returns>
+    [Obsolete("Construct a new QueryOptions instead. Will be removed in a future version.", error: false)]
     public QueryOptions CloneWithFilter(FilterGroup? filter)
     {
         return new QueryOptions
@@ -139,11 +143,11 @@ public class QueryOptions
             CaseInsensitive = CaseInsensitive,
             EnableCache = EnableCache,
             Sort = Sort.Select(CloneSort).ToList(),
-            Select = Select is null ? null : new List<string>(Select),
-            Includes = Includes is null ? null : new List<string>(Includes),
-            FilteredIncludes = FilteredIncludes is null ? null : FilteredIncludes.Select(CloneInclude).ToList(),
+            Select = Select is null ? null : [..Select],
+            Includes = Includes is null ? null : [..Includes],
+            FilteredIncludes = FilteredIncludes?.Select(CloneInclude).ToList(),
             ProjectionMode = ProjectionMode,
-            GroupBy = GroupBy is null ? null : new List<string>(GroupBy),
+            GroupBy = GroupBy is null ? null : [..GroupBy],
             Aggregates = Aggregates.Select(CloneAggregate).ToList(),
             Having = CloneHaving(Having),
             Distinct = Distinct,
@@ -151,7 +155,6 @@ public class QueryOptions
             Skip = Skip,
             Top = Top,
             IncludeCount = IncludeCount,
-            Ast = Ast,
             SelectTree = CloneSelection(SelectTree)
         };
     }

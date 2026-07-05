@@ -36,6 +36,11 @@ internal sealed class EffectiveQueryOptions
     public int MaxFieldDepth { get; init; }
 
     /// <summary>
+    /// Whether expression caching is enabled for this query.
+    /// </summary>
+    public bool? EnableCache { get; init; }
+
+    /// <summary>
     /// Whether to apply AsNoTracking to EF Core queries.
     /// </summary>
     public bool UseNoTracking { get; init; }

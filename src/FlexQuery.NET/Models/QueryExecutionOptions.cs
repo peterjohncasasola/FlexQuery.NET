@@ -23,6 +23,17 @@ public class QueryExecutionOptions : BaseQueryOptions
     // --- Execution Strategies ---
 
     /// <summary>
+    /// If true (default), string comparisons will be case-insensitive using database collation.
+    /// </summary>
+    public bool CaseInsensitive { get; set; } = true;
+
+    /// <summary>
+    /// If true, enables expression caching for this query.
+    /// When null (default), the global setting from <see cref="Configuration.FlexQueryOptions"/> is used.
+    /// </summary>
+    public bool? EnableCache { get; set; }
+
+    /// <summary>
     /// If true, applies .AsSplitQuery() to the EF Core query.
     /// Use this for complex include trees to avoid cartesian explosion.
     /// </summary>

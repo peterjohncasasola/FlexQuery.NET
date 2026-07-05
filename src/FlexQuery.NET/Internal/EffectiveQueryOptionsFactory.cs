@@ -24,7 +24,7 @@ internal static class EffectiveQueryOptionsFactory
         {
             MaxPageSize = execution.MaxPageSize ?? global.MaxPageSize,
             DefaultPageSize = execution.DefaultPageSize,
-            CaseInsensitive = execution.CaseInsensitiveFields,
+            CaseInsensitive = execution.CaseInsensitive,
             IncludeTotalCount = execution.IncludeTotalCount,
             StrictFieldValidation = execution.StrictFieldValidation,
             MaxFieldDepth = execution.MaxFieldDepth ?? global.MaxFieldDepth,
@@ -40,7 +40,8 @@ internal static class EffectiveQueryOptionsFactory
             GroupableFields = execution.GroupableFields,
             AggregatableFields = execution.AggregatableFields,
             DefaultSortField = execution.DefaultSortField,
-            DefaultSortDescending = execution.DefaultSortDescending
+            DefaultSortDescending = execution.DefaultSortDescending,
+            EnableCache = execution.EnableCache
         };
     }
 }

@@ -28,7 +28,6 @@ public static class FlexQueryDebugExtensions
         
         return new DebugResult
         {
-            Ast = options.Ast,
             LinqLambda = ExpressionPrinter.Print(provider.LastExpression),
             ExpressionTree = ExpressionTreeVisualizer.Visualize(provider.LastExpression)
         };

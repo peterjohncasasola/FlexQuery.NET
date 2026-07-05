@@ -904,7 +904,7 @@ public class GroupByTests : IDisposable
             Includes = ["Orders"]
         };
 
-        options.Normalize();
+        options = options.Normalize();
 
         options.Paging.PageSize.Should().Be(10);
         options.Paging.Page.Should().Be(3);

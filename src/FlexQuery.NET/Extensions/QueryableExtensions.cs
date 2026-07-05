@@ -81,7 +81,7 @@ public static class QueryableExtensions
 
         var options = parameters.ToQueryOptions();
 
-        options.Normalize();
+        options = options.Normalize();
         options.ValidateOrThrow<T>(exec);
 
         var hasProjection = options.HasProjection()
@@ -108,7 +108,7 @@ public static class QueryableExtensions
         var exec = new QueryExecutionOptions();
         configure?.Invoke(exec);
 
-        options.Normalize();
+        options = options.Normalize();
         options.ValidateOrThrow<T>(exec);
 
         var hasProjection = options.HasProjection()
