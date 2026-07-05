@@ -170,7 +170,7 @@ public sealed class SqlTranslator : ISqlTranslator
         var mapping = _mappingRegistry.GetMapping(entityType);
         var selectTree = SelectTreeBuilder.Build(options);
 
-        if (options.Includes?.Count > 0 || options.FilteredIncludes?.Count > 0 || selectTree.HasChildren)
+        if (options.Includes?.Count > 0 || options.Expand?.Count > 0 || selectTree.HasChildren)
         {
             mapping.TableAlias = mapping.TableName;
         }

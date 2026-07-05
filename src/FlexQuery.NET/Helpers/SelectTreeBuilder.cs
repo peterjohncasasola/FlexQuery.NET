@@ -44,9 +44,9 @@ public static class SelectTreeBuilder
             }
         }
 
-        if (options.FilteredIncludes != null)
+        if (options.Expand != null)
         {
-            foreach (var node in options.FilteredIncludes)
+            foreach (var node in options.Expand)
             {
                 MergeIncludeNode(root, node);
             }

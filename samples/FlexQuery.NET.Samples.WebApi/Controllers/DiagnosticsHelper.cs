@@ -67,11 +67,6 @@ internal static class DiagnosticsHelper
                 }).ToList(),
                 select = options.Select,
                 includes = options.Includes,
-                filteredIncludes = options.FilteredIncludes?.Select(i => new
-                {
-                    path = i.Path,
-                    filter = i.Filter is not null ? SerializeFilter(i.Filter) : null
-                }).ToList(),
                 groupBy = options.GroupBy,
                 aggregates = options.Aggregates?.Select(a => new
                 {
@@ -93,9 +88,7 @@ internal static class DiagnosticsHelper
                     disabled = options.Paging.Disabled,
                     skip = options.Paging.Skip
                 },
-                distinct = options.Distinct ?? false,
-                caseInsensitive = options.CaseInsensitive,
-                cacheEnabled = options.EnableCache ?? false
+                distinct = options.Distinct ?? false
             },
             pipeline,
             warnings = DetectWarnings(options, report),
@@ -168,9 +161,6 @@ internal static class DiagnosticsHelper
         if (options.Select is not { Count: > 0 } && options.Aggregates?.Count is not > 0)
             warnings.Add(new { type = "no_projection", message = "No projection specified — all columns will be selected" });
 
-        if (options.FilteredIncludes?.Count > 0)
-            warnings.Add(new { type = "cartesian_explosion", message = "Multiple includes risk Cartesian explosion — consider SplitQuery" });
-
         return warnings;
     }
 
@@ -208,7 +198,6 @@ internal static class DiagnosticsHelper
         if (options.Filter?.Groups?.Count > 0) score += 1;
         if (options.Sort?.Count > 1) score += 1;
         if (options.Includes?.Count > 0) score += 2;
-        if (options.FilteredIncludes?.Count > 0) score += 3;
         if (options.GroupBy is { Count: > 0 }) score += 2;
         if (options.Aggregates?.Count > 0) score += options.Aggregates.Count;
         if (options.Having is not null) score += 1;
@@ -220,7 +209,6 @@ internal static class DiagnosticsHelper
     {
         var factors = new List<object>();
         factors.Add(new { name = "Filters", value = CountFilters(options.Filter), weight = 1, max = 3 });
-        factors.Add(new { name = "Includes", value = (options.Includes?.Count ?? 0) + (options.FilteredIncludes?.Count ?? 0), weight = 2, max = 2 });
         factors.Add(new { name = "GroupBy", value = options.GroupBy is { Count: > 0 } ? 1 : 0, weight = 2, max = 2 });
         factors.Add(new { name = "Aggregates", value = options.Aggregates?.Count ?? 0, weight = 1, max = 3 });
         return factors;

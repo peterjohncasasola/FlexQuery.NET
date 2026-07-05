@@ -17,7 +17,7 @@ public sealed class GroupByIncludeConflictRule : IValidationRule
         if ((options.GroupBy?.Count ?? 0) == 0) return;
 
         var hasIncludes = (options.Includes?.Count ?? 0) > 0;
-        var hasFilteredIncludes = (options.FilteredIncludes?.Count ?? 0) > 0;
+        var hasFilteredIncludes = (options.Expand?.Count ?? 0) > 0;
 
         if (hasIncludes || hasFilteredIncludes)
         {

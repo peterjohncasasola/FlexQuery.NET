@@ -33,9 +33,9 @@ public sealed class ExpandPathValidationRule : IValidationRule
             }
         }
 
-        if (options.FilteredIncludes != null)
+        if (options.Expand != null)
         {
-            foreach (var node in options.FilteredIncludes)
+            foreach (var node in options.Expand)
             {
                 ValidateIncludeNode(node, type, string.Empty, result);
             }

@@ -41,9 +41,9 @@ internal sealed class SqlJoinBuilder
         TraverseJoinTree(selectTree, mapping, mapping.TableAlias, joins, joinedPaths, parameters, options.CaseInsensitive);
 
         // 2. Explicit Includes and Filtered Includes
-        if (options.FilteredIncludes != null)
+        if (options.Expand != null)
         {
-            foreach (var filteredInclude in options.FilteredIncludes)
+            foreach (var filteredInclude in options.Expand)
             {
                 if (!joinedPaths.Add(filteredInclude.Path)) continue;
 

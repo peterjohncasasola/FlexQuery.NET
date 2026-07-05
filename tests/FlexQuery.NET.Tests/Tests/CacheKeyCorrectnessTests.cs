@@ -219,7 +219,7 @@ public class CacheKeyCorrectnessTests
         var options1 = new QueryOptions
         {
             Select = ["Id"],
-            FilteredIncludes =
+            Expand =
             [
                 new IncludeNode
                 {
@@ -236,7 +236,7 @@ public class CacheKeyCorrectnessTests
         var options2 = new QueryOptions
         {
             Select = ["Id"],
-            FilteredIncludes =
+            Expand =
             [
                 new IncludeNode
                 {

@@ -86,7 +86,7 @@ public static class QueryableExtensions
 
         var hasProjection = options.HasProjection()
             || (options.Includes?.Count ?? 0) > 0
-            || (options.FilteredIncludes?.Count ?? 0) > 0;
+            || (options.Expand?.Count ?? 0) > 0;
 
         return query.ApplyFlexQuery(options, hasProjection, exec);
 
@@ -113,7 +113,7 @@ public static class QueryableExtensions
 
         var hasProjection = options.HasProjection()
             || (options.Includes?.Count ?? 0) > 0
-            || (options.FilteredIncludes?.Count ?? 0) > 0;
+            || (options.Expand?.Count ?? 0) > 0;
 
         return query.ApplyFlexQuery(options, hasProjection, exec);
 

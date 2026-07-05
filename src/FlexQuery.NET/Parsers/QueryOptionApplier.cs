@@ -50,7 +50,7 @@ internal static class QueryOptionApplier
         if (parameters.TryGetValue(QueryOptionKeys.Include, out var include))
         {
             options.Includes = ParserUtilities.SplitCsv(include.Split('(')[0]);
-            options.FilteredIncludes = FilteredIncludeParser.Parse(include);
+            options.Expand = FilteredIncludeParser.Parse(include);
         }
 
         options.Sort.AddRange(SortParser.Parse(parameters));
@@ -85,7 +85,7 @@ internal static class QueryOptionApplier
         if (!string.IsNullOrWhiteSpace(include))
         {
             options.Includes = ParserUtilities.SplitCsv(include.Split('(')[0]);
-            options.FilteredIncludes = FilteredIncludeParser.Parse(include);
+            options.Expand = FilteredIncludeParser.Parse(include);
         }
     }
 

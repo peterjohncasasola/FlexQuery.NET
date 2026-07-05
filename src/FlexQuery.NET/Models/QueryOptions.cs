@@ -22,7 +22,7 @@ public class QueryOptions
     public List<string>? Includes { get; set; }
 
     /// <summary>Deep, filtered navigation expansion trees.</summary>
-    public List<IncludeNode>? FilteredIncludes { get; set; }
+    public List<IncludeNode>? Expand { get; set; }
 
     /// <summary>Defines how projected data should be shaped (Nested, Flat, FlatMixed).</summary>
     public ProjectionMode ProjectionMode { get; set; } = ProjectionMode.Nested;
@@ -55,7 +55,7 @@ public class QueryOptions
     // --- Metadata & Internal State ---
 
     /// <summary>Custom metadata or items passed through the validation pipeline.</summary>
-    public Dictionary<string, object> Items { get; } = new();
+    internal Dictionary<string, object> Items { get; } = new();
 
     /// <summary>Internal: Merged selection tree from JSON select format.</summary>
     internal SelectionNode? SelectTree { get; set; }
@@ -63,8 +63,8 @@ public class QueryOptions
     // --- Internal: retained for pipeline use (set via QueryExecutionOptions instead) ---
 
     /// <summary>Whether string comparisons are case-insensitive.</summary>
-    public bool CaseInsensitive { get; set; } = true;
+    internal bool CaseInsensitive { get; set; } = true;
 
     /// <summary>Whether expression caching is enabled for this query.</summary>
-    public bool? EnableCache { get; set; }
+    internal bool? EnableCache { get; set; }
 }

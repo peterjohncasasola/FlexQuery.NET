@@ -463,7 +463,7 @@ public class SqlTranslatorTests
     {
         var options = NoPaging(new QueryOptions
         {
-            FilteredIncludes = 
+            Expand = 
             [
                 new IncludeNode 
                 { 

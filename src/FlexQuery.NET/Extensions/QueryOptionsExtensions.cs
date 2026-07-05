@@ -122,7 +122,7 @@ public static class QueryOptionsExtensions
         return (options.Select?.Count ?? 0) > 0
                || options.SelectTree is not null
                || (options.Includes?.Count ?? 0) > 0
-               || (options.FilteredIncludes?.Count ?? 0) > 0
+               || (options.Expand?.Count ?? 0) > 0
                || (options.GroupBy?.Count ?? 0) > 0
                || options.Aggregates.Count > 0;
     }
@@ -154,23 +154,26 @@ public static class QueryOptionsExtensions
         // 2. Includes → FilteredIncludes consolidation
         if (result.Includes?.Count > 0)
         {
-            if (result.FilteredIncludes == null)
+            if (result.Expand == null)
             {
-                result.FilteredIncludes = result.Includes
+                result.Expand = result.Includes
                     .Select(path => new IncludeNode { Path = path })
                     .ToList();
             }
             else
             {
-                var existingPathSet = new HashSet<string>(
-                    result.FilteredIncludes.Select(i => i.Path),
-                    StringComparer.OrdinalIgnoreCase);
-                foreach (var inc in result.Includes)
+                if (result.Expand != null)
                 {
-                    if (!existingPathSet.Contains(inc))
+                    var existingPathSet = new HashSet<string>(
+                        result.Expand.Select(i => i.Path),
+                        StringComparer.OrdinalIgnoreCase);
+                    foreach (var inc in result.Includes)
                     {
-                        result.FilteredIncludes.Add(new IncludeNode { Path = inc });
-                        existingPathSet.Add(inc);
+                        if (!existingPathSet.Contains(inc))
+                        {
+                            result.Expand.Add(new IncludeNode { Path = inc });
+                            existingPathSet.Add(inc);
+                        }
                     }
                 }
             }
@@ -180,7 +183,7 @@ public static class QueryOptionsExtensions
         return result;
     }
 
-    public static QueryOptions CopyQueryOptions(QueryOptions source)
+    internal static QueryOptions CopyQueryOptions(this QueryOptions source)
     {
         var copy = new QueryOptions
         {
@@ -188,7 +191,7 @@ public static class QueryOptionsExtensions
             Sort = source.Sort.Select(CloneSortNode).ToList(),
             Select = source.Select?.ToList(),
             Includes = source.Includes?.ToList(),
-            FilteredIncludes = source.FilteredIncludes?.Select(CloneIncludeNode).ToList(),
+            Expand = source.Expand?.Select(CloneIncludeNode).ToList(),
             ProjectionMode = source.ProjectionMode,
             GroupBy = source.GroupBy?.ToList(),
             Aggregates = source.Aggregates.Select(CloneAggregateModel).ToList(),

@@ -21,7 +21,7 @@ internal static class QueryCacheKeyBuilder
             .Append("select=").Append(ListKey(options.Select)).Append('|')
             .Append("tree=").Append(SelectionKey(options.SelectTree)).Append('|')
             .Append("includes=").Append(ListKey(options.Includes)).Append('|')
-            .Append("filteredIncludes=").Append(IncludeKey(options.FilteredIncludes)).Append('|')
+            .Append("filteredIncludes=").Append(IncludeKey(options.Expand)).Append('|')
             .Append("mode=").Append(options.ProjectionMode).Append('|')
             .Append("groupBy=").Append(ListKey(options.GroupBy)).Append('|')
             .Append("aggregates=").Append(AggregateKey(options.Aggregates)).Append('|')

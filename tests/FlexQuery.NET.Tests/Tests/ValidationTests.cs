@@ -210,7 +210,7 @@ public class ValidationTests
         var options = new QueryOptions
         {
             GroupBy = ["Status"],
-            FilteredIncludes = [new IncludeNode { Path = "Orders" }]
+            Expand = [new IncludeNode { Path = "Orders" }]
         };
 
         Action act = () => options.ValidateOrThrow<Customer>();
@@ -264,7 +264,7 @@ public class ValidationTests
     {
         var options = new QueryOptions
         {
-            FilteredIncludes =
+            Expand =
             [
                 new IncludeNode
                 {
@@ -288,7 +288,7 @@ public class ValidationTests
     {
         var options = new QueryOptions
         {
-            FilteredIncludes =
+            Expand =
             [
                 new IncludeNode
                 {

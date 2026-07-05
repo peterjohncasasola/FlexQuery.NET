@@ -196,7 +196,7 @@ public class QueryNormalizationTests
     {
         new QueryOptions { Select = ["Id"] }.HasProjection().Should().BeTrue();
         new QueryOptions { Includes = ["Orders"] }.HasProjection().Should().BeTrue();
-        new QueryOptions { FilteredIncludes = [new IncludeNode { Path = "Orders" }] }.HasProjection().Should().BeTrue();
+        new QueryOptions { Expand = [new IncludeNode { Path = "Orders" }] }.HasProjection().Should().BeTrue();
         new QueryOptions { GroupBy = ["Status"] }.HasProjection().Should().BeTrue();
         new QueryOptions { Aggregates = [new AggregateModel { Function = "count", Alias = "Count" }] }.HasProjection().Should().BeTrue();
 
@@ -215,9 +215,9 @@ public class QueryNormalizationTests
 
         options = options.Normalize();
 
-        options.FilteredIncludes.Should().HaveCount(2);
-        options.FilteredIncludes.Should().Contain(i => i.Path == "Orders");
-        options.FilteredIncludes.Should().Contain(i => i.Path == "Details");
+        options.Expand.Should().HaveCount(2);
+        options.Expand.Should().Contain(i => i.Path == "Orders");
+        options.Expand.Should().Contain(i => i.Path == "Details");
         options.Includes.Should().BeNull();
     }
 
@@ -227,14 +227,14 @@ public class QueryNormalizationTests
         var options = new QueryOptions
         {
             Includes = ["Orders", "Details"],
-            FilteredIncludes = [new IncludeNode { Path = "Orders", Filter = new FilterGroup { Filters = [new FilterCondition { Field = "Status", Operator = "eq", Value = "Open" }] } }]
+            Expand = [new IncludeNode { Path = "Orders", Filter = new FilterGroup { Filters = [new FilterCondition { Field = "Status", Operator = "eq", Value = "Open" }] } }]
         };
 
         options = options.Normalize();
 
-        options.FilteredIncludes.Should().HaveCount(2);
-        options.FilteredIncludes.Should().ContainSingle(i => i.Path == "Orders" && i.Filter != null);
-        options.FilteredIncludes.Should().Contain(i => i.Path == "Details" && i.Filter == null);
+        options.Expand.Should().HaveCount(2);
+        options.Expand.Should().ContainSingle(i => i.Path == "Orders" && i.Filter != null);
+        options.Expand.Should().Contain(i => i.Path == "Details" && i.Filter == null);
         options.Includes.Should().BeNull();
     }
 

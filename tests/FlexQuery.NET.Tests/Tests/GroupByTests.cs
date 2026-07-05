@@ -908,6 +908,6 @@ public class GroupByTests : IDisposable
         options.Paging.PageSize.Should().Be(10);
         options.Paging.Page.Should().Be(3);
         options.Includes.Should().BeNull();
-        options.FilteredIncludes.Should().ContainSingle(i => i.Path == "Orders");
+        options.Expand.Should().ContainSingle(i => i.Path == "Orders");
     }
 }

@@ -52,8 +52,8 @@ public sealed class FluentQueryBuilder
         configure(builder);
         var includes = builder.Build();
         if (includes.Count <= 0) return this;
-        _options.FilteredIncludes ??= [];
-        _options.FilteredIncludes.AddRange(includes);
+        _options.Expand ??= [];
+        _options.Expand.AddRange(includes);
         return this;
     }
 

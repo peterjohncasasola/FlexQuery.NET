@@ -13,7 +13,7 @@ public class IncludeSecurityTests
         var options = new QueryOptions
         {
             Includes = new List<string> { "Orders", "Profile" },
-            FilteredIncludes = new List<IncludeNode>
+            Expand = new List<IncludeNode>
             {
                 new IncludeNode { Path = "Orders", Children = { new IncludeNode { Path = "Items" } } }
             }
@@ -36,7 +36,7 @@ public class IncludeSecurityTests
         var options = new QueryOptions
         {
             Includes = new List<string> { "Orders", "Orders.Items", "Profile" },
-            FilteredIncludes = new List<IncludeNode>
+            Expand = new List<IncludeNode>
             {
                 new IncludeNode { Path = "Orders", Children = { new IncludeNode { Path = "Items" } } }
             }
@@ -85,7 +85,7 @@ public class IncludeSecurityTests
     {
         var options = new QueryOptions
         {
-            FilteredIncludes = new List<IncludeNode>
+            Expand = new List<IncludeNode>
             {
                 new IncludeNode 
                 { 
@@ -189,7 +189,7 @@ public class IncludeSecurityTests
     {
         var options = new QueryOptions
         {
-            FilteredIncludes = new List<IncludeNode>
+            Expand = new List<IncludeNode>
             {
                 new IncludeNode 
                 { 
@@ -214,7 +214,7 @@ public class IncludeSecurityTests
         // Non-strict mode should record error but remove the unauthorized nested include
         Assert.False(result.IsValid);
         Assert.Contains(result.Errors, e => e.Field == "Orders.SecretItems");
-        Assert.Single(options.FilteredIncludes!);
-        Assert.Empty(options.FilteredIncludes[0].Children); // SecretItems removed
+        Assert.Single(options.Expand!);
+        Assert.Empty(options.Expand[0].Children); // SecretItems removed
     }
 }

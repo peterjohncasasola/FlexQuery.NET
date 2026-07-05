@@ -14,7 +14,7 @@ public class FluentQueryBuilderTests
         options.Sort.Should().BeEmpty();
         options.Select.Should().BeNull();
         options.Includes.Should().BeNull();
-        options.FilteredIncludes.Should().BeNull();
+        options.Expand.Should().BeNull();
         options.Paging.Page.Should().Be(1);
         options.Paging.PageSize.Should().Be(20);
         options.Distinct.Should().BeNull();
@@ -172,13 +172,13 @@ public class FluentQueryBuilderTests
             .Expand(e => e.Path("Orders", f => f.GreaterThan("Total", 100)))
             .Build();
 
-        options.FilteredIncludes.Should().HaveCount(1);
-        options.FilteredIncludes![0].Path.Should().Be("Orders");
-        options.FilteredIncludes[0].Filter.Should().NotBeNull();
-        options.FilteredIncludes[0].Filter!.Filters.Should().HaveCount(1);
-        options.FilteredIncludes[0].Filter?.Filters[0].Field.Should().Be("Total");
-        options.FilteredIncludes[0].Filter?.Filters[0].Operator.Should().Be("gt");
-        options.FilteredIncludes[0].Filter?.Filters[0].Value.Should().Be("100");
+        options.Expand.Should().HaveCount(1);
+        options.Expand![0].Path.Should().Be("Orders");
+        options.Expand[0].Filter.Should().NotBeNull();
+        options.Expand[0].Filter!.Filters.Should().HaveCount(1);
+        options.Expand[0].Filter?.Filters[0].Field.Should().Be("Total");
+        options.Expand[0].Filter?.Filters[0].Operator.Should().Be("gt");
+        options.Expand[0].Filter?.Filters[0].Value.Should().Be("100");
     }
 
     [Fact]
@@ -189,10 +189,10 @@ public class FluentQueryBuilderTests
                 c.Path("Items")))
             .Build();
 
-        options.FilteredIncludes.Should().HaveCount(1);
-        options.FilteredIncludes![0].Path.Should().Be("Orders");
-        options.FilteredIncludes[0].Children.Should().HaveCount(1);
-        options.FilteredIncludes[0].Children[0].Path.Should().Be("Items");
+        options.Expand.Should().HaveCount(1);
+        options.Expand![0].Path.Should().Be("Orders");
+        options.Expand[0].Children.Should().HaveCount(1);
+        options.Expand[0].Children[0].Path.Should().Be("Items");
     }
 
     [Fact]
@@ -202,7 +202,7 @@ public class FluentQueryBuilderTests
             .Expand(e => { })
             .Build();
 
-        options.FilteredIncludes.Should().BeNull();
+        options.Expand.Should().BeNull();
     }
 
     [Fact]
@@ -329,7 +329,7 @@ public class FluentQueryBuilderTests
         options.Sort.Should().HaveCount(1);
         options.Select.Should().HaveCount(3);
         options.Includes.Should().HaveCount(1);
-        options.FilteredIncludes.Should().HaveCount(1);
+        options.Expand.Should().HaveCount(1);
         options.ProjectionMode.Should().Be(ProjectionMode.Flat);
         options.GroupBy.Should().HaveCount(1);
         options.Aggregates.Should().HaveCount(1);

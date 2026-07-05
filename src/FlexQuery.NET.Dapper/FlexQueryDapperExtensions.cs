@@ -258,7 +258,7 @@ public static class FlexQueryDapperExtensions
             && typeof(T) != typeof(object);
 
         IReadOnlyList<object> items;
-        if (options.Includes?.Count > 0 || options.FilteredIncludes?.Count > 0)
+        if (options.Includes?.Count > 0 || options.Expand?.Count > 0)
         {
             var dynamicItems = await connection.QueryAsync(
                 command.Sql,
@@ -267,9 +267,9 @@ public static class FlexQueryDapperExtensions
                 commandType: CommandType.Text);
 
             IReadOnlyList<T> hydrated;
-            if (options.FilteredIncludes?.Count > 0)
+            if (options.Expand?.Count > 0)
             {
-                hydrated = DapperRowHydrator.HydrateFilteredIncludes<T>(dynamicItems, mapping, registry, options.FilteredIncludes);
+                hydrated = DapperRowHydrator.HydrateFilteredIncludes<T>(dynamicItems, mapping, registry, options.Expand);
             }
             else
             {

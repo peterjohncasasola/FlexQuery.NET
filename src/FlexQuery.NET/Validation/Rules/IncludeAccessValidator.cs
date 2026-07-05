@@ -49,14 +49,14 @@ public sealed class IncludeAccessValidator : IValidationRule
         }
 
         // Check filtered includes - remove unauthorized ones in non-strict mode
-        if (options.FilteredIncludes is not null)
+        if (options.Expand is not null)
         {
-            for (int i = options.FilteredIncludes.Count - 1; i >= 0; i--)
+            for (int i = options.Expand.Count - 1; i >= 0; i--)
             {
-                var node = options.FilteredIncludes[i];
+                var node = options.Expand[i];
                 if (ShouldRemoveIncludeNode(node, string.Empty, allowedIncludes, execOptions, result))
                 {
-                    options.FilteredIncludes.RemoveAt(i);
+                    options.Expand.RemoveAt(i);
                 }
             }
         }

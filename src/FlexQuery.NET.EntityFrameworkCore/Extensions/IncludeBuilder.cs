@@ -41,8 +41,8 @@ public static class IncludeBuilder
         QueryOptions options)
         where T : class
     {
-        if (options.FilteredIncludes is null) return query;
-        foreach (var root in options.FilteredIncludes)
+        if (options.Expand is null) return query;
+        foreach (var root in options.Expand)
             query = ApplyNode(query, root, options);
 
         return query;
