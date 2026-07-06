@@ -5,6 +5,7 @@ using FlexQuery.NET.Caching;
 using FlexQuery.NET.Exceptions;
 using FlexQuery.NET.Expressions;
 using FlexQuery.NET.Models;
+using FlexQuery.NET.Validation;
 
 namespace FlexQuery.NET.Builders;
 
@@ -45,23 +46,8 @@ internal static class KeysetPaginationBuilder
             throw new KeysetPaginationException(
                 "Keyset pagination requires at least one sort field.");
 
-        if (cursorValues.Count != orderings.Count)
-            throw new KeysetPaginationException(
-                $"Cursor has {cursorValues.Count} value(s) but the query has {orderings.Count} ordering column(s). " +
-                $"Provide a cursor with {orderings.Count} value(s) or use the correct SeekAfter overload.");
-
-        for (var i = 0; i < cursorValues.Count; i++)
-        {
-            if (cursorValues[i] is not null) continue;
-            
-            var keyType = orderings[i].KeySelector.Body.Type;
-            
-            if (keyType.IsValueType && Nullable.GetUnderlyingType(keyType) is null)
-            {
-                throw new KeysetPaginationException(
-                    $"Cursor value at position {i} is null but the corresponding key type '{keyType.Name}' is not nullable.");
-            }
-        }
+        var keyTypes = orderings.Select(o => o.KeySelector.Body.Type).ToArray();
+        KeysetCursorValidator.Validate(cursorValues, keyTypes);
 
         var parameter = Expression.Parameter(typeof(T), "x");
         var body = BuildOrChain(parameter, orderings, cursorValues, 0);

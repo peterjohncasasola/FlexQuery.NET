@@ -8,6 +8,7 @@ using FlexQuery.NET.Dapper.Sql.Helpers;
 using FlexQuery.NET.Dapper.Sql.Models;
 using FlexQuery.NET.Helpers;
 using FlexQuery.NET.Validation;
+using FlexQuery.NET.Exceptions;
 
 namespace FlexQuery.NET.Dapper.Sql.Translators;
 
@@ -87,21 +88,54 @@ public sealed class SqlTranslator : ISqlTranslator
             ? GroupedSortValidator.Validate(options.Sort, options.GroupBy, options.Aggregates)
             : options.Sort;
 
-        if (!options.Paging.Disabled
-            && sortForOrderBy is { Count: 0 })
+        string orderByClause;
+        string pagingClause;
+
+        if (options.IsKeysetMode)
         {
-            if (_dialect.RequiresOrderByForPaging)
+            if (sortForOrderBy.Count == 0)
+                throw new KeysetPaginationException("Keyset pagination requires at least one sort field.");
+
+            if (options.Cursor != null)
             {
-                throw new InvalidOperationException(
-                    $"Paging requires an ORDER BY clause when using the {_dialect.GetType().Name} dialect. "
-                    + "Add at least one Sort field to QueryOptions.Sort, or set Paging.Disabled = true.");
+                var keysetResult = SqlKeysetBuilder.BuildSeekClause(sortForOrderBy, options.Cursor, mapping, _dialect, parameters);
+
+                if (!string.IsNullOrEmpty(keysetResult.WhereClause))
+                {
+                    whereClause = string.IsNullOrEmpty(whereClause)
+                        ? $"WHERE {keysetResult.WhereClause}"
+                        : $"{whereClause} AND {keysetResult.WhereClause}";
+                }
+
+                orderByClause = keysetResult.OrderByClause;
+            }
+            else
+            {
+                orderByClause = BuildOrderByClause(sortForOrderBy, mapping);
             }
 
-            sortForOrderBy = [new SortNode { Field = ResolveDefaultSortProperty(mapping) }];
+            pagingClause = options.Paging.Disabled
+                ? string.Empty
+                : BuildKeysetLimitClause(options.Paging, parameters);
         }
+        else
+        {
+            if (!options.Paging.Disabled
+                && sortForOrderBy is { Count: 0 })
+            {
+                if (_dialect.RequiresOrderByForPaging)
+                {
+                    throw new InvalidOperationException(
+                        $"Paging requires an ORDER BY clause when using the {_dialect.GetType().Name} dialect. "
+                        + "Add at least one Sort field to QueryOptions.Sort, or set Paging.Disabled = true.");
+                }
 
-        var orderByClause = BuildOrderByClause(sortForOrderBy, mapping);
-        var pagingClause = BuildPagingClause(options.Paging, parameters);
+                sortForOrderBy = [new SortNode { Field = ResolveDefaultSortProperty(mapping) }];
+            }
+
+            orderByClause = BuildOrderByClause(sortForOrderBy, mapping);
+            pagingClause = BuildPagingClause(options.Paging, parameters);
+        }
 
         var clauses = new List<string> { selectClause, fromClause, joinClause, whereClause, groupByClause, havingClause, orderByClause, pagingClause };
         var sql = string.Join(" ", clauses.Where(c => !string.IsNullOrEmpty(c)));
@@ -280,6 +314,14 @@ public sealed class SqlTranslator : ISqlTranslator
         parameters.AddNamed(limitParam, paging.PageSize);
 
         return _dialect.GetPagingClause(offsetParam, limitParam);
+    }
+
+    private string BuildKeysetLimitClause(PagingOptions paging, SqlParameterContext parameters)
+    {
+        var limitParam = _dialect.CreateParameterName("PageSize");
+        parameters.AddNamed(limitParam, paging.PageSize);
+
+        return _dialect.GetLimitExpression(limitParam);
     }
 
     private static string ResolveDefaultSortProperty(IEntityMapping mapping)
