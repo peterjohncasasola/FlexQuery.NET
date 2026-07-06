@@ -6,7 +6,7 @@ When FlexQuery generates SQL for queries that involve navigation properties (inc
 
 ## How Relationships Are Discovered
 
-The `SqlTranslator` uses the `IMappingRegistry` to resolve relationship metadata at translation time. For each navigation property encountered in the `QueryOptions.Includes` or `QueryOptions.FilteredIncludes`, the translator looks up the registered `RelationshipMapping` and `JoinInfo` to determine the correct JOIN type, table name, and join predicate.
+The `SqlTranslator` uses the mapping registry to resolve relationship metadata at translation time. For each navigation property encountered in the `QueryOptions.Includes` or `QueryOptions.FilteredIncludes`, the translator looks up the registered `RelationshipMapping` and `JoinInfo` to determine the correct JOIN type, table name, and join predicate.
 
 ## Simple Includes → LEFT JOIN
 

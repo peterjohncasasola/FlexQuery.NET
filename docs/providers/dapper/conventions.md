@@ -38,17 +38,15 @@ EntityMapping                   → Complete mapping ready for SQL generation
 
 ## Convention Interfaces
 
-### IMappingRegistry
+### Fluent Configuration API
 
-The central registry that stores and retrieves entity mappings:
+Configure entity mappings using `DapperQueryOptions.Entity<TEntity>()`. The fluent builder is the only public API surface — the underlying mapping registry is an internal implementation detail:
 
 ```csharp
-public interface IMappingRegistry
-{
-    IEntityMapping GetMapping(Type entityType);
-    IEntityMapping GetMapping<T>();
-    EntityTypeBuilder<TEntity> Entity<TEntity>() where TEntity : class;
-}
+options.Entity<Customer>()
+    .ToTable("Customers")
+    .HasKey(c => c.Id)
+    .HasMany(c => c.Orders).WithForeignKey("CustomerId");
 ```
 
 ### IEntityConvention
@@ -102,7 +100,7 @@ The `DefaultForeignKeyConvention` follows the pattern `{NavigationPropertyName}I
 Discovers and configures relationships between entities:
 
 ```csharp
-public interface IRelationshipConvention
+internal interface IRelationshipConvention
 {
     void Apply(EntityMapping mapping, IMappingRegistry registry);
 }

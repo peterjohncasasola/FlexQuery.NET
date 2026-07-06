@@ -62,7 +62,7 @@ public async Task<IActionResult> GetUsers([FromQuery] FlexQueryParameters parame
 - **Dialect Support** — SQL Server, PostgreSQL, MySQL, SQLite via `ISqlDialect`
 - **Flat Projection** — Deep select paths (e.g., `Orders.Total`) become `LEFT JOIN` with flattened aliases
 - **Optional Auto-Dialect Detection** — `ISqlDialectResolver` can detect dialect from the `DbConnection`
-- **Mapping Registry** — Custom entity-to-table mapping via `IMappingRegistry`
+- **Entity Mapping** — Fluent entity-to-table mapping via `DapperQueryOptions.Entity<T>()`
 - **Diagnostics** — Pass `Action<FlexQueryExecutionConfig>` to observe pipeline stages
 
 ## Known Limitations
