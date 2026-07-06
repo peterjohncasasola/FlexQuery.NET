@@ -1,18 +1,14 @@
 using FlexQuery.NET.Models;
+using FlexQuery.NET.Serialization;
 
 namespace FlexQuery.NET.Parsers;
 
-/// <summary>
-/// Factory for creating base <see cref="QueryOptions"/> instances with common properties.
-/// Centralizes the creation of pagination, mode, select, include, and other shared options.
-/// </summary>
 internal static class QueryOptionsFactory
 {
-    /// <summary>
-    /// Creates a base QueryOptions populated with paging, mode, select, include, group, and having options.
-    /// </summary>
     public static QueryOptions Create(FlexQueryParameters parameters)
     {
+        var isKeyset = parameters.UseKeysetPagination || parameters.Cursor != null;
+
         var options = new QueryOptions
         {
             Paging = new PagingOptions
@@ -21,7 +17,7 @@ internal static class QueryOptionsFactory
                 PageSize = parameters.PageSize ?? 20
             },
             ProjectionMode = ParserUtilities.ParseProjectionMode(parameters.Mode),
-            IncludeCount = parameters.IncludeCount ?? true,
+            IncludeCount = parameters.IncludeCount ?? (isKeyset ? null : true),
             Distinct = parameters.Distinct ?? false
         };
 
@@ -42,6 +38,11 @@ internal static class QueryOptionsFactory
 
         if (!string.IsNullOrWhiteSpace(parameters.Sort))
             options.Sort.AddRange(SortParser.Parse(parameters.Sort));
+
+        options.IsKeysetMode = isKeyset;
+        options.OffsetExplicitlyRequested = parameters.Page != null;
+        if (parameters.Cursor != null)
+            options.Cursor = KeysetCursorSerializer.Deserialize(parameters.Cursor);
 
         return options;
     }

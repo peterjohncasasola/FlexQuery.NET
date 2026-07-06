@@ -45,4 +45,14 @@ public abstract class FlexQueryBase
 
     /// <summary>The projection mode (Flat, FlatMixed, Nested).</summary>
     public string? Mode { get; set; }
+
+    /// <summary>Serialized cursor token for keyset pagination. Pass the NextCursorToken from a previous response.</summary>
+    public string? Cursor { get; set; }
+
+    /// <summary>
+    /// Enables keyset (seek/cursor) pagination instead of offset pagination.
+    /// When enabled, pagination uses WHERE predicates rather than Skip/Take,
+    /// providing significantly better performance for large datasets.
+    /// </summary>
+    public bool UseKeysetPagination { get; set; }
 }

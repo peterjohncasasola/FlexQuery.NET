@@ -24,7 +24,8 @@ public static class QueryResultExtensions
             Page       = queryResult.Page,
             PageSize   = queryResult.PageSize,
             Aggregates = queryResult.Aggregates,
-            Data       = queryResult.Data.Cast<TProjected>().ToList()
+            Data       = queryResult.Data.Cast<TProjected>().ToList(),
+            NextCursorToken = queryResult.NextCursorToken
         };
     }
 
@@ -56,7 +57,8 @@ public static class QueryResultExtensions
             Page       = result.Page,
             PageSize   = result.PageSize,
             Aggregates = result.Aggregates,
-            Data       = result.Data?.Cast<object>().ToList() ?? new List<object>()
+            Data       = result.Data?.Cast<object>().ToList() ?? new List<object>(),
+            NextCursorToken = result.NextCursorToken
         };
     }
 
@@ -87,7 +89,8 @@ public static class QueryResultExtensions
             Page       = result.Page,
             PageSize   = result.PageSize,
             Aggregates = result.Aggregates,
-            Data       = result.Data?.Cast<dynamic>().ToList() ?? new List<dynamic>()
+            Data       = result.Data?.Cast<dynamic>().ToList() ?? new List<dynamic>(),
+            NextCursorToken = result.NextCursorToken
         };
     }
     

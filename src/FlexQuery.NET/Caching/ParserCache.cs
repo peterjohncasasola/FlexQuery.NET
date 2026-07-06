@@ -65,6 +65,8 @@ public static class ParserCache
 /// <param name="IncludeCount">Whether to include total count.</param>
 /// <param name="Distinct">Whether to apply distinct.</param>
 /// <param name="Mode">The projection mode.</param>
+/// <param name="Cursor">The cursor token for keyset pagination.</param>
+/// <param name="UseKeysetPagination">Whether keyset pagination is explicitly requested.</param>
 /// <param name="RawKey">Optional raw parameter key for additional uniqueness.</param>
 /// <param name="Version">The version identifier for cache invalidation.</param>
 public sealed record ParsedQueryCacheKey(
@@ -80,6 +82,8 @@ public sealed record ParsedQueryCacheKey(
     bool? IncludeCount,
     bool? Distinct,
     string? Mode,
+    string? Cursor = null,
+    bool UseKeysetPagination = false,
     string? RawKey = null,
     string Version = "v2"
 );

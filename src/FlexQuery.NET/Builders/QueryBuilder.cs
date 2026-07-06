@@ -14,11 +14,6 @@ namespace FlexQuery.NET.Builders;
 /// </summary>
 public static class QueryBuilder
 {
-    private static readonly MethodInfo OrderByMethod = ExpressionMethodCache.QueryableOrderBy();
-    private static readonly MethodInfo OrderByDescendingMethod = ExpressionMethodCache.QueryableOrderByDescending();
-    private static readonly MethodInfo ThenByMethod = ExpressionMethodCache.QueryableThenBy();
-    private static readonly MethodInfo ThenByDescendingMethod = ExpressionMethodCache.QueryableThenByDescending();
-
     /// <summary>Applies the filter group from <paramref name="options"/> to the query.</summary>
     /// <typeparam name="T">The entity type.</typeparam>
     /// <param name="query">The source queryable.</param>
@@ -61,12 +56,12 @@ public static class QueryBuilder
             Expression keyExpression;
             if (HasAggregate(sort))
             {
-                if (!BuildAggregateExpression(parameter, sort, options, out keyExpression))
+                if (!SortBuilder.BuildAggregateExpression(parameter, sort, options, out keyExpression))
                     continue;
             }
             else
             {
-                if (!BuildPropertyExpression(parameter, sort.Field, options, out keyExpression))
+                if (!SortBuilder.BuildPropertyExpression(parameter, sort.Field, options, out keyExpression))
                     continue;
             }
 
@@ -74,8 +69,8 @@ public static class QueryBuilder
             var keySelector = Expression.Lambda(keyExpression, parameter);
 
             ordered = ordered is null
-                ? ApplyInitialOrder(query, keySelector, keyType, sort.Descending)
-                : ApplyThenOrder(ordered, keySelector, keyType, sort.Descending);
+                ? SortBuilder.ApplyInitialOrder(query, keySelector, keyType, sort.Descending)
+                : SortBuilder.ApplyThenOrder(ordered, keySelector, keyType, sort.Descending);
         }
 
         return ordered ?? query;
@@ -92,7 +87,7 @@ public static class QueryBuilder
 
         if (options.Paging.Skip > 0 && query is not IOrderedQueryable<T>)
         {
-            string? fieldName = options.Select?.FirstOrDefault(f => !string.IsNullOrWhiteSpace(f) && !f.Contains('.'));
+            var fieldName = options.Select?.FirstOrDefault(f => !string.IsNullOrWhiteSpace(f) && !f.Contains('.'));
             if (fieldName == null)
             {
                 var allProps = ReflectionCache.GetProperties(typeof(T));
@@ -110,7 +105,7 @@ public static class QueryBuilder
                     var parameter = Expression.Parameter(typeof(T), "x");
                     var property = Expression.Property(parameter, defaultSortProp);
                     var keySelector = Expression.Lambda(property, parameter);
-                    query = ApplyInitialOrder(query, keySelector, defaultSortProp.PropertyType, false);
+                    query = SortBuilder.ApplyInitialOrder(query, keySelector, defaultSortProp.PropertyType, false);
                 }
             }
         }
@@ -118,6 +113,25 @@ public static class QueryBuilder
         return query.Skip(options.Paging.Skip).Take(options.Paging.PageSize);
     }
 
+    /// <summary>Applies keyset (seek/cursor) pagination. Generates WHERE predicate from cursor values instead of Skip/Take.</summary>
+    /// <typeparam name="T">The entity type.</typeparam>
+    /// <param name="query">The source queryable (must be sorted).</param>
+    /// <param name="options">The query options containing sort metadata and cursor.</param>
+    /// <returns>The queryable with keyset predicate applied.</returns>
+    public static IQueryable<T> ApplyKeysetPaging<T>(IQueryable<T> query, QueryOptions options)
+    {
+        if (!options.IsKeysetMode)
+            return ApplyPaging(query, options);
+
+        if (options.Cursor is null)
+            return query.Take(options.Paging.PageSize);
+        
+        var orderings = KeysetPaginationBuilder.BuildOrderingInfos<T>(options.Sort);
+        var predicate = KeysetPaginationBuilder.BuildSeekPredicate<T>(orderings, options.Cursor.Values);
+        
+        return query.Where(predicate).Take(options.Paging.PageSize);
+        
+    }
     /// <summary>
     /// Applies dynamic projection to the query.
     /// If Select is null or empty and no Includes are present, returns the original query cast to object.
@@ -175,229 +189,9 @@ public static class QueryBuilder
     private static bool HasAggregate(SortNode sort)
         => !string.IsNullOrWhiteSpace(sort.Aggregate);
 
-    private static bool BuildPropertyExpression(
-        Expression parameter,
-        string path,
-        QueryOptions options,
-        out Expression propertyExpression)
-    {
-        propertyExpression = null!;
-
-        if (FieldResolver.TryResolveMappedExpression(parameter, path, options, out var resolvedExpr, out var resolvedType))
-        {
-            if (IsCollectionType(resolvedType)) return false;
-            propertyExpression = resolvedExpr;
-            return true;
-        }
-
-        if (!SafePropertyResolver.TryResolveChain(parameter.Type, path, out var chain))
-            return false;
-        if (chain.Count == 0)
-            return false;
-
-        if (chain.Any(p => IsCollectionType(p.PropertyType)))
-            return false;
-
-        Expression access = parameter;
-        foreach (var prop in chain)
-        {
-            access = Expression.Property(access, prop);
-        }
-
-        propertyExpression = access;
-        return true;
-    }
-
-    private static bool BuildAggregateExpression(
-        Expression parameter,
-        SortNode sort,
-        QueryOptions options,
-        out Expression aggregateExpression)
-    {
-        aggregateExpression = null!;
-        Expression collectionAccess;
-        Type elementType;
-
-        if (FieldResolver.TryResolveMappedExpression(parameter, sort.Field, options, out var resolvedExpr, out var resolvedType))
-        {
-            if (!IsCollectionType(resolvedType)) return false;
-            if (!SafePropertyResolver.TryGetCollectionElementType(resolvedType, out elementType)) return false;
-            collectionAccess = resolvedExpr;
-        }
-        else
-        {
-            if (string.IsNullOrWhiteSpace(sort.Aggregate)
-                || !SafePropertyResolver.TryResolveChain(parameter.Type, sort.Field, out var chain)
-                || chain.Count == 0)
-            {
-                return false;
-            }
-
-            var collectionProp = chain[^1];
-            if (!IsCollectionType(collectionProp.PropertyType))
-                return false;
-
-            if (chain.Take(chain.Count - 1).Any(p => IsCollectionType(p.PropertyType)))
-                return false;
-
-            collectionAccess = parameter;
-            foreach (var prop in chain)
-            {
-                collectionAccess = Expression.Property(collectionAccess, prop);
-            }
-
-            if (!SafePropertyResolver.TryGetCollectionElementType(collectionProp.PropertyType, out elementType))
-                return false;
-        }
-
-        var aggregate = sort.Aggregate!.Trim().ToLowerInvariant();
-        if (aggregate == "count")
-        {
-            if (!string.IsNullOrWhiteSpace(sort.AggregateField))
-                return false;
-
-            aggregateExpression = BuildCountExpression(collectionAccess, elementType);
-            return true;
-        }
-
-        if (string.IsNullOrWhiteSpace(sort.AggregateField))
-            return false;
-
-        if (!BuildElementSelectorExpression(elementType, sort.AggregateField!, out var selectorLambda, out var selectorType))
-            return false;
-
-        if (selectorType == typeof(string))
-            return false;
-
-        var builtAggregate = BuildSelectorAggregateExpression(
-            aggregate,
-            collectionAccess,
-            elementType,
-            selectorLambda,
-            selectorType);
-
-        if (builtAggregate is null)
-            return false;
-
-        aggregateExpression = builtAggregate;
-        return true;
-    }
-
-    private static Expression BuildCountExpression(Expression collectionAccess, Type elementType)
-    {
-        var countMethod = ExpressionMethodCache.EnumerableCount(elementType);
-        return Expression.Call(countMethod, collectionAccess);
-    }
-
-    private static bool BuildElementSelectorExpression(
-        Type elementType,
-        string path,
-        out LambdaExpression selectorLambda,
-        out Type selectorType)
-    {
-        selectorLambda = null!;
-        selectorType = null!;
-
-        if (path.Contains('.', StringComparison.Ordinal))
-            return false;
-
-        if (!SafePropertyResolver.TryResolveChain(elementType, path, out var valueChain) || valueChain.Count == 0)
-            return false;
-        if (valueChain.Any(p => IsCollectionType(p.PropertyType)))
-            return false;
-
-        var item = Expression.Parameter(elementType, "e");
-        Expression body = item;
-        foreach (var prop in valueChain)
-        {
-            body = Expression.Property(body, prop);
-        }
-
-        selectorType = body.Type;
-        selectorLambda = Expression.Lambda(
-            typeof(Func<,>).MakeGenericType(elementType, selectorType),
-            body,
-            item);
-
-        return true;
-    }
-
-    private static Expression? BuildSelectorAggregateExpression(
-        string aggregate,
-        Expression collectionAccess,
-        Type elementType,
-        LambdaExpression selectorLambda,
-        Type selectorType)
-    {
-        var effectiveSelectorType = selectorType;
-        var effectiveSelectorLambda = selectorLambda;
-
-        if (selectorType == typeof(decimal))
-        {
-            effectiveSelectorType = typeof(double);
-            effectiveSelectorLambda = ConvertSelectorLambda(selectorLambda, effectiveSelectorType);
-        }
-        else if (selectorType == typeof(decimal?))
-        {
-            effectiveSelectorType = typeof(double?);
-            effectiveSelectorLambda = ConvertSelectorLambda(selectorLambda, effectiveSelectorType);
-        }
-
-        var method = aggregate switch
-        {
-            "max" => ExpressionMethodCache.EnumerableMaxWithSelector(elementType, effectiveSelectorType),
-            "min" => ExpressionMethodCache.EnumerableMinWithSelector(elementType, effectiveSelectorType),
-            "sum" => ExpressionMethodCache.EnumerableSumWithSelector(elementType, effectiveSelectorType),
-            "avg" => ExpressionMethodCache.EnumerableAverageWithSelector(elementType, effectiveSelectorType),
-            "average" => ExpressionMethodCache.EnumerableAverageWithSelector(elementType, effectiveSelectorType),
-            _ => null!
-        };
-
-        return Expression.Call(method, collectionAccess, effectiveSelectorLambda);
-    }
-
-    private static LambdaExpression ConvertSelectorLambda(
-        LambdaExpression selectorLambda,
-        Type targetSelectorType)
-    {
-        var parameter = selectorLambda.Parameters[0];
-        var convertedBody = Expression.Convert(selectorLambda.Body, targetSelectorType);
-        return Expression.Lambda(
-            typeof(Func<,>).MakeGenericType(parameter.Type, targetSelectorType),
-            convertedBody,
-            parameter);
-    }
-
     private static bool IsCollectionType(Type type)
         => SafePropertyResolver.TryGetCollectionElementType(type, out _);
-
-    private static IOrderedQueryable<T> ApplyInitialOrder<T>(
-        IQueryable<T> query,
-        LambdaExpression keySelector,
-        Type keyType,
-        bool descending)
-    {
-        var method = (descending ? OrderByDescendingMethod : OrderByMethod)
-            .MakeGenericMethod(typeof(T), keyType);
-
-        var orderedQuery = method.Invoke(null, [query, keySelector]);
-        return (IOrderedQueryable<T>)orderedQuery!;
-    }
-
-    private static IOrderedQueryable<T> ApplyThenOrder<T>(
-        IOrderedQueryable<T> query,
-        LambdaExpression keySelector,
-        Type keyType,
-        bool descending)
-    {
-        var method = (descending ? ThenByDescendingMethod : ThenByMethod)
-            .MakeGenericMethod(typeof(T), keyType);
-
-        var orderedQuery = method.Invoke(null, [query, keySelector]);
-        return (IOrderedQueryable<T>)orderedQuery!;
-    }
     
     private static bool HasAnyCondition(FilterGroup group)
         => group.Filters.Count > 0 || group.Groups.Any(g => HasAnyCondition(g));
 }
-

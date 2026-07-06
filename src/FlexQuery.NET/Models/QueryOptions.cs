@@ -67,4 +67,15 @@ public class QueryOptions
 
     /// <summary>Whether expression caching is enabled for this query.</summary>
     internal bool? EnableCache { get; set; }
+
+    // --- Keyset Pagination ---
+
+    /// <summary>Internal: deserialized cursor values for keyset pagination.</summary>
+    internal KeysetCursor? Cursor { get; set; }
+
+    /// <summary>Internal: true when keyset pagination was requested (via UseKeysetPagination or cursor presence).</summary>
+    internal bool IsKeysetMode { get; set; }
+
+    /// <summary>Internal: true when offset pagination parameters were explicitly provided by the caller. Used for presence-based conflict detection.</summary>
+    internal bool OffsetExplicitlyRequested { get; set; }
 }

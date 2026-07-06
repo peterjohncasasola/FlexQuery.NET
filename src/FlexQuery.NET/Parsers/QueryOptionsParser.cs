@@ -71,7 +71,7 @@ public static class QueryOptionsParser
             parameters.Query, parameters.Filter, parameters.Sort, parameters.Select,
             parameters.Include, parameters.GroupBy, parameters.Having,
             parameters.Page, parameters.PageSize, parameters.IncludeCount,
-            parameters.Distinct, parameters.Mode, rawKey, syntax.ToString());
+            parameters.Distinct, parameters.Mode, parameters.Cursor, parameters.UseKeysetPagination, rawKey, syntax.ToString());
 
         if (ParserCache.TryGet(cacheKey, out var cached))
         {
@@ -127,6 +127,8 @@ public static class QueryOptionsParser
             IncludeCount = grouped.TryGetValue(QueryOptionKeys.IncludeCount, out var ic) ? ic.Equals("true", StringComparison.OrdinalIgnoreCase) : null,
             Distinct = grouped.TryGetValue(QueryOptionKeys.Distinct, out var dVal) ? dVal.Equals("true", StringComparison.OrdinalIgnoreCase) : null,
             Mode = TryGet(QueryOptionKeys.Mode),
+            Cursor = TryGet(QueryOptionKeys.Cursor),
+            UseKeysetPagination = grouped.TryGetValue(QueryOptionKeys.UseKeysetPagination, out var ukp) && ukp.Equals("true", StringComparison.OrdinalIgnoreCase),
             RawParameters = grouped
         };
 

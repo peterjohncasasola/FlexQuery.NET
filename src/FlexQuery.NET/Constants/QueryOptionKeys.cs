@@ -29,4 +29,6 @@ internal static class QueryOptionKeys
     public const string Fn = "fn";
     public const string Collection = "collection";
     public const string Field2 = "field2";
+    public const string Cursor = "cursor";
+    public const string UseKeysetPagination = "useKeysetPagination";
 }

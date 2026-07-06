@@ -81,6 +81,8 @@ public static class QueryableExtensions
 
         var options = parameters.ToQueryOptions();
 
+        ValidatePaginationMode(options);
+
         options = options.Normalize();
         options.ValidateOrThrow<T>(exec);
 
@@ -108,6 +110,8 @@ public static class QueryableExtensions
         var exec = new QueryExecutionOptions();
         configure?.Invoke(exec);
 
+        ValidatePaginationMode(options);
+
         options = options.Normalize();
         options.ValidateOrThrow<T>(exec);
 
@@ -117,6 +121,18 @@ public static class QueryableExtensions
 
         return query.ApplyFlexQuery(options, hasProjection, exec);
 
+    }
+
+    private static void ValidatePaginationMode(QueryOptions options)
+    {
+        if (!options.IsKeysetMode) return;
+
+        if (options.OffsetExplicitlyRequested)
+        {
+            throw new QueryValidationException(
+                "Offset pagination parameters cannot be used together with Keyset Pagination. " +
+                "Choose either Offset Pagination or Keyset Pagination.");
+        }
     }
 
     private static QueryResult<object> ApplyFlexQuery<T>(this IQueryable<T> query, QueryOptions options, bool hasProjection, QueryExecutionOptions? execOptions = null)
@@ -140,7 +156,9 @@ public static class QueryableExtensions
                 options.Aggregates);
         }
 
-        filtered = QueryBuilder.ApplyPaging(filtered, options);
+        filtered = options.IsKeysetMode
+            ? QueryBuilder.ApplyKeysetPaging(filtered, options)
+            : QueryBuilder.ApplyPaging(filtered, options);
 
         if (hasProjection)
         {
@@ -165,6 +183,11 @@ public static class QueryableExtensions
     private static int? TryGetTotalCount<T>(
         this IQueryable<T> filteredQuery, QueryOptions options, QueryExecutionOptions? execOptions = null)
     {
+        if (options.IsKeysetMode)
+        {
+            return options.IncludeCount == true ? filteredQuery.Count() : null;
+        }
+
         return (options.IncludeCount == true && (execOptions?.IncludeTotalCount ?? true))
             ? filteredQuery.Count() 
             : null;

@@ -60,4 +60,7 @@ public sealed class QueryResult<T>
     /// <c>Data.Count</c> is at most 20.
     /// </summary>
     public IReadOnlyList<T> Data { get; init; } = [];
+
+    /// <summary>Serialized cursor token for the next page. Present when keyset pagination was used and there may be more results.</summary>
+    public string? NextCursorToken { get; init; }
 }

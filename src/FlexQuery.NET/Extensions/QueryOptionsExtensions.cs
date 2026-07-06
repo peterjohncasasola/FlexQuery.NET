@@ -3,6 +3,7 @@ using FlexQuery.NET.Caching;
 using FlexQuery.NET.Constants;
 using FlexQuery.NET.Exceptions;
 using FlexQuery.NET.Models;
+using FlexQuery.NET.Serialization;
 using FlexQuery.NET.Validation;
 
 namespace FlexQuery.NET;
@@ -101,6 +102,22 @@ public static class QueryOptionsExtensions
         Dictionary<string, Dictionary<string, object>>? aggregates = null,
         int? resultCount = null)
     {
+        var dataList = data.ToList();
+        string? nextCursorToken = null;
+
+        if (options.IsKeysetMode && dataList.Count > 0)
+        {
+            var lastItem = dataList[^1];
+            var values = new object?[options.Sort.Count];
+            for (var i = 0; i < options.Sort.Count; i++)
+            {
+                var prop = ReflectionCache.GetProperty(typeof(T), options.Sort[i].Field);
+                values[i] = prop?.GetValue(lastItem);
+            }
+            var cursor = new KeysetCursor(values);
+            nextCursorToken = KeysetCursorSerializer.Serialize(cursor);
+        }
+
         return new QueryResult<T>
         {
             TotalCount = totalCount,
@@ -108,7 +125,8 @@ public static class QueryOptionsExtensions
             Page       = options.Paging.Page,
             PageSize   = options.Paging.PageSize,
             Aggregates = aggregates,
-            Data       = data.ToList()
+            Data       = dataList,
+            NextCursorToken = nextCursorToken
         };
     }
 
@@ -202,6 +220,9 @@ public static class QueryOptionsExtensions
             IncludeCount = source.IncludeCount,
             CaseInsensitive = source.CaseInsensitive,
             EnableCache = source.EnableCache,
+            Cursor = source.Cursor,
+            IsKeysetMode = source.IsKeysetMode,
+            OffsetExplicitlyRequested = source.OffsetExplicitlyRequested,
             UseEfCoreOperators = source.UseEfCoreOperators
         };
 
