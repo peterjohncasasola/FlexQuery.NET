@@ -1,7 +1,6 @@
 using System.Diagnostics;
 using FlexQuery.NET.Dapper;
 using FlexQuery.NET.Dapper.Dialects;
-using FlexQuery.NET.Dapper.Mapping;
 using FlexQuery.NET.Diagnostics;
 using FlexQuery.NET.Models;
 using FlexQuery.NET.Parsers;
@@ -15,7 +14,7 @@ namespace FlexQuery.NET.Samples.WebApi.Controllers;
 [ApiController]
 [Route("api/dapper/customers")]
 [Produces("application/json")]
-public sealed class DapperCustomersController(AppDbContext db, IMappingRegistry registry) : ControllerBase
+public sealed class DapperCustomersController(AppDbContext db) : ControllerBase
 {
     [HttpGet]
     [ProducesResponseType(typeof(QueryResult<Customer>), 200)]
@@ -33,8 +32,11 @@ public sealed class DapperCustomersController(AppDbContext db, IMappingRegistry 
             configureDapper: opt =>
             {
                 opt.Dialect = new SqliteDialect();
-                opt.MappingRegistry = registry;
-                opt.EntityType = typeof(Customer);
+                opt.Entity<Customer>()
+                    .ToTable("Customers")
+                    .HasMany(c => c.Orders).WithForeignKey("CustomerId");
+                opt.Entity<Order>()
+                    .ToTable("Orders");
             },
             cancellationToken: cancellationToken,
             configureExecution: cfg => cfg.Listener = collector);

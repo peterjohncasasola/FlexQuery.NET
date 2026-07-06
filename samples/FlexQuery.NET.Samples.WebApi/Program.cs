@@ -1,7 +1,6 @@
 using System.Reflection;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using FlexQuery.NET.Dapper.Mapping;
 using FlexQuery.NET.Samples.WebApi.Data;
 using FlexQuery.NET.Samples.WebApi.Models;
 using Microsoft.EntityFrameworkCore;
@@ -12,17 +11,6 @@ var builder = WebApplication.CreateBuilder(args);
 // 1. Add SQLite Database
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseSqlite("Data Source=flexquery_sample.db"));
-
-// 2. Configure Dapper Mapping Registry for FlexQuery.NET
-var dapperRegistry = new MappingRegistry();
-dapperRegistry.Entity<Customer>()
-    .ToTable("Customers")
-    .HasMany(c => c.Orders).WithForeignKey("CustomerId");
-
-dapperRegistry.Entity<Order>()
-    .ToTable("Orders");
-
-builder.Services.AddSingleton<IMappingRegistry>(dapperRegistry);
 
 // 3. Add Controllers and Configure JSON serialization
 builder.Services.AddControllers()

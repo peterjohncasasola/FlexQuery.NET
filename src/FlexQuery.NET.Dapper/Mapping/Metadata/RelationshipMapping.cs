@@ -5,7 +5,7 @@ namespace FlexQuery.NET.Dapper.Mapping.Metadata;
 /// <summary>
 /// Configuration metadata for a relationship/navigation property.
 /// </summary>
-public sealed class RelationshipMapping
+internal sealed class RelationshipMapping
 {
     /// <summary>The reflection PropertyInfo for the navigation property.</summary>
     public PropertyInfo NavigationProperty { get; }

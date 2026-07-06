@@ -36,20 +36,9 @@ namespace FlexQuery.NET.Dapper;
 /// </remarks>
 public static class FlexQueryDapperExtensions
 {
-    private static void ValidateEntityType(Type t, Type? entityType)
+    private static void SetEntityType(QueryOptions options, Type entityType)
     {
-        var resolved = entityType ?? t;
-        if (resolved == typeof(object))
-        {
-            throw new InvalidOperationException(
-                "Entity type could not be resolved. Set EntityType in DapperQueryOptions " +
-                "or use a concrete type parameter when calling FlexQueryAsync<T>().");
-        }
-    }
-
-    private static void SetEntityType(QueryOptions options, Type t, DapperQueryOptions dapperOptions)
-    {
-        options.Items[ContextKeys.EntityType] = dapperOptions.EntityType ?? t;
+        options.Items[ContextKeys.EntityType] = entityType;
     }
 
     /// <summary>
@@ -73,7 +62,6 @@ public static class FlexQueryDapperExtensions
     {
         var dapperOptions = new DapperQueryOptions();
         configureDapper?.Invoke(dapperOptions);
-        ValidateEntityType(typeof(T), dapperOptions.EntityType);
 
         return await connection.FlexQueryAsync<T>(parameters, dapperOptions, configureExecution, cancellationToken);
     }
@@ -98,14 +86,13 @@ public static class FlexQueryDapperExtensions
         CancellationToken cancellationToken = default) where T : class
     {
         var dapperOptions = dapperQueryOptions ?? new DapperQueryOptions();
-        ValidateEntityType(typeof(T), dapperOptions.EntityType);
 
         var parsedOptions = parameters.ToQueryOptions();
-        SetEntityType(parsedOptions, typeof(T), dapperOptions);
+        SetEntityType(parsedOptions, typeof(T));
 
         var execOptions = dapperOptions.ToQueryExecutionOptions();
         parsedOptions = parsedOptions.Normalize();
-        parsedOptions.ValidateOrThrow(dapperOptions.EntityType ?? typeof(T), execOptions);
+        parsedOptions.ValidateOrThrow(typeof(T), execOptions);
 
         var execConfig = new FlexQueryExecutionConfig();
         configureExecution?.Invoke(execConfig);
@@ -183,13 +170,12 @@ public static class FlexQueryDapperExtensions
         ArgumentNullException.ThrowIfNull(options);
 
         var dapperOptions = dapperQueryOptions ?? new DapperQueryOptions();
-        ValidateEntityType(typeof(T), dapperOptions.EntityType);
 
-        SetEntityType(options, typeof(T), dapperOptions);
+        SetEntityType(options, typeof(T));
 
         var execOptions = dapperOptions.ToQueryExecutionOptions();
         options = options.Normalize();
-        options.ValidateOrThrow(dapperOptions.EntityType ?? typeof(T), execOptions);
+        options.ValidateOrThrow(typeof(T), execOptions);
 
         var execConfig = new FlexQueryExecutionConfig();
         configureExecution?.Invoke(execConfig);
@@ -221,18 +207,14 @@ public static class FlexQueryDapperExtensions
             await connection.OpenAsync(ct);
         }
 
-        var dialect = execOptions.Dialect
-            ?? DapperQueryOptions.GlobalDefaultDialect
-            ?? DapperQueryOptions.GlobalDialectResolver.Resolve(connection);
+        var dialect = execOptions.Dialect ?? SqlDialectResolver.Resolve(connection);
 
-        var registry = execOptions.MappingRegistry ?? new Mapping.MappingRegistry();
-
-        if (execOptions.EntityType != null)
-            options.Items[ContextKeys.EntityType] = execOptions.EntityType;
+        var registry = execOptions.Registry;
+        options.Items[ContextKeys.EntityType] = typeof(T);
 
         var translator = new SqlTranslator(registry, dialect);
         var command = translator.Translate(options);
-        var entityType = execOptions.EntityType ?? typeof(T);
+        var entityType = typeof(T);
         var mapping = registry.GetMapping(entityType);
 
         var parameters = new DynamicParameters();
@@ -255,10 +237,7 @@ public static class FlexQueryDapperExtensions
         }
 
         var metadata = ProjectionMetadataBuilder.Build(entityType, options);
-        var useDynamicType = metadata.IsProjected
-            && options.GroupBy == null
-            && options.Aggregates.Count == 0
-            && typeof(T) != typeof(object);
+        var useDynamicType = false;
 
         IReadOnlyList<object> items;
         if (options.Includes?.Count > 0 || options.Expand?.Count > 0)
@@ -345,11 +324,14 @@ public static class FlexQueryDapperExtensions
         }
         else
         {
-            items = (await connection.QueryAsync<T>(
+            var dynamicItems = await connection.QueryAsync(
                 command.Sql,
                 parameters,
                 commandTimeout: execOptions.CommandTimeoutSeconds,
-                commandType: CommandType.Text)).Cast<object>().ToList();
+                commandType: CommandType.Text);
+            items = dynamicItems
+                .Select(d => (object)new Dictionary<string, object>((IDictionary<string, object>)d, StringComparer.OrdinalIgnoreCase))
+                .ToList();
         }
 
         bool shouldIncludeCount = execOptions.IncludeTotalCount && (options.IncludeCount ?? true);

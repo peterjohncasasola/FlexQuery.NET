@@ -5,10 +5,10 @@ namespace FlexQuery.NET.Dapper.Dialects;
 /// <summary>
 /// Default implementation of ISqlDialectResolver that inspects the connection type name.
 /// </summary>
-public class DefaultSqlDialectResolver : ISqlDialectResolver
+internal static class SqlDialectResolver
 {
     /// <summary>Resolves the appropriate SQL dialect for the given database connection.</summary>
-    public ISqlDialect Resolve(DbConnection connection)
+    public static ISqlDialect Resolve(DbConnection connection)
     {
         var typeName = connection.GetType().Name;
 

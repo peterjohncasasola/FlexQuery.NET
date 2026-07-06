@@ -3,7 +3,7 @@ namespace FlexQuery.NET.Dapper.Mapping;
 /// <summary>
 /// Information about a join relationship.
 /// </summary>
-public sealed class JoinInfo
+internal sealed class JoinInfo
 {
     /// <summary>The navigation property name used for the join.</summary>
     public string NavigationProperty { get; set; } = string.Empty;

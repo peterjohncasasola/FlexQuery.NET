@@ -13,7 +13,6 @@ public class GroupedQueryExecutionTests : IDisposable
 {
     private readonly SqlProjectionDbContext _db = SqlProjectionDbContext.CreateSeeded();
     private readonly DbConnection _connection;
-    private readonly MappingRegistry _registry = CreateRegistry();
 
     public GroupedQueryExecutionTests()
     {
@@ -170,15 +169,24 @@ public class GroupedQueryExecutionTests : IDisposable
 
     private Task<QueryResult<object>> ExecuteOrdersAsync(QueryOptions options)
     {
-        return _connection.FlexQueryAsync<object>(
-            options,
-            dapperQueryOptions: new DapperQueryOptions
-            {
-                Dialect = new SqliteDialect(),
-                MappingRegistry = _registry,
-                EntityType = typeof(SqlOrder),
-                IncludeTotalCount = true
-            });
+        var dapperOptions = new DapperQueryOptions
+        {
+            Dialect = new SqliteDialect(),
+            IncludeTotalCount = true
+        };
+        ConfigureMappings(dapperOptions);
+        return _connection.FlexQueryAsync<SqlOrder>(options, dapperOptions);
+    }
+
+    private static void ConfigureMappings(DapperQueryOptions options)
+    {
+        options.Entity<SqlCustomer>()
+            .ToTable("Customers")
+            .HasMany(c => c.Orders).WithForeignKey("CustomerId");
+        options.Entity<SqlOrder>()
+            .ToTable("Orders")
+            .HasMany(o => o.Items).WithForeignKey("OrderId");
+        options.Entity<SqlOrderItem>().ToTable("OrderItems");
     }
 
     private static QueryOptions GroupedOptions(int page, int pageSize)
@@ -335,16 +343,4 @@ public class GroupedQueryExecutionTests : IDisposable
         return (T)Convert.ChangeType(propValue, typeof(T))!;
     }
 
-    private static MappingRegistry CreateRegistry()
-    {
-        var registry = new MappingRegistry();
-        registry.Entity<SqlCustomer>()
-            .ToTable("Customers")
-            .HasMany(c => c.Orders).WithForeignKey("CustomerId");
-        registry.Entity<SqlOrder>()
-            .ToTable("Orders")
-            .HasMany(o => o.Items).WithForeignKey("OrderId");
-        registry.Entity<SqlOrderItem>().ToTable("OrderItems");
-        return registry;
-    }
 }

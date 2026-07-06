@@ -5,7 +5,7 @@ namespace FlexQuery.NET.Dapper.Mapping.Metadata;
 /// <summary>
 /// Configuration metadata for an entity property.
 /// </summary>
-public sealed class PropertyMapping
+internal sealed class PropertyMapping
 {
     /// <summary>The reflection PropertyInfo for the mapped property.</summary>
     public PropertyInfo PropertyInfo { get; }

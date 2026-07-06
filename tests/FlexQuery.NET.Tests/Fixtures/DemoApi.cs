@@ -12,6 +12,8 @@ using Microsoft.Extensions.DependencyInjection;
 using System.Data;
 
 using System.Text.Json.Serialization;
+using FlexQuery.NET.Adapters.Kendo;
+using FlexQuery.NET.Exceptions;
 using FlexQuery.NET.Tests.Models;
 
 namespace FlexQuery.NET.Tests.Fixtures;
@@ -28,22 +30,6 @@ public class DemoApiStartup
                 options.JsonSerializerOptions.PropertyNamingPolicy = null;
             })
             .AddFlexQuerySecurity();
-        
-        var registry = new MappingRegistry();
-        
-        registry.Entity<SqlCustomer>()
-            .ToTable("Customers")
-            .HasOne(c => c.Address).WithForeignKey("CustomerId");
-        registry.Entity<SqlCustomer>().HasMany(c => c.Orders).WithForeignKey("CustomerId");
-
-        registry.Entity<SqlOrder>()
-            .ToTable("Orders")
-            .HasMany(o => o.Items).WithForeignKey("OrderId");
-            
-        registry.Entity<SqlOrderItem>()
-            .ToTable("OrderItems");
-
-        services.AddSingleton<IMappingRegistry>(registry);
     }
 
     public void Configure(IApplicationBuilder app)
@@ -57,18 +43,24 @@ public class DemoApiStartup
 }
 
 [ApiController]
+[Route("api/diag")]
+public class DiagnosticController : ControllerBase
+{
+    [HttpGet("ping")]
+    public IActionResult Ping() => Ok("pong");
+}
+
+[ApiController]
 [Route("api/users")]
 public class UsersController : ControllerBase
 {
     private readonly IDbConnection _connection;
     private readonly ISqlDialect _dialect;
-    private readonly IMappingRegistry _registry;
 
-    public UsersController(IDbConnection connection, ISqlDialect dialect, IMappingRegistry registry)
+    public UsersController(IDbConnection connection, ISqlDialect dialect)
     {
         _connection = connection;
         _dialect = dialect;
-        _registry = registry;
     }
 
     [HttpGet("health")]
@@ -79,11 +71,18 @@ public class UsersController : ControllerBase
     {
         try
         {
-            var result = await ((System.Data.Common.DbConnection)_connection).FlexQueryAsync<object>(parameters, opt => 
+            var result = await ((System.Data.Common.DbConnection)_connection).FlexQueryAsync<SqlCustomer>(parameters, opt => 
             {
                 opt.Dialect = _dialect;
-                opt.MappingRegistry = _registry;
-                opt.EntityType = typeof(SqlCustomer);
+                opt.Entity<SqlCustomer>()
+                    .ToTable("Customers")
+                    .HasOne(c => c.Address).WithForeignKey("CustomerId");
+                opt.Entity<SqlCustomer>().HasMany(c => c.Orders).WithForeignKey("CustomerId");
+                opt.Entity<SqlOrder>()
+                    .ToTable("Orders")
+                    .HasMany(o => o.Items).WithForeignKey("OrderId");
+                opt.Entity<SqlOrderItem>()
+                    .ToTable("OrderItems");
             });
             return Ok(result);
         }
@@ -100,13 +99,11 @@ public class OrdersController : ControllerBase
 {
     private readonly IDbConnection _connection;
     private readonly ISqlDialect _dialect;
-    private readonly IMappingRegistry _registry;
 
-    public OrdersController(IDbConnection connection, ISqlDialect dialect, IMappingRegistry registry)
+    public OrdersController(IDbConnection connection, ISqlDialect dialect)
     {
         _connection = connection;
         _dialect = dialect;
-        _registry = registry;
     }
 
     [HttpGet]
@@ -114,15 +111,22 @@ public class OrdersController : ControllerBase
     {
         try
         {
-            var result = await ((System.Data.Common.DbConnection)_connection).FlexQueryAsync<object>(parameters, opt => 
+            var result = await ((System.Data.Common.DbConnection)_connection).FlexQueryAsync<SqlOrder>(parameters, opt => 
             {
                 opt.Dialect = _dialect;
-                opt.MappingRegistry = _registry;
-                opt.EntityType = typeof(SqlOrder);
+                opt.Entity<SqlCustomer>()
+                    .ToTable("Customers")
+                    .HasOne(c => c.Address).WithForeignKey("CustomerId");
+                opt.Entity<SqlCustomer>().HasMany(c => c.Orders).WithForeignKey("CustomerId");
+                opt.Entity<SqlOrder>()
+                    .ToTable("Orders")
+                    .HasMany(o => o.Items).WithForeignKey("OrderId");
+                opt.Entity<SqlOrderItem>()
+                    .ToTable("OrderItems");
             });
             return Ok(result);
         }
-        catch (FlexQuery.NET.Exceptions.QueryValidationException ex)
+        catch (QueryValidationException ex)
         {
             return BadRequest(ex.Message);
         }
@@ -135,23 +139,28 @@ public class ProductsController : ControllerBase
 {
     private readonly IDbConnection _connection;
     private readonly ISqlDialect _dialect;
-    private readonly IMappingRegistry _registry;
 
-    public ProductsController(IDbConnection connection, ISqlDialect dialect, IMappingRegistry registry)
+    public ProductsController(IDbConnection connection, ISqlDialect dialect)
     {
         _connection = connection;
         _dialect = dialect;
-        _registry = registry;
     }
 
     [HttpGet]
     public async Task<IActionResult> Get([FromQuery] FlexQueryParameters parameters)
     {
-        // Using SqlOrderItem as "Product" for demo
         var result = await ((DbConnection)_connection).FlexQueryAsync<SqlOrderItem>(parameters, opt => 
         {
             opt.Dialect = _dialect;
-            opt.MappingRegistry = _registry;
+            opt.Entity<SqlCustomer>()
+                .ToTable("Customers")
+                .HasOne(c => c.Address).WithForeignKey("CustomerId");
+            opt.Entity<SqlCustomer>().HasMany(c => c.Orders).WithForeignKey("CustomerId");
+            opt.Entity<SqlOrder>()
+                .ToTable("Orders")
+                .HasMany(o => o.Items).WithForeignKey("OrderId");
+            opt.Entity<SqlOrderItem>()
+                .ToTable("OrderItems");
         });
         return Ok(result);
     }

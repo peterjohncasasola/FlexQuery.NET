@@ -32,12 +32,4 @@ public static class DapperQueryOptionsExtensions
         return options;
     }
 
-    /// <summary>
-    /// Registers the mapping registry with the service collection.
-    /// </summary>
-    public static DapperQueryOptions UseMappingRegistry(this DapperQueryOptions options, Mapping.IMappingRegistry registry)
-    {
-        options.MappingRegistry = registry;
-        return options;
-    }
 }

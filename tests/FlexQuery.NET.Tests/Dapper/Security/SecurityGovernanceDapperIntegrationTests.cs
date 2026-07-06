@@ -16,18 +16,8 @@ namespace FlexQuery.NET.Tests.Dapper.Security;
 
 public class SecurityGovernanceDapperIntegrationTests
 {
-    private readonly IMappingRegistry _registry = new MappingRegistry();
+
     private static readonly ISqlDialect Dialect = new SqliteDialect();
-
-    public SecurityGovernanceDapperIntegrationTests()
-    {
-        _registry.Entity<GovEntity>()
-            .ToTable("Entities")
-            .HasMany(e => e.Orders).WithForeignKey("EntityId");
-
-        _registry.Entity<GovOrder>()
-            .ToTable("Orders");
-    }
 
     private static QueryOptions NoPaging(QueryOptions options)
     {
@@ -52,7 +42,7 @@ public class SecurityGovernanceDapperIntegrationTests
 
         options.Validate(typeof(GovEntity), execOptions);
 
-        var translator = new SqlTranslator(_registry, Dialect);
+        var translator = new SqlTranslator(CreateValidationRegistry(), Dialect);
         var command = translator.Translate(options);
 
         command.Sql.Should().Contain("SELECT");
@@ -79,7 +69,7 @@ public class SecurityGovernanceDapperIntegrationTests
 
         options.Validate(typeof(GovEntity), execOptions);
 
-        var translator = new SqlTranslator(_registry, Dialect);
+        var translator = new SqlTranslator(CreateValidationRegistry(), Dialect);
         var command = translator.Translate(options);
 
         // Positive: allowed scalar fields appear
@@ -124,7 +114,7 @@ public class SecurityGovernanceDapperIntegrationTests
 
         options.Validate(typeof(GovOrder), execOptions);
 
-        var translator = new SqlTranslator(_registry, Dialect);
+        var translator = new SqlTranslator(CreateValidationRegistry(), Dialect);
         var command = translator.Translate(options);
 
         command.Sql.Should().Contain("ORDER BY");
@@ -159,7 +149,7 @@ public class SecurityGovernanceDapperIntegrationTests
 
         options.Validate(typeof(GovOrder), execOptions);
 
-        var translator = new SqlTranslator(_registry, Dialect);
+        var translator = new SqlTranslator(CreateValidationRegistry(), Dialect);
         var command = translator.Translate(options);
 
         // Non-grouped sort "Id" is removed by GroupedSortValidator and replaced
@@ -310,7 +300,7 @@ public class SecurityGovernanceDapperIntegrationTests
 
         options.Validate(typeof(GovEntity), execOptions);
 
-        var translator = new SqlTranslator(_registry, Dialect);
+        var translator = new SqlTranslator(CreateValidationRegistry(), Dialect);
         var command = translator.Translate(options);
 
         command.Sql.Should().Contain("ORDER BY");
@@ -338,7 +328,7 @@ public class SecurityGovernanceDapperIntegrationTests
 
         options.Validate(typeof(GovEntity), execOptions);
 
-        var translator = new SqlTranslator(_registry, Dialect);
+        var translator = new SqlTranslator(CreateValidationRegistry(), Dialect);
         var command = translator.Translate(options);
 
         command.Sql.Should().Contain("ORDER BY");
@@ -362,7 +352,7 @@ public class SecurityGovernanceDapperIntegrationTests
 
         options.Validate(typeof(GovEntity), execOptions);
 
-        var translator = new SqlTranslator(_registry, Dialect);
+        var translator = new SqlTranslator(CreateValidationRegistry(), Dialect);
         var command = translator.Translate(options);
 
         command.Sql.Should().Contain("ORDER BY");
@@ -389,7 +379,7 @@ public class SecurityGovernanceDapperIntegrationTests
 
         options.Validate(typeof(GovEntity), execOptions);
 
-        var translator = new SqlTranslator(_registry, Dialect);
+        var translator = new SqlTranslator(CreateValidationRegistry(), Dialect);
         var command = translator.Translate(options);
 
         command.Sql.Should().NotContain("\"SSN\"");
@@ -416,7 +406,7 @@ public class SecurityGovernanceDapperIntegrationTests
 
         options.Validate(typeof(GovEntity), execOptions);
 
-        var translator = new SqlTranslator(_registry, Dialect);
+        var translator = new SqlTranslator(CreateValidationRegistry(), Dialect);
         var command = translator.Translate(options);
 
         command.Sql.Should().Contain("\"Id\"");
@@ -443,15 +433,13 @@ public class SecurityGovernanceDapperIntegrationTests
             AllowedFields = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "Id", "Name" }
         };
 
-        var result = await connection.FlexQueryAsync<object>(
-            options,
-            dapperQueryOptions: new DapperQueryOptions(execOptions)
-            {
-                Dialect = new SqliteDialect(),
-                MappingRegistry = CreateOrderRegistry(),
-                EntityType = typeof(SqlCustomer),
-                IncludeTotalCount = true
-            });
+        var dapperOptions = new DapperQueryOptions(execOptions)
+        {
+            Dialect = new SqliteDialect(),
+            IncludeTotalCount = true
+        };
+        CreateOrderRegistry(dapperOptions);
+        var result = await connection.FlexQueryAsync<SqlCustomer>(options, dapperOptions);
 
         result.Data.Should().NotBeEmpty();
         foreach (var row in result.Data)
@@ -459,7 +447,6 @@ public class SecurityGovernanceDapperIntegrationTests
             var dict = AssertDictionary(row);
             dict.Keys.Should().Contain("Id");
             dict.Keys.Should().Contain("Name");
-            // Fields not in AllowedFields must NOT appear
             dict.Keys.Should().NotContain("Email");
             // Note: SqlCustomer has Id, Name, Email, Orders — only Id/Name are allowed
             dict.Keys.Count.Should().Be(2);
@@ -505,15 +492,13 @@ public class SecurityGovernanceDapperIntegrationTests
             AggregatableFields = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "Total" }
         };
 
-        var result = await connection.FlexQueryAsync<object>(
-            options,
-            dapperQueryOptions: new DapperQueryOptions(execOptions)
-            {
-                Dialect = new SqliteDialect(),
-                MappingRegistry = CreateOrderRegistry(),
-                EntityType = typeof(SqlOrder),
-                IncludeTotalCount = true
-            });
+        var dapperOptions = new DapperQueryOptions(execOptions)
+        {
+            Dialect = new SqliteDialect(),
+            IncludeTotalCount = true
+        };
+        CreateOrderRegistry(dapperOptions);
+        var result = await connection.FlexQueryAsync<SqlOrder>(options, dapperOptions);
 
         result.Data.Should().NotBeEmpty();
         var first = AssertDictionary(result.Data[0]);
@@ -541,16 +526,14 @@ public class SecurityGovernanceDapperIntegrationTests
         {
             GroupableFields = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "Id" }
         };
-
-        var act = async () => await connection.FlexQueryAsync<object>(
-            options,
-            dapperQueryOptions: new DapperQueryOptions(execOptions)
-            {
-                Dialect = new SqliteDialect(),
-                MappingRegistry = CreateOrderRegistry(),
-                EntityType = typeof(SqlCustomer),
-                IncludeTotalCount = true
-            });
+        
+        var dapperOptions = new DapperQueryOptions(execOptions)
+        {
+            Dialect = new SqliteDialect(),
+            IncludeTotalCount = true
+        };
+        dapperOptions.Entity<GovEntity>().ToTable("Entities");
+        var act = async () => await connection.FlexQueryAsync<GovEntity>(options, dapperOptions);
 
         await act.Should().ThrowAsync<QueryValidationException>();
     }
@@ -572,15 +555,13 @@ public class SecurityGovernanceDapperIntegrationTests
             AggregatableFields = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "Id" }
         };
 
-        var act = async () => await connection.FlexQueryAsync<object>(
-            options,
-            dapperQueryOptions: new DapperQueryOptions(execOptions)
-            {
-                Dialect = new SqliteDialect(),
-                MappingRegistry = CreateOrderRegistry(),
-                EntityType = typeof(SqlCustomer),
-                IncludeTotalCount = true
-            });
+        var dapperOptions = new DapperQueryOptions(execOptions)
+        {
+            Dialect = new SqliteDialect(),
+            IncludeTotalCount = true
+        };
+        CreateOrderRegistry(dapperOptions);
+        var act = async () => await connection.FlexQueryAsync<SqlCustomer>(options, dapperOptions);
 
         await act.Should().ThrowAsync<QueryValidationException>();
     }
@@ -604,15 +585,13 @@ public class SecurityGovernanceDapperIntegrationTests
             AggregatableFields = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "Id" }
         };
 
-        var act = async () => await connection.FlexQueryAsync<object>(
-            options,
-            dapperQueryOptions: new DapperQueryOptions(execOptions)
-            {
-                Dialect = new SqliteDialect(),
-                MappingRegistry = CreateOrderRegistry(),
-                EntityType = typeof(SqlCustomer),
-                IncludeTotalCount = true
-            });
+        var dapperOptions = new DapperQueryOptions(execOptions)
+        {
+            Dialect = new SqliteDialect(),
+            IncludeTotalCount = true
+        };
+        CreateOrderRegistry(dapperOptions);
+        var act = async () => await connection.FlexQueryAsync<SqlCustomer>(options, dapperOptions);
 
         await act.Should().ThrowAsync<QueryValidationException>();
     }
@@ -637,15 +616,13 @@ public class SecurityGovernanceDapperIntegrationTests
             FilterableFields = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "Id" }
         };
 
-        var act = async () => await connection.FlexQueryAsync<object>(
-            options,
-            dapperQueryOptions: new DapperQueryOptions(execOptions)
-            {
-                Dialect = new SqliteDialect(),
-                MappingRegistry = CreateOrderRegistry(),
-                EntityType = typeof(SqlCustomer),
-                IncludeTotalCount = true
-            });
+        var dapperOptions = new DapperQueryOptions(execOptions)
+        {
+            Dialect = new SqliteDialect(),
+            IncludeTotalCount = true
+        };
+        CreateOrderRegistry(dapperOptions);
+        var act = async () => await connection.FlexQueryAsync<SqlCustomer>(options, dapperOptions);
 
         await act.Should().ThrowAsync<QueryValidationException>();
     }
@@ -671,16 +648,13 @@ public class SecurityGovernanceDapperIntegrationTests
                 ["admin"] = new(StringComparer.OrdinalIgnoreCase) { "Id", "Name" }
             }
         };
-
-        var result = await connection.FlexQueryAsync<object>(
-            options,
-            dapperQueryOptions: new DapperQueryOptions(execOptions)
-            {
-                Dialect = new SqliteDialect(),
-                MappingRegistry = CreateOrderRegistry(),
-                EntityType = typeof(SqlCustomer),
-                IncludeTotalCount = true
-            });
+        var dapperOptions = new DapperQueryOptions(execOptions)
+        {
+            Dialect = new SqliteDialect(),
+            IncludeTotalCount = true
+        };
+        CreateOrderRegistry(dapperOptions);
+        var result = await connection.FlexQueryAsync<SqlCustomer>(options, dapperOptions);
 
         result.Data.Should().NotBeEmpty();
         foreach (var row in result.Data)
@@ -709,9 +683,6 @@ public class SecurityGovernanceDapperIntegrationTests
         cmd.CommandText = "INSERT INTO SortTest VALUES (1, 'Charlie'), (2, 'Alice'), (3, 'Bob')";
         cmd.ExecuteNonQuery();
 
-        var reg = new MappingRegistry();
-        reg.Entity<SortTestRow>().ToTable("SortTest");
-
         var options = NoPaging(new QueryOptions { IncludeCount = true });
         var execOptions = new QueryExecutionOptions
         {
@@ -719,19 +690,17 @@ public class SecurityGovernanceDapperIntegrationTests
             AllowedFields = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "Id", "Name" }
         };
 
-        var result = await conn.FlexQueryAsync<object>(
-            options,
-            dapperQueryOptions: new DapperQueryOptions(execOptions)
-            {
-                Dialect = new SqliteDialect(),
-                MappingRegistry = reg,
-                EntityType = typeof(SortTestRow),
-                IncludeTotalCount = true
-            });
+        var dapperOptions = new DapperQueryOptions(execOptions)
+        {
+            Dialect = new SqliteDialect(),
+            IncludeTotalCount = true
+        };
+        dapperOptions.Entity<SortTestRow>().ToTable("SortTest");
+        var result = await conn.FlexQueryAsync<SortTestRow>(options, dapperOptions);
 
         result.Data.Should().HaveCount(3);
         var names = result.Data
-            .Select(row => (string)((Dictionary<string, object?>)row)["Name"]!)
+            .Select(row => (string)AssertDictionary(row)["Name"]!)
             .ToList();
         names.Should().BeInAscendingOrder();
         names[0].Should().Be("Alice");
@@ -755,17 +724,25 @@ public class SecurityGovernanceDapperIntegrationTests
         return result;
     }
 
-    private static MappingRegistry CreateOrderRegistry()
+    private static IMappingRegistry CreateValidationRegistry()
     {
         var reg = new MappingRegistry();
-        reg.Entity<SqlCustomer>()
+        reg.Entity<GovEntity>().ToTable("Entities").HasKey(e => e.Id).HasMany(e => e.Orders).WithForeignKey("EntityId");
+        reg.Entity<GovOrder>().ToTable("Orders");
+        return reg;
+    }
+
+    private static void CreateOrderRegistry(DapperQueryOptions options)
+    {
+        
+        options.Entity<SqlCustomer>()
             .ToTable("Customers")
             .HasMany(c => c.Orders).WithForeignKey("CustomerId");
-        reg.Entity<SqlOrder>()
+        options.Entity<SqlOrder>()
             .ToTable("Orders")
             .HasMany(o => o.Items).WithForeignKey("OrderId");
-        reg.Entity<SqlOrderItem>().ToTable("OrderItems");
-        return reg;
+        options.Entity<SqlOrderItem>().ToTable("OrderItems");
+        
     }
 
     // ── Inline entity types for SQL translation tests ──────────────

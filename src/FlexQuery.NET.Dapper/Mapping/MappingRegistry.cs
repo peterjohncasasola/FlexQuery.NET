@@ -8,7 +8,7 @@ namespace FlexQuery.NET.Dapper.Mapping;
 /// <summary>
 /// Registry for entity mappings with caching and convention-based discovery.
 /// </summary>
-public sealed class MappingRegistry : IMappingRegistry
+internal sealed class MappingRegistry : IMappingRegistry
 {
     private readonly ConcurrentDictionary<Type, EntityMapping> _mappings = new();
     
@@ -42,9 +42,8 @@ public sealed class MappingRegistry : IMappingRegistry
     public IEntityMapping GetMapping<T>() => GetMapping(typeof(T));
 
     /// <summary>Registers an existing entity mapping, overwriting any previously registered mapping for the same type.</summary>
-    public void Register(EntityMapping mapping) => _mappings[mapping.Type] = mapping;
+    internal void Register(EntityMapping mapping) => _mappings[mapping.Type] = mapping;
 
-    /// <summary>Returns a fluent builder for the given entity type.</summary>
     public EntityTypeBuilder<TEntity> Entity<TEntity>() where TEntity : class
     {
         var mapping = _mappings.GetOrAdd(typeof(TEntity), CreateAndApplyConventions);
@@ -70,5 +69,5 @@ public sealed class MappingRegistry : IMappingRegistry
     }
 
     /// <summary>Returns all registered entity mappings. Intended for testing and internal diagnostics.</summary>
-    public IEnumerable<EntityMapping> GetAllMappings() => _mappings.Values;
+    internal IEnumerable<EntityMapping> GetAllMappings() => _mappings.Values;
 }

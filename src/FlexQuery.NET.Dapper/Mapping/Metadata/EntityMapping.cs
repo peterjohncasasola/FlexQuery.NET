@@ -5,7 +5,7 @@ namespace FlexQuery.NET.Dapper.Mapping.Metadata;
 /// <summary>
 /// Configuration metadata for a database entity.
 /// </summary>
-public sealed class EntityMapping : IEntityMapping
+internal sealed class EntityMapping : IEntityMapping
 {
     private readonly Dictionary<string, PropertyMapping> _properties = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string, RelationshipMapping> _relationships = new(StringComparer.OrdinalIgnoreCase);

@@ -15,23 +15,8 @@ public static class ServiceCollectionExtensions
         var options = new DapperQueryOptions();
         configure(options);
 
-        // Optionally, register the options as a singleton or configured options
         services.AddSingleton(options);
         
-        if (options.Dialect != null)
-        {
-            DapperQueryOptions.GlobalDefaultDialect = options.Dialect;
-        }
-
-        // Register dialect as singleton for DI resolution
-        services.AddSingleton(DapperQueryOptions.GlobalDefaultDialect ??= options.Dialect!);
-        
-        // Register mapping registry
-        if (options.MappingRegistry != null)
-        {
-            services.AddSingleton(options.MappingRegistry);
-        }
-
         return services;
     }
 
@@ -40,8 +25,10 @@ public static class ServiceCollectionExtensions
     /// </summary>
     public static IServiceCollection AddFlexQueryDapperSqlServer(this IServiceCollection services, Action<DapperQueryOptions>? configure = null)
     {
-        var options = new DapperQueryOptions();
-        options.Dialect = new Dialects.SqlServerDialect();
+        var options = new DapperQueryOptions
+        {
+            Dialect = new Dialects.SqlServerDialect()
+        };
         configure?.Invoke(options);
         return services.AddFlexQueryDapperInternal(options);
     }
@@ -51,8 +38,10 @@ public static class ServiceCollectionExtensions
     /// </summary>
     public static IServiceCollection AddFlexQueryDapperPostgreSql(this IServiceCollection services, Action<DapperQueryOptions>? configure = null)
     {
-        var options = new DapperQueryOptions();
-        options.Dialect = new Dialects.PostgreSqlDialect();
+        var options = new DapperQueryOptions
+        {
+            Dialect = new Dialects.PostgreSqlDialect()
+        };
         configure?.Invoke(options);
         return services.AddFlexQueryDapperInternal(options);
     }
@@ -62,8 +51,10 @@ public static class ServiceCollectionExtensions
     /// </summary>
     public static IServiceCollection AddFlexQueryDapperSqlite(this IServiceCollection services, Action<DapperQueryOptions>? configure = null)
     {
-        var options = new DapperQueryOptions();
-        options.Dialect = new Dialects.SqliteDialect();
+        var options = new DapperQueryOptions
+        {
+            Dialect = new Dialects.SqliteDialect()
+        };
         configure?.Invoke(options);
         return services.AddFlexQueryDapperInternal(options);
     }
@@ -74,13 +65,7 @@ public static class ServiceCollectionExtensions
         
         if (options.Dialect != null)
         {
-            DapperQueryOptions.GlobalDefaultDialect = options.Dialect;
-            services.AddSingleton(options.Dialect);
-        }
-
-        if (options.MappingRegistry != null)
-        {
-            services.AddSingleton(options.MappingRegistry);
+            services.AddSingleton(options);
         }
 
         return services;

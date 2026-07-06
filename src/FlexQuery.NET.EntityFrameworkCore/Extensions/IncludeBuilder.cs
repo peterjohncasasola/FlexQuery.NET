@@ -27,7 +27,7 @@ namespace FlexQuery.NET.EntityFrameworkCore;
 ///   .ThenInclude(o => o.OrderItems.Where(oi => oi.Id == 101));
 /// </code>
 /// </summary>
-public static class IncludeBuilder
+internal static class IncludeBuilder
 {
     // ── Public entry point ───────────────────────────────────────────────
 

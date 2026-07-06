@@ -8,7 +8,7 @@ namespace FlexQuery.NET.EntityFrameworkCore.Operators;
 /// <summary>
 /// EF Core LIKE implementation backed by EF.Functions.Like.
 /// </summary>
-public sealed class EfCoreLikeOperatorHandler : IOperatorHandler
+internal sealed class EfCoreLikeOperatorHandler : IOperatorHandler
 {
     /// <inheritdoc />
     public string Operator => FilterOperators.Like;

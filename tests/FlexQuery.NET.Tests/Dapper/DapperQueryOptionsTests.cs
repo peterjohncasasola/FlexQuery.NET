@@ -96,8 +96,8 @@ public class DapperQueryOptionsTests
 
         options.Entity<TestEntity>().ToTable("custom_entities");
 
-        options.MappingRegistry.Should().NotBeNull();
-        options.MappingRegistry!.GetMapping(typeof(TestEntity)).TableName
+        options.Registry.Should().NotBeNull();
+        options.Registry.GetMapping(typeof(TestEntity)).TableName
             .Should().Be("custom_entities");
     }
 

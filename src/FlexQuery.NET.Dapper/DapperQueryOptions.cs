@@ -1,9 +1,7 @@
 using FlexQuery.NET.Models;
-using FlexQuery.NET.Dapper.Sql;
 using FlexQuery.NET.Dapper.Dialects;
 using FlexQuery.NET.Dapper.Mapping;
-using FlexQuery.NET.Security;
-using System.Data.Common;
+using FlexQuery.NET.Dapper.Mapping.Builders;
 
 namespace FlexQuery.NET.Dapper;
 
@@ -37,81 +35,16 @@ public sealed class DapperQueryOptions : BaseQueryOptions
         CopyBaseOptions(this, target);
         return target;
     }
-
-    /// <summary>Global default SQL dialect for all queries when not explicitly configured.</summary>
-    public static ISqlDialect? GlobalDefaultDialect { get; set; }
-
-    /// <summary>Global default resolver for SQL dialects.</summary>
-    public static ISqlDialectResolver GlobalDialectResolver { get; set; } = new DefaultSqlDialectResolver();
-
-    /// <summary>SQL dialect to use for query generation. If null, resolves via GlobalDefaultDialect or GlobalDialectResolver.</summary>
+    
+    /// <summary>SQL dialect to use for query generation. If null, resolves via SqlDialectResolver</summary>
     public ISqlDialect? Dialect { get; set; }
 
-    /// <summary>Entity mapping registry. If null, a new registry is created.</summary>
-    public IMappingRegistry? MappingRegistry { get; set; }
+    internal MappingRegistry Registry { get; } = new();
 
     /// <summary>Command timeout in seconds.</summary>
     public int CommandTimeoutSeconds { get; set; } = 30;
-
-    /// <summary>Explicitly set the entity type for mapping resolution.</summary>
-    public Type? EntityType { get; set; }
-
-    /// <summary>
-    /// Configures the mapping for a specific entity type using fluent builder API.
-    /// </summary>
-    public Mapping.Builders.EntityTypeBuilder<TEntity> Entity<TEntity>() where TEntity : class
-    {
-        MappingRegistry ??= new Mapping.MappingRegistry();
-        return MappingRegistry.Entity<TEntity>();
-    }
-
-    /// <summary>
-    /// Scans the given assembly for public, non-abstract class types and registers them as entity mappings
-    /// if they have a primary key candidate (Id, TypeNameId, or <see cref="System.ComponentModel.DataAnnotations.KeyAttribute"/>)
-    /// or a <see cref="System.ComponentModel.DataAnnotations.Schema.TableAttribute"/>.
-    /// </summary>
-    public void ScanEntitiesFromAssembly(System.Reflection.Assembly assembly)
-    {
-        var registry = MappingRegistry ?? new Mapping.MappingRegistry();
-        var types = assembly.GetTypes()
-            .Where(t => t.IsClass && !t.IsAbstract && t.IsPublic);
-
-        foreach (var type in types)
-        {
-            var hasKey = type.GetProperties().Any(p => 
-                p.Name.Equals("Id", StringComparison.OrdinalIgnoreCase) || 
-                p.Name.Equals(type.Name + "Id", StringComparison.OrdinalIgnoreCase) ||
-                p.GetCustomAttributes(typeof(System.ComponentModel.DataAnnotations.KeyAttribute), true).Any());
-            
-            var hasTable = type.GetCustomAttributes(typeof(System.ComponentModel.DataAnnotations.Schema.TableAttribute), true).Any();
-
-            if (hasKey || hasTable)
-            {
-                registry.GetMapping(type);
-            }
-        }
-
-        if (MappingRegistry == null)
-            MappingRegistry = registry;
-    }
-
-    /// <summary>
-    /// Resolves the dialect by checking: explicit setting, GlobalDefaultDialect, GlobalDialectResolver.
-    /// </summary>
-    internal ISqlDialect ResolveDialect(DbConnection connection)
-    {
-        return Dialect 
-            ?? GlobalDefaultDialect 
-            ?? GlobalDialectResolver.Resolve(connection);
-    }
-
-    /// <summary>
-    /// Resolves the mapping registry from explicit setting or creates a new one.
-    /// </summary>
-    internal IMappingRegistry ResolveMappingRegistry()
-    {
-        return MappingRegistry ?? new Mapping.MappingRegistry();
-    }
+    
+    public EntityTypeBuilder<TEntity> Entity<TEntity>() where TEntity : class => Registry.Entity<TEntity>();
 
     private static void CopyBaseOptions(BaseQueryOptions source, BaseQueryOptions target)
     {

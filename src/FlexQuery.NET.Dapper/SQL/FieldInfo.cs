@@ -3,7 +3,7 @@ namespace FlexQuery.NET.Dapper.Sql;
 /// <summary>
 /// Information about a translated field.
 /// </summary>
-public sealed class FieldInfo
+internal sealed class FieldInfo
 {
     /// <summary>Property name in the entity.</summary>
     public string PropertyName { get; init; } = string.Empty;

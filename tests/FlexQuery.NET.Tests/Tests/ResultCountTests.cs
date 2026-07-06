@@ -43,7 +43,7 @@ public class ResultCountTests
     [Fact]
     public async Task Dapper_NormalQuery_SetsResultCountToTotalCount()
     {
-        using var db = SqlProjectionDbContext.CreateSeeded();
+        await using var db = SqlProjectionDbContext.CreateSeeded();
         var result = await ExecuteDapperOrdersAsync(db, new QueryOptions
         {
             Paging = { Page = 1, PageSize = 2 },
@@ -58,7 +58,7 @@ public class ResultCountTests
     [Fact]
     public async Task Dapper_GroupedQuery_SetsResultCountToGroupedRowsBeforePaging()
     {
-        using var db = SqlProjectionDbContext.CreateSeeded();
+        await using var db = SqlProjectionDbContext.CreateSeeded();
         var result = await ExecuteDapperOrdersAsync(db, GroupedOptions(page: 1, pageSize: 2));
 
         result.TotalCount.Should().Be(4);
@@ -86,7 +86,7 @@ public class ResultCountTests
     [Fact]
     public async Task ResultCount_GroupedQuery_WithHaving_UsesPostHavingGroupCount()
     {
-        using var efDb = SqlProjectionDbContext.CreateSeeded();
+        await using var efDb = SqlProjectionDbContext.CreateSeeded();
         await AddHavingRowsAsync(efDb);
 
         var efResult = await efDb.Orders.FlexQueryAsync(GroupedHavingOptions(page: 1, pageSize: 1));
@@ -248,20 +248,19 @@ public class ResultCountTests
         if (connection.State != System.Data.ConnectionState.Open)
             await connection.OpenAsync();
 
-        return await connection.FlexQueryAsync<object>(
+        var dapperOptions = new DapperQueryOptions
+        {
+            Dialect = new SqliteDialect(),
+            IncludeTotalCount = includeTotalCount
+        };
+
+        return await connection.FlexQueryAsync<SqlOrder>(
             options,
-            new DapperQueryOptions
-            {
-                Dialect = new SqliteDialect(),
-                MappingRegistry = CreateRegistry(),
-                EntityType = typeof(SqlOrder),
-                IncludeTotalCount = includeTotalCount
-            });
+            dapperQueryOptions: CreateRegistry(dapperOptions));
     }
 
-    private static MappingRegistry CreateRegistry()
+    private static DapperQueryOptions CreateRegistry(DapperQueryOptions registry)
     {
-        var registry = new MappingRegistry();
         registry.Entity<SqlCustomer>()
             .ToTable("Customers")
             .HasMany(c => c.Orders).WithForeignKey("CustomerId");
