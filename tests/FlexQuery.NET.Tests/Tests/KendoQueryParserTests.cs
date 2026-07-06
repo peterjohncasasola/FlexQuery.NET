@@ -510,8 +510,8 @@ public class KendoQueryParserTests
           }
         }
         """;
-
-        var result = json.FromKendoJson();
+        var root = JsonDocument.Parse(json).RootElement.Clone();
+        var result = root.ToQueryOptions();
 
         result.Filter!.Filters.Should().ContainSingle();
         result.Filter.Filters[0].Field.Should().Be("name");
