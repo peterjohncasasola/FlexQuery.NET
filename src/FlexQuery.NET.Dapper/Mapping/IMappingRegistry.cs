@@ -5,7 +5,7 @@ namespace FlexQuery.NET.Dapper.Mapping;
 /// <summary>
 /// Registry for entity mappings.
 /// </summary>
-public interface IMappingRegistry
+internal interface IMappingRegistry
 {
     /// <summary>Gets the mapping for an entity type.</summary>
     IEntityMapping GetMapping(Type entityType);

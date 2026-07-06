@@ -5,7 +5,7 @@ namespace FlexQuery.NET.Dapper.Mapping;
 /// <summary>
 /// Configuration for a database entity.
 /// </summary>
-public interface IEntityMapping
+internal interface IEntityMapping
 {
     /// <summary>Entity type.</summary>
     Type Type { get; }
