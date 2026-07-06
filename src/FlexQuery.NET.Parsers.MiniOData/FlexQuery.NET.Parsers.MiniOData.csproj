@@ -54,5 +54,9 @@
     <None Include="README.md" Pack="true" PackagePath="" />
     <None Include="..\..\assets\logo.png" Pack="true" PackagePath="" />
   </ItemGroup>
+  
+  <ItemGroup>
+    <InternalsVisibleTo Include="FlexQuery.NET.Tests" />
+  </ItemGroup>
 
 </Project>

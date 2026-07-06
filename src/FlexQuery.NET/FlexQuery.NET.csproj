@@ -8,6 +8,7 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <LangVersion>latest</LangVersion>
+    <RootNamespace>FlexQuery.NET</RootNamespace>
 
      <!-- NuGet Metadata -->
      <PackageId>FlexQuery.NET</PackageId>

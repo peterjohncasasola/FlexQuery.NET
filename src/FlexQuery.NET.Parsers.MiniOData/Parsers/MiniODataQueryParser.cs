@@ -2,7 +2,7 @@ using FlexQuery.NET.Models;
 
 namespace FlexQuery.NET.Parsers.MiniOData;
 
-public sealed class MiniODataQueryParser : IQueryParser
+internal sealed class MiniODataQueryParser : IQueryParser
 {
     public QuerySyntax Syntax => QuerySyntax.MiniOData;
 

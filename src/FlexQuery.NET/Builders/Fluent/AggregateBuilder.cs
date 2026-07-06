@@ -1,6 +1,6 @@
 using FlexQuery.NET.Models;
 
-namespace FlexQuery.NET.Builders;
+namespace FlexQuery.NET.Builders.Fluent;
 
 /// <summary>Builds a list of AggregateModel entries for use with QueryBuilder.Aggregate.</summary>
 public sealed class AggregateBuilder

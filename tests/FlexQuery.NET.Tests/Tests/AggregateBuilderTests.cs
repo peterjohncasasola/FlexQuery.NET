@@ -1,4 +1,5 @@
 using FlexQuery.NET.Builders;
+using FlexQuery.NET.Builders.Fluent;
 
 namespace FlexQuery.NET.Tests.Tests;
 

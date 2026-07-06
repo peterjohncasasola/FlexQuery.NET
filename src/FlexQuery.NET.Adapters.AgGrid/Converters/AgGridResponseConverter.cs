@@ -17,7 +17,7 @@ namespace FlexQuery.NET.Adapters.AgGrid.Converters;
 /// grouping, distinct processing, or aggregation. It only reshapes the supplied result rows into
 /// an AG Grid Server-Side Row Model response.
 /// </remarks>
-public static class AgGridResponseConverter
+internal static class AgGridResponseConverter
 {
     private sealed record PropertyEntry(PropertyInfo Info, string Name, string CamelName);
 
@@ -166,7 +166,10 @@ public static class AgGridResponseConverter
             var values = new Dictionary<string, object?>(StringComparer.OrdinalIgnoreCase);
             foreach (DictionaryEntry item in nonGenericDictionary)
             {
-                values[item.Key.ToString()!] = item.Value;
+                if (item.Key is not null)
+                {
+                    values[item.Key.ToString()!] = item.Value;
+                }
             }
 
             return values;
