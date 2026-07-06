@@ -1,3 +1,4 @@
+using System.Text.Json;
 using FlexQuery.NET.Adapters.Kendo.Models;
 using FlexQuery.NET.Adapters.Kendo.Parsers;
 using FlexQuery.NET.Models;
@@ -24,7 +25,7 @@ public static class KendoExtensions
     /// </summary>
     /// <param name="json">The JSON string containing the Kendo UI request.</param>
     /// <returns>A FlexQuery.NET QueryOptions object.</returns>
-    public static QueryOptions FromKendoJson(this string json)
+    public static QueryOptions ToQueryOptions(this JsonElement json)
     {
         return KendoQueryOptionsParser.Parse(json);
     }

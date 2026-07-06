@@ -1,3 +1,4 @@
+using System.Text.Json;
 using FlexQuery.NET.Adapters.AgGrid.Models;
 using FlexQuery.NET.Adapters.AgGrid.Parsers;
 using FlexQuery.NET.Adapters.AgGrid.Converters;
@@ -25,7 +26,7 @@ public static class AgGridExtensions
     /// </summary>
     /// <param name="json">The JSON string containing the AgGrid request.</param>
     /// <returns>A FlexQuery.NET QueryOptions object.</returns>
-    public static QueryOptions FromAgGridJson(this string json)
+    public static QueryOptions ToQueryOptions(this JsonElement json)
     {
         return AgGridQueryOptionsParser.Parse(json);
     }
