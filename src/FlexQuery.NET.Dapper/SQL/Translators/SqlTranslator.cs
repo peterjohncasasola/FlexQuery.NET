@@ -12,19 +12,6 @@ using FlexQuery.NET.Validation;
 namespace FlexQuery.NET.Dapper.Sql.Translators;
 
 /// <summary>
-/// Translates Core QueryOptions into SQL commands for Dapper execution.
-/// </summary>
-internal interface ISqlTranslator
-{
-    /// <summary>Translates QueryOptions into fully parameterized SQL.</summary>
-    SqlCommand Translate(QueryOptions options);
-
-    /// <summary>Translates QueryOptions aggregates list into parameterized SQL.</summary>
-    SqlCommand TranslateAggregates(QueryOptions options);
-
-}
-
-/// <summary>
 /// SQL translator implementation that generates parameterized queries from QueryOptions.
 /// Acts as an orchestrator: it resolves the entity mapping and selection tree once per
 /// translation, then delegates SELECT, JOIN, and WHERE generation to dedicated builders
