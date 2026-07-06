@@ -10,7 +10,7 @@ namespace FlexQuery.NET.Validation.Rules;
 /// Uses configured security options (SelectableFields, AllowedFields, BlockedFields)
 /// to determine which fields to include by default.
 /// </summary>
-public sealed class DefaultProjectionRule : IValidationRule
+internal sealed class DefaultProjectionRule : IValidationRule
 {
     /// <inheritdoc />
     public void Validate(QueryOptions options, QueryContext context, ValidationResult result)

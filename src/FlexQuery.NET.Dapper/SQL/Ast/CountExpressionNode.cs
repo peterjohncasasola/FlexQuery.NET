@@ -5,7 +5,7 @@ namespace FlexQuery.NET.Dapper.Sql.Ast;
 /// <summary>
 /// AST Node representing a COUNT() condition (correlated COUNT semantics).
 /// </summary>
-public class CountExpressionNode
+internal class CountExpressionNode
 {
     /// <summary>The navigation property name on the parent entity.</summary>
     public string NavigationProperty { get; set; } = string.Empty;

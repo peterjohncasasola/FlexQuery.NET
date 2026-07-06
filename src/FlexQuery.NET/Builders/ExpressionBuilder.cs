@@ -14,7 +14,7 @@ namespace FlexQuery.NET.Builders;
 /// <see cref="FilterCondition"/> objects. All expression building is done without
 /// string-eval so it is EF Core-translatable.
 /// </summary>
-public static class ExpressionBuilder
+internal static class ExpressionBuilder
 {
     /// <summary>
     /// Builds a combined predicate expression for the given <see cref="FilterGroupNode"/>.

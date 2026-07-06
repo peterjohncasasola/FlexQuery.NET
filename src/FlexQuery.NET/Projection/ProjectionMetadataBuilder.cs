@@ -9,7 +9,7 @@ namespace FlexQuery.NET.Projection;
 /// <summary>
 /// Builds projection metadata by resolving field types and normalizing the selection tree.
 /// </summary>
-public static class ProjectionMetadataBuilder
+internal static class ProjectionMetadataBuilder
 {
     /// <summary>
     /// Builds complete projection metadata from QueryOptions.

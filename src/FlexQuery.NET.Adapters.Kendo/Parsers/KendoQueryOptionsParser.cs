@@ -8,7 +8,7 @@ namespace FlexQuery.NET.Adapters.Kendo.Parsers;
 /// <summary>
 /// Parses Kendo UI DataSource requests into FlexQuery.NET QueryOptions.
 /// </summary>
-public static class KendoQueryOptionsParser
+internal static class KendoQueryOptionsParser
 {
     /// <summary>
     /// Parses a Kendo UI DataSource request into FlexQuery.NET QueryOptions.

@@ -8,7 +8,7 @@ namespace FlexQuery.NET.Dapper.Conventions;
 /// <summary>
 /// Default entity convention. Infers table name, maps properties, detects primary key.
 /// </summary>
-public class DefaultEntityConvention : IEntityConvention
+internal class DefaultEntityConvention : IEntityConvention
 {
     private readonly IPluralizer _pluralizer;
 

@@ -6,7 +6,7 @@ namespace FlexQuery.NET.Dapper.Conventions;
 /// <summary>
 /// Default convention for inferring foreign key column names.
 /// </summary>
-public class DefaultForeignKeyConvention : IForeignKeyConvention
+internal class DefaultForeignKeyConvention : IForeignKeyConvention
 {
     /// <summary>Infers the foreign key column name for the given navigation property and relationship type.</summary>
     public string GetForeignKeyName(PropertyInfo navigationProperty, Type targetType, RelationshipType relationshipType, Type entityType)

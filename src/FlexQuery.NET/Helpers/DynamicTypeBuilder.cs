@@ -9,7 +9,7 @@ namespace FlexQuery.NET.Helpers;
 /// Builds runtime types dynamically to be used in MemberInitExpressions.
 /// Types are cached with bounded FIFO eviction to prevent unbounded memory growth.
 /// </summary>
-public static class DynamicTypeBuilder
+internal static class DynamicTypeBuilder
 {
     private static readonly ModuleBuilder _moduleBuilder;
     private static readonly ConcurrentDictionary<string, Lazy<Type>> _builtTypes = new();

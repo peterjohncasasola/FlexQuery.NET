@@ -53,7 +53,7 @@ public sealed class EntityMapping : IEntityMapping
 
     /// <summary>Gets the relationship mapping for the given navigation property name, or null if not found.</summary>
     public RelationshipMapping? GetRelationship(string navigationProperty)
-        => _relationships.TryGetValue(navigationProperty, out var r) ? r : null;
+        => _relationships.GetValueOrDefault(navigationProperty);
 
     /// <summary>All registered property mappings for this entity.</summary>
     public IEnumerable<PropertyMapping> Properties => _properties.Values;

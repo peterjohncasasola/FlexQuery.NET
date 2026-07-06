@@ -9,7 +9,7 @@ namespace FlexQuery.NET.Dapper.Sql.Translators;
 /// <summary>
 /// Translator for relationship count queries.
 /// </summary>
-public class SqlCountTranslator(ISqlDialect dialect)
+internal class SqlCountTranslator(ISqlDialect dialect)
 {
     /// <summary>
     /// Translates a count condition into a correlated COUNT subquery.

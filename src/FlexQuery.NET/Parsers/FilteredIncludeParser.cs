@@ -56,7 +56,7 @@ internal static class JqlSyntaxDetector
 /// comma-separated.
 /// </para>
 /// </summary>
-public static class FilteredIncludeParser
+internal static class FilteredIncludeParser
 {
 
     // ── Public entry point ───────────────────────────────────────────────

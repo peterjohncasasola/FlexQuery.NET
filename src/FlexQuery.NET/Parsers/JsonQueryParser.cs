@@ -5,7 +5,7 @@ namespace FlexQuery.NET.Parsers;
 /// <summary>
 /// Default implementation of <see cref="IQueryParser"/> that handles JSON filter payloads.
 /// </summary>
-public sealed class JsonQueryParser : IQueryParser
+internal sealed class JsonQueryParser : IQueryParser
 {
     /// <inheritdoc />
     public QuerySyntax Syntax => QuerySyntax.Json;

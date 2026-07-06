@@ -22,7 +22,7 @@ internal static class AgGridFilterParser
         return group;
     }
 
-    internal static FilterGroup ParseField(string fieldPath, AgGridFilterNode filter, string? defaultFilterType = null)
+    private static FilterGroup ParseField(string fieldPath, AgGridFilterNode filter, string? defaultFilterType = null)
     {
         if (filter.Conditions.Count > 0)
         {

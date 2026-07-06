@@ -7,7 +7,7 @@ namespace FlexQuery.NET.Validation.Rules;
 /// <summary>
 /// Validates that all fields in filters and sorts exist on the target entity.
 /// </summary>
-public sealed class FieldExistenceRule : IValidationRule
+internal sealed class FieldExistenceRule : IValidationRule
 {
     /// <inheritdoc />
     public void Validate(QueryOptions options, QueryContext context, ValidationResult result)

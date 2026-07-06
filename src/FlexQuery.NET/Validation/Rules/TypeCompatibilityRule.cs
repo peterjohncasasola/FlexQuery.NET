@@ -9,7 +9,7 @@ namespace FlexQuery.NET.Validation.Rules;
 /// Validates that operators are compatible with the field types (e.g., "contains" on numeric fields)
 /// and that values can be converted to the target property types.
 /// </summary>
-public sealed class TypeCompatibilityRule : IValidationRule
+internal sealed class TypeCompatibilityRule : IValidationRule
 {
     /// <inheritdoc />
     public void Validate(QueryOptions options, QueryContext context, ValidationResult result)

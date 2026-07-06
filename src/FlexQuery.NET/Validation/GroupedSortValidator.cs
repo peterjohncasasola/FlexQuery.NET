@@ -23,7 +23,7 @@ namespace FlexQuery.NET.Validation;
 /// Both the EF Core and Dapper providers use this validator so that grouped
 /// sort behavior is consistent across execution pipelines.
 /// </summary>
-public static class GroupedSortValidator
+internal static class GroupedSortValidator
 {
     /// <summary>
     /// Validates the given sorts against the group-by fields and aggregates,

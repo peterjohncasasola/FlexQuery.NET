@@ -13,7 +13,7 @@ namespace FlexQuery.NET.Parsers.Jql;
 /// <c>labels CONTAINS 'bug'</c>.
 /// </para>
 /// </summary>
-public sealed class JqlQueryParser : IQueryParser
+internal sealed class JqlQueryParser : IQueryParser
 {
     /// <inheritdoc />
     public QuerySyntax Syntax => QuerySyntax.Jql;

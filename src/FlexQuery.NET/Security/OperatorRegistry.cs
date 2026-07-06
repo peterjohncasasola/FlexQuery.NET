@@ -5,7 +5,7 @@ namespace FlexQuery.NET.Security;
 
 internal static class OperatorRegistry
 {
-    public static readonly HashSet<string> Allowed = new(StringComparer.OrdinalIgnoreCase)
+    private static readonly HashSet<string> Allowed = new(StringComparer.OrdinalIgnoreCase)
     {
         FilterOperators.Equal,
         FilterOperators.NotEqual,

@@ -10,7 +10,7 @@ namespace FlexQuery.NET.Validation.Rules;
 /// mismatches when the HAVING aggregate alias does not correspond to any
 /// computed aggregate, which would cause a runtime column-not-found error.
 /// </summary>
-public sealed class HavingAliasIntegrityRule : IValidationRule
+internal sealed class HavingAliasIntegrityRule : IValidationRule
 {
     /// <inheritdoc />
     public void Validate(QueryOptions options, QueryContext context, ValidationResult result)

@@ -8,7 +8,7 @@ using FlexQuery.NET.Parsers;
 
 namespace FlexQuery.NET.Adapters.AgGrid.Parsers;
 
-public static class AgGridQueryOptionsParser
+internal static class AgGridQueryOptionsParser
 {
     public static QueryOptions Parse(AgGridRequest request)
     {

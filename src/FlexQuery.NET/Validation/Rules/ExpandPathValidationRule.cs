@@ -12,7 +12,7 @@ namespace FlexQuery.NET.Validation.Rules;
 /// expand paths (e.g. <c>Orders.Items.Product</c>) are validated at every level.
 /// A typo in any segment is caught before the query reaches a provider.
 /// </summary>
-public sealed class ExpandPathValidationRule : IValidationRule
+internal sealed class ExpandPathValidationRule : IValidationRule
 {
     /// <inheritdoc />
     public void Validate(QueryOptions options, QueryContext context, ValidationResult result)

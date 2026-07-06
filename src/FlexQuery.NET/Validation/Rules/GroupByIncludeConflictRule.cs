@@ -9,7 +9,7 @@ namespace FlexQuery.NET.Validation.Rules;
 /// because group keys collapse multiple source rows into a single output
 /// row, making per-group navigation expansion ambiguous.
 /// </summary>
-public sealed class GroupByIncludeConflictRule : IValidationRule
+internal sealed class GroupByIncludeConflictRule : IValidationRule
 {
     /// <inheritdoc />
     public void Validate(QueryOptions options, QueryContext context, ValidationResult result)

@@ -9,7 +9,7 @@ namespace FlexQuery.NET.Dapper.Sql.Translators;
 /// <summary>
 /// Translator for relationship existence queries (Any/All).
 /// </summary>
-public class SqlExistsTranslator(ISqlDialect dialect)
+internal class SqlExistsTranslator(ISqlDialect dialect)
 {
     /// <summary>Translates an AnyExpressionNode into an EXISTS subquery fragment.</summary>
     public string TranslateAny(AnyExpressionNode node, IEntityMapping mapping, Func<FilterGroup, string> filterBuilder, IMappingRegistry registry)

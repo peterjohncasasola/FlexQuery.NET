@@ -18,7 +18,7 @@ namespace FlexQuery.NET.Validation.Rules;
 /// silently removed from the query. In strict mode (default), validation errors
 /// cause exceptions to be thrown.
 /// </remarks>
-public sealed class FieldAccessValidator : IValidationRule
+internal sealed class FieldAccessValidator : IValidationRule
 {
     private static readonly ConcurrentDictionary<string, string> _normalizationCache = new();
 

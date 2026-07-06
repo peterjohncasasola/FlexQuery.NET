@@ -9,7 +9,7 @@ namespace FlexQuery.NET.Validation.Rules;
 /// cannot be translated into a meaningful SQL predicate and would be silently
 /// dropped at the provider level.
 /// </summary>
-public sealed class HavingWithoutGroupByRule : IValidationRule
+internal sealed class HavingWithoutGroupByRule : IValidationRule
 {
     /// <inheritdoc />
     public void Validate(QueryOptions options, QueryContext context, ValidationResult result)

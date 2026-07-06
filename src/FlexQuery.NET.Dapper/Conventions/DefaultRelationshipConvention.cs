@@ -9,7 +9,7 @@ namespace FlexQuery.NET.Dapper.Conventions;
 /// <summary>
 /// Default relationship convention. Discovers relationships, infers foreign keys and target types.
 /// </summary>
-public class DefaultRelationshipConvention : IRelationshipConvention
+internal class DefaultRelationshipConvention : IRelationshipConvention
 {
     private readonly IForeignKeyConvention _foreignKeyConvention;
 

@@ -6,7 +6,7 @@ namespace FlexQuery.NET.Security;
 /// Optional per-entity field whitelist for secure dynamic filtering.
 /// If an entity type has no registered fields, all fields are allowed.
 /// </summary>
-public static class FieldRegistry
+internal static class FieldRegistry
 {
     private static readonly ConcurrentDictionary<Type, HashSet<string>> _allowed =
         new();

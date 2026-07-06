@@ -12,7 +12,7 @@ namespace FlexQuery.NET.Builders;
 /// Applies <see cref="QueryOptions"/> (filter, sort, page, select) to an
 /// <see cref="IQueryable{T}"/> and materialises results.
 /// </summary>
-public static class QueryBuilder
+internal static class QueryBuilder
 {
     /// <summary>Applies the filter group from <paramref name="options"/> to the query.</summary>
     /// <typeparam name="T">The entity type.</typeparam>
@@ -21,8 +21,7 @@ public static class QueryBuilder
     /// <returns>The filtered queryable.</returns>
     public static IQueryable<T> ApplyFilter<T>(IQueryable<T> query, QueryOptions options)
     {
-        if (options.Filter is null) return query;
-        if (!HasAnyCondition(options.Filter)) return query;
+        if (options.Filter is null || !HasAnyCondition(options.Filter)) return query;
 
         var predicate = ExpressionBuilder.BuildPredicate<T>(options);
         return predicate is null ? query : query.Where(predicate);
@@ -193,5 +192,5 @@ public static class QueryBuilder
         => SafePropertyResolver.TryGetCollectionElementType(type, out _);
     
     private static bool HasAnyCondition(FilterGroup group)
-        => group.Filters.Count > 0 || group.Groups.Any(g => HasAnyCondition(g));
+        => group.Filters.Count > 0 || group.Groups.Any(HasAnyCondition);
 }

@@ -1,3 +1,5 @@
+using FlexQuery.NET.Dapper.Mapping.Metadata;
+
 namespace FlexQuery.NET.Dapper.Mapping;
 
 /// <summary>
@@ -24,7 +26,7 @@ public interface IEntityMapping
     IEnumerable<string> GetProperties();
 
     /// <summary>Get relationship mapping metadata.</summary>
-    Metadata.RelationshipMapping? GetRelationship(string navigationProperty);
+    RelationshipMapping? GetRelationship(string navigationProperty);
 
     /// <summary>Get join information for an include relationship.</summary>
     JoinInfo? GetJoinInfo(string navigationProperty);

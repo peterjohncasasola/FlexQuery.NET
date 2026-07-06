@@ -6,7 +6,7 @@ namespace FlexQuery.NET.Validation.Rules;
 /// <summary>
 /// Validates that all operators used in filters are recognized and allowed by the registry.
 /// </summary>
-public sealed class OperatorValidityRule : IValidationRule
+internal sealed class OperatorValidityRule : IValidationRule
 {
     /// <inheritdoc />
     public void Validate(QueryOptions options, QueryContext context, ValidationResult result)

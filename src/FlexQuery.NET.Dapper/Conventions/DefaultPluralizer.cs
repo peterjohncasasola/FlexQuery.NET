@@ -3,7 +3,7 @@ namespace FlexQuery.NET.Dapper.Conventions;
 /// <summary>
 /// Default English pluralizer implementation.
 /// </summary>
-public class DefaultPluralizer : IPluralizer
+internal class DefaultPluralizer : IPluralizer
 {
     /// <summary>Pluralizes an English word using simple rules.</summary>
     public string Pluralize(string name)

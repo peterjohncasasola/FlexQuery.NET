@@ -3,7 +3,7 @@ namespace FlexQuery.NET.Dapper.Sql;
 /// <summary>
 /// Result of SQL translation containing the SQL string and parameters.
 /// </summary>
-public sealed class SqlCommand
+internal sealed class SqlCommand
 {
     /// <summary>The generated SQL string.</summary>
     public string Sql { get; init; } = string.Empty;

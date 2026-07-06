@@ -8,7 +8,7 @@ namespace FlexQuery.NET.Dapper.Sql.Translators;
 /// <summary>
 /// Translator for relationship inclusion (LEFT JOIN).
 /// </summary>
-public class SqlIncludeTranslator
+internal class SqlIncludeTranslator
 {
     private readonly ISqlDialect _dialect;
 

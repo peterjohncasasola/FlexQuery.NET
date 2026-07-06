@@ -38,7 +38,7 @@ public static class AgGridResponseConverter
     /// </param>
     /// <param name="options">Optional names for adapter-defined response metadata fields.</param>
     /// <returns>An AG Grid SSRM response for the current store level.</returns>
-    public static AgGridServerSideResponse Convert<T>(
+    internal static AgGridServerSideResponse Convert<T>(
         AgGridRequest request,
         QueryResult<T> result,
         bool camelCase = false,
@@ -166,10 +166,7 @@ public static class AgGridResponseConverter
             var values = new Dictionary<string, object?>(StringComparer.OrdinalIgnoreCase);
             foreach (DictionaryEntry item in nonGenericDictionary)
             {
-                if (item.Key is not null)
-                {
-                    values[item.Key.ToString()!] = item.Value;
-                }
+                values[item.Key.ToString()!] = item.Value;
             }
 
             return values;
