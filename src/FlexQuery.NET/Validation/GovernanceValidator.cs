@@ -3,14 +3,14 @@ using FlexQuery.NET.Models;
 using FlexQuery.NET.Security;
 using FlexQuery.NET.Validation.Rules;
 
-namespace FlexQuery.NET.Configuration;
+namespace FlexQuery.NET.Validation;
 
 /// <summary>
 /// Validates the internal consistency of governance configuration (AllowedFields, BlockedFields,
 /// operation-specific field lists, and DefaultSortField) at application startup.
 /// Throws <see cref="QueryValidationException"/> when configuration errors are detected.
 /// </summary>
-public static class GovernanceValidator
+internal static class GovernanceValidator
 {
     /// <summary>
     /// Validates the complete governance configuration, checking for overlapping field lists,
