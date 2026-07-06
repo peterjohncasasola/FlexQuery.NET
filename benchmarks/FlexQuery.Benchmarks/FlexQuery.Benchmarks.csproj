@@ -24,6 +24,12 @@
     <PackageReference Include="Microsoft.AspNetCore.TestHost" Version="8.0.0" />
   </ItemGroup>
 
+  <!-- Temporarily excluded: depends on internal types (IMappingRegistry, SqlTranslator) which are now internal -->
+  <!-- Can be re-enabled when a public SQL diagnostics API is available -->
+  <ItemGroup>
+    <Compile Remove="Benchmarks\Dapper\DapperSqlGenerationBenchmarks.cs" />
+  </ItemGroup>
+
   <ItemGroup>
     <ProjectReference Include="..\..\src\FlexQuery.NET\FlexQuery.NET.csproj" />
     <ProjectReference Include="..\..\src\FlexQuery.NET.EntityFrameworkCore\FlexQuery.NET.EntityFrameworkCore.csproj" />
