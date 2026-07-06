@@ -5,7 +5,7 @@ namespace FlexQuery.NET.Models;
 /// <summary>
 /// Represents a merged field/navigation selection tree.
 /// </summary>
-public sealed class SelectionNode
+internal sealed class SelectionNode
 {
     private readonly Dictionary<string, SelectionNode> _children = new(StringComparer.OrdinalIgnoreCase);
 

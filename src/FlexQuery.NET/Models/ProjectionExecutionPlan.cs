@@ -32,10 +32,10 @@ public sealed class ProjectionExecutionPlan
     /// <summary>Creates a new <see cref="Builder"/> for constructing a <see cref="ProjectionExecutionPlan"/>.</summary>
     /// <param name="entityType">The entity type being projected.</param>
     /// <returns>A new builder instance.</returns>
-    public static Builder Create(Type entityType) => new(entityType);
+    internal static Builder Create(Type entityType) => new(entityType);
 
     /// <summary>Fluent builder for constructing a <see cref="ProjectionExecutionPlan"/>.</summary>
-    public sealed class Builder
+    internal sealed class Builder
     {
         private readonly ProjectionExecutionPlan _plan = new();
         private readonly List<ProjectedField> _fields = new();

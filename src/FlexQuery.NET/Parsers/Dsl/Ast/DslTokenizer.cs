@@ -1,7 +1,7 @@
 namespace FlexQuery.NET.Parsers.Dsl;
 
 /// <summary>Tokenizes the filter DSL into parser-friendly tokens.</summary>
-public sealed class DslTokenizer
+internal sealed class DslTokenizer
 {
     private readonly string _source;
     private int _position;

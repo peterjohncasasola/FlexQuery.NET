@@ -6,7 +6,7 @@ namespace FlexQuery.NET.Validation;
 /// <summary>
 /// Pipeline-based validator for <see cref="QueryOptions"/>.
 /// </summary>
-public sealed class QueryValidator : IQueryValidator
+internal sealed class QueryValidator : IQueryValidator
 {
     private readonly List<IValidationRule> _rules = [];
 

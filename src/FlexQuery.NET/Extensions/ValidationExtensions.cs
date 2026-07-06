@@ -56,7 +56,7 @@ public static class ValidationExtensions
     /// <param name="validator">The validator to use.</param>
     /// <returns>A <see cref="ValidationResult"/> indicating success or failure with details.</returns>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="validator"/> is null.</exception>
-    public static ValidationResult Validate<T>(this IQueryable<T> query, QueryOptions options, QueryExecutionOptions execOptions, IQueryValidator validator)
+    internal static ValidationResult Validate<T>(this IQueryable<T> query, QueryOptions options, QueryExecutionOptions execOptions, IQueryValidator validator)
     {
         ArgumentNullException.ThrowIfNull(validator);
         var context = new QueryContext { TargetType = typeof(T), ExecutionOptions = execOptions };

@@ -6,7 +6,7 @@ namespace FlexQuery.NET.Projection;
 /// Contains metadata about a query projection, including the entity type,
 /// the selection tree, and the resolved field-to-CLR-type mappings.
 /// </summary>
-public sealed class ProjectionMetadata
+internal sealed class ProjectionMetadata
 {
     /// <summary>Whether this metadata represents an active projection with fields.</summary>
     public bool IsProjected => FieldTypes.Count > 0;

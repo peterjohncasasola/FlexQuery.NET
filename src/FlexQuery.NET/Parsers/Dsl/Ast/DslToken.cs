@@ -1,7 +1,7 @@
 namespace FlexQuery.NET.Parsers.Dsl;
 
 /// <summary>Token kinds used by the filter DSL parser.</summary>
-public enum DslTokenKind
+internal enum DslTokenKind
 {
     /// <summary>A field name, operator, or raw value segment.</summary>
     Identifier,
@@ -22,7 +22,7 @@ public enum DslTokenKind
 }
 
 /// <summary>A single token from a DSL filter string.</summary>
-public sealed class DslToken
+internal sealed class DslToken
 {
     /// <summary>Creates a new DSL token.</summary>
     public DslToken(DslTokenKind kind, string value, int position)

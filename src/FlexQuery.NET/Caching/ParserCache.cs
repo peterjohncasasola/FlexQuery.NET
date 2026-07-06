@@ -7,7 +7,7 @@ namespace FlexQuery.NET.Caching;
 /// Cache for parsed <see cref="QueryOptions"/>.
 /// This avoids re-parsing the same query string multiple times.
 /// </summary>
-public static class ParserCache
+internal static class ParserCache
 {
     private static readonly BoundedConcurrentCache<ParsedQueryCacheKey, QueryOptions> _cache = new();
 
@@ -69,7 +69,7 @@ public static class ParserCache
 /// <param name="UseKeysetPagination">Whether keyset pagination is explicitly requested.</param>
 /// <param name="RawKey">Optional raw parameter key for additional uniqueness.</param>
 /// <param name="Version">The version identifier for cache invalidation.</param>
-public sealed record ParsedQueryCacheKey(
+internal sealed record ParsedQueryCacheKey(
     string? Query,
     string? Filter,
     string? Sort,

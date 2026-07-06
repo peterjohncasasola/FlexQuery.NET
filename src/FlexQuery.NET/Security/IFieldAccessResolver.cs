@@ -5,7 +5,7 @@ namespace FlexQuery.NET.Security;
 /// <summary>
 /// Interface for custom logic to determine if a specific field is accessible for a given operation.
 /// </summary>
-public interface IFieldAccessResolver
+internal interface IFieldAccessResolver
 {
     /// <summary>
     /// Determines if the specified field is allowed for the given operation and context.

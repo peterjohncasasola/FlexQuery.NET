@@ -1,7 +1,7 @@
 namespace FlexQuery.NET.Parsers.Dsl;
 
 /// <summary>A relationship filter node (any/all/count) with a scoped filter.</summary>
-public sealed class RelationshipNode : DslAstNode
+internal sealed class RelationshipNode : DslAstNode
 {
     /// <summary>
     /// Initializes a new instance of the <see cref="RelationshipNode"/> class.

@@ -12,7 +12,7 @@ public class BaseQueryOptions
     /// <summary>
     /// Creates a new instance with default security settings.
     /// </summary>
-    public BaseQueryOptions()
+    protected BaseQueryOptions()
     {
         IncludeTotalCount = true;
         DefaultPageSize = 20;
@@ -126,7 +126,7 @@ public class BaseQueryOptions
     // --- Advanced Security ---
 
     /// <summary>Optional custom resolver for dynamic field-level access control.</summary>
-    public IFieldAccessResolver? FieldAccessResolver { get; set; }
+    internal IFieldAccessResolver? FieldAccessResolver { get; set; }
 
     /// <summary>Role-based field permissions. Maps roles to sets of allowed fields.</summary>
     public Dictionary<string, HashSet<string>>? RoleAllowedFields { get; set; }

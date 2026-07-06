@@ -1,7 +1,7 @@
 namespace FlexQuery.NET.Parsers.Dsl;
 
 /// <summary>Parses DSL tokens into an AST using AND precedence over OR.</summary>
-public sealed class DslAstParser
+internal sealed class DslAstParser
 {
     private readonly IReadOnlyList<DslToken> _tokens;
     private int _position;

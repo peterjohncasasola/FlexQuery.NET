@@ -6,7 +6,7 @@ namespace FlexQuery.NET.QueryDebug;
 /// <summary>
 /// Utility to visualize the structure of an Expression Tree.
 /// </summary>
-public static class ExpressionTreeVisualizer
+internal static class ExpressionTreeVisualizer
 {
     /// <summary>
     /// Visualizes the expression tree structure.

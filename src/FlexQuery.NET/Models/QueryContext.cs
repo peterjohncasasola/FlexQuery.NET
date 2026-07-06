@@ -4,7 +4,7 @@ namespace FlexQuery.NET.Models;
 /// Provides contextual information for the query validation process.
 /// This can be extended to include user roles, request metadata, etc.
 /// </summary>
-public class QueryContext
+internal sealed class QueryContext
 {
     /// <summary>
     /// Optional metadata associated with the current query context.

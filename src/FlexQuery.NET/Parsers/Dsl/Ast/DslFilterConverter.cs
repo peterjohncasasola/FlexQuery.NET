@@ -4,7 +4,7 @@ using FlexQuery.NET.Models;
 namespace FlexQuery.NET.Parsers.Dsl;
 
 /// <summary>Converts DSL AST nodes into the package's unified filter model.</summary>
-public static class DslFilterConverter
+internal static class DslFilterConverter
 {
     /// <summary>Converts a DSL AST into a <see cref="FilterGroup"/>.</summary>
     public static FilterGroup ToFilterGroup(DslAstNode node)

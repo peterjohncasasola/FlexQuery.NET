@@ -7,7 +7,7 @@ namespace FlexQuery.NET.Parsers;
 /// <summary>
 /// Default implementation of <see cref="IQueryParser"/> that handles the native FlexQuery DSL.
 /// </summary>
-public sealed class DslQueryParser : IQueryParser
+internal sealed class DslQueryParser : IQueryParser
 {
     /// <inheritdoc />
     public QuerySyntax Syntax => QuerySyntax.NativeDsl;

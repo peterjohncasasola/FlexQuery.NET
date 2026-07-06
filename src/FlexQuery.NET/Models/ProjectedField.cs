@@ -8,37 +8,19 @@ public sealed class ProjectedField
     /// <summary>
     /// The source property path (e.g., "Customer.Name" or "Orders.Total").
     /// </summary>
-    public string SourcePath { get; set; } = null!;
+    public string SourcePath { get; internal set; } = null!;
 
-    /// <summary>
-    /// The output name (alias or original property name).
-    /// </summary>
-    public string OutputName { get; set; } = null!;
+    public string OutputName { get; internal set; } = null!;
 
-    /// <summary>
-    /// The CLR type of the projected field.
-    /// </summary>
-    public Type FieldType { get; set; } = null!;
+    public Type FieldType { get; internal set; } = null!;
 
-    /// <summary>
-    /// Whether this field comes from a navigation property.
-    /// </summary>
-    public bool IsNavigation { get; set; }
+    public bool IsNavigation { get; internal set; }
 
-    /// <summary>
-    /// Navigation level index (0 = root, 1 = first navigation, etc.) for flat projections.
-    /// </summary>
-    public int NavigationLevel { get; set; }
+    public int NavigationLevel { get; internal set; }
 
-    /// <summary>
-    /// Whether this field was deduplicated from another selection.
-    /// </summary>
-    public bool IsDeduplicated { get; set; }
+    public bool IsDeduplicated { get; internal set; }
 
-    /// <summary>
-    /// The alias if specified, otherwise null.
-    /// </summary>
-    public string? Alias { get; set; }
+    public string? Alias { get; internal set; }
 
     /// <summary>Factory method to create a <see cref="ProjectedField"/> instance.</summary>
     /// <param name="sourcePath">The source property path.</param>

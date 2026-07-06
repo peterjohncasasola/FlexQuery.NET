@@ -9,7 +9,7 @@ namespace FlexQuery.NET.Caching;
 /// Caches compiled projection expressions for reuse.
 /// Key design: Entity type + projection fields = cached expression.
 /// </summary>
-public static class ProjectionExpressionCache
+internal static class ProjectionExpressionCache
 {
     private static readonly BoundedConcurrentCache<string, CachedProjection> _projectionCache = new();
 
@@ -72,7 +72,7 @@ public static class ProjectionExpressionCache
 /// <summary>
 /// A cached projection entry containing the expression and metadata.
 /// </summary>
-public sealed class CachedProjection
+internal sealed class CachedProjection
 {
     /// <summary>The LINQ expression representing the projection.</summary>
     public Expression ProjectionExpression { get; init; } = null!;
@@ -81,6 +81,6 @@ public sealed class CachedProjection
     /// <summary>The UTC timestamp when this entry was cached.</summary>
     public DateTimeOffset CachedAt { get; init; } = DateTimeOffset.UtcNow;
     /// <summary>Number of times this cached projection has been used.</summary>
-    public int UsageCount { get; set; }
+    public int UsageCount { get; internal set; }
 }
 

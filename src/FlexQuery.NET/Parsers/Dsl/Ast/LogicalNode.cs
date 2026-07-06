@@ -1,7 +1,7 @@
 namespace FlexQuery.NET.Parsers.Dsl;
 
 /// <summary>A logical AND/OR node with child expressions.</summary>
-public sealed class LogicalNode : DslAstNode
+internal sealed class LogicalNode : DslAstNode
 {
     /// <summary>Creates a logical AST node.</summary>
     public LogicalNode(string logic, IReadOnlyList<DslAstNode> children)

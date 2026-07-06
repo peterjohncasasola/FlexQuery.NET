@@ -10,7 +10,7 @@ namespace FlexQuery.NET.Builders;
 /// Optimizes projection selections by removing duplicates, merging paths,
 /// and eliminating unnecessary includes.
 /// </summary>
-public static class ProjectionOptimizer
+internal static class ProjectionOptimizer
 {
     private static readonly ConcurrentDictionary<string, OptimizedProjection> _optimizationCache = new();
 
@@ -107,7 +107,7 @@ public static class ProjectionOptimizer
 /// <summary>
 /// Represents an optimized projection result with metadata.
 /// </summary>
-public sealed class OptimizedProjection
+internal sealed class OptimizedProjection
 {
     internal SelectionNode OptimizedTree { get; set; } = null!;
     /// <summary>The list of projected fields after optimization.</summary>

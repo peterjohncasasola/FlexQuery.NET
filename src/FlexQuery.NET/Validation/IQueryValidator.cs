@@ -28,7 +28,7 @@ public sealed class ValidationResult
 /// <summary>
 /// Defines a validator that checks <see cref="QueryOptions"/> before execution.
 /// </summary>
-public interface IQueryValidator
+internal interface IQueryValidator
 {
     /// <summary>Validates the provided query options.</summary>
     /// <param name="options">The query options to validate.</param>
@@ -40,7 +40,7 @@ public interface IQueryValidator
 /// <summary>
 /// Defines a modular validation rule for the query pipeline.
 /// </summary>
-public interface IValidationRule
+internal interface IValidationRule
 {
     /// <summary>Executes the validation rule.</summary>
     /// <param name="options">The query options to validate.</param>

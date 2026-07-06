@@ -7,7 +7,7 @@ namespace FlexQuery.NET.QueryDebug;
 /// <summary>
 /// Utility to convert LINQ Expressions into readable C# syntax.
 /// </summary>
-public sealed class ExpressionPrinter : ExpressionVisitor
+internal sealed class ExpressionPrinter : ExpressionVisitor
 {
     private readonly StringBuilder _sb = new();
 

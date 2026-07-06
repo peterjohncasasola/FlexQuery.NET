@@ -1,7 +1,7 @@
 namespace FlexQuery.NET.Parsers.Dsl;
 
 /// <summary>A single field/operator/value condition.</summary>
-public sealed class ConditionNode : DslAstNode
+internal sealed class ConditionNode : DslAstNode
 {
     /// <summary>Creates a condition AST node.</summary>
     public ConditionNode(string field, string @operator, string? value)

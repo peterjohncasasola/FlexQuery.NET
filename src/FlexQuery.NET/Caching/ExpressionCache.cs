@@ -6,7 +6,7 @@ namespace FlexQuery.NET.Caching;
 /// <summary>
 /// Thread-safe cache for expression trees and compiled delegates.
 /// </summary>
-public static class ExpressionCache
+internal static class ExpressionCache
 {
     private static readonly BoundedConcurrentCache<string, LambdaExpression> _expressionCache = new();
     private static readonly BoundedConcurrentCache<string, Delegate> _compiledCache = new();
