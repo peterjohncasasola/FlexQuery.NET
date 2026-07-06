@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using FlexQuery.NET.Dapper;
+using FlexQuery.NET.Dapper.Configuration;
 using FlexQuery.NET.Dapper.Dialects;
 using FlexQuery.NET.Diagnostics;
 using FlexQuery.NET.Models;
@@ -29,15 +30,6 @@ public sealed class DapperCustomersController(AppDbContext db) : ControllerBase
         var sw = Stopwatch.StartNew();
 
         var result = await connection.FlexQueryAsync<Customer>(parameters,
-            configureDapper: opt =>
-            {
-                opt.Dialect = new SqliteDialect();
-                opt.Entity<Customer>()
-                    .ToTable("Customers")
-                    .HasMany(c => c.Orders).WithForeignKey("CustomerId");
-                opt.Entity<Order>()
-                    .ToTable("Orders");
-            },
             cancellationToken: cancellationToken,
             configureExecution: cfg => cfg.Listener = collector);
 
