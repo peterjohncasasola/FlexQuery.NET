@@ -5,12 +5,11 @@ namespace FlexQuery.NET.Dapper.Mapping.Builders;
 /// <summary>
 /// Fluent builder for configuring property column mappings.
 /// </summary>
-public class PropertyBuilder
+public sealed class PropertyBuilder
 {
     private readonly PropertyMapping _mapping;
 
-    /// <summary>Creates a new property builder for the given mapping.</summary>
-    public PropertyBuilder(PropertyMapping mapping)
+    internal PropertyBuilder(PropertyMapping mapping)
     {
         _mapping = mapping;
     }

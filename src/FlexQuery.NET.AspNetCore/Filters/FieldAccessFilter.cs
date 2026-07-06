@@ -11,7 +11,7 @@ namespace FlexQuery.NET.AspNetCore.Filters;
 /// An action filter that automatically applies field-level security settings from 
 /// <see cref="FieldAccessAttribute"/> to <see cref="QueryExecutionOptions"/> and stores it in HttpContext.Items.
 /// </summary>
-public class FieldAccessFilter : IActionFilter
+public sealed class FieldAccessFilter : IActionFilter
 {
     private const string LegacyExecutionOptionsKey = "FlexQueryExecutionOptions";
 

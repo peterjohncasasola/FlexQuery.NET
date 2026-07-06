@@ -5,12 +5,11 @@ namespace FlexQuery.NET.Dapper.Mapping.Builders;
 /// <summary>
 /// Fluent builder for configuring relationship mappings.
 /// </summary>
-public class RelationshipBuilder
+public sealed class RelationshipBuilder
 {
     private readonly RelationshipMapping _mapping;
 
-    /// <summary>Creates a new relationship builder for the given mapping.</summary>
-    public RelationshipBuilder(RelationshipMapping mapping)
+    internal RelationshipBuilder(RelationshipMapping mapping)
     {
         _mapping = mapping;
     }

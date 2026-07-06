@@ -6,7 +6,7 @@ namespace FlexQuery.NET.Models;
 /// Defines server-side execution rules, validation constraints, and security policies.
 /// This model separates server-side requirements from client-side query parameters.
 /// </summary>
-public class QueryExecutionOptions : BaseQueryOptions
+public sealed class QueryExecutionOptions : BaseQueryOptions
 {
 
     /// <summary>

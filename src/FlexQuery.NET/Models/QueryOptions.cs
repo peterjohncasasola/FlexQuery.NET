@@ -5,7 +5,7 @@ namespace FlexQuery.NET.Models;
 /// Represents the parsed user input for a dynamic query request.
 /// This model contains the filtering, sorting, and projection parameters provided by the client.
 /// </summary>
-public class QueryOptions
+public sealed class QueryOptions
 {
     // --- Data Selection & Projection ---
     

@@ -142,7 +142,7 @@ public class FilterBuilder
 /// <summary>
 /// A typed filter builder that supports expression-based field selection.
 /// </summary>
-public class FilterBuilder<T> : FilterBuilder
+public sealed class FilterBuilder<T> : FilterBuilder
 {
     /// <summary>
     /// Begins a strongly-typed condition for the provided property selector.

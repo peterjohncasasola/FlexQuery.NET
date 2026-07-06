@@ -4,7 +4,7 @@ namespace FlexQuery.NET.AspNetCore.Attributes;
 /// Specifies field-level access permissions for a controller or action.
 /// </summary>
 [AttributeUsage(AttributeTargets.Method | AttributeTargets.Class)]
-public class FieldAccessAttribute : Attribute
+public sealed class FieldAccessAttribute : Attribute
 {
     /// <summary>
     /// Gets or sets the list of allowed fields (whitelist).

@@ -3,7 +3,7 @@ namespace FlexQuery.NET.Models;
 /// <summary>
 /// Specifies a sort field and direction in the query tree.
 /// </summary>
-public class SortNode
+public sealed class SortNode
 {
     /// <summary>The property name to sort by.</summary>
     public string Field { get; set; } = string.Empty;
