@@ -1,9 +1,7 @@
 using System.Linq.Expressions;
-using FlexQuery.NET.Expressions;
 using FlexQuery.NET.Models;
-using FlexQuery.NET.Security;
 
-namespace FlexQuery.NET.Builders;
+namespace FlexQuery.NET.Expressions;
 
 internal static class HavingExpressionBuilder
 {
