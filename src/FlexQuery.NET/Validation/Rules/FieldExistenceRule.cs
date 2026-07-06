@@ -1,6 +1,7 @@
 using FlexQuery.NET.Models;
 using FlexQuery.NET.Security;
 using FlexQuery.NET.Constants;
+using FlexQuery.NET.Resolvers;
 
 namespace FlexQuery.NET.Validation.Rules;
 
@@ -24,7 +25,7 @@ internal sealed class FieldExistenceRule : IValidationRule
             if (string.IsNullOrWhiteSpace(sort.Field)) continue;
             if (IsGroupedAggregateAlias(options, sort.Field)) continue;
 
-            if (!Builders.FieldResolver.TryResolveType(context.TargetType, sort.Field, context.ExecutionOptions, out _))
+            if (!FieldResolver.TryResolveType(context.TargetType, sort.Field, context.ExecutionOptions, out _))
             {
                 result.Errors.Add(new ValidationError(
                     $"Field '{sort.Field}' does not exist on type '{context.TargetType.Name}'.", 
@@ -45,7 +46,7 @@ internal sealed class FieldExistenceRule : IValidationRule
         {
             if (string.IsNullOrWhiteSpace(filter.Field)) continue;
 
-            if (!Builders.FieldResolver.TryResolveType(entityType, filter.Field, executionOptions, out var propertyType))
+            if (!FieldResolver.TryResolveType(entityType, filter.Field, executionOptions, out var propertyType))
             {
                 result.Errors.Add(new ValidationError(
                     $"Field '{filter.Field}' does not exist on type '{entityType.Name}'.", 

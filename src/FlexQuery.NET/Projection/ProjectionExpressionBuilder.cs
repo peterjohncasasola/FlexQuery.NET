@@ -5,6 +5,7 @@ using FlexQuery.NET.Caching;
 using FlexQuery.NET.Expressions;
 using FlexQuery.NET.Helpers;
 using FlexQuery.NET.Models;
+using FlexQuery.NET.Resolvers;
 
 namespace FlexQuery.NET.Projection;
 

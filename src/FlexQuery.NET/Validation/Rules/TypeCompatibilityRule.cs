@@ -2,6 +2,7 @@ using FlexQuery.NET.Models;
 using FlexQuery.NET.Security;
 using FlexQuery.NET.Constants;
 using System.ComponentModel;
+using FlexQuery.NET.Resolvers;
 
 namespace FlexQuery.NET.Validation.Rules;
 
@@ -25,7 +26,7 @@ internal sealed class TypeCompatibilityRule : IValidationRule
         {
             if (string.IsNullOrWhiteSpace(filter.Field) || string.IsNullOrWhiteSpace(filter.Operator)) continue;
 
-            if (Builders.FieldResolver.TryResolveType(entityType, filter.Field, executionOptions, out var propertyType))
+            if (FieldResolver.TryResolveType(entityType, filter.Field, executionOptions, out var propertyType))
             {
                 var op = filter.Operator.ToLowerInvariant();
 
@@ -57,7 +58,7 @@ internal sealed class TypeCompatibilityRule : IValidationRule
 
             if (filter.ScopedFilter != null)
             {
-                if (Builders.FieldResolver.TryResolveType(entityType, filter.Field, executionOptions, out var scopedPropertyType) &&
+                if (FieldResolver.TryResolveType(entityType, filter.Field, executionOptions, out var scopedPropertyType) &&
                     SafePropertyResolver.TryGetCollectionElementType(scopedPropertyType, out var elementType))
                 {
                     ValidateFilterGroup(filter.ScopedFilter, elementType, executionOptions, result);

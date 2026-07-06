@@ -7,6 +7,7 @@ using FlexQuery.NET.Helpers;
 using FlexQuery.NET.Constants;
 using FlexQuery.NET.Expressions;
 using FlexQuery.NET.Metadata;
+using FlexQuery.NET.Resolvers;
 
 namespace FlexQuery.NET.Builders;
 

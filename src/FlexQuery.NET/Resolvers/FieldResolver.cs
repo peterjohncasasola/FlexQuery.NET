@@ -7,7 +7,7 @@ using FlexQuery.NET.Security;
 using FlexQuery.NET.Helpers;
 using FlexQuery.NET.Constants;
 
-namespace FlexQuery.NET.Builders;
+namespace FlexQuery.NET.Resolvers;
 
 internal static class FieldResolver
 {

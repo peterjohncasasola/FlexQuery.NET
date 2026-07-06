@@ -5,6 +5,7 @@ using FlexQuery.NET.Constants;
 using FlexQuery.NET.Expressions;
 using FlexQuery.NET.Helpers;
 using FlexQuery.NET.Models;
+using FlexQuery.NET.Resolvers;
 using FlexQuery.NET.Security;
 
 namespace FlexQuery.NET.Builders;
