@@ -48,7 +48,7 @@ public static class FlexQueryDapperExtensions
     /// <typeparam name="T">The entity type used for mapping resolution.</typeparam>
     /// <param name="connection">The database connection.</param>
     /// <param name="parameters">The OpenAPI-friendly DTO containing user query parameters.</param>
-    /// <param name="configureDapper">Optional delegate to configure Dapper-specific options (dialect, mapping registry, etc.).</param>
+    /// <param name="dapperQueryOptions">Optional delegate to configure Dapper-specific options (dialect, mapping registry, etc.).</param>
     /// <param name="configureExecution">Optional delegate to configure execution listeners.</param>
     /// <param name="cancellationToken">A <see cref="CancellationToken" /> to observe while waiting for the task to complete.</param>
     /// <returns>A paged query result.</returns>
@@ -56,36 +56,12 @@ public static class FlexQueryDapperExtensions
     public static async Task<QueryResult<object>> FlexQueryAsync<T>(
         this DbConnection connection,
         FlexQueryParameters parameters,
-        Action<DapperQueryOptions>? configureDapper = null,
+        Action<DapperQueryOptions>? dapperQueryOptions = null,
         Action<FlexQueryExecutionConfig>? configureExecution = null,
         CancellationToken cancellationToken = default) where T : class
     {
         var dapperOptions = new DapperQueryOptions();
-        configureDapper?.Invoke(dapperOptions);
-
-        return await connection.FlexQueryAsync<T>(parameters, dapperOptions, configureExecution, cancellationToken);
-    }
-
-    /// <summary>
-    /// Parses <paramref name="parameters"/> and executes the query with the provided <paramref name="dapperQueryOptions"/>,
-    /// returning a paged result set.
-    /// </summary>
-    /// <typeparam name="T">The entity type used for mapping resolution.</typeparam>
-    /// <param name="connection">The database connection.</param>
-    /// <param name="parameters">The OpenAPI-friendly DTO containing user query parameters.</param>
-    /// <param name="dapperQueryOptions">Dapper-specific execution options (dialect, mapping, security rules, etc.).</param>
-    /// <param name="configureExecution">Optional delegate to configure execution listeners.</param>
-    /// <param name="cancellationToken">A <see cref="CancellationToken" /> to observe while waiting for the task to complete.</param>
-    /// <returns>A paged query result.</returns>
-    /// <exception cref="OperationCanceledException">If the <see cref="CancellationToken" /> is canceled.</exception>
-    public static async Task<QueryResult<object>> FlexQueryAsync<T>(
-        this DbConnection connection,
-        FlexQueryParameters parameters,
-        DapperQueryOptions? dapperQueryOptions = null,
-        Action<FlexQueryExecutionConfig>? configureExecution = null,
-        CancellationToken cancellationToken = default) where T : class
-    {
-        var dapperOptions = dapperQueryOptions ?? new DapperQueryOptions();
+        dapperQueryOptions?.Invoke(dapperOptions);
 
         var parsedOptions = parameters.ToQueryOptions();
         SetEntityType(parsedOptions, typeof(T));
@@ -118,7 +94,7 @@ public static class FlexQueryDapperExtensions
     /// <typeparam name="T">The entity type used for mapping resolution.</typeparam>
     /// <param name="connection">The database connection.</param>
     /// <param name="parameters">Raw query-string key/value pairs (e.g., filter, sort, select, page, pageSize).</param>
-    /// <param name="configureDapper">Optional delegate to configure Dapper-specific options.</param>
+    /// <param name="dapperQueryOptions">Optional delegate to configure Dapper-specific options.</param>
     /// <param name="configureExecution">Optional delegate to configure execution listeners.</param>
     /// <param name="cancellationToken">A <see cref="CancellationToken" /> to observe while waiting for the task to complete.</param>
     /// <returns>A paged query result.</returns>
@@ -126,7 +102,7 @@ public static class FlexQueryDapperExtensions
     public static async Task<QueryResult<object>> FlexQueryAsync<T>(
         this DbConnection connection,
         IDictionary<string, StringValues> parameters,
-        Action<DapperQueryOptions>? configureDapper = null,
+        Action<DapperQueryOptions>? dapperQueryOptions = null,
         Action<FlexQueryExecutionConfig>? configureExecution = null,
         CancellationToken cancellationToken = default) where T : class
     {
@@ -143,7 +119,7 @@ public static class FlexQueryDapperExtensions
             RawParameters = dict
         };
 
-        return await FlexQueryAsync<T>(connection, flexParams, configureDapper, configureExecution, cancellationToken);
+        return await FlexQueryAsync<T>(connection, flexParams, dapperQueryOptions, configureExecution, cancellationToken);
     }
 
     /// <summary>
@@ -197,7 +173,7 @@ public static class FlexQueryDapperExtensions
     private static async Task<QueryResult<object>> ExecuteQueryAsync<T>(
         DbConnection connection,
         QueryOptions options,
-        DapperQueryOptions execOptions,
+        DapperQueryOptions dapperQueryOptions,
         FlexQueryExecutionContext? ctx = null) where T : class
     {
         var ct = ctx?.CancellationToken ?? CancellationToken.None;
@@ -207,9 +183,9 @@ public static class FlexQueryDapperExtensions
             await connection.OpenAsync(ct);
         }
 
-        var dialect = execOptions.Dialect ?? SqlDialectResolver.Resolve(connection);
+        var dialect = dapperQueryOptions.Dialect ?? SqlDialectResolver.Resolve(connection);
 
-        var registry = execOptions.Registry;
+        var registry = dapperQueryOptions.Registry;
         options.Items[ContextKeys.EntityType] = typeof(T);
 
         var translator = new SqlTranslator(registry, dialect);
@@ -245,7 +221,7 @@ public static class FlexQueryDapperExtensions
             var dynamicItems = await connection.QueryAsync(
                 command.Sql,
                 parameters,
-                commandTimeout: execOptions.CommandTimeoutSeconds,
+                commandTimeout: dapperQueryOptions.CommandTimeoutSeconds,
                 commandType: CommandType.Text);
 
             IReadOnlyList<T> hydrated;
@@ -268,7 +244,7 @@ public static class FlexQueryDapperExtensions
                 projectedType,
                 command.Sql,
                 parameters,
-                commandTimeout: execOptions.CommandTimeoutSeconds,
+                commandTimeout: dapperQueryOptions.CommandTimeoutSeconds,
                 commandType: CommandType.Text);
 
             items = dynamicItems.Cast<object>().ToList();
@@ -280,7 +256,7 @@ public static class FlexQueryDapperExtensions
             var dynamicItems = await connection.QueryAsync(
                 command.Sql,
                 parameters,
-                commandTimeout: execOptions.CommandTimeoutSeconds,
+                commandTimeout: dapperQueryOptions.CommandTimeoutSeconds,
                 commandType: CommandType.Text);
 
             if (useDynamicForGrouping)
@@ -327,14 +303,14 @@ public static class FlexQueryDapperExtensions
             var dynamicItems = await connection.QueryAsync(
                 command.Sql,
                 parameters,
-                commandTimeout: execOptions.CommandTimeoutSeconds,
+                commandTimeout: dapperQueryOptions.CommandTimeoutSeconds,
                 commandType: CommandType.Text);
             items = dynamicItems
-                .Select(d => (object)new Dictionary<string, object>((IDictionary<string, object>)d, StringComparer.OrdinalIgnoreCase))
+                .Select(object (d) => new Dictionary<string, object>((IDictionary<string, object>)d, StringComparer.OrdinalIgnoreCase))
                 .ToList();
         }
 
-        bool shouldIncludeCount = execOptions.IncludeTotalCount && (options.IncludeCount ?? true);
+        var shouldIncludeCount = dapperQueryOptions.IncludeTotalCount && (options.IncludeCount ?? true);
 
         int? totalCount = null;
         int? resultCount = null;
@@ -351,14 +327,14 @@ public static class FlexQueryDapperExtensions
             totalCount = (int)await connection.QuerySingleAsync<long>(
                 sourceCountCommand.Sql,
                 sourceCountParameters,
-                commandTimeout: execOptions.CommandTimeoutSeconds,
+                commandTimeout: dapperQueryOptions.CommandTimeoutSeconds,
                 commandType: CommandType.Text);
 
             resultCount = options.GroupBy is { Count: > 0 } || options.Distinct == true
                 ? (int)await connection.QuerySingleAsync<long>(
                     ExtractCountSql(command.Sql),
                     parameters,
-                    commandTimeout: execOptions.CommandTimeoutSeconds,
+                    commandTimeout: dapperQueryOptions.CommandTimeoutSeconds,
                     commandType: CommandType.Text)
                 : totalCount;
         }
@@ -377,7 +353,7 @@ public static class FlexQueryDapperExtensions
             var aggResult = await connection.QueryFirstOrDefaultAsync(
                 aggCommand.Sql,
                 aggParams,
-                commandTimeout: execOptions.CommandTimeoutSeconds,
+                commandTimeout: dapperQueryOptions.CommandTimeoutSeconds,
                 commandType: CommandType.Text);
 
             if (aggResult != null)
