@@ -2,13 +2,12 @@ using System.Linq.Expressions;
 using System.Reflection;
 using FlexQuery.NET.Caching;
 using FlexQuery.NET.Constants;
-using FlexQuery.NET.Expressions;
 using FlexQuery.NET.Helpers;
 using FlexQuery.NET.Models;
 using FlexQuery.NET.Resolvers;
 using FlexQuery.NET.Security;
 
-namespace FlexQuery.NET.Builders;
+namespace FlexQuery.NET.Expressions;
 
 /// <summary>
 /// Builds strongly-typed LINQ Expression trees from <see cref="FilterGroupNode"/> and

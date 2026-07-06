@@ -1,6 +1,7 @@
 using System.Linq.Expressions;
 using System.Reflection;
 using FlexQuery.NET.Builders;
+using FlexQuery.NET.Expressions;
 using FlexQuery.NET.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Query;

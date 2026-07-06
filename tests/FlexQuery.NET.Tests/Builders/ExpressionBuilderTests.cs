@@ -1,5 +1,6 @@
 using FlexQuery.NET.Builders;
 using FlexQuery.NET.Constants;
+using FlexQuery.NET.Expressions;
 using FlexQuery.NET.Models;
 using FlexQuery.NET.Security;
 using FlexQuery.NET.Tests.Fixtures;
