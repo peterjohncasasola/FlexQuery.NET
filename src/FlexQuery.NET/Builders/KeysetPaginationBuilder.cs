@@ -2,7 +2,6 @@ using System.Linq.Expressions;
 using System.Reflection;
 using System.Text.Json;
 using FlexQuery.NET.Caching;
-using FlexQuery.NET.Exceptions;
 using FlexQuery.NET.Expressions;
 using FlexQuery.NET.Models;
 using FlexQuery.NET.Validation;
@@ -18,7 +17,7 @@ internal static class KeysetPaginationBuilder
     public static List<(LambdaExpression KeySelector, bool Descending)> BuildOrderingInfos<T>(List<SortNode> sorts)
     {
         if (sorts.Count == 0)
-            throw new KeysetPaginationException("Keyset pagination requires at least one sort field.Provide a Sort expression or call .OrderBy() before .SeekAfter().");
+            throw new InvalidOperationException("Keyset pagination requires at least one sort field. Provide a Sort expression or call .OrderBy() before .SeekAfter().");
         
         var result = new List<(LambdaExpression, bool)>(sorts.Count);
         var parameter = Expression.Parameter(typeof(T), "x");
@@ -43,7 +42,7 @@ internal static class KeysetPaginationBuilder
         IReadOnlyList<object?> cursorValues)
     {
         if (orderings.Count == 0)
-            throw new KeysetPaginationException(
+            throw new InvalidOperationException(
                 "Keyset pagination requires at least one sort field.");
 
         var keyTypes = orderings.Select(o => o.KeySelector.Body.Type).ToArray();

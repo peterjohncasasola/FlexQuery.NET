@@ -3,7 +3,6 @@ using FlexQuery.NET.Dapper.Dialects;
 using FlexQuery.NET.Dapper.Mapping;
 using FlexQuery.NET.Dapper.Sql.Helpers;
 using FlexQuery.NET.Dapper.Sql.Models;
-using FlexQuery.NET.Exceptions;
 using FlexQuery.NET.Models;
 using FlexQuery.NET.Validation;
 
@@ -19,7 +18,7 @@ internal static class SqlKeysetBuilder
         SqlParameterContext parameters)
     {
         if (sorts.Count == 0)
-            throw new KeysetPaginationException("Keyset pagination requires at least one sort field.");
+            throw new InvalidOperationException("Keyset pagination requires at least one sort field.");
 
         var keyTypes = new Type[sorts.Count];
         var columns = new string[sorts.Count];

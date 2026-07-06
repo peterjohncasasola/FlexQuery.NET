@@ -8,14 +8,13 @@ using FlexQuery.NET.Dapper.Sql.Helpers;
 using FlexQuery.NET.Dapper.Sql.Models;
 using FlexQuery.NET.Helpers;
 using FlexQuery.NET.Validation;
-using FlexQuery.NET.Exceptions;
 
 namespace FlexQuery.NET.Dapper.Sql.Translators;
 
 /// <summary>
 /// Translates Core QueryOptions into SQL commands for Dapper execution.
 /// </summary>
-public interface ISqlTranslator
+internal interface ISqlTranslator
 {
     /// <summary>Translates QueryOptions into fully parameterized SQL.</summary>
     SqlCommand Translate(QueryOptions options);
@@ -34,7 +33,7 @@ public interface ISqlTranslator
 /// dedicated class for any of them would be ceremony without payoff.
 /// All parameter naming and SQL generation is delegated to the ISqlDialect abstraction.
 /// </summary>
-public sealed class SqlTranslator : ISqlTranslator
+internal sealed class SqlTranslator : ISqlTranslator
 {
     private readonly IMappingRegistry _mappingRegistry;
     private readonly ISqlDialect _dialect;
@@ -94,7 +93,7 @@ public sealed class SqlTranslator : ISqlTranslator
         if (options.IsKeysetMode)
         {
             if (sortForOrderBy.Count == 0)
-                throw new KeysetPaginationException("Keyset pagination requires at least one sort field.");
+                throw new InvalidOperationException("Keyset pagination requires at least one sort field.");
 
             if (options.Cursor != null)
             {

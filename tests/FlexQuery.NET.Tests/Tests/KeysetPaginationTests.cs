@@ -3,6 +3,7 @@ using FlexQuery.NET.Builders;
 using FlexQuery.NET.Exceptions;
 using FlexQuery.NET.Models;
 using FlexQuery.NET.Serialization;
+using FlexQuery.NET.Validation;
 
 namespace FlexQuery.NET.Tests.Tests;
 
@@ -185,7 +186,7 @@ public class KeysetPaginationTests : IDisposable
             .OrderBy(e => e.Id)
             .SeekAfter<TestEntity, int?>(null);
 
-        act.Should().Throw<KeysetPaginationException>();
+        act.Should().Throw<QueryValidationException>();
     }
 
     // ── BuildSeekPredicate validation ────────────────────────────────────
@@ -197,7 +198,7 @@ public class KeysetPaginationTests : IDisposable
         var act = () => KeysetPaginationBuilder.BuildSeekPredicate<TestEntity>(
             [], cursor.Values);
 
-        act.Should().Throw<KeysetPaginationException>()
+        act.Should().Throw<InvalidOperationException>()
             .WithMessage("*at least one sort field*");
     }
 
@@ -211,7 +212,7 @@ public class KeysetPaginationTests : IDisposable
         var act = () => KeysetPaginationBuilder.BuildSeekPredicate<TestEntity>(
             orderings, cursor.Values);
 
-        act.Should().Throw<KeysetPaginationException>()
+        act.Should().Throw<QueryValidationException>()
             .WithMessage("*2 value(s)*1 ordering column*");
     }
 

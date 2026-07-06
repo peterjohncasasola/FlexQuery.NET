@@ -272,7 +272,7 @@ public class SqlKeysetBuilderTests
     // ── Keyset mode: error cases ────────────────────────────────────────
 
     [Fact]
-    public void Translate_KeysetModeNoSort_ThrowsKeysetPaginationException()
+    public void Translate_KeysetModeNoSort_ThrowsInvalidOperationException()
     {
         var options = Options(o =>
         {
@@ -284,12 +284,12 @@ public class SqlKeysetBuilderTests
         var translator = new SqlTranslator(_registry, Dialect);
         var act = () => translator.Translate(options);
 
-        act.Should().Throw<KeysetPaginationException>()
+        act.Should().Throw<InvalidOperationException>()
             .WithMessage("*at least one sort field*");
     }
 
     [Fact]
-    public void Translate_KeysetModeCursorCountMismatch_ThrowsKeysetPaginationException()
+    public void Translate_KeysetModeCursorCountMismatch_ThrowsQueryValidationException()
     {
         var options = Options(o =>
         {
@@ -306,7 +306,7 @@ public class SqlKeysetBuilderTests
         var translator = new SqlTranslator(_registry, Dialect);
         var act = () => translator.Translate(options);
 
-        act.Should().Throw<KeysetPaginationException>()
+        act.Should().Throw<QueryValidationException>()
             .WithMessage("*1 value(s)*2 ordering column*");
     }
 

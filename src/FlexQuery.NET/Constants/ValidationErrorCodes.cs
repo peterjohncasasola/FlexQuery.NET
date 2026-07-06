@@ -16,4 +16,6 @@ internal static class ValidationErrorCodes
     public const string HavingAliasMismatch = "HAVING_ALIAS_MISMATCH";
     public const string GroupByIncludeConflict = "GROUPBY_INCLUDE_CONFLICT";
     public const string IncludePathNotFound = "INCLUDE_PATH_NOT_FOUND";
+    public const string CursorMismatch = "CURSOR_MISMATCH";
+    public const string CursorNullValue = "CURSOR_NULL_VALUE";
 }

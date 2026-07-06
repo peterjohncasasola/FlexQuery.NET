@@ -1,7 +1,6 @@
 using System.Linq.Expressions;
 using System.Reflection;
 using FlexQuery.NET.Builders;
-using FlexQuery.NET.Exceptions;
 using FlexQuery.NET.Expressions;
 
 namespace FlexQuery.NET;
@@ -39,11 +38,11 @@ public static class KeysetPaginationExtensions
     {
         var orderings = KeysetPaginationBuilder.ExtractOrderings(query.Expression);
         if (orderings.Count == 0)
-            throw new KeysetPaginationException(
+            throw new InvalidOperationException(
                 "Keyset pagination requires at least one OrderBy or ThenBy clause. Call .OrderBy() before .SeekAfter().");
 
         if (orderings.Count != 1)
-            throw new KeysetPaginationException(
+            throw new InvalidOperationException(
                 $"Cursor has 1 value(s) but the query has {orderings.Count} ordering column(s). " +
                 $"Use SeekAfter with {orderings.Count} value(s) or use a single-column ordering.");
 
