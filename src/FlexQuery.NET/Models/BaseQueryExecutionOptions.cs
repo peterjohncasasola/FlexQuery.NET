@@ -1,3 +1,4 @@
+using System.Linq.Expressions;
 using FlexQuery.NET.Security;
 
 namespace FlexQuery.NET.Models;
@@ -32,7 +33,7 @@ public class BaseQueryOptions
     /// <summary>
     /// Maps a DTO field name to an entity expression for full DTO querying.
     /// </summary>
-    public Dictionary<string, System.Linq.Expressions.LambdaExpression>? ExpressionMappings { get; set; }
+    public Dictionary<string, LambdaExpression>? ExpressionMappings { get; set; }
 
     /// <summary>
     /// Maps an exposed DTO field to an entity expression for server-side evaluation.
@@ -41,9 +42,9 @@ public class BaseQueryOptions
     /// <typeparam name="TProperty">The property type of the mapped field.</typeparam>
     /// <param name="alias">The DTO field name (alias) to map.</param>
     /// <param name="expression">An expression that resolves the field from the entity.</param>
-    public void MapField<TEntity, TProperty>(string alias, System.Linq.Expressions.Expression<Func<TEntity, TProperty>> expression)
+    public void MapField<TEntity, TProperty>(string alias, Expression<Func<TEntity, TProperty>> expression)
     {
-        ExpressionMappings ??= new Dictionary<string, System.Linq.Expressions.LambdaExpression>(StringComparer.OrdinalIgnoreCase);
+        ExpressionMappings ??= new Dictionary<string, LambdaExpression>(StringComparer.OrdinalIgnoreCase);
         ExpressionMappings[alias] = expression;
     }
 

@@ -49,7 +49,7 @@ internal sealed class EntityMapping : IEntityMapping
 
     /// <summary>Gets the property mapping for the given property name, or null if not found.</summary>
     public PropertyMapping? GetProperty(string propertyName)
-        => _properties.TryGetValue(propertyName, out var p) ? p : null;
+        => _properties.GetValueOrDefault(propertyName);
 
     /// <summary>Gets the relationship mapping for the given navigation property name, or null if not found.</summary>
     public RelationshipMapping? GetRelationship(string navigationProperty)
