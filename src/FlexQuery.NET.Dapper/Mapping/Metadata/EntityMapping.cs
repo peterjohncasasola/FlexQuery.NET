@@ -60,6 +60,10 @@ public sealed class EntityMapping : IEntityMapping
     /// <summary>All registered relationship mappings for this entity.</summary>
     public IEnumerable<RelationshipMapping> Relationships => _relationships.Values;
 
+    /// <summary>Property mappings marked as primary keys.</summary>
+    public IReadOnlyList<PropertyMapping> Keys =>
+        _properties.Values.Where(p => p.IsPrimaryKey).ToList();
+
     // --- Backward compatibility with existing IEntityMapping interface ---
 
     /// <summary>Returns the database column name for the given property name.</summary>

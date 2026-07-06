@@ -32,7 +32,17 @@ public sealed class EntityTypeBuilder<TEntity> where TEntity : class
         return new PropertyBuilder(propMapping);
     }
 
-    /// <summary>Begins configuration for a one-to-many relationship.</summary>
+    public EntityTypeBuilder<TEntity> HasKey(Expression<Func<TEntity, object?>> keyExpression)
+    {
+        var properties = ExtractProperties(keyExpression);
+        foreach (var prop in properties)
+        {
+            var propMapping = _mapping.GetOrAddProperty(prop);
+            propMapping.IsPrimaryKey = true;
+        }
+        return this;
+    }
+
     public RelationshipBuilder HasMany<TRelatedEntity>(Expression<Func<TEntity, IEnumerable<TRelatedEntity>>> navigationExpression)
         where TRelatedEntity : class
     {
@@ -47,6 +57,30 @@ public sealed class EntityTypeBuilder<TEntity> where TEntity : class
         var propertyInfo = GetPropertyInfo(navigationExpression);
         var relMapping = _mapping.GetOrAddRelationship(propertyInfo, typeof(TRelatedEntity), RelationshipType.ManyToOne);
         return new RelationshipBuilder(relMapping);
+    }
+
+    private static List<PropertyInfo> ExtractProperties(Expression<Func<TEntity, object?>> expression)
+    {
+        var body = expression.Body;
+        if (body is UnaryExpression unary && unary.NodeType == ExpressionType.Convert)
+            body = unary.Operand;
+
+        if (body is MemberExpression member)
+        {
+            if (member.Member is PropertyInfo singleProp)
+                return [singleProp];
+        }
+
+        if (body is NewExpression newExpr)
+        {
+            return newExpr.Arguments
+                .Select(a => a is MemberExpression me ? me.Member as PropertyInfo : null)
+                .Where(p => p != null)
+                .Cast<PropertyInfo>()
+                .ToList();
+        }
+
+        throw new ArgumentException("Expression must be a property access or anonymous type with property initializers.", nameof(expression));
     }
 
     private PropertyInfo GetPropertyInfo<TProperty>(Expression<Func<TEntity, TProperty>> expression)
