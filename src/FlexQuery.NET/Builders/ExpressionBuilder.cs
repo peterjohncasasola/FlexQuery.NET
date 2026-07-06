@@ -140,7 +140,7 @@ internal static class ExpressionBuilder
                 FilterOperators.Any => BuildAnyExpression(resolvedExpr, resolvedType, condition.Value, options),
                 FilterOperators.All => BuildAllExpression(resolvedExpr, resolvedType, condition.Value, options),
                 FilterOperators.Count => BuildCountExpression(resolvedExpr, resolvedType, condition.Value, options),
-                _ => SafeConditionBuilder.Build(resolvedExpr, op, condition.Value, options.CaseInsensitive)
+                _ => FilterExpressionBuilder.Build(resolvedExpr, op, condition.Value, options.CaseInsensitive)
             };
 
             if (expr is null) return null;
@@ -209,7 +209,7 @@ internal static class ExpressionBuilder
         var isLeaf = index == chain.Count - 1;
         if (isLeaf)
         {
-            return SafeConditionBuilder.Build(access, op, rawValue, options.CaseInsensitive);
+            return FilterExpressionBuilder.Build(access, op, rawValue, options.CaseInsensitive);
         }
 
         if (SafePropertyResolver.TryGetCollectionElementType(prop.PropertyType, out var elementType))

@@ -2,10 +2,11 @@ using System.Linq.Expressions;
 using FlexQuery.NET.Constants;
 using FlexQuery.NET.Helpers;
 using FlexQuery.NET.Operators;
+using FlexQuery.NET.Security;
 
-namespace FlexQuery.NET.Security;
+namespace FlexQuery.NET.Expressions;
 
-internal static class SafeConditionBuilder
+internal static class FilterExpressionBuilder
 {
     public static Expression? Build(Expression member, string op, string? rawValue, bool caseInsensitive = true)
     {

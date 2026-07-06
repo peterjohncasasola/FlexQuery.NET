@@ -1,4 +1,5 @@
 using System.Linq.Expressions;
+using FlexQuery.NET.Expressions;
 using FlexQuery.NET.Models;
 using FlexQuery.NET.Security;
 
@@ -16,7 +17,7 @@ internal static class HavingExpressionBuilder
         if (member is null) return null;
 
         var memberExpr = Expression.Property(parameter, member);
-        var predicate = SafeConditionBuilder.Build(memberExpr, having.Operator, having.Value, caseInsensitive);
+        var predicate = FilterExpressionBuilder.Build(memberExpr, having.Operator, having.Value, caseInsensitive);
         if (predicate is null) return null;
 
         var delegateType = typeof(Func<,>).MakeGenericType(projectionType, typeof(bool));
