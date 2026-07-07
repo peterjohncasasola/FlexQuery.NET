@@ -1,14 +1,14 @@
 using FlexQuery.NET.Builders;
 using FlexQuery.NET.EntityFrameworkCore.SqlFormatting;
-using FlexQuery.NET;
 using FlexQuery.NET.Internal;
 using FlexQuery.NET.Models;
-using FlexQuery.NET.Parsers;
 using FlexQuery.NET.Validation;
 using Microsoft.EntityFrameworkCore;
-using System.ComponentModel;
 using System.Reflection;
-using System.Threading;
+using FlexQuery.NET.Diagnostics;
+using FlexQuery.NET.Execution;
+using FlexQuery.NET.Models.Paging;
+using FlexQuery.NET.Options;
 
 namespace FlexQuery.NET.EntityFrameworkCore;
 

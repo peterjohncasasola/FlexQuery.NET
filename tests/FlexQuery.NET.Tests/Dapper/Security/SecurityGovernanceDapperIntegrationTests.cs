@@ -1,19 +1,17 @@
-using System.Data.Common;
 using System.Reflection;
 using Microsoft.EntityFrameworkCore;
-using FlexQuery.NET.Constants;
 using FlexQuery.NET.Dapper;
-using FlexQuery.NET.Dapper.Configuration;
 using FlexQuery.NET.Dapper.Dialects;
 using FlexQuery.NET.Dapper.Mapping;
-using FlexQuery.NET.Dapper.Mapping.Configuration;
 using DapperModelBuilder = FlexQuery.NET.Dapper.Mapping.Configuration.ModelBuilder;
 using FlexQuery.NET.Dapper.Sql.Translators;
 using FlexQuery.NET.Exceptions;
 using FlexQuery.NET;
 using FlexQuery.NET.Models;
-using FlexQuery.NET.Tests.Fixtures;
-using FluentAssertions;
+using FlexQuery.NET.Models.Aggregates;
+using FlexQuery.NET.Models.Filters;
+using FlexQuery.NET.Models.Paging;
+using FlexQuery.NET.Options;
 
 namespace FlexQuery.NET.Tests.Dapper.Security;
 

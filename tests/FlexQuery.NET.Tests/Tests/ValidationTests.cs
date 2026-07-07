@@ -1,12 +1,11 @@
 using FlexQuery.NET.Models;
 using FlexQuery.NET.Parsers;
 using FlexQuery.NET.Parsers.Jql;
-using FlexQuery.NET.Validation;
 using FlexQuery.NET.Exceptions;
-using FlexQuery.NET;
-using FluentAssertions;
+using FlexQuery.NET.Models.Aggregates;
+using FlexQuery.NET.Models.Filters;
+using FlexQuery.NET.Models.Projection;
 using Microsoft.Extensions.Primitives;
-using Xunit;
 
 namespace FlexQuery.NET.Tests.Tests;
 

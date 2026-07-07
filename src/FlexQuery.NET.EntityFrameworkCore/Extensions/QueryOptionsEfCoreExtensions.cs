@@ -1,4 +1,3 @@
-using System.Threading;
 using FlexQuery.NET.EntityFrameworkCore.Operators;
 using FlexQuery.NET.Models;
 using FlexQuery.NET.Operators;

@@ -4,6 +4,10 @@ using FlexQuery.NET.Dapper.Sql.Translators;
 using FlexQuery.NET.Dapper.Dialects;
 using FlexQuery.NET.Parsers.Dsl;
 using FlexQuery.NET.Exceptions;
+using FlexQuery.NET.Models.Aggregates;
+using FlexQuery.NET.Models.Filters;
+using FlexQuery.NET.Models.Paging;
+using FlexQuery.NET.Options;
 
 namespace FlexQuery.NET.Tests.Dapper.Security;
 

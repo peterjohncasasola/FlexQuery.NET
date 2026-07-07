@@ -1,5 +1,5 @@
 using FlexQuery.NET.Builders.Fluent;
-using FlexQuery.NET.Models;
+using FlexQuery.NET.Models.Paging;
 
 namespace FlexQuery.NET.Tests.Tests;
 

@@ -1,7 +1,9 @@
 using FlexQuery.NET.EntityFrameworkCore;
 using FlexQuery.NET.Models;
+using FlexQuery.NET.Models.Aggregates;
+using FlexQuery.NET.Models.Filters;
+using FlexQuery.NET.Models.Paging;
 using FlexQuery.NET.Parsers;
-using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Primitives;
 
@@ -294,7 +296,7 @@ public class GroupByTests : IDisposable
     [Fact]
     public async Task FlexQueryAsync_GroupedNullKeys_ReturnsNullGroupWithCorrectAggregates()
     {
-        using var db = TestDbContext.CreateSeeded();
+        await using var db = TestDbContext.CreateSeeded();
         db.Entities.AddRange(
             new TestEntity
             {
@@ -837,7 +839,7 @@ public class GroupByTests : IDisposable
             if (readOnlyValue is null)
                 return default!;
 
-            return (T)Convert.ChangeType(readOnlyValue!, typeof(T))!;
+            return (T)Convert.ChangeType(readOnlyValue, typeof(T));
         }
 
         if (row is IDictionary<string, object?> dictionary
@@ -846,7 +848,7 @@ public class GroupByTests : IDisposable
             if (value is null)
                 return default!;
 
-            return (T)Convert.ChangeType(value!, typeof(T))!;
+            return (T)Convert.ChangeType(value, typeof(T));
         }
 
         var property = row.GetType().GetProperty(
@@ -863,7 +865,7 @@ public class GroupByTests : IDisposable
         if (propertyValue is null)
             return default!;
 
-        return (T)Convert.ChangeType(propertyValue, typeof(T))!;
+        return (T)Convert.ChangeType(propertyValue, typeof(T));
     }
 
     [Fact]

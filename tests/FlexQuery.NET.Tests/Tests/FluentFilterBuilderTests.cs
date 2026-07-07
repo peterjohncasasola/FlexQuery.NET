@@ -1,8 +1,5 @@
-using System.Linq;
-using FluentAssertions;
-using FlexQuery.NET;
 using FlexQuery.NET.Models;
-using Xunit;
+using FlexQuery.NET.Models.Filters;
 
 namespace FlexQuery.NET.Tests.Tests;
 

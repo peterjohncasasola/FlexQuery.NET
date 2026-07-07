@@ -2,7 +2,7 @@ using System.Text.Json;
 using FlexQuery.NET.Adapters.AgGrid.Mapping;
 using FlexQuery.NET.Adapters.AgGrid.Models;
 using FlexQuery.NET.Constants;
-using FlexQuery.NET.Models;
+using FlexQuery.NET.Models.Filters;
 
 namespace FlexQuery.NET.Adapters.AgGrid.Parsers;
 
@@ -199,7 +199,7 @@ internal static class AgGridFilterParser
             return;
         }
 
-        if (!source.IsNegated && source.Groups.Count == 0 && source.Logic == LogicOperator.And)
+        if (source is { IsNegated: false, Groups.Count: 0, Logic: LogicOperator.And })
         {
             target.Filters.AddRange(source.Filters);
             return;

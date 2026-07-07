@@ -4,12 +4,12 @@ using FlexQuery.NET.Parsers.Jql;
 using FlexQuery.NET.Validation;
 using FlexQuery.NET.Exceptions;
 using FlexQuery.NET;
+using FlexQuery.NET.Execution;
+using FlexQuery.NET.Models.Aggregates;
+using FlexQuery.NET.Options;
 using FlexQuery.NET.Security;
-using FlexQuery.NET.Configuration;
 using FlexQuery.NET.Validation.Rules;
-using FluentAssertions;
 using Microsoft.Extensions.Primitives;
-using Xunit;
 
 namespace FlexQuery.NET.Tests.Tests;
 

@@ -1,6 +1,5 @@
-using FlexQuery.NET.Configuration;
 using FlexQuery.NET.Internal;
-using FlexQuery.NET.Models;
+using FlexQuery.NET.Options;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 

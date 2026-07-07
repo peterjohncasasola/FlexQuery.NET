@@ -1,6 +1,9 @@
 using System.Text.Json;
 using FlexQuery.NET.Adapters.Kendo.Models;
 using FlexQuery.NET.Models;
+using FlexQuery.NET.Models.Aggregates;
+using FlexQuery.NET.Models.Filters;
+using FlexQuery.NET.Models.Paging;
 using FlexQuery.NET.Parsers;
 
 namespace FlexQuery.NET.Adapters.Kendo.Parsers;
@@ -52,7 +55,7 @@ internal static class KendoQueryOptionsParser
                 result.Paging.Page = 1;
             }
         }
-        else if (request.PageSize > 0 && request.Page > 0)
+        else if (request is { PageSize: > 0, Page: > 0 })
         {
             // Alternative pagination mode using page and pageSize
             result.Paging.PageSize = request.PageSize;
@@ -60,7 +63,7 @@ internal static class KendoQueryOptionsParser
         }
 
         // Handle groups
-        if (request.Group != null && request.Group.Count > 0)
+        if (request.Group is { Count: > 0 })
         {
             var groupByFields = request.Group
                 .Select(g => g.Field?.Trim())
@@ -77,7 +80,7 @@ internal static class KendoQueryOptionsParser
         }
 
         // Handle top-level aggregates
-        if (request.Aggregates != null && request.Aggregates.Count > 0)
+        if (request.Aggregates is { Count: > 0 })
         {
             foreach (var aggregate in request.Aggregates)
             {
@@ -182,12 +185,13 @@ internal static class KendoQueryOptionsParser
             throw new FormatException("Kendo request JSON must be an object.");
         }
 
-        var request = new KendoRequest();
-
-        request.Page = GetInt(root, "page", 1);
-        request.PageSize = GetInt(root, "pageSize", 0);
-        request.Skip = GetInt(root, "skip", 0);
-        request.Take = GetInt(root, "take", 0);
+        var request = new KendoRequest
+        {
+            Page = GetInt(root, "page", 1),
+            PageSize = GetInt(root, "pageSize"),
+            Skip = GetInt(root, "skip"),
+            Take = GetInt(root, "take")
+        };
 
         if (root.TryGetProperty("filter", out var filterElement))
         {

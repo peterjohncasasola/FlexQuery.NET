@@ -1,5 +1,5 @@
-using FlexQuery.NET.Models;
 using FlexQuery.NET.Constants;
+using FlexQuery.NET.Options;
 using Microsoft.AspNetCore.Http;
 
 namespace FlexQuery.NET.AspNetCore.Extensions;
@@ -17,7 +17,7 @@ public static class HttpContextExtensions
     /// </summary>
     /// <param name="context">The HTTP context.</param>
     /// <returns>The configured execution options, or a new default instance if none was found.</returns>
-    public static QueryExecutionOptions GetFlexQueryExecutionOptions(this HttpContext context)
+    public static QueryExecutionOptions GetFlexQueryExecutionOptions(this HttpContext? context)
     {
         if (context == null)
             return new QueryExecutionOptions();

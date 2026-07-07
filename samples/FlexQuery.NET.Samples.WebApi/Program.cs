@@ -2,7 +2,6 @@ using System.Reflection;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using FlexQuery.NET.Dapper.Configuration;
-using FlexQuery.NET.Dapper.Dialects;
 using FlexQuery.NET.Samples.WebApi.Data;
 using FlexQuery.NET.Samples.WebApi.Models;
 using Microsoft.EntityFrameworkCore;

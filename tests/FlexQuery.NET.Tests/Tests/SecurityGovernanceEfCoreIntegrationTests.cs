@@ -4,8 +4,10 @@ using FlexQuery.NET;
 using FlexQuery.NET.Models;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
-using FluentAssertions;
 using System.Reflection;
+using FlexQuery.NET.Internal;
+using FlexQuery.NET.Models.Aggregates;
+using FlexQuery.NET.Options;
 
 namespace FlexQuery.NET.Tests.Tests;
 

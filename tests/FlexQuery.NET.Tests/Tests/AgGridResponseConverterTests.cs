@@ -2,7 +2,6 @@ using FlexQuery.NET.Adapters.AgGrid;
 using FlexQuery.NET.Adapters.AgGrid.Converters;
 using FlexQuery.NET.Adapters.AgGrid.Models;
 using FlexQuery.NET.Models;
-using FluentAssertions;
 
 namespace FlexQuery.NET.Tests.Tests;
 

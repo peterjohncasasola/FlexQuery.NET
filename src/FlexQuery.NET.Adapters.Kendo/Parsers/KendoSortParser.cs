@@ -1,5 +1,5 @@
 using FlexQuery.NET.Adapters.Kendo.Models;
-using FlexQuery.NET.Models;
+using FlexQuery.NET.Models.Paging;
 
 namespace FlexQuery.NET.Adapters.Kendo.Parsers;
 

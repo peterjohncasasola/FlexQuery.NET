@@ -1,7 +1,5 @@
-using FlexQuery.NET;
 using FlexQuery.NET.Models;
-using FlexQuery.NET.Tests.Fixtures;
-using FluentAssertions;
+using FlexQuery.NET.Models.Paging;
 
 namespace FlexQuery.NET.Tests.Tests;
 

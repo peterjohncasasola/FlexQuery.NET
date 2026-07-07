@@ -1,5 +1,3 @@
-using System.Collections.Generic;
-using System.Text.Json;
 using System.Text.Json.Serialization;
 
 namespace FlexQuery.NET.Adapters.Kendo.Models;

@@ -1,6 +1,7 @@
-using FlexQuery.NET.Builders;
 using FlexQuery.NET.Filters;
 using FlexQuery.NET.Models;
+using FlexQuery.NET.Models.Filters;
+
 namespace FlexQuery.NET.Parsers.Jql;
 
 /// <summary>

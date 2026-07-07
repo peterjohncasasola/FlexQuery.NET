@@ -1,8 +1,4 @@
 using FlexQuery.NET.Dapper.Dialects;
-using FlexQuery.NET.Models;
-using FlexQuery.NET.Tests.Fixtures;
-using FluentAssertions;
-using Microsoft.AspNetCore.Mvc.Testing;
 using System.Net.Http.Json;
 using System.Text.Json;
 

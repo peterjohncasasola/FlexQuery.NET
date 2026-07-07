@@ -1,4 +1,3 @@
-using FlexQuery.NET.Tests.Models;
 using Microsoft.EntityFrameworkCore;
 
 namespace FlexQuery.NET.Tests.Fixtures;

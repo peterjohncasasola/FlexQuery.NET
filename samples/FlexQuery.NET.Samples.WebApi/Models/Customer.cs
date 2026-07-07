@@ -1,6 +1,3 @@
-using System;
-using System.Collections.Generic;
-
 namespace FlexQuery.NET.Samples.WebApi.Models;
 
 public sealed class Customer

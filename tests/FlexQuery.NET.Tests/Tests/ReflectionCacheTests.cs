@@ -1,8 +1,5 @@
 using FlexQuery.NET.Caching;
-using FluentAssertions;
 using System.Collections.Concurrent;
-using System.Reflection;
-using Xunit;
 
 namespace FlexQuery.NET.Tests.Tests;
 

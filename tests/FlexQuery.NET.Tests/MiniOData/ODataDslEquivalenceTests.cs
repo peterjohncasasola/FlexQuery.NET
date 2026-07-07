@@ -1,9 +1,8 @@
-using FlexQuery.NET.Constants;
 using FlexQuery.NET.Parsers.MiniOData;
 using FlexQuery.NET.Models;
+using FlexQuery.NET.Models.Filters;
 using FlexQuery.NET.Parsers;
 using FlexQuery.NET.Parsers.Dsl;
-using FluentAssertions;
 
 namespace FlexQuery.NET.Tests.MiniOData;
 

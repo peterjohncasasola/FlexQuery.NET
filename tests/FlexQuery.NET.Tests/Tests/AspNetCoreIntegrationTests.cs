@@ -2,18 +2,14 @@ using System.Reflection;
 using FlexQuery.NET.AspNetCore.Attributes;
 using FlexQuery.NET.AspNetCore.Extensions;
 using FlexQuery.NET.AspNetCore.Filters;
-using FlexQuery.NET.EntityFrameworkCore;
 using FlexQuery.NET.Models;
 using FlexQuery.NET.Exceptions;
-using FluentAssertions;
+using FlexQuery.NET.Options;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Mvc.Abstractions;
 using Microsoft.AspNetCore.Mvc.Controllers;
 using Microsoft.AspNetCore.Mvc.Filters;
 using Microsoft.AspNetCore.Routing;
-using Microsoft.Extensions.Primitives;
-using Xunit;
 
 namespace FlexQuery.NET.Tests.Tests;
 

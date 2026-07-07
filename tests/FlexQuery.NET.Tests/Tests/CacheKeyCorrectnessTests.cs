@@ -1,12 +1,10 @@
 using System.Linq.Expressions;
-using FlexQuery.NET.Builders;
-using FlexQuery.NET.Constants;
 using FlexQuery.NET.Models;
 using FlexQuery.NET.Parsers;
 using FlexQuery.NET.Caching;
-using FluentAssertions;
+using FlexQuery.NET.Models.Filters;
+using FlexQuery.NET.Models.Projection;
 using Microsoft.Extensions.Primitives;
-using Xunit;
 
 namespace FlexQuery.NET.Tests.Tests;
 

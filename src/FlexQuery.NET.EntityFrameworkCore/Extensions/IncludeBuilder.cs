@@ -1,10 +1,9 @@
 using System.Linq.Expressions;
 using System.Reflection;
-using FlexQuery.NET.Builders;
 using FlexQuery.NET.Expressions;
 using FlexQuery.NET.Models;
+using FlexQuery.NET.Models.Projection;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Query;
 
 namespace FlexQuery.NET.EntityFrameworkCore;
 

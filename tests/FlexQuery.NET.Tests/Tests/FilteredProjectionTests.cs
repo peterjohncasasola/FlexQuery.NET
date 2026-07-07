@@ -1,10 +1,7 @@
-using FlexQuery.NET.Constants;
-using FlexQuery.NET;
 using FlexQuery.NET.Models;
-using FlexQuery.NET.Tests.Fixtures;
-using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
 using System.Text.RegularExpressions;
+using FlexQuery.NET.Models.Filters;
 
 namespace FlexQuery.NET.Tests.Tests;
 

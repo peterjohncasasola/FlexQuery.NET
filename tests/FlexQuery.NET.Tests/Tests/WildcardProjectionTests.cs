@@ -1,12 +1,10 @@
 using FlexQuery.NET;
 using FlexQuery.NET.Models;
-using FlexQuery.NET.Parsers;
-using FlexQuery.NET.Tests.Fixtures;
 using FlexQuery.NET.Exceptions;
-using FlexQuery.NET;
-using FluentAssertions;
+using FlexQuery.NET.Models.Filters;
+using FlexQuery.NET.Models.Paging;
+using FlexQuery.NET.Options;
 using Microsoft.EntityFrameworkCore;
-using Xunit;
 
 namespace FlexQuery.NET.Tests.Tests;
 

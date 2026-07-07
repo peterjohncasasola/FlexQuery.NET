@@ -4,6 +4,7 @@ using FlexQuery.NET.Dapper.Dialects;
 using FlexQuery.NET.Dapper.Sql.Helpers;
 using FlexQuery.NET.Dapper.Sql.Models;
 using FlexQuery.NET.Dapper.Sql.Translators;
+using FlexQuery.NET.Internal;
 
 namespace FlexQuery.NET.Dapper.Sql.Builders;
 
@@ -13,25 +14,12 @@ namespace FlexQuery.NET.Dapper.Sql.Builders;
 /// to render the boolean fragment for filtered navigations/includes, mirroring the
 /// existing callback-injection pattern already used with <c>SqlIncludeTranslator</c>.
 /// </summary>
-internal sealed class SqlJoinBuilder
+internal sealed class SqlJoinBuilder(
+    IMappingRegistry mappingRegistry,
+    ISqlDialect dialect,
+    SqlIncludeTranslator includeTranslator,
+    SqlWhereBuilder whereBuilder)
 {
-    private readonly IMappingRegistry _mappingRegistry;
-    private readonly ISqlDialect _dialect;
-    private readonly SqlIncludeTranslator _includeTranslator;
-    private readonly SqlWhereBuilder _whereBuilder;
-
-    public SqlJoinBuilder(
-        IMappingRegistry mappingRegistry,
-        ISqlDialect dialect,
-        SqlIncludeTranslator includeTranslator,
-        SqlWhereBuilder whereBuilder)
-    {
-        _mappingRegistry = mappingRegistry;
-        _dialect = dialect;
-        _includeTranslator = includeTranslator;
-        _whereBuilder = whereBuilder;
-    }
-
     public string BuildJoinClause(QueryOptions options, IEntityMapping mapping, SqlParameterContext parameters, SelectionNode selectTree)
     {
         var joins = new List<string>();
@@ -57,11 +45,11 @@ internal sealed class SqlJoinBuilder
                 };
 
                 var ci = options.CaseInsensitive;
-                var sql = _includeTranslator.Translate(node, mapping, filterGroup =>
+                var sql = includeTranslator.Translate(node, mapping, filterGroup =>
                 {
-                    var targetMapping = _mappingRegistry.GetMapping(rel.TargetType!);
-                    return _whereBuilder.BuildFilterGroupExpression(filterGroup, targetMapping, parameters, ci);
-                }, _mappingRegistry);
+                    var targetMapping = mappingRegistry.GetMapping(rel.TargetType);
+                    return whereBuilder.BuildFilterGroupExpression(filterGroup, targetMapping, parameters, ci);
+                }, mappingRegistry);
 
                 if (!string.IsNullOrEmpty(sql)) joins.Add(sql);
             }
@@ -75,7 +63,7 @@ internal sealed class SqlJoinBuilder
                 if (!joinedPaths.Add(include)) continue;
 
                 var node = new Ast.IncludeNode { NavigationProperty = include };
-                var sql = _includeTranslator.Translate(node, mapping, _ => string.Empty, _mappingRegistry);
+                var sql = includeTranslator.Translate(node, mapping, _ => string.Empty, mappingRegistry);
                 if (!string.IsNullOrEmpty(sql)) joins.Add(sql);
             }
         }
@@ -91,17 +79,17 @@ internal sealed class SqlJoinBuilder
             if (rel == null) continue;
 
             var childAlias = rel.NavigationPropertyName;
-            var targetMapping = _mappingRegistry.GetMapping(rel.TargetType);
+            var targetMapping = mappingRegistry.GetMapping(rel.TargetType);
 
             if (joinedPaths.Add(childAlias))
             {
                 var parentRef = string.IsNullOrEmpty(parentAlias) ? currentMapping.TableName : parentAlias;
-                var joinCondition = SqlDialectHelper.BuildJoinCondition(_dialect, rel, currentMapping, parentRef, targetMapping, childAlias);
-                var sql = $"LEFT JOIN {_dialect.QuoteIdentifier(targetMapping.TableName)} AS {_dialect.QuoteIdentifier(childAlias)} ON {joinCondition}";
+                var joinCondition = SqlDialectHelper.BuildJoinCondition(dialect, rel, currentMapping, parentRef, targetMapping, childAlias);
+                var sql = $"LEFT JOIN {dialect.QuoteIdentifier(targetMapping.TableName)} AS {dialect.QuoteIdentifier(childAlias)} ON {joinCondition}";
 
                 if (child.Value.Filter != null)
                 {
-                    var filterSql = _whereBuilder.BuildFilterGroupExpression(child.Value.Filter, targetMapping, parameters, caseInsensitive);
+                    var filterSql = whereBuilder.BuildFilterGroupExpression(child.Value.Filter, targetMapping, parameters, caseInsensitive);
                     if (!string.IsNullOrEmpty(filterSql))
                         sql += $" AND ({filterSql})";
                 }

@@ -1,6 +1,5 @@
 using FlexQuery.NET.Models;
 using FlexQuery.NET.Parsers;
-using FluentAssertions;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Primitives;

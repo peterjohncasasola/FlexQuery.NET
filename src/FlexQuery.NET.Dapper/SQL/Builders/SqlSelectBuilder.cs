@@ -5,6 +5,8 @@ using FlexQuery.NET.Dapper.Dialects;
 using FlexQuery.NET.Dapper.Sql.Helpers;
 using FlexQuery.NET.Metadata;
 using System.Reflection;
+using FlexQuery.NET.Internal;
+using FlexQuery.NET.Models.Projection;
 
 namespace FlexQuery.NET.Dapper.Sql.Builders;
 
@@ -56,7 +58,7 @@ internal sealed class SqlSelectBuilder(IMappingRegistry mappingRegistry, ISqlDia
         var distinctPrefix = !string.IsNullOrEmpty(distinctClause) ? $"{distinctClause} " : string.Empty;
         var selectParts = new List<string>();
 
-        if (options.Aggregates?.Count > 0 && options.GroupBy?.Count > 0)
+        if (options.Aggregates.Count > 0 && options.GroupBy?.Count > 0)
         {
             foreach (var g in options.GroupBy)
             {
@@ -145,7 +147,7 @@ internal sealed class SqlSelectBuilder(IMappingRegistry mappingRegistry, ISqlDia
     {
         var rootFields = GetRootGovernedPropertyNames(governedSelectFields);
         if (rootFields != null)
-            return mapping.GetProperties().Where(p => rootFields.Contains(p));
+            return mapping.GetProperties().Where(rootFields.Contains);
 
         return mapping.GetProperties();
     }
@@ -307,7 +309,7 @@ internal sealed class SqlSelectBuilder(IMappingRegistry mappingRegistry, ISqlDia
             }
         }
 
-        foreach (var (navName, navNode, rel) in navChildren)
+        foreach (var (_, navNode, rel) in navChildren)
         {
             var targetMapping = mappingRegistry.GetMapping(rel.TargetType);
             navPath.Add(rel.NavigationPropertyName);

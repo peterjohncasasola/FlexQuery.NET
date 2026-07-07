@@ -1,9 +1,8 @@
-using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Filters;
 using Microsoft.AspNetCore.Mvc.Controllers;
-using FlexQuery.NET.Models;
 using FlexQuery.NET.AspNetCore.Attributes;
 using FlexQuery.NET.Constants;
+using FlexQuery.NET.Options;
 
 namespace FlexQuery.NET.AspNetCore.Filters;
 

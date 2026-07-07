@@ -3,7 +3,7 @@ using FlexQuery.NET.Adapters.Kendo;
 using FlexQuery.NET.Adapters.Kendo.Models;
 using FlexQuery.NET.Adapters.Kendo.Parsers;
 using FlexQuery.NET.Models;
-using FluentAssertions;
+using FlexQuery.NET.Models.Filters;
 
 namespace FlexQuery.NET.Tests.Tests;
 

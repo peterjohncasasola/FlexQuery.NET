@@ -1,11 +1,7 @@
-using FlexQuery.NET;
 using FlexQuery.NET.EntityFrameworkCore;
 using FlexQuery.NET.Models;
 using FlexQuery.NET.Parsers;
-using FlexQuery.NET.Tests.Fixtures;
-using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
-using Xunit;
 
 namespace FlexQuery.NET.Tests.Tests;
 
@@ -124,7 +120,7 @@ public class FilteredIncludeTests : IDisposable
         orderList.Should().HaveCount(2);
 
         // Find the items of SO-001
-        var so001 = orderList.Cast<object>().First(o => (string)o.GetType().GetProperty("Number")?.GetValue(o)! == "SO-001");
+        var so001 = orderList.First(o => (string)o.GetType().GetProperty("Number")?.GetValue(o)! == "SO-001");
         var items = so001.GetType().GetProperty("Items")?.GetValue(so001) as System.Collections.IEnumerable;
         var itemList = new List<object>();
         foreach (var i in items!) itemList.Add(i);

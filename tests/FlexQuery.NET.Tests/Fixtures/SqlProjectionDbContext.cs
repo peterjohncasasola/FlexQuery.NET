@@ -1,6 +1,5 @@
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
-using FlexQuery.NET.Tests.Models;
 
 namespace FlexQuery.NET.Tests.Fixtures;
 

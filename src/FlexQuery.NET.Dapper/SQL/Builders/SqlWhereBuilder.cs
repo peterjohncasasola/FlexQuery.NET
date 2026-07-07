@@ -1,4 +1,3 @@
-using FlexQuery.NET.Models;
 using FlexQuery.NET.Constants;
 using FlexQuery.NET.Dapper.Mapping;
 using FlexQuery.NET.Dapper.Dialects;
@@ -6,6 +5,7 @@ using FlexQuery.NET.Dapper.Sql.Ast;
 using FlexQuery.NET.Dapper.Sql.Helpers;
 using FlexQuery.NET.Dapper.Sql.Models;
 using FlexQuery.NET.Dapper.Sql.Translators;
+using FlexQuery.NET.Models.Filters;
 
 namespace FlexQuery.NET.Dapper.Sql.Builders;
 
@@ -145,13 +145,13 @@ internal sealed class SqlWhereBuilder(
 
         return op switch
         {
-            FilterOperators.IsNull or "isnull" => $"{quotedColumn} IS NULL",
-            FilterOperators.IsNotNull or "isnotnull" => $"{quotedColumn} IS NOT NULL",
+            FilterOperators.IsNull => $"{quotedColumn} IS NULL",
+            FilterOperators.IsNotNull => $"{quotedColumn} IS NOT NULL",
             FilterOperators.In => BuildInExpression(quotedColumn, condition.Field, condition.Value, mapping, parameters),
             FilterOperators.Between => BuildBetweenExpression(quotedColumn, condition.Field, condition.Value, mapping, parameters),
-            FilterOperators.Contains => BuildLikeExpression(quotedColumn, condition.Value, mapping, parameters, "%", "%"),
-            FilterOperators.StartsWith => BuildLikeExpression(quotedColumn, condition.Value, mapping, parameters, "", "%"),
-            FilterOperators.EndsWith => BuildLikeExpression(quotedColumn, condition.Value, mapping, parameters, "%", ""),
+            FilterOperators.Contains => BuildLikeExpression(quotedColumn, condition.Value, parameters, "%", "%"),
+            FilterOperators.StartsWith => BuildLikeExpression(quotedColumn, condition.Value, parameters, "", "%"),
+            FilterOperators.EndsWith => BuildLikeExpression(quotedColumn, condition.Value, parameters, "%", ""),
             _ => BuildComparisonExpression(quotedColumn, condition.Field, condition.Value, op, mapping, parameters)
         };
     }
@@ -218,7 +218,7 @@ internal sealed class SqlWhereBuilder(
         return $"{quotedColumn} BETWEEN {fromParam} AND {toParam}";
     }
 
-    private string BuildLikeExpression(string quotedColumn, string? value, IEntityMapping mapping, SqlParameterContext parameters, string prefix, string suffix)
+    private string BuildLikeExpression(string quotedColumn, string? value, SqlParameterContext parameters, string prefix, string suffix)
     {
         var paramValue = $"{prefix}{value}{suffix}";
         var paramName = parameters.Add(paramValue);

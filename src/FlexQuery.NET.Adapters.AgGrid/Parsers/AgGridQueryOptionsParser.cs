@@ -1,9 +1,11 @@
 using System.Text.Json;
-using System.Linq;
 using FlexQuery.NET.Adapters.AgGrid.Models;
 using FlexQuery.NET.Constants;
 using FlexQuery.NET.Models;
 using FlexQuery.NET.Builders;
+using FlexQuery.NET.Models.Aggregates;
+using FlexQuery.NET.Models.Filters;
+using FlexQuery.NET.Models.Paging;
 using FlexQuery.NET.Parsers;
 
 namespace FlexQuery.NET.Adapters.AgGrid.Parsers;
@@ -127,7 +129,7 @@ internal static class AgGridQueryOptionsParser
         var resolved = new List<SortNode>(sortModel.Count);
         foreach (var sortItem in sortModel)
         {
-            if (sortItem is null || string.IsNullOrWhiteSpace(sortItem.ColId)) continue;
+            if (string.IsNullOrWhiteSpace(sortItem.ColId)) continue;
 
             if (aggregateLookup.TryGetValue(sortItem.ColId, out var alias))
             {
@@ -190,10 +192,11 @@ internal static class AgGridQueryOptionsParser
             throw new FormatException("AG Grid request JSON must be an object.");
         }
 
-        var request = new AgGridRequest();
-
-        request.StartRow = GetInt(root, "startRow", 0);
-        request.EndRow = GetInt(root, "endRow", 0);
+        var request = new AgGridRequest
+        {
+            StartRow = GetInt(root, "startRow"),
+            EndRow = GetInt(root, "endRow")
+        };
 
         if (root.TryGetProperty("filterModel", out var filterModel) && filterModel.ValueKind == JsonValueKind.Object)
         {
@@ -299,13 +302,6 @@ internal static class AgGridQueryOptionsParser
     {
         return element.TryGetProperty(propertyName, out var property) && property.ValueKind == JsonValueKind.Number
             ? (property.TryGetInt32(out var val) ? val : defaultValue)
-            : defaultValue;
-    }
-
-    private static bool GetBool(JsonElement element, string propertyName, bool defaultValue = false)
-    {
-        return element.TryGetProperty(propertyName, out var property) && (property.ValueKind == JsonValueKind.True || property.ValueKind == JsonValueKind.False)
-            ? property.GetBoolean()
             : defaultValue;
     }
 

@@ -1,4 +1,4 @@
-using FlexQuery.NET.Models;
+using FlexQuery.NET.Execution;
 
 namespace FlexQuery.NET.Diagnostics;
 
@@ -39,10 +39,9 @@ public sealed class ConsoleExecutionListener : IFlexQueryExecutionListener
     /// </summary>
     public ValueTask QueryExecutedAsync(QueryExecutedEvent e, CancellationToken ct)
     {
-        if (e.Exception is not null)
-            Console.WriteLine($"[FlexQuery] [{e.QueryId}] Database failed in {e.Duration.TotalMilliseconds:F1}ms: {e.Exception.Message}");
-        else
-            Console.WriteLine($"[FlexQuery] [{e.QueryId}] Database executed in {e.Duration.TotalMilliseconds:F1}ms, rows={e.RowCount}");
+        Console.WriteLine(e.Exception is not null
+            ? $"[FlexQuery] [{e.QueryId}] Database failed in {e.Duration.TotalMilliseconds:F1}ms: {e.Exception.Message}"
+            : $"[FlexQuery] [{e.QueryId}] Database executed in {e.Duration.TotalMilliseconds:F1}ms, rows={e.RowCount}");
         return ValueTask.CompletedTask;
     }
 
@@ -51,10 +50,9 @@ public sealed class ConsoleExecutionListener : IFlexQueryExecutionListener
     /// </summary>
     public ValueTask QueryMaterializedAsync(QueryMaterializedEvent e, CancellationToken ct)
     {
-        if (e.Exception is not null)
-            Console.WriteLine($"[FlexQuery] [{e.QueryId}] Materialization failed in {e.Duration.TotalMilliseconds:F1}ms: {e.Exception.Message}");
-        else
-            Console.WriteLine($"[FlexQuery] [{e.QueryId}] Materialized in {e.Duration.TotalMilliseconds:F1}ms");
+        Console.WriteLine(e.Exception is not null
+            ? $"[FlexQuery] [{e.QueryId}] Materialization failed in {e.Duration.TotalMilliseconds:F1}ms: {e.Exception.Message}"
+            : $"[FlexQuery] [{e.QueryId}] Materialized in {e.Duration.TotalMilliseconds:F1}ms");
         return ValueTask.CompletedTask;
     }
 }

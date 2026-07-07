@@ -3,7 +3,8 @@ using FlexQuery.NET.Adapters.AgGrid;
 using FlexQuery.NET.Adapters.AgGrid.Models;
 using FlexQuery.NET.Adapters.AgGrid.Parsers;
 using FlexQuery.NET.Models;
-using FluentAssertions;
+using FlexQuery.NET.Models.Aggregates;
+using FlexQuery.NET.Models.Filters;
 
 namespace FlexQuery.NET.Tests.Tests;
 

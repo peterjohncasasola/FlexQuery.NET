@@ -1,9 +1,5 @@
-using FlexQuery.NET;
 using FlexQuery.NET.Helpers;
 using FlexQuery.NET.Models;
-using FlexQuery.NET.Tests.Fixtures;
-using FlexQuery.NET.Tests.Models;
-using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
 using System.Text.RegularExpressions;
 using System.Text.Json;

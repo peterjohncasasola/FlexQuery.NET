@@ -1,5 +1,5 @@
 using FlexQuery.NET.Adapters.AgGrid.Models;
-using FlexQuery.NET.Models;
+using FlexQuery.NET.Models.Paging;
 
 namespace FlexQuery.NET.Adapters.AgGrid.Parsers;
 
@@ -16,7 +16,7 @@ internal static class AgGridSortParser
 
         foreach (var sortItem in sortModel)
         {
-            if (sortItem is null || string.IsNullOrWhiteSpace(sortItem.ColId))
+            if (string.IsNullOrWhiteSpace(sortItem.ColId))
             {
                 continue;
             }

@@ -1,13 +1,12 @@
 using System.Data.Common;
 using System.Reflection;
 using FlexQuery.NET.Dapper;
-using FlexQuery.NET.Dapper.Configuration;
 using FlexQuery.NET.Dapper.Dialects;
-using FlexQuery.NET.Dapper.Mapping;
-using FlexQuery.NET.Dapper.Mapping.Configuration;
 using DapperModelBuilder = FlexQuery.NET.Dapper.Mapping.Configuration.ModelBuilder;
 using FlexQuery.NET.Models;
-using FluentAssertions;
+using FlexQuery.NET.Models.Aggregates;
+using FlexQuery.NET.Models.Filters;
+using FlexQuery.NET.Models.Paging;
 using Microsoft.EntityFrameworkCore;
 
 namespace FlexQuery.NET.Tests.Api.Dapper;

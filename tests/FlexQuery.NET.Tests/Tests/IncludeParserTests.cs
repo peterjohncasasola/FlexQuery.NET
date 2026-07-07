@@ -1,7 +1,4 @@
-using System;
 using FlexQuery.NET.Parsers;
-using FluentAssertions;
-using Xunit;
 
 namespace FlexQuery.NET.Tests.Tests;
 

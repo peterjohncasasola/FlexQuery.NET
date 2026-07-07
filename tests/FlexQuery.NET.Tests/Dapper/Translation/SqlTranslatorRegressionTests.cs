@@ -2,7 +2,9 @@ using FlexQuery.NET.Models;
 using FlexQuery.NET.Dapper.Mapping;
 using FlexQuery.NET.Dapper.Sql.Translators;
 using FlexQuery.NET.Dapper.Dialects;
-using FluentAssertions;
+using FlexQuery.NET.Models.Filters;
+using FlexQuery.NET.Models.Paging;
+using FlexQuery.NET.Models.Projection;
 
 namespace FlexQuery.NET.Tests.Dapper.Translation;
 

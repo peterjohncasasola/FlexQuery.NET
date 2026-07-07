@@ -2,7 +2,7 @@ using FlexQuery.NET.Constants;
 using FlexQuery.NET.Dapper.Sql.Ast;
 using FlexQuery.NET.Dapper.Dialects;
 using FlexQuery.NET.Dapper.Mapping;
-using FlexQuery.NET.Models;
+using FlexQuery.NET.Models.Filters;
 
 namespace FlexQuery.NET.Dapper.Sql.Translators;
 

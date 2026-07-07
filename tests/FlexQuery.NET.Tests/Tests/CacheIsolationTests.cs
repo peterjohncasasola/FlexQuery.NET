@@ -1,5 +1,4 @@
 using FlexQuery.NET.Parsers;
-using FluentAssertions;
 using Microsoft.Extensions.Primitives;
 
 namespace FlexQuery.NET.Tests.Tests;

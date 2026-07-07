@@ -2,7 +2,7 @@ using System.Text.Json;
 using FlexQuery.NET.Adapters.Kendo.Mapping;
 using FlexQuery.NET.Adapters.Kendo.Models;
 using FlexQuery.NET.Constants;
-using FlexQuery.NET.Models;
+using FlexQuery.NET.Models.Filters;
 using FlexQuery.NET.Parsers;
 
 namespace FlexQuery.NET.Adapters.Kendo.Parsers;
@@ -49,7 +49,7 @@ internal static class KendoFilterParser
     private static FilterGroup? ParseFilterDescriptor(KendoFilterDescriptor descriptor)
     {
         // If this descriptor has nested filters, it's a logical group
-        if (descriptor.Filters != null && descriptor.Filters.Count > 0)
+        if (descriptor.Filters is { Count: > 0 })
         {
             var group = new FilterGroup
             {
@@ -75,7 +75,7 @@ internal static class KendoFilterParser
         }
 
         var flexOperator = KendoOperatorMapper.Map(descriptor.Operator);
-        var value = FormatValue(descriptor.Value, flexOperator, descriptor.Field);
+        var value = FormatValue(descriptor.Value, flexOperator);
 
         return new FilterGroup
         {
@@ -107,16 +107,10 @@ internal static class KendoFilterParser
     /// </summary>
     /// <param name="value">The JsonElement to format.</param>
     /// <param name="flexOperator">The FlexQuery.NET operator.</param>
-    /// <param name="fieldPath">The field path for error messages.</param>
     /// <returns>The formatted string value, or null for null-check operators.</returns>
-    private static string? FormatValue(JsonElement value, string flexOperator, string fieldPath)
+    private static string? FormatValue(JsonElement value, string flexOperator)
     {
-        if (flexOperator is FilterOperators.IsNull or FilterOperators.IsNotNull)
-        {
-            return null;
-        }
-
-        return Format(value);
+        return flexOperator is FilterOperators.IsNull or FilterOperators.IsNotNull ? null : Format(value);
     }
 
     /// <summary>
@@ -149,7 +143,7 @@ internal static class KendoFilterParser
             return;
         }
 
-        if (!source.IsNegated && source.Groups.Count == 0 && source.Logic == LogicOperator.And)
+        if (source is { IsNegated: false, Groups.Count: 0, Logic: LogicOperator.And })
         {
             target.Filters.AddRange(source.Filters);
             return;

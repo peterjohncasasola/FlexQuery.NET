@@ -1,4 +1,4 @@
-using FlexQuery.NET.Models;
+using FlexQuery.NET.Models.Filters;
 
 namespace FlexQuery.NET.Parsers.Jql;
 
@@ -61,7 +61,7 @@ internal static class JqlFilterConverter
     {
         var group = new FilterGroup
         {
-            Logic = string.Equals(node.Logic?.Trim(), "or", StringComparison.OrdinalIgnoreCase)
+            Logic = string.Equals(node.Logic.Trim(), "or", StringComparison.OrdinalIgnoreCase)
                 ? LogicOperator.Or
                 : LogicOperator.And
         };

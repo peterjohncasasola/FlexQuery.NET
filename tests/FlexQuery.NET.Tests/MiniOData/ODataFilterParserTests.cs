@@ -1,6 +1,5 @@
-using FlexQuery.NET.Constants;
+using FlexQuery.NET.Models.Filters;
 using FlexQuery.NET.Parsers.MiniOData;
-using FluentAssertions;
 
 namespace FlexQuery.NET.Tests.MiniOData;
 
@@ -161,7 +160,7 @@ public class ODataFilterParserTests
     {
         var result = ODataFilterParser.Parse("age gt 18 and status eq 'active'");
 
-        result.Logic.Should().Be(FlexQuery.NET.Models.LogicOperator.And);
+        result.Logic.Should().Be(LogicOperator.And);
         result.Filters.Should().HaveCount(2);
         result.Filters[0].Field.Should().Be("age");
         result.Filters[1].Field.Should().Be("status");
@@ -172,7 +171,7 @@ public class ODataFilterParserTests
     {
         var result = ODataFilterParser.Parse("status eq 'active' or status eq 'pending'");
 
-        result.Logic.Should().Be(FlexQuery.NET.Models.LogicOperator.Or);
+        result.Logic.Should().Be(LogicOperator.Or);
         result.Filters.Should().HaveCount(2);
     }
 
@@ -192,7 +191,7 @@ public class ODataFilterParserTests
         var result = ODataFilterParser.Parse("name eq 'john' and (age gt 18 or status eq 'vip')");
 
         // Should have AND at top level
-        result.Logic.Should().Be(FlexQuery.NET.Models.LogicOperator.And);
+        result.Logic.Should().Be(LogicOperator.And);
     }
 
     // ========================
@@ -204,7 +203,7 @@ public class ODataFilterParserTests
     {
         var result = ODataFilterParser.Parse("(status eq 'active' or status eq 'pending') and age gt 18");
 
-        result.Logic.Should().Be(FlexQuery.NET.Models.LogicOperator.And);
+        result.Logic.Should().Be(LogicOperator.And);
     }
 
     // ========================
@@ -331,7 +330,7 @@ public class ODataFilterParserTests
     {
         var result = ODataFilterParser.Parse("a eq '1' and b eq '2' and c eq '3'");
 
-        result.Logic.Should().Be(FlexQuery.NET.Models.LogicOperator.And);
+        result.Logic.Should().Be(LogicOperator.And);
         result.Filters.Should().HaveCount(3);
     }
 }

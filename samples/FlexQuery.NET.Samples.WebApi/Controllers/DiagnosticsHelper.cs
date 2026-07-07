@@ -1,5 +1,6 @@
 using FlexQuery.NET.Diagnostics;
 using FlexQuery.NET.Models;
+using FlexQuery.NET.Models.Filters;
 
 namespace FlexQuery.NET.Samples.WebApi.Controllers;
 

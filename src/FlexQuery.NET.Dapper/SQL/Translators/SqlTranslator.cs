@@ -7,6 +7,10 @@ using FlexQuery.NET.Dapper.Sql.Builders;
 using FlexQuery.NET.Dapper.Sql.Helpers;
 using FlexQuery.NET.Dapper.Sql.Models;
 using FlexQuery.NET.Helpers;
+using FlexQuery.NET.Internal;
+using FlexQuery.NET.Models.Aggregates;
+using FlexQuery.NET.Models.Paging;
+using FlexQuery.NET.Models.Projection;
 using FlexQuery.NET.Validation;
 
 namespace FlexQuery.NET.Dapper.Sql.Translators;
@@ -230,7 +234,7 @@ internal sealed class SqlTranslator : ISqlTranslator
             aggregateExpression = $"{having.Function.ToUpperInvariant()}({column})";
         }
 
-        var valStr = having.Value?.ToString()?.Trim('"');
+        var valStr = having.Value?.Trim('"');
 
         object? convertedValue;
         if (isCountStar || string.IsNullOrWhiteSpace(having.Field))

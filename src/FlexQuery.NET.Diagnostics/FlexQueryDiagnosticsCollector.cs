@@ -1,3 +1,4 @@
+using FlexQuery.NET.Execution;
 using FlexQuery.NET.Models;
 
 namespace FlexQuery.NET.Diagnostics;
@@ -127,7 +128,7 @@ public sealed class FlexQueryDiagnosticsCollector : IFlexQueryExecutionListener
                 Provider = provider,
                 Translator = translator,
                 Sql = lastTranslated?.GeneratedQuery,
-                Rows = lastMaterialized is not null ? (lastMaterialized.Value.Result as QueryResult<object>)?.Data?.Count
+                Rows = lastMaterialized is not null ? (lastMaterialized.Value.Result as QueryResult<object>)?.Data.Count
                     ?? lastExecuted?.RowCount : lastExecuted?.RowCount,
                 Exception = lastMaterialized?.Exception ?? lastExecuted?.Exception,
                 Duration = duration,

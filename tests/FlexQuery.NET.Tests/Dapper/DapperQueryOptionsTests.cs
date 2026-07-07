@@ -1,10 +1,8 @@
 using FlexQuery.NET.Dapper;
-using FlexQuery.NET.Dapper.Configuration;
-using FlexQuery.NET.Dapper.Mapping;
 using FlexQuery.NET.Dapper.Mapping.Configuration;
-using FlexQuery.NET.Models;
+using FlexQuery.NET.Execution;
+using FlexQuery.NET.Options;
 using FlexQuery.NET.Security;
-using FluentAssertions;
 
 namespace FlexQuery.NET.Tests.Dapper;
 

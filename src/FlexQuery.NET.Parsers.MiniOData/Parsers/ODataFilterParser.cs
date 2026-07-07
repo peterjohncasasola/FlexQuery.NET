@@ -1,5 +1,5 @@
 using FlexQuery.NET.Constants;
-using FlexQuery.NET.Models;
+using FlexQuery.NET.Models.Filters;
 
 namespace FlexQuery.NET.Parsers.MiniOData;
 
@@ -45,7 +45,7 @@ public sealed class ODataFilterParser
     };
 
     /// <summary>Creates a parser over pre-tokenized OData filter input.</summary>
-    public ODataFilterParser(IReadOnlyList<ODataToken> tokens)
+    private ODataFilterParser(IReadOnlyList<ODataToken> tokens)
     {
         _tokens = tokens;
     }
@@ -61,7 +61,7 @@ public sealed class ODataFilterParser
     }
 
     /// <summary>Parses the token stream into a <see cref="FilterGroup"/>.</summary>
-    public FilterGroup ParseExpression()
+    private FilterGroup ParseExpression()
     {
         var group = ParseOr();
         if (Current.Kind != ODataTokenKind.End && Current.Kind != ODataTokenKind.CloseParen)
@@ -227,13 +227,12 @@ public sealed class ODataFilterParser
         }
 
         // Standard binary comparison: field op value
-        if (Current.Kind != ODataTokenKind.Identifier || !ComparisonOperators.ContainsKey(Current.Value))
+        if (Current.Kind != ODataTokenKind.Identifier || !ComparisonOperators.TryGetValue(Current.Value, out var flexOp))
         {
             throw new MiniODataParseException(
                 $"Expected comparison operator at position {Current.Position}, but found '{Current.Value}'.");
         }
 
-        var flexOp = ComparisonOperators[Current.Value];
         _position++; // consume operator
         var val = ParseLiteralValue();
 
@@ -303,7 +302,7 @@ public sealed class ODataFilterParser
     private IReadOnlyList<ODataToken> CollectInnerTokens()
     {
         var tokens = new List<ODataToken>();
-        int depth = 0;
+        var depth = 0;
 
         while (_position < _tokens.Count)
         {
@@ -330,9 +329,8 @@ public sealed class ODataFilterParser
     private static IReadOnlyList<ODataToken> StripLambdaPrefix(IReadOnlyList<ODataToken> tokens, string lambdaVar)
     {
         var result = new List<ODataToken>();
-        var prefix = lambdaVar + "/";
 
-        for (int i = 0; i < tokens.Count; i++)
+        for (var i = 0; i < tokens.Count; i++)
         {
             var token = tokens[i];
 
@@ -447,10 +445,6 @@ public sealed class ODataFilterParser
 
     private static FilterGroup MergeGroups(LogicOperator logic, FilterGroup left, FilterGroup right)
     {
-        // Helper: check if a group is a simple single-condition wrapper
-        static bool IsSimpleWrapper(FilterGroup g) =>
-            !g.IsNegated && g.Filters.Count <= 1 && g.Groups.Count == 0;
-
         // If left already uses the target logic and isn't negated, absorb right into it
         if (left.Logic == logic && !left.IsNegated)
         {
@@ -474,12 +468,16 @@ public sealed class ODataFilterParser
             return merged;
         }
 
-        // General case: wrap both as sub-groups
+        // General case: wrap both as subgroups
         return new FilterGroup
         {
             Logic = logic,
             Groups = { left, right }
         };
+
+        // Helper: check if a group is a simple single-condition wrapper
+        static bool IsSimpleWrapper(FilterGroup g) =>
+            g is { IsNegated: false, Filters.Count: <= 1, Groups.Count: 0 };
     }
 
     private bool IsKeyword(string keyword)

@@ -1,7 +1,6 @@
-using System.Linq.Expressions;
-using FlexQuery.NET.Builders;
+using FlexQuery.NET.Internal;
 using FlexQuery.NET.Models;
-using FlexQuery.NET.Parsers;
+using FlexQuery.NET.Options;
 
 namespace FlexQuery.NET.EntityFrameworkCore;
 

@@ -1,9 +1,7 @@
 using FlexQuery.NET.EntityFrameworkCore;
 using FlexQuery.NET.Models;
+using FlexQuery.NET.Options;
 using Microsoft.AspNetCore.Http;
-using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
 
 namespace FlexQuery.NET.AspNetCore.Extensions;
 

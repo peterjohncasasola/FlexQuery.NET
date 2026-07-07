@@ -3,6 +3,9 @@ using FlexQuery.NET.Dapper.Dialects;
 using DapperModelBuilder = FlexQuery.NET.Dapper.Mapping.Configuration.ModelBuilder;
 using FlexQuery.NET.EntityFrameworkCore;
 using FlexQuery.NET.Models;
+using FlexQuery.NET.Models.Aggregates;
+using FlexQuery.NET.Models.Filters;
+using FlexQuery.NET.Models.Paging;
 using Microsoft.EntityFrameworkCore;
 
 namespace FlexQuery.NET.Tests.Tests;

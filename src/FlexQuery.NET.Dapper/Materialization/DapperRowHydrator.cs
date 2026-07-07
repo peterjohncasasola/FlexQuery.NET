@@ -1,5 +1,5 @@
 using FlexQuery.NET.Dapper.Mapping;
-using FlexQuery.NET.Models;
+using FlexQuery.NET.Models.Projection;
 
 namespace FlexQuery.NET.Dapper.Materialization;
 
@@ -99,7 +99,7 @@ internal static class DapperRowHydrator
         return parentMap.Values.ToList();
     }
 
-    public static T MapRowToEntity<T>(IDictionary<string, object> row, IEntityMapping mapping, string prefix) where T : class
+    private static T MapRowToEntity<T>(IDictionary<string, object> row, IEntityMapping mapping, string prefix) where T : class
         => (T)MapRowToEntity(row, mapping, prefix);
 
     private static object MapRowToEntity(IDictionary<string, object> row, IEntityMapping mapping, string prefix)

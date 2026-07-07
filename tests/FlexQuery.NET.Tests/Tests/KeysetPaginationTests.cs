@@ -1,9 +1,9 @@
-using FlexQuery.NET;
 using FlexQuery.NET.Builders;
 using FlexQuery.NET.Exceptions;
+using FlexQuery.NET.Internal;
 using FlexQuery.NET.Models;
+using FlexQuery.NET.Models.Paging;
 using FlexQuery.NET.Serialization;
-using FlexQuery.NET.Validation;
 
 namespace FlexQuery.NET.Tests.Tests;
 
@@ -384,7 +384,7 @@ public class KeysetPaginationTests : IDisposable
     public void CursorSerializer_RoundTrip_AndUseInSeekAfter()
     {
         var token = KeysetCursorSerializer.Serialize(new KeysetCursor(3));
-        var cursor = KeysetCursorSerializer.Deserialize(token);
+        KeysetCursorSerializer.Deserialize(token);
 
         var page = _db.Entities
             .OrderBy(e => e.Id)

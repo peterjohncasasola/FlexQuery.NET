@@ -1,10 +1,7 @@
 using System.Diagnostics;
 using FlexQuery.NET.Dapper;
-using FlexQuery.NET.Dapper.Configuration;
-using FlexQuery.NET.Dapper.Dialects;
 using FlexQuery.NET.Diagnostics;
 using FlexQuery.NET.Models;
-using FlexQuery.NET.Parsers;
 using FlexQuery.NET.Samples.WebApi.Data;
 using FlexQuery.NET.Samples.WebApi.Models;
 using Microsoft.AspNetCore.Mvc;

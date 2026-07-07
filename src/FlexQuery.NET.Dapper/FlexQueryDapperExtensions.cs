@@ -3,19 +3,17 @@ using System.Data.Common;
 using System.Text.RegularExpressions;
 using Dapper;
 using FlexQuery.NET.Builders;
-using FlexQuery.NET.Helpers;
 using FlexQuery.NET.Internal;
 using FlexQuery.NET.Models;
-using FlexQuery.NET.Parsers;
 using FlexQuery.NET.Projection;
 using FlexQuery.NET.Dapper.Mapping;
-using FlexQuery.NET.Dapper.Sql;
 using FlexQuery.NET.Dapper.Sql.Translators;
 using FlexQuery.NET.Dapper.Dialects;
-using FlexQuery.NET;
 using Microsoft.Extensions.Primitives;
 using FlexQuery.NET.Constants;
 using FlexQuery.NET.Dapper.Materialization;
+using FlexQuery.NET.Diagnostics;
+using FlexQuery.NET.Execution;
 
 namespace FlexQuery.NET.Dapper;
 
@@ -249,7 +247,7 @@ public static class FlexQueryDapperExtensions
                 commandTimeout: dapperQueryOptions.CommandTimeoutSeconds,
                 commandType: CommandType.Text);
 
-            items = dynamicItems.Cast<object>().ToList();
+            items = dynamicItems.ToList();
         }
         else if (typeof(T) == typeof(object) || options.GroupBy?.Count > 0 || options.Aggregates.Count > 0)
         {
@@ -290,7 +288,7 @@ public static class FlexQueryDapperExtensions
                                 prop.SetValue(instance, kvp.Value);
                         }
                         return instance;
-                    }).Cast<object>().ToList();
+                    }).ToList();
                 }
             }
             else
@@ -342,7 +340,7 @@ public static class FlexQueryDapperExtensions
         }
 
         Dictionary<string, Dictionary<string, object>>? grandTotals = null;
-        if (options.Aggregates?.Count > 0 && (options.GroupBy == null || options.GroupBy.Count == 0))
+        if (options.Aggregates.Count > 0 && (options.GroupBy == null || options.GroupBy.Count == 0))
         {
             var aggCommand = translator.TranslateAggregates(options);
             var aggParams = new DynamicParameters();
@@ -373,7 +371,7 @@ public static class FlexQueryDapperExtensions
                             fnDict = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase);
                             grandTotals[fieldName] = fnDict;
                         }
-                        fnDict[fnName] = val ?? 0;
+                        fnDict[fnName] = val;
                     }
                 }
             }

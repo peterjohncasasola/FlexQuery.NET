@@ -2,7 +2,6 @@ using FlexQuery.NET.Adapters.Kendo;
 using FlexQuery.NET.Adapters.Kendo.Models;
 using FlexQuery.NET.Diagnostics;
 using FlexQuery.NET.EntityFrameworkCore;
-using FlexQuery.NET.Models;
 using FlexQuery.NET.Samples.WebApi.Data;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;

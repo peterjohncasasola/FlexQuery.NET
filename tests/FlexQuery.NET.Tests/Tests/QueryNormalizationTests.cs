@@ -1,9 +1,9 @@
-using FlexQuery.NET;
 using FlexQuery.NET.Caching;
 using FlexQuery.NET.Models;
+using FlexQuery.NET.Models.Aggregates;
+using FlexQuery.NET.Models.Filters;
+using FlexQuery.NET.Models.Projection;
 using FlexQuery.NET.Parsers;
-using FlexQuery.NET.Tests.Models;
-using FluentAssertions;
 using Microsoft.Extensions.Primitives;
 
 namespace FlexQuery.NET.Tests.Tests;

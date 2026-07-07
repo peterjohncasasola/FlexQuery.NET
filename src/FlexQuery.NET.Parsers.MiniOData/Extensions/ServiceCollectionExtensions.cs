@@ -1,5 +1,4 @@
 using Microsoft.Extensions.DependencyInjection;
-using FlexQuery.NET.Parsers;
 
 namespace FlexQuery.NET.Parsers.MiniOData;
 

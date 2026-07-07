@@ -1,7 +1,5 @@
 using System.Data;
-using System.Data.Common;
 using FlexQuery.NET.Dapper.Dialects;
-using FlexQuery.NET.Tests.Fixtures;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.Hosting;
