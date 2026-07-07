@@ -1,7 +1,6 @@
 using FlexQuery.NET.Caching;
 using FlexQuery.NET.Dapper.Dialects;
 using FlexQuery.NET.Dapper.Mapping;
-using FlexQuery.NET.Dapper.Sql.Helpers;
 using FlexQuery.NET.Dapper.Sql.Models;
 using FlexQuery.NET.Internal;
 using FlexQuery.NET.Models.Paging;
@@ -31,7 +30,7 @@ internal static class SqlKeysetBuilder
             var sort = sorts[i];
 
             keyTypes[i] = ReflectionCache.GetProperty(mapping.Type, sort.Field)?.PropertyType ?? typeof(object);
-            columns[i] = SqlDialectHelper.QuoteColumn(dialect, mapping.GetColumnName(sort.Field), mapping);
+            columns[i] = SqlSyntaxBuilder.QuoteColumn(dialect, mapping.GetColumnName(sort.Field), mapping);
             descending[i] = sort.Descending;
         }
 

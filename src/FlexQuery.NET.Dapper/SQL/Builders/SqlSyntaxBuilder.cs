@@ -2,14 +2,14 @@ using FlexQuery.NET.Dapper.Dialects;
 using FlexQuery.NET.Dapper.Mapping;
 using FlexQuery.NET.Dapper.Mapping.Metadata;
 
-namespace FlexQuery.NET.Dapper.Sql.Helpers;
+namespace FlexQuery.NET.Dapper.Sql.Builders;
 
 /// <summary>
 /// Pure, stateless quoting helpers shared by the SELECT, JOIN, and WHERE builders.
 /// Centralizing this avoids three slightly-different reimplementations of the same
 /// alias/identifier quoting rules drifting apart over time.
 /// </summary>
-internal static class SqlDialectHelper
+internal static class SqlSyntaxBuilder
 {
     /// <summary>Quotes a column, prefixed with the mapping's table alias when one is set.</summary>
     public static string QuoteColumn(ISqlDialect dialect, string column, IEntityMapping mapping)
@@ -36,9 +36,9 @@ internal static class SqlDialectHelper
         return rel.RelationshipType switch
         {
             RelationshipType.OneToMany =>
-                $"{dialect.QuoteIdentifier(childAlias)}.{dialect.QuoteIdentifier(rel.ForeignKey)} = {dialect.QuoteIdentifier(parentRef)}.{dialect.QuoteIdentifier(parentMapping.GetColumnName(rel.PrincipalKey ?? "Id"))}",
+                $"{dialect.QuoteIdentifier(childAlias)}.{dialect.QuoteIdentifier(rel.ForeignKey)} = {dialect.QuoteIdentifier(parentRef)}.{dialect.QuoteIdentifier(parentMapping.GetColumnName(rel.PrincipalKey))}",
             RelationshipType.ManyToOne =>
-                $"{dialect.QuoteIdentifier(parentRef)}.{dialect.QuoteIdentifier(rel.ForeignKey)} = {dialect.QuoteIdentifier(childAlias)}.{dialect.QuoteIdentifier(targetMapping.GetColumnName(rel.PrincipalKey ?? "Id"))}",
+                $"{dialect.QuoteIdentifier(parentRef)}.{dialect.QuoteIdentifier(rel.ForeignKey)} = {dialect.QuoteIdentifier(childAlias)}.{dialect.QuoteIdentifier(targetMapping.GetColumnName(rel.PrincipalKey))}",
             _ => "1=0"
         };
     }

@@ -1,7 +1,6 @@
 using FlexQuery.NET.Models;
 using FlexQuery.NET.Dapper.Mapping;
 using FlexQuery.NET.Dapper.Dialects;
-using FlexQuery.NET.Dapper.Sql.Helpers;
 using FlexQuery.NET.Dapper.Sql.Models;
 using FlexQuery.NET.Dapper.Sql.Translators;
 using FlexQuery.NET.Internal;
@@ -84,7 +83,7 @@ internal sealed class SqlJoinBuilder(
             if (joinedPaths.Add(childAlias))
             {
                 var parentRef = string.IsNullOrEmpty(parentAlias) ? currentMapping.TableName : parentAlias;
-                var joinCondition = SqlDialectHelper.BuildJoinCondition(dialect, rel, currentMapping, parentRef, targetMapping, childAlias);
+                var joinCondition = SqlSyntaxBuilder.BuildJoinCondition(dialect, rel, currentMapping, parentRef, targetMapping, childAlias);
                 var sql = $"LEFT JOIN {dialect.QuoteIdentifier(targetMapping.TableName)} AS {dialect.QuoteIdentifier(childAlias)} ON {joinCondition}";
 
                 if (child.Value.Filter != null)

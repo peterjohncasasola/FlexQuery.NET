@@ -2,7 +2,6 @@ using FlexQuery.NET.Models;
 using FlexQuery.NET.Dapper.Mapping;
 using FlexQuery.NET.Dapper.Mapping.Metadata;
 using FlexQuery.NET.Dapper.Dialects;
-using FlexQuery.NET.Dapper.Sql.Helpers;
 using FlexQuery.NET.Metadata;
 using System.Reflection;
 using FlexQuery.NET.Internal;
@@ -32,7 +31,7 @@ internal sealed class SqlSelectBuilder(IMappingRegistry mappingRegistry, ISqlDia
         foreach (var agg in options.Aggregates)
         {
             var column = mapping.GetColumnName(agg.Field ?? "*");
-            var quoted = SqlDialectHelper.QuoteColumn(dialect, column, mapping);
+            var quoted = SqlSyntaxBuilder.QuoteColumn(dialect, column, mapping);
 
             if (agg.Function.Equals("count", StringComparison.OrdinalIgnoreCase) && (string.IsNullOrEmpty(agg.Field) || agg.Field == "*"))
             {
@@ -62,7 +61,7 @@ internal sealed class SqlSelectBuilder(IMappingRegistry mappingRegistry, ISqlDia
         {
             foreach (var g in options.GroupBy)
             {
-                selectParts.Add(SqlDialectHelper.QuoteColumn(dialect, mapping.GetColumnName(g), mapping));
+                selectParts.Add(SqlSyntaxBuilder.QuoteColumn(dialect, mapping.GetColumnName(g), mapping));
             }
 
             selectParts.AddRange(BuildAggregateSelectParts(options, mapping));
@@ -73,7 +72,7 @@ internal sealed class SqlSelectBuilder(IMappingRegistry mappingRegistry, ISqlDia
         {
             foreach (var g in options.GroupBy)
             {
-                selectParts.Add(SqlDialectHelper.QuoteColumn(dialect, mapping.GetColumnName(g), mapping));
+                selectParts.Add(SqlSyntaxBuilder.QuoteColumn(dialect, mapping.GetColumnName(g), mapping));
             }
             return $"SELECT {distinctPrefix}{string.Join(", ", selectParts)}";
         }
@@ -88,7 +87,7 @@ internal sealed class SqlSelectBuilder(IMappingRegistry mappingRegistry, ISqlDia
             var governedProps = GetGovernedProperties(mapping, options.Select);
             foreach (var p in governedProps)
             {
-                selectParts.Add(SqlDialectHelper.QuoteColumn(dialect, mapping.GetColumnName(p), mapping));
+                selectParts.Add(SqlSyntaxBuilder.QuoteColumn(dialect, mapping.GetColumnName(p), mapping));
             }
         }
 
@@ -216,7 +215,7 @@ internal sealed class SqlSelectBuilder(IMappingRegistry mappingRegistry, ISqlDia
             var targetMapping = mappingRegistry.GetMapping(rel.TargetType);
             var navAlias = rel.NavigationPropertyName;
 
-            var joinCondition = SqlDialectHelper.BuildJoinCondition(dialect, rel, currentMapping, currentAlias, targetMapping, navAlias);
+            var joinCondition = SqlSyntaxBuilder.BuildJoinCondition(dialect, rel, currentMapping, currentAlias, targetMapping, navAlias);
 
             joins.Add($"LEFT JOIN {dialect.QuoteIdentifier(targetMapping.TableName)} AS {dialect.QuoteIdentifier(navAlias)} ON {joinCondition}");
             flatJoins.Add(navAlias);

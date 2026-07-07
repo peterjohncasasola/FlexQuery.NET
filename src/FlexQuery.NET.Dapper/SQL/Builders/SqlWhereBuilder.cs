@@ -2,7 +2,7 @@ using FlexQuery.NET.Constants;
 using FlexQuery.NET.Dapper.Mapping;
 using FlexQuery.NET.Dapper.Dialects;
 using FlexQuery.NET.Dapper.Sql.Ast;
-using FlexQuery.NET.Dapper.Sql.Helpers;
+using FlexQuery.NET.Dapper.Sql.Converters;
 using FlexQuery.NET.Dapper.Sql.Models;
 using FlexQuery.NET.Dapper.Sql.Translators;
 using FlexQuery.NET.Models.Filters;
@@ -141,7 +141,7 @@ internal sealed class SqlWhereBuilder(
         }
 
         var column = mapping.GetColumnName(condition.Field);
-        var quotedColumn = SqlDialectHelper.QuoteColumn(dialect, column, mapping);
+        var quotedColumn = SqlSyntaxBuilder.QuoteColumn(dialect, column, mapping);
 
         return op switch
         {

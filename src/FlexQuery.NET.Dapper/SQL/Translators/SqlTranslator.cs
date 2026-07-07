@@ -5,7 +5,7 @@ using FlexQuery.NET.Constants;
 using FlexQuery.NET.Dapper.Mapping;
 using FlexQuery.NET.Dapper.Dialects;
 using FlexQuery.NET.Dapper.Sql.Builders;
-using FlexQuery.NET.Dapper.Sql.Helpers;
+using FlexQuery.NET.Dapper.Sql.Converters;
 using FlexQuery.NET.Dapper.Sql.Models;
 using FlexQuery.NET.Helpers;
 using FlexQuery.NET.Internal;
@@ -73,7 +73,7 @@ internal sealed class SqlTranslator : ISqlTranslator
         var fromClause = BuildFromClause(mapping);
         var whereClause = _whereBuilder.BuildWhereClause(options.Filter, mapping, parameters, options.CaseInsensitive);
         var groupByClause = BuildGroupByClause(options.GroupBy, mapping);
-        var havingClause = BuildHavingClause(options.Having, mapping, parameters);
+        var havingClause = SqlHavingBuilder.Build(_dialect, options.Having, mapping, parameters);
 
         var sortForOrderBy = options.GroupBy?.Count > 0
             ? GroupedSortValidator.Validate(options.Sort, options.GroupBy, options.Aggregates)
@@ -213,64 +213,8 @@ internal sealed class SqlTranslator : ISqlTranslator
     private string BuildGroupByClause(IReadOnlyList<string>? groupBys, IEntityMapping mapping)
     {
         if (groupBys == null || groupBys.Count == 0) return string.Empty;
-        var columns = groupBys.Select(g => SqlDialectHelper.QuoteColumn(_dialect, mapping.GetColumnName(g), mapping));
+        var columns = groupBys.Select(g => SqlSyntaxBuilder.QuoteColumn(_dialect, mapping.GetColumnName(g), mapping));
         return $"GROUP BY {string.Join(", ", columns)}";
-    }
-
-    private string BuildHavingClause(HavingCondition? having, IEntityMapping mapping, SqlParameterContext parameters)
-    {
-        if (having == null) return string.Empty;
-
-        var isCountStar = having.Function.Equals("count", StringComparison.OrdinalIgnoreCase)
-            && string.IsNullOrWhiteSpace(having.Field);
-
-        string aggregateExpression;
-        if (isCountStar)
-        {
-            aggregateExpression = "COUNT(*)";
-        }
-        else
-        {
-            var column = SqlDialectHelper.QuoteColumn(_dialect, mapping.GetColumnName(having.Field!), mapping);
-            aggregateExpression = $"{having.Function.ToUpperInvariant()}({column})";
-        }
-
-        var valStr = having.Value?.Trim('"');
-
-        object? convertedValue;
-        if (isCountStar || string.IsNullOrWhiteSpace(having.Field))
-        {
-            if (long.TryParse(valStr, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out var longVal))
-                convertedValue = longVal;
-            else if (double.TryParse(valStr, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out var doubleVal))
-                convertedValue = doubleVal;
-            else
-                convertedValue = valStr;
-        }
-        else
-        {
-            convertedValue = SqlValueConverter.Convert(having.Field!, valStr, mapping);
-        }
-
-        if (_dialect is SqliteDialect && convertedValue is decimal decimalValue)
-        {
-            convertedValue = (double)decimalValue;
-        }
-
-        var paramName = parameters.Add(convertedValue);
-
-        var sqlOp = having.Operator.ToLowerInvariant() switch
-        {
-            "eq" or "equal" or "equals" or "=" => "=",
-            "neq" or "ne" or "notequal" or "<>" or "!=" => "<>",
-            "gt" or "greaterthan" or ">" => ">",
-            "gte" or "ge" or "greaterthanorequal" or ">=" => ">=",
-            "lt" or "lessthan" or "<" => "<",
-            "lte" or "le" or "lessthanorequal" or "<=" => "<=",
-            _ => having.Operator
-        };
-
-        return $"HAVING {aggregateExpression} {sqlOp} {paramName}";
     }
 
     private string BuildOrderByClause(IReadOnlyList<SortNode>? sorts, IEntityMapping mapping)
@@ -288,7 +232,7 @@ internal sealed class SqlTranslator : ISqlTranslator
     {
         if (mapping.GetPropertyName(sort.Field) is not null)
         {
-            return SqlDialectHelper.QuoteColumn(_dialect, mapping.GetColumnName(sort.Field), mapping);
+            return SqlSyntaxBuilder.QuoteColumn(_dialect, mapping.GetColumnName(sort.Field), mapping);
         }
 
         return _dialect.QuoteIdentifier(sort.Field);
