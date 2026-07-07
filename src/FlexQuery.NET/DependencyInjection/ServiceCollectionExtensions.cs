@@ -4,7 +4,7 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace FlexQuery.NET.DependencyInjection;
 
-public static class FlexQueryServiceCollectionExtensions
+public static class ServiceCollectionExtensions
 {
     public static IServiceCollection AddFlexQuery(
         this IServiceCollection services,
