@@ -1,5 +1,6 @@
 using FlexQuery.NET.Dapper;
-using FlexQuery.NET.Dapper.Mapping.Configuration;
+using FlexQuery.NET.Dapper.Options;
+using FlexQuery.NET.Dapper.Configuration;
 using FlexQuery.NET.Execution;
 using FlexQuery.NET.Options;
 using FlexQuery.NET.Security;

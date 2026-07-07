@@ -1,9 +1,10 @@
 using System.Reflection;
 using Microsoft.EntityFrameworkCore;
 using FlexQuery.NET.Dapper;
+using FlexQuery.NET.Dapper.Options;
 using FlexQuery.NET.Dapper.Dialects;
 using FlexQuery.NET.Dapper.Mapping;
-using DapperModelBuilder = FlexQuery.NET.Dapper.Mapping.Configuration.ModelBuilder;
+using DapperModelBuilder = FlexQuery.NET.Dapper.Configuration.ModelBuilder;
 using FlexQuery.NET.Dapper.Sql.Translators;
 using FlexQuery.NET.Exceptions;
 using FlexQuery.NET;

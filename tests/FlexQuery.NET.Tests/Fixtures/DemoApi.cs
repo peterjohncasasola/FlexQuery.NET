@@ -2,7 +2,7 @@ using FlexQuery.NET.AspNetCore.Extensions;
 using FlexQuery.NET.Dapper;
 using FlexQuery.NET.Dapper.Configuration;
 using FlexQuery.NET.Dapper.Dialects;
-using FlexQuery.NET.Dapper.Mapping.Configuration;
+using FlexQuery.NET.Dapper.Metadata;
 using FlexQuery.NET.Exceptions;
 using FlexQuery.NET.Models;
 using Microsoft.AspNetCore.Builder;

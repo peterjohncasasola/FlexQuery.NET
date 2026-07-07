@@ -1,6 +1,7 @@
 using FlexQuery.NET.Dapper;
+using FlexQuery.NET.Dapper.Options;
 using FlexQuery.NET.Dapper.Dialects;
-using DapperModelBuilder = FlexQuery.NET.Dapper.Mapping.Configuration.ModelBuilder;
+using DapperModelBuilder = FlexQuery.NET.Dapper.Configuration.ModelBuilder;
 using FlexQuery.NET.EntityFrameworkCore;
 using FlexQuery.NET.Models;
 using FlexQuery.NET.Models.Aggregates;
