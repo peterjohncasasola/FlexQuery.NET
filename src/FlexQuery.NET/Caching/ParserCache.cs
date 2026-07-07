@@ -70,7 +70,6 @@ internal static class ParserCache
 /// <param name="RawKey">Optional raw parameter key for additional uniqueness.</param>
 /// <param name="Version">The version identifier for cache invalidation.</param>
 internal sealed record ParsedQueryCacheKey(
-    string? Query,
     string? Filter,
     string? Sort,
     string? Select,

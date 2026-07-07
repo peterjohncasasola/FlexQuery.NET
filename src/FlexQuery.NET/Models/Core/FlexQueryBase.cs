@@ -6,9 +6,6 @@ namespace FlexQuery.NET.Models;
 /// </summary>
 public abstract class FlexQueryBase
 {
-    /// <summary>The JQL-lite query string.</summary>
-    public string? Query { get; set; }
-
     /// <summary>The filter expression (DSL or JSON).</summary>
     public string? Filter { get; set; }
 

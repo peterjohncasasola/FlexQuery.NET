@@ -9,7 +9,6 @@ public class FlexQueryBaseTests
     {
         var request = new FlexQueryRequest
         {
-            Query = "Status eq Active",
             Filter = "Age gt 18",
             Sort = "Name:asc",
             Select = "Id,Name",
@@ -23,7 +22,6 @@ public class FlexQueryBaseTests
             Mode = "Flat"
         };
 
-        request.Query.Should().Be("Status eq Active");
         request.Filter.Should().Be("Age gt 18");
         request.Sort.Should().Be("Name:asc");
         request.Select.Should().Be("Id,Name");

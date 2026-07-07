@@ -68,7 +68,7 @@ public static class QueryOptionsParser
         }
 
         var cacheKey = new ParsedQueryCacheKey(
-            parameters.Query, parameters.Filter, parameters.Sort, parameters.Select,
+            parameters.Filter, parameters.Sort, parameters.Select,
             parameters.Include, parameters.GroupBy, parameters.Having,
             parameters.Page, parameters.PageSize, parameters.IncludeCount,
             parameters.Distinct, parameters.Mode, parameters.Cursor, parameters.UseKeysetPagination, rawKey, syntax.ToString());
@@ -115,7 +115,6 @@ public static class QueryOptionsParser
         string? TryGet(string key) => grouped.GetValueOrDefault(key);
         var parameters = new FlexQueryParameters
         {
-            Query = TryGet(QueryOptionKeys.Query),
             Filter = TryGet(QueryOptionKeys.Filter) ?? TryGet($"${QueryOptionKeys.Filter}"),
             Sort = TryGet(QueryOptionKeys.Sort) ?? TryGet(QueryOptionKeys.OrderBy) ?? TryGet($"${QueryOptionKeys.OrderBy}"),
             Select = TryGet(QueryOptionKeys.Select) ?? TryGet($"${QueryOptionKeys.Select}"),
@@ -147,8 +146,7 @@ public static class QueryOptionsParser
             return true;
         }   
 
-        return string.IsNullOrWhiteSpace(parameters.Query)
-            && string.IsNullOrWhiteSpace(parameters.Filter)
+        return string.IsNullOrWhiteSpace(parameters.Filter)
             && IndexedFilterParser.HasIndexedSort(parameters.RawParameters);
     }
     
