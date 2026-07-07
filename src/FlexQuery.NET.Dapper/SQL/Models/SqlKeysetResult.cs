@@ -1,4 +1,4 @@
-namespace FlexQuery.NET.Dapper.Sql;
+namespace FlexQuery.NET.Dapper.Sql.Models;
 
 internal sealed class SqlKeysetResult
 {

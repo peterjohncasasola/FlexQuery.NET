@@ -1,3 +1,4 @@
+using FlexQuery.NET.Dapper.Sql.Models;
 using FlexQuery.NET.Models;
 
 namespace FlexQuery.NET.Dapper.Sql.Translators;

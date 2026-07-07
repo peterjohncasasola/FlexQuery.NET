@@ -3,6 +3,7 @@ using FlexQuery.NET.Dapper;
 using FlexQuery.NET.Dapper.Dialects;
 using FlexQuery.NET.Dapper.Mapping;
 using FlexQuery.NET.Dapper.Sql;
+using FlexQuery.NET.Dapper.Sql.Models;
 using FlexQuery.NET.Dapper.Sql.Translators;
 using FlexQuery.NET.Models;
 using FlexQuery.NET.Models.Aggregates;

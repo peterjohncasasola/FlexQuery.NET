@@ -1,4 +1,4 @@
-namespace FlexQuery.NET.Dapper.Sql;
+namespace FlexQuery.NET.Dapper.Sql.Models;
 
 /// <summary>
 /// Result of SQL translation containing the SQL string and parameters.
