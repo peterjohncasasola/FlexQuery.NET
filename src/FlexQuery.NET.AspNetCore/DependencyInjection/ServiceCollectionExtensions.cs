@@ -2,7 +2,7 @@ using Microsoft.Extensions.DependencyInjection;
 using FlexQuery.NET.AspNetCore.Filters;
 using FlexQuery.NET.Options;
 
-namespace FlexQuery.NET.AspNetCore.Extensions;
+namespace FlexQuery.NET.AspNetCore.DependencyInjection;
 
 /// <summary>
 /// Extension methods for registering FlexQuery ASP.NET Core components.

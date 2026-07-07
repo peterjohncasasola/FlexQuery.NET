@@ -2,7 +2,7 @@ using FlexQuery.NET.Constants;
 using FlexQuery.NET.Options;
 using Microsoft.AspNetCore.Http;
 
-namespace FlexQuery.NET.AspNetCore.Extensions;
+namespace FlexQuery.NET.AspNetCore;
 
 /// <summary>
 /// Extension methods for <see cref="HttpContext"/> to support FlexQuery.NET server-side policy retrieval.
@@ -28,8 +28,6 @@ public static class HttpContextExtensions
             return options;
         }
 
-        // Backward-compatible fallback for callers that used the original
-        // ASP.NET Core integration key directly.
         if (context.Items.TryGetValue(ExecutionOptionsKey, out optionsObj)
             && optionsObj is QueryExecutionOptions legacyOptions)
         {

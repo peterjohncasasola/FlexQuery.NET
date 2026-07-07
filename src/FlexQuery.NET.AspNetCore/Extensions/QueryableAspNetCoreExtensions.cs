@@ -3,7 +3,7 @@ using FlexQuery.NET.Models;
 using FlexQuery.NET.Options;
 using Microsoft.AspNetCore.Http;
 
-namespace FlexQuery.NET.AspNetCore.Extensions;
+namespace FlexQuery.NET.AspNetCore;
 
 /// <summary>
 /// ASP.NET Core specific extension methods for executing FlexQuery queries using server-owned execution options.
@@ -28,10 +28,8 @@ public static class QueryableAspNetCoreExtensions
         CancellationToken cancellationToken = default)
         where T : class
     {
-        // 1. Resolve server-owned execution options
         var execOptions = context.GetFlexQueryExecutionOptions();
 
-        // 2. Pass to the underlying EF Core integration
         return await query.FlexQueryAsync(parameters, execOptions, cancellationToken);
     }
 }
