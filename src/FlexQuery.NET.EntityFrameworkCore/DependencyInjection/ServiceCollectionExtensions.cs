@@ -7,9 +7,9 @@ public static class ServiceCollectionExtensions
 {
     public static IServiceCollection AddFlexQueryEntityFrameworkCore(
         this IServiceCollection services,
-        Action<EfCoreFlexQueryDefaults>? configureDefaults = null)
+        Action<FlexQueryEfCoreOptions>? configureDefaults = null)
     {
-        var defaults = new EfCoreFlexQueryDefaults();
+        var defaults = new FlexQueryEfCoreOptions();
         configureDefaults?.Invoke(defaults);
 
         QueryOptionsEfCoreExtensions.EnsureEfCoreOperatorsRegistered();
