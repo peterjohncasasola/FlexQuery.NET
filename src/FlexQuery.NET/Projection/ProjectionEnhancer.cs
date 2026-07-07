@@ -3,7 +3,7 @@ using System.Reflection;
 using FlexQuery.NET.Expressions;
 using FlexQuery.NET.Models;
 
-namespace FlexQuery.NET.Builders;
+namespace FlexQuery.NET.Projection;
 
 /// <summary>
 /// Injects filter-aligned operators (e.g. Where) into navigation projections.
