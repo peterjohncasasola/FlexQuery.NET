@@ -4,8 +4,10 @@ using FlexQuery.NET.Options;
 
 namespace FlexQuery.NET.Dapper.Options;
 
+/// <inheritdoc/>
 public sealed class DapperQueryOptions : BaseQueryOptions
 {
+    /// <inheritdoc/>
     public DapperQueryOptions()
     {
         IncludeTotalCount = true;

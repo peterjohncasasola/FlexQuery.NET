@@ -178,16 +178,8 @@ public static class FlexQueryDapperExtensions
                 new QueryExecutedEvent(ctx.QueryId, items.Count, null, ctx.Stopwatch.Elapsed, now),
                 ctx.CancellationToken);
         }
-
-        var queryResult = new QueryResult<object>
-        {
-            Data        = items,
-            TotalCount  = totalCount,
-            ResultCount = resultCount,
-            Page        = options.Paging.Page,
-            PageSize    = options.Paging.PageSize,
-            Aggregates  = grandTotals
-        };
+        
+        var queryResult = options.BuildQueryResult(items, totalCount, grandTotals, resultCount);
 
         if (ctx?.Listener is not null)
         {
