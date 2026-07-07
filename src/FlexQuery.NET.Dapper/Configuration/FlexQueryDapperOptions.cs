@@ -8,7 +8,7 @@ namespace FlexQuery.NET.Dapper.Configuration;
 /// </summary>
 /// <remarks>
 /// <para>
-/// <see cref="FlexQueryDapperConfigurer"/> is used with
+/// <see cref="FlexQueryDapperOptions"/> is used with
 /// <c>AddFlexQueryDapper(...)</c> to configure the default SQL dialect and
 /// define the application's entity mapping model.
 /// </para>
@@ -17,9 +17,9 @@ namespace FlexQuery.NET.Dapper.Configuration;
 /// during query execution.
 /// </para>
 /// </remarks>
-public sealed class FlexQueryDapperConfigurer
+public sealed class FlexQueryDapperOptions
 {
-    internal FlexQueryDapperConfigurer()
+    internal FlexQueryDapperOptions()
     {
         Model = new ModelBuilder();
     }
@@ -38,8 +38,8 @@ public sealed class FlexQueryDapperConfigurer
     /// <summary>
     /// Configures FlexQuery.NET to generate SQL Server-compatible queries by default.
     /// </summary>
-    /// <returns>The current <see cref="FlexQueryDapperConfigurer"/> instance.</returns>
-    public FlexQueryDapperConfigurer UseSqlServer()
+    /// <returns>The current <see cref="FlexQueryDapperOptions"/> instance.</returns>
+    public FlexQueryDapperOptions UseSqlServer()
     {
         Dialect = new SqlServerDialect();
         return this;
@@ -48,8 +48,8 @@ public sealed class FlexQueryDapperConfigurer
     /// <summary>
     /// Configures FlexQuery.NET to generate SQLite-compatible queries by default.
     /// </summary>
-    /// <returns>The current <see cref="FlexQueryDapperConfigurer"/> instance.</returns>
-    public FlexQueryDapperConfigurer UseSqlite()
+    /// <returns>The current <see cref="FlexQueryDapperOptions"/> instance.</returns>
+    public FlexQueryDapperOptions UseSqlite()
     {
         Dialect = new SqliteDialect();
         return this;
@@ -58,8 +58,8 @@ public sealed class FlexQueryDapperConfigurer
     /// <summary>
     /// Configures FlexQuery.NET to generate PostgreSQL-compatible queries by default.
     /// </summary>
-    /// <returns>The current <see cref="FlexQueryDapperConfigurer"/> instance.</returns>
-    public FlexQueryDapperConfigurer UsePostgreSql()
+    /// <returns>The current <see cref="FlexQueryDapperOptions"/> instance.</returns>
+    public FlexQueryDapperOptions UsePostgreSql()
     {
         Dialect = new PostgreSqlDialect();
         return this;
@@ -68,8 +68,8 @@ public sealed class FlexQueryDapperConfigurer
     /// <summary>
     /// Configures FlexQuery.NET to generate MySQL-compatible queries by default.
     /// </summary>
-    /// <returns>The current <see cref="FlexQueryDapperConfigurer"/> instance.</returns>
-    public FlexQueryDapperConfigurer UseMySql()
+    /// <returns>The current <see cref="FlexQueryDapperOptions"/> instance.</returns>
+    public FlexQueryDapperOptions UseMySql()
     {
         Dialect = new MySqlDialect();
         return this;
@@ -78,8 +78,8 @@ public sealed class FlexQueryDapperConfigurer
     /// <summary>
     /// Configures FlexQuery.NET to generate MariaDB-compatible queries by default.
     /// </summary>
-    /// <returns>The current <see cref="FlexQueryDapperConfigurer"/> instance.</returns>
-    public FlexQueryDapperConfigurer UseMariaDb()
+    /// <returns>The current <see cref="FlexQueryDapperOptions"/> instance.</returns>
+    public FlexQueryDapperOptions UseMariaDb()
     {
         Dialect = new MariaDbDialect();
         return this;
@@ -88,8 +88,8 @@ public sealed class FlexQueryDapperConfigurer
     /// <summary>
     /// Configures FlexQuery.NET to generate Oracle-compatible queries by default.
     /// </summary>
-    /// <returns>The current <see cref="FlexQueryDapperConfigurer"/> instance.</returns>
-    public FlexQueryDapperConfigurer UseOracle()
+    /// <returns>The current <see cref="FlexQueryDapperOptions"/> instance.</returns>
+    public FlexQueryDapperOptions UseOracle()
     {
         Dialect = new OracleDialect();
         return this;

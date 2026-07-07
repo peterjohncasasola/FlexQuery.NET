@@ -7,9 +7,9 @@ public static class ServiceCollectionExtensions
 {
     public static IServiceCollection AddFlexQueryDapper(
         this IServiceCollection services,
-        Action<FlexQueryDapperConfigurer> configure)
+        Action<FlexQueryDapperOptions> configure)
     {
-        var configurer = new FlexQueryDapperConfigurer();
+        var configurer = new FlexQueryDapperOptions();
         configure(configurer);
 
         var model = configurer.Model.Build();
@@ -25,7 +25,7 @@ public static class ServiceCollectionExtensions
 
     public static IServiceCollection AddFlexQueryDapperSqlServer(
         this IServiceCollection services,
-        Action<FlexQueryDapperConfigurer>? configure = null)
+        Action<FlexQueryDapperOptions>? configure = null)
     {
         return services.AddFlexQueryDapper(cfg =>
         {
@@ -36,7 +36,7 @@ public static class ServiceCollectionExtensions
 
     public static IServiceCollection AddFlexQueryDapperPostgreSql(
         this IServiceCollection services,
-        Action<FlexQueryDapperConfigurer>? configure = null)
+        Action<FlexQueryDapperOptions>? configure = null)
     {
         return services.AddFlexQueryDapper(cfg =>
         {
@@ -47,7 +47,7 @@ public static class ServiceCollectionExtensions
 
     public static IServiceCollection AddFlexQueryDapperSqlite(
         this IServiceCollection services,
-        Action<FlexQueryDapperConfigurer>? configure = null)
+        Action<FlexQueryDapperOptions>? configure = null)
     {
         return services.AddFlexQueryDapper(cfg =>
         {
