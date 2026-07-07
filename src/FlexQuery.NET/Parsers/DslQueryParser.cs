@@ -1,6 +1,7 @@
 using FlexQuery.NET.Models;
 using FlexQuery.NET.Parsers.Dsl;
 using FlexQuery.NET.Builders;
+using FlexQuery.NET.Filters;
 
 namespace FlexQuery.NET.Parsers;
 

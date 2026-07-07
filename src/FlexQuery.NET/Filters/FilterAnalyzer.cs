@@ -1,6 +1,7 @@
+using FlexQuery.NET.Builders;
 using FlexQuery.NET.Models;
 
-namespace FlexQuery.NET.Builders;
+namespace FlexQuery.NET.Filters;
 
 /// <summary>
 /// Extracts (and re-bases) filter subtrees that target a specific navigation path.

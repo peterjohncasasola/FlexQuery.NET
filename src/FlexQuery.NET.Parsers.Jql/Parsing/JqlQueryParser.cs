@@ -1,4 +1,5 @@
 using FlexQuery.NET.Builders;
+using FlexQuery.NET.Filters;
 using FlexQuery.NET.Models;
 namespace FlexQuery.NET.Parsers.Jql;
 

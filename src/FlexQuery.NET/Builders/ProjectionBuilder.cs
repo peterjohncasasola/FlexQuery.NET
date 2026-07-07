@@ -2,6 +2,7 @@ using System.Linq.Expressions;
 using System.Reflection;
 using FlexQuery.NET.Caching;
 using FlexQuery.NET.Expressions;
+using FlexQuery.NET.Filters;
 using FlexQuery.NET.Models;
 using FlexQuery.NET.Projection;
 using FlexQuery.NET.Resolvers;

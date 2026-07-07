@@ -2,6 +2,7 @@ using FlexQuery.NET.Builders;
 using FlexQuery.NET.Caching;
 using FlexQuery.NET.Constants;
 using FlexQuery.NET.Exceptions;
+using FlexQuery.NET.Filters;
 using FlexQuery.NET.Models;
 using FlexQuery.NET.Serialization;
 using FlexQuery.NET.Validation;

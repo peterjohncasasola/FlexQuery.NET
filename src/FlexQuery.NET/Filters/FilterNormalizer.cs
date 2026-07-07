@@ -3,7 +3,7 @@ using System.Text;
 using FlexQuery.NET.Constants;
 using FlexQuery.NET.Models;
 
-namespace FlexQuery.NET.Builders;
+namespace FlexQuery.NET.Filters;
 
 /// <summary>
 /// Provides canonical AST normalization for filter trees.
