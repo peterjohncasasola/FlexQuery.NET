@@ -34,21 +34,21 @@ public static class QueryableEfCoreExtensions
     public static async Task<QueryResult<object>> FlexQueryAsync<T>(
         this IQueryable<T> query,
         FlexQueryParameters parameters,
-        Action<EfCoreQueryOptions>? configure = null,
+        Action<EfCoreQueryOptions>? configureQueryOptions = null,
         CancellationToken cancellationToken = default,
         Action<FlexQueryExecutionConfig>? configureExecution = null)
         where T : class
     {
-        var exec = new EfCoreQueryOptions();
-        configure?.Invoke(exec);
+        var efCoreQueryOptions = new EfCoreQueryOptions();
+        configureQueryOptions?.Invoke(efCoreQueryOptions);
 
-        return await query.FlexQueryAsync(parameters, exec, cancellationToken, configureExecution);
+        return await query.FlexQueryAsync(parameters, efCoreQueryOptions, cancellationToken, configureExecution);
     }
 
     public static async Task<QueryResult<object>> FlexQueryAsync<T>(
         this IQueryable<T> query,
         FlexQueryParameters parameters,
-        EfCoreQueryOptions execOptions,
+        EfCoreQueryOptions efCoreQueryOptions,
         CancellationToken cancellationToken = default,
         Action<FlexQueryExecutionConfig>? configureExecution = null)
         where T : class
@@ -58,7 +58,7 @@ public static class QueryableEfCoreExtensions
         QueryOptionsEfCoreExtensions.EnsureEfCoreOperatorsRegistered();
 
         options = options.Normalize();
-        options.ValidateOrThrow<T>(execOptions);
+        options.ValidateOrThrow<T>(efCoreQueryOptions);
 
         var execConfig = new FlexQueryExecutionConfig();
         configureExecution?.Invoke(execConfig);
@@ -76,21 +76,21 @@ public static class QueryableEfCoreExtensions
 
         var hasProjection = options.HasProjection();
 
-        return await query.ApplyFlexQueryAsync(options, hasProjection, execOptions, ctx);
+        return await query.ApplyFlexQueryAsync(options, hasProjection, efCoreQueryOptions, ctx);
     }
 
     public static async Task<QueryResult<object>> FlexQueryAsync<T>(
         this IQueryable<T> query,
         QueryOptions options,
-        Action<EfCoreQueryOptions>? configure = null,
+        Action<EfCoreQueryOptions>? configureQueryOptions = null,
         CancellationToken cancellationToken = default,
         Action<FlexQueryExecutionConfig>? configureExecution = null)
         where T : class
     {
-        var execOptions = new EfCoreQueryOptions();
-        configure?.Invoke(execOptions);
+        var efCoreQueryOptions = new EfCoreQueryOptions();
+        configureQueryOptions?.Invoke(efCoreQueryOptions);
 
-        return await query.FlexQueryAsync(options, execOptions, cancellationToken, configureExecution);
+        return await query.FlexQueryAsync(options, efCoreQueryOptions, cancellationToken, configureExecution);
     }
 
     public static async Task<QueryResult<object>> FlexQueryAsync<T>(
