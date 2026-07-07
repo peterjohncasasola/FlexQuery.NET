@@ -10,7 +10,7 @@ namespace FlexQuery.NET.Tests.Dapper;
 public class DapperQueryOptionsTests
 {
     [Fact]
-    public void ToQueryExecutionOptions_PreservesAllBaseOptions()
+    public void Properties_AreAccessibleViaInheritance()
     {
         var resolver = new AllowAllResolver();
         var options = new DapperQueryOptions
@@ -30,7 +30,7 @@ public class DapperQueryOptionsTests
             IncludeTotalCount = false,
             DefaultPageSize = 17,
             MaxPageSize = 50,
-            CaseInsensitiveFields = false,
+            CaseInsensitive = false,
             FieldMappings = new(StringComparer.OrdinalIgnoreCase) { ["displayName"] = "Name" },
             FieldAccessResolver = resolver,
             RoleAllowedFields = new(StringComparer.OrdinalIgnoreCase)
@@ -42,52 +42,31 @@ public class DapperQueryOptionsTests
         };
         options.MapField<TestEntity, string>("displayName", x => x.Name);
 
-        var converted = options.ToQueryExecutionOptions();
-
-        converted.AllowedFields.Should().BeSameAs(options.AllowedFields);
-        converted.BlockedFields.Should().BeSameAs(options.BlockedFields);
-        converted.AllowedIncludes.Should().BeSameAs(options.AllowedIncludes);
-        converted.ExpressionMappings.Should().BeSameAs(options.ExpressionMappings);
-        converted.AllowedOperators.Should().BeSameAs(options.AllowedOperators);
-        converted.FilterableFields.Should().BeSameAs(options.FilterableFields);
-        converted.SortableFields.Should().BeSameAs(options.SortableFields);
-        converted.SelectableFields.Should().BeSameAs(options.SelectableFields);
-        converted.MaxFieldDepth.Should().Be(3);
-        converted.StrictFieldValidation.Should().BeTrue();
-        converted.IncludeTotalCount.Should().BeFalse();
-        converted.DefaultPageSize.Should().Be(17);
-        converted.MaxPageSize.Should().Be(50);
-        converted.CaseInsensitiveFields.Should().BeFalse();
-        converted.FieldMappings.Should().BeSameAs(options.FieldMappings);
-        converted.FieldAccessResolver.Should().BeSameAs(resolver);
-        converted.RoleAllowedFields.Should().BeSameAs(options.RoleAllowedFields);
-        converted.CurrentRole.Should().Be("admin");
-        converted.AllowedFieldsResolver.Should().BeSameAs(options.AllowedFieldsResolver);
+        options.AllowedFields.Should().BeEquivalentTo(new[] { "Id" });
+        options.BlockedFields.Should().BeEquivalentTo(new[] { "Secret" });
+        options.AllowedIncludes.Should().BeEquivalentTo(new[] { "Orders" });
+        options.FilterableFields.Should().BeEquivalentTo(new[] { "Name" });
+        options.SortableFields.Should().BeEquivalentTo(new[] { "Id" });
+        options.SelectableFields.Should().BeEquivalentTo(new[] { "Id", "Name" });
+        options.MaxFieldDepth.Should().Be(3);
+        options.StrictFieldValidation.Should().BeTrue();
+        options.IncludeTotalCount.Should().BeFalse();
+        options.DefaultPageSize.Should().Be(17);
+        options.MaxPageSize.Should().Be(50);
+        options.CaseInsensitive.Should().BeFalse();
+        options.FieldMappings.Should().ContainKey("displayName");
+        options.FieldAccessResolver.Should().BeSameAs(resolver);
+        options.RoleAllowedFields.Should().ContainKey("admin");
+        options.CurrentRole.Should().Be("admin");
+        options.AllowedFieldsResolver.Should().NotBeNull();
     }
 
     [Fact]
-    public void CopyConstructor_PreservesAllBaseOptions()
+    public void DefaultConstructor_SetsDefaultValues()
     {
-        var source = new QueryExecutionOptions
-        {
-            AllowedOperators = new(StringComparer.OrdinalIgnoreCase)
-            {
-                ["Name"] = new(StringComparer.OrdinalIgnoreCase) { "contains" }
-            },
-            FieldMappings = new(StringComparer.OrdinalIgnoreCase) { ["displayName"] = "Name" },
-            CurrentRole = "reader",
-            RoleAllowedFields = new(StringComparer.OrdinalIgnoreCase)
-            {
-                ["reader"] = new(StringComparer.OrdinalIgnoreCase) { "Name" }
-            }
-        };
-
-        var copied = new DapperQueryOptions(source);
-
-        copied.AllowedOperators.Should().BeSameAs(source.AllowedOperators);
-        copied.FieldMappings.Should().BeSameAs(source.FieldMappings);
-        copied.CurrentRole.Should().Be("reader");
-        copied.RoleAllowedFields.Should().BeSameAs(source.RoleAllowedFields);
+        var options = new DapperQueryOptions();
+        options.IncludeTotalCount.Should().BeTrue();
+        options.CommandTimeoutSeconds.Should().Be(30);
     }
 
     [Fact]

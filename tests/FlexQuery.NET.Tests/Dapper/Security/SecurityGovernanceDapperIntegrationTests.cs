@@ -430,15 +430,11 @@ public class SecurityGovernanceDapperIntegrationTests
             await connection.OpenAsync();
 
         var options = NoPaging(new QueryOptions { IncludeCount = true });
-        var execOptions = new QueryExecutionOptions
-        {
-            AllowedFields = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "Id", "Name" }
-        };
-
-        var dapperOptions = new DapperQueryOptions(execOptions)
+        var dapperOptions = new DapperQueryOptions
         {
             Dialect = new SqliteDialect(),
-            IncludeTotalCount = true
+            IncludeTotalCount = true,
+            AllowedFields = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "Id", "Name" }
         };
         CreateOrderRegistry(dapperOptions);
         var result = await connection.FlexQueryAsync<SqlCustomer>(options, dapperOptions);
@@ -488,16 +484,12 @@ public class SecurityGovernanceDapperIntegrationTests
             Aggregates = { new AggregateModel { Field = "Total", Function = "sum", Alias = "totalSum" } },
             Sort = { new SortNode { Field = "Total", Descending = true } }
         });
-        var execOptions = new QueryExecutionOptions
-        {
-            GroupableFields = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "CustomerId" },
-            AggregatableFields = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "Total" }
-        };
-
-        var dapperOptions = new DapperQueryOptions(execOptions)
+        var dapperOptions = new DapperQueryOptions
         {
             Dialect = new SqliteDialect(),
-            IncludeTotalCount = true
+            IncludeTotalCount = true,
+            GroupableFields = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "CustomerId" },
+            AggregatableFields = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "Total" }
         };
         CreateOrderRegistry(dapperOptions);
         var result = await connection.FlexQueryAsync<SqlOrder>(options, dapperOptions);
@@ -524,19 +516,15 @@ public class SecurityGovernanceDapperIntegrationTests
             GroupBy = new List<string> { "Name" },
             Aggregates = { new AggregateModel { Field = "Name", Function = "count", Alias = "cnt" } }
         });
-        var execOptions = new QueryExecutionOptions
-        {
-            GroupableFields = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "Id" }
-        };
-        
         var modelBuilder = new DapperModelBuilder();
         modelBuilder.Entity<GovEntity>().ToTable("Entities");
         var model = modelBuilder.Build();
 
-        var dapperOptions = new DapperQueryOptions(execOptions)
+        var dapperOptions = new DapperQueryOptions
         {
             Dialect = new SqliteDialect(),
-            IncludeTotalCount = true
+            IncludeTotalCount = true,
+            GroupableFields = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "Id" }
         };
         dapperOptions.UseModel(model);
         var act = async () => await connection.FlexQueryAsync<GovEntity>(options, dapperOptions);
@@ -556,15 +544,11 @@ public class SecurityGovernanceDapperIntegrationTests
         {
             Aggregates = { new AggregateModel { Field = "Name", Function = "count", Alias = "cnt" } }
         });
-        var execOptions = new QueryExecutionOptions
-        {
-            AggregatableFields = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "Id" }
-        };
-
-        var dapperOptions = new DapperQueryOptions(execOptions)
+        var dapperOptions = new DapperQueryOptions
         {
             Dialect = new SqliteDialect(),
-            IncludeTotalCount = true
+            IncludeTotalCount = true,
+            AggregatableFields = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "Id" }
         };
         CreateOrderRegistry(dapperOptions);
         var act = async () => await connection.FlexQueryAsync<SqlCustomer>(options, dapperOptions);
@@ -586,15 +570,11 @@ public class SecurityGovernanceDapperIntegrationTests
             Aggregates = { new AggregateModel { Field = "Name", Function = "count", Alias = "cnt" } },
             Having = new HavingCondition { Field = "Name", Function = "count", Operator = "gt", Value = "0" }
         });
-        var execOptions = new QueryExecutionOptions
-        {
-            AggregatableFields = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "Id" }
-        };
-
-        var dapperOptions = new DapperQueryOptions(execOptions)
+        var dapperOptions = new DapperQueryOptions
         {
             Dialect = new SqliteDialect(),
-            IncludeTotalCount = true
+            IncludeTotalCount = true,
+            AggregatableFields = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "Id" }
         };
         CreateOrderRegistry(dapperOptions);
         var act = async () => await connection.FlexQueryAsync<SqlCustomer>(options, dapperOptions);
@@ -617,15 +597,11 @@ public class SecurityGovernanceDapperIntegrationTests
                 Filters = { new FilterCondition { Field = "Name", Operator = "eq", Value = "Alice" } }
             }
         });
-        var execOptions = new QueryExecutionOptions
-        {
-            FilterableFields = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "Id" }
-        };
-
-        var dapperOptions = new DapperQueryOptions(execOptions)
+        var dapperOptions = new DapperQueryOptions
         {
             Dialect = new SqliteDialect(),
-            IncludeTotalCount = true
+            IncludeTotalCount = true,
+            FilterableFields = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "Id" }
         };
         CreateOrderRegistry(dapperOptions);
         var act = async () => await connection.FlexQueryAsync<SqlCustomer>(options, dapperOptions);
@@ -646,18 +622,15 @@ public class SecurityGovernanceDapperIntegrationTests
             await connection.OpenAsync();
 
         var options = NoPaging(new QueryOptions { IncludeCount = true });
-        var execOptions = new QueryExecutionOptions
+        var dapperOptions = new DapperQueryOptions
         {
+            Dialect = new SqliteDialect(),
+            IncludeTotalCount = true,
             CurrentRole = "admin",
             RoleAllowedFields = new Dictionary<string, HashSet<string>>(StringComparer.OrdinalIgnoreCase)
             {
                 ["admin"] = new(StringComparer.OrdinalIgnoreCase) { "Id", "Name" }
             }
-        };
-        var dapperOptions = new DapperQueryOptions(execOptions)
-        {
-            Dialect = new SqliteDialect(),
-            IncludeTotalCount = true
         };
         CreateOrderRegistry(dapperOptions);
         var result = await connection.FlexQueryAsync<SqlCustomer>(options, dapperOptions);
@@ -690,20 +663,16 @@ public class SecurityGovernanceDapperIntegrationTests
         cmd.ExecuteNonQuery();
 
         var options = NoPaging(new QueryOptions { IncludeCount = true });
-        var execOptions = new QueryExecutionOptions
-        {
-            DefaultSortField = "Name",
-            AllowedFields = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "Id", "Name" }
-        };
-
         var modelBuilder = new DapperModelBuilder();
         modelBuilder.Entity<SortTestRow>().ToTable("SortTest");
         var model = modelBuilder.Build();
 
-        var dapperOptions = new DapperQueryOptions(execOptions)
+        var dapperOptions = new DapperQueryOptions
         {
             Dialect = new SqliteDialect(),
-            IncludeTotalCount = true
+            IncludeTotalCount = true,
+            DefaultSortField = "Name",
+            AllowedFields = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "Id", "Name" }
         };
         dapperOptions.UseModel(model);
         var result = await conn.FlexQueryAsync<SortTestRow>(options, dapperOptions);

@@ -1,4 +1,5 @@
 using FlexQuery.NET.EntityFrameworkCore;
+using FlexQuery.NET.EntityFrameworkCore.Options;
 using FlexQuery.NET.Exceptions;
 using FlexQuery.NET;
 using FlexQuery.NET.Models;
@@ -25,7 +26,7 @@ public sealed class SecurityGovernanceEfCoreIntegrationTests : IDisposable
     public async Task AllowedFields_ShouldRestrictDefaultProjection()
     {
         var options = new QueryOptions { IncludeCount = true };
-        var execOptions = new QueryExecutionOptions
+        var execOptions = new EfCoreQueryOptions
         {
             AllowedFields = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "Id", "Name" }
         };
@@ -50,7 +51,7 @@ public sealed class SecurityGovernanceEfCoreIntegrationTests : IDisposable
     public async Task BlockedFields_ShouldExcludeFieldsFromDefaultProjection()
     {
         var options = new QueryOptions { IncludeCount = true };
-        var execOptions = new QueryExecutionOptions
+        var execOptions = new EfCoreQueryOptions
         {
             BlockedFields = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "SSN" }
         };
@@ -78,7 +79,7 @@ public sealed class SecurityGovernanceEfCoreIntegrationTests : IDisposable
         {
             Select = new List<string> { "SSN" }
         };
-        var execOptions = new QueryExecutionOptions
+        var execOptions = new EfCoreQueryOptions
         {
             BlockedFields = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "SSN" }
         };
@@ -102,7 +103,7 @@ public sealed class SecurityGovernanceEfCoreIntegrationTests : IDisposable
             Aggregates = { new AggregateModel { Field = "Salary", Function = "sum", Alias = "salarySum" } },
             Paging = { Disabled = true }
         };
-        var execOptions = new QueryExecutionOptions
+        var execOptions = new EfCoreQueryOptions
         {
             GroupableFields = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "Name" }
         };
@@ -124,7 +125,7 @@ public sealed class SecurityGovernanceEfCoreIntegrationTests : IDisposable
             Aggregates = { new AggregateModel { Field = "Salary", Function = "sum", Alias = "salarySum" } },
             Paging = { Disabled = true }
         };
-        var execOptions = new QueryExecutionOptions
+        var execOptions = new EfCoreQueryOptions
         {
             AggregatableFields = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "Id" }
         };
@@ -148,7 +149,7 @@ public sealed class SecurityGovernanceEfCoreIntegrationTests : IDisposable
             Having = new HavingCondition { Field = "Salary", Function = "sum", Operator = "gt", Value = "0" },
             Paging = { Disabled = true }
         };
-        var execOptions = new QueryExecutionOptions
+        var execOptions = new EfCoreQueryOptions
         {
             AggregatableFields = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "Id" }
         };
@@ -166,7 +167,7 @@ public sealed class SecurityGovernanceEfCoreIntegrationTests : IDisposable
     public async Task DefaultSortField_ShouldOrderResults()
     {
         var options = new QueryOptions { Paging = { Page = 1, PageSize = 10 } };
-        var execOptions = new QueryExecutionOptions
+        var execOptions = new EfCoreQueryOptions
         {
             DefaultSortField = "Name",
             AllowedFields = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "Id", "Name" }
@@ -192,7 +193,7 @@ public sealed class SecurityGovernanceEfCoreIntegrationTests : IDisposable
         {
             Select = new List<string> { "Name", "SSN" }
         };
-        var execOptions = new QueryExecutionOptions
+        var execOptions = new EfCoreQueryOptions
         {
             BlockedFields = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "SSN" },
             StrictFieldValidation = false
@@ -212,7 +213,7 @@ public sealed class SecurityGovernanceEfCoreIntegrationTests : IDisposable
     public async Task RoleAllowedFields_ShouldRestrictDefaultProjection()
     {
         var options = new QueryOptions { IncludeCount = true };
-        var execOptions = new QueryExecutionOptions
+        var execOptions = new EfCoreQueryOptions
         {
             CurrentRole = "admin",
             RoleAllowedFields = new Dictionary<string, HashSet<string>>(StringComparer.OrdinalIgnoreCase)
@@ -241,7 +242,7 @@ public sealed class SecurityGovernanceEfCoreIntegrationTests : IDisposable
     public async Task AllowedFields_Wildcard_ShouldExpandAndProjectNavigationProperties()
     {
         var options = new QueryOptions { IncludeCount = true, Paging = { Page = 1, PageSize = 10 } };
-        var execOptions = new QueryExecutionOptions
+        var execOptions = new EfCoreQueryOptions
         {
             AllowedFields = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "Id", "Name", "Orders.*" }
         };
@@ -280,7 +281,7 @@ public sealed class SecurityGovernanceEfCoreIntegrationTests : IDisposable
         options.SelectTree = new SelectionNode();
         options.SelectTree.GetOrAddChild("SSN");
 
-        var execOptions = new QueryExecutionOptions
+        var execOptions = new EfCoreQueryOptions
         {
             BlockedFields = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "SSN" },
             StrictFieldValidation = true
@@ -303,7 +304,7 @@ public sealed class SecurityGovernanceEfCoreIntegrationTests : IDisposable
         options.SelectTree = new SelectionNode();
         options.SelectTree.GetOrAddChild("SSN");
 
-        var execOptions = new QueryExecutionOptions
+        var execOptions = new EfCoreQueryOptions
         {
             AllowedFields = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "Id", "Name" },
             StrictFieldValidation = true
@@ -327,7 +328,7 @@ public sealed class SecurityGovernanceEfCoreIntegrationTests : IDisposable
         var orders = options.SelectTree.GetOrAddChild("Orders");
         orders.GetOrAddChild("Total");
 
-        var execOptions = new QueryExecutionOptions
+        var execOptions = new EfCoreQueryOptions
         {
             BlockedFields = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "Orders.Total" },
             StrictFieldValidation = true
@@ -350,7 +351,7 @@ public sealed class SecurityGovernanceEfCoreIntegrationTests : IDisposable
         options.SelectTree = new SelectionNode();
         options.SelectTree.MarkIncludeAllScalars();
 
-        var execOptions = new QueryExecutionOptions
+        var execOptions = new EfCoreQueryOptions
         {
             BlockedFields = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "SSN" },
             StrictFieldValidation = true
@@ -375,7 +376,7 @@ public sealed class SecurityGovernanceEfCoreIntegrationTests : IDisposable
         // Use flat Select (NOT SelectTree) — the normal code path
         options.Select = new List<string> { "SSN" };
 
-        var execOptions = new QueryExecutionOptions
+        var execOptions = new EfCoreQueryOptions
         {
             BlockedFields = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "SSN" },
             StrictFieldValidation = true
@@ -399,7 +400,7 @@ public sealed class SecurityGovernanceEfCoreIntegrationTests : IDisposable
         options.SelectTree = new SelectionNode();
         options.SelectTree.GetOrAddChild("SSN");
 
-        var execOptions = new QueryExecutionOptions
+        var execOptions = new EfCoreQueryOptions
         {
             BlockedFields = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "SSN" },
             StrictFieldValidation = true
@@ -420,7 +421,7 @@ public sealed class SecurityGovernanceEfCoreIntegrationTests : IDisposable
         options.SelectTree = new SelectionNode();
         options.SelectTree.GetOrAddChild("SSN");
 
-        var execOptions = new QueryExecutionOptions
+        var execOptions = new EfCoreQueryOptions
         {
             BlockedFields = ["SSN"],
             StrictFieldValidation = false

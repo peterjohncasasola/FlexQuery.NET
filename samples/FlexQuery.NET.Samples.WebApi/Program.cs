@@ -1,8 +1,8 @@
 using System.Reflection;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using FlexQuery.NET.Dapper.Configuration;
 using FlexQuery.NET.Dapper.DependencyInjection;
+using FlexQuery.NET.EntityFrameworkCore.DependencyInjection;
 using FlexQuery.NET.Samples.WebApi.Data;
 using FlexQuery.NET.Samples.WebApi.Models;
 using Microsoft.EntityFrameworkCore;
@@ -32,6 +32,8 @@ builder.Services.AddFlexQueryDapper(cfg =>
     cfg.Model.Entity<Order>()
         .ToTable("Orders");
 });
+
+builder.Services.AddFlexQueryEntityFrameworkCore();
 
 // 4. Configure Swagger
 builder.Services.AddEndpointsApiExplorer();

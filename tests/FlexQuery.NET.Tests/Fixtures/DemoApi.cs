@@ -1,4 +1,3 @@
-using FlexQuery.NET.AspNetCore.Extensions;
 using FlexQuery.NET.Dapper;
 using FlexQuery.NET.Dapper.Configuration;
 using FlexQuery.NET.Dapper.Dialects;
@@ -11,6 +10,7 @@ using Microsoft.Extensions.DependencyInjection;
 using System.Data;
 using System.Data.Common;
 using System.Text.Json.Serialization;
+using FlexQuery.NET.AspNetCore.DependencyInjection;
 
 namespace FlexQuery.NET.Tests.Fixtures;
 

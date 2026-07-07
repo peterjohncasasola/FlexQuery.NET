@@ -1,6 +1,6 @@
 using System.Reflection;
 using FlexQuery.NET.AspNetCore.Attributes;
-using FlexQuery.NET.AspNetCore.Extensions;
+using FlexQuery.NET.AspNetCore;
 using FlexQuery.NET.AspNetCore.Filters;
 using FlexQuery.NET.Models;
 using FlexQuery.NET.Exceptions;

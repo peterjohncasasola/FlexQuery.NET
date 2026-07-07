@@ -123,7 +123,7 @@ public class IncludeSecurityTests
         var exec = new QueryExecutionOptions
         {
             AllowedIncludes = new HashSet<string> { "Orders.Items" },
-            CaseInsensitiveFields = true
+            CaseInsensitive = true
         };
         var context = new QueryContext { ExecutionOptions = exec };
         
