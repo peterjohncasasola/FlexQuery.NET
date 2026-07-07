@@ -3,6 +3,7 @@ using System.ComponentModel.DataAnnotations.Schema;
 using System.Reflection;
 using FlexQuery.NET.Dapper.Mapping;
 using FlexQuery.NET.Dapper.Mapping.Metadata;
+using FlexQuery.NET.Helpers;
 
 namespace FlexQuery.NET.Dapper.Conventions;
 
@@ -32,7 +33,7 @@ internal class DefaultRelationshipConvention : IRelationshipConvention
             if (property.GetCustomAttribute<NotMappedAttribute>() != null)
                 continue;
 
-            if (!IsNavigationProperty(property.PropertyType))
+            if (!TypeHelper.IsNavigationProperty(property.PropertyType))
                 continue;
 
             Type targetType;
@@ -79,16 +80,5 @@ internal class DefaultRelationshipConvention : IRelationshipConvention
             return enumerableInterface.GetGenericArguments()[0];
 
         return typeof(object);
-    }
-
-    private bool IsNavigationProperty(Type type)
-    {
-        if (type == typeof(string) || type == typeof(byte[]) || type.IsValueType || type.IsPrimitive)
-            return false;
-
-        if (Nullable.GetUnderlyingType(type) != null)
-            return false;
-
-        return true; 
     }
 }

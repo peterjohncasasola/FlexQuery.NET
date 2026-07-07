@@ -74,4 +74,29 @@ internal static class TypeHelper
                t == typeof(float)  || t == typeof(double) ||
                t == typeof(decimal);
     }
+    
+    public static bool TryGetCollectionElementType(Type type, out Type elementType)
+    {
+        elementType = null!;
+        if (type == typeof(string)) return false;
+
+        var enumerable = type.GetInterfaces()
+            .Concat([type])
+            .FirstOrDefault(i => i.IsGenericType
+                                 && i.GetGenericTypeDefinition() == typeof(IEnumerable<>));
+
+        if (enumerable is null) return false;
+
+        elementType = enumerable.GetGenericArguments()[0];
+        return true;
+    }
+    
+    public static bool IsNavigationProperty(Type type)
+    {
+        if (type == typeof(string) || type == typeof(byte[]) || type.IsValueType || type.IsPrimitive)
+            return false;
+
+        // Nullable<T> where T is a value type is not a navigation property
+        return Nullable.GetUnderlyingType(type) == null;
+    }
 }

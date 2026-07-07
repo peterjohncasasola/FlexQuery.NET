@@ -2,6 +2,7 @@ using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using System.Reflection;
 using FlexQuery.NET.Dapper.Mapping.Metadata;
+using FlexQuery.NET.Helpers;
 
 namespace FlexQuery.NET.Dapper.Conventions;
 
@@ -45,7 +46,7 @@ internal class DefaultEntityConvention : IEntityConvention
                 continue;
 
             // Skip navigation properties (complex types and collections are handled by relationship convention)
-            if (IsNavigationProperty(property.PropertyType))
+            if (TypeHelper.IsNavigationProperty(property.PropertyType))
                 continue;
 
             var propMapping = mapping.GetOrAddProperty(property);
@@ -68,17 +69,5 @@ internal class DefaultEntityConvention : IEntityConvention
                 propMapping.IsPrimaryKey = true;
             }
         }
-    }
-
-    private bool IsNavigationProperty(Type type)
-    {
-        if (type == typeof(string) || type == typeof(byte[]) || type.IsValueType || type.IsPrimitive)
-            return false;
-
-        // Nullable<T> where T is a value type is not a navigation property
-        if (Nullable.GetUnderlyingType(type) != null)
-            return false;
-
-        return true; 
     }
 }
