@@ -1,4 +1,5 @@
 using System.Text.RegularExpressions;
+using FlexQuery.NET.Builders;
 using FlexQuery.NET.Models;
 using FlexQuery.NET.Constants;
 using FlexQuery.NET.Dapper.Mapping;

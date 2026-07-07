@@ -1,3 +1,4 @@
+using FlexQuery.NET.Builders;
 using FlexQuery.NET.Models;
 using FlexQuery.NET.Parsers;
 using FlexQuery.NET.Parsers.Jql;
@@ -63,7 +64,7 @@ public class SecurityTests : IDisposable
         var dict = new Dictionary<string, Microsoft.Extensions.Primitives.StringValues> { { "select", maliciousSelect } };
         var act = () => QueryOptionsParser.Parse(dict);
         var options = act();
-        var actBuild = () => Helpers.SelectTreeBuilder.Build(options);
+        var actBuild = () => SelectTreeBuilder.Build(options);
         actBuild.Should().NotThrow();
     }
 }

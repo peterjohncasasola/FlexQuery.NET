@@ -3,6 +3,7 @@ using FlexQuery.NET.Models;
 using Microsoft.EntityFrameworkCore;
 using System.Text.RegularExpressions;
 using System.Text.Json;
+using FlexQuery.NET.Builders;
 
 namespace FlexQuery.NET.Tests.Tests;
 
@@ -165,7 +166,7 @@ public class SelectTests : IDisposable
         }
         """;
         
-        var selectTree = Helpers.SelectTreeBuilder.ParseJsonSelect(JsonDocument.Parse(json).RootElement);
+        var selectTree = SelectTreeBuilder.ParseJsonSelect(JsonDocument.Parse(json).RootElement);
         var options = new QueryOptions { SelectTree = selectTree };
         
         var query = _db.Entities.Where(e => e.Id == 1).ApplySelect(options);

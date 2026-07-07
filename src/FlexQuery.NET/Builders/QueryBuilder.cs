@@ -149,7 +149,7 @@ internal static class QueryBuilder
             return GroupByBuilder.Apply(query, options);
         }
 
-        var tree = Helpers.SelectTreeBuilder.Build(options);
+        var tree = SelectTreeBuilder.Build(options);
         
         if (!tree.HasChildren)
         {

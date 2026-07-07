@@ -3,7 +3,7 @@ using FlexQuery.NET.Internal;
 using FlexQuery.NET.Models;
 using FlexQuery.NET.Models.Projection;
 
-namespace FlexQuery.NET.Helpers;
+namespace FlexQuery.NET.Builders;
 
 /// <summary>
 /// Combines different select formats into a merged navigation tree.

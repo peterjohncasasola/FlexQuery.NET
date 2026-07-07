@@ -1,4 +1,5 @@
 using System.Text.Json;
+using FlexQuery.NET.Builders;
 using FlexQuery.NET.Constants;
 using FlexQuery.NET.Helpers;
 using FlexQuery.NET.Models;

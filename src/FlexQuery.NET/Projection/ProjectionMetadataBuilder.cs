@@ -1,3 +1,4 @@
+using FlexQuery.NET.Builders;
 using FlexQuery.NET.Caching;
 using FlexQuery.NET.Helpers;
 using FlexQuery.NET.Metadata;
