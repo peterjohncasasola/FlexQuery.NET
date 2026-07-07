@@ -74,9 +74,7 @@ public static class QueryableEfCoreExtensions
             }
         }
 
-        var hasProjection = options.HasProjection()
-            || (options.Includes?.Count ?? 0) > 0
-            || (options.Expand?.Count ?? 0) > 0;
+        var hasProjection = options.HasProjection();
 
         return await query.ApplyFlexQueryAsync(options, hasProjection, execOptions, ctx);
     }
@@ -126,9 +124,7 @@ public static class QueryableEfCoreExtensions
             }
         }
 
-        var hasProjection = options.HasProjection()
-            || (options.Includes?.Count ?? 0) > 0
-            || (options.Expand?.Count ?? 0) > 0;
+        var hasProjection = options.HasProjection();
 
         return await query.ApplyFlexQueryAsync(options, hasProjection, execOptions, ctx);
     }
