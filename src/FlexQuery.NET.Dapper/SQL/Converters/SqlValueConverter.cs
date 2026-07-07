@@ -1,8 +1,8 @@
-using FlexQuery.NET.Security;
 using System.ComponentModel;
 using FlexQuery.NET.Dapper.Mapping;
+using FlexQuery.NET.Security;
 
-namespace FlexQuery.NET.Dapper.Sql.Helpers;
+namespace FlexQuery.NET.Dapper.Sql.Converters;
 
 /// <summary>
 /// Converts a raw filter/having string value into the CLR type of the target property,
