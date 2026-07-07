@@ -119,7 +119,7 @@ public class BaseQueryOptions
     public int? MaxPageSize { get; set; }
 
     /// <summary>If true, field name matching during validation is case-insensitive.</summary>
-    public bool CaseInsensitiveFields { get; set; } = true;
+    public bool CaseInsensitive { get; set; } = true;
 
     /// <summary>Maps external field aliases to internal property names.</summary>
     public Dictionary<string, string>? FieldMappings { get; set; }
@@ -137,4 +137,27 @@ public class BaseQueryOptions
 
     /// <summary>Optional resolver to dynamically determine allowed fields based on the entity type.</summary>
     public Func<Type, IEnumerable<string>>? AllowedFieldsResolver { get; set; }
+
+    /// <summary>
+    /// Applies global application-wide defaults from <see cref="FlexQueryOptions"/>
+    /// to a per-request options instance. Values already set on the target are not overridden.
+    /// </summary>
+    internal static void ApplyGlobalDefaults(BaseQueryOptions target, FlexQueryOptions global)
+    {
+        target.MaxPageSize ??= global.MaxPageSize;
+        
+        if (target.DefaultPageSize is 0 or 20)
+            target.DefaultPageSize = global.DefaultPageSize;
+        
+        if (target.CaseInsensitive)
+            target.CaseInsensitive = global.CaseInsensitive;
+        
+        if (target.IncludeTotalCount)
+            target.IncludeTotalCount = global.IncludeTotalCount;
+        
+        if (!target.StrictFieldValidation)
+            target.StrictFieldValidation = global.StrictFieldValidation;
+        
+        target.MaxFieldDepth ??= global.MaxFieldDepth;
+    }
 }

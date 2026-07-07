@@ -22,5 +22,5 @@ internal sealed class QueryContext
     /// <summary>
     /// Gets or sets the server-side execution and security rules.
     /// </summary>
-    public QueryExecutionOptions? ExecutionOptions { get; set; }
+    public BaseQueryOptions? ExecutionOptions { get; set; }
 }

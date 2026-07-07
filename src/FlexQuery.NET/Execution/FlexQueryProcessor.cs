@@ -6,26 +6,12 @@ using FlexQuery.NET.Validation;
 
 namespace FlexQuery.NET.Execution;
 
-public sealed class FlexQueryProcessor : IFlexQueryProcessor
+/// <inheritdoc/>
+public sealed class FlexQueryProcessor(FlexQueryOptions globalOptions) : IFlexQueryProcessor
 {
-    private readonly FlexQueryOptions _globalOptions;
-    private readonly Action<QueryExecutionOptions>? _configureExecution;
-    private readonly IQueryValidator _validator;
-
-    public FlexQueryProcessor(FlexQueryOptions globalOptions)
-        : this(globalOptions, null)
-    {
-    }
-
-    public FlexQueryProcessor(
-        FlexQueryOptions globalOptions,
-        Action<QueryExecutionOptions>? configureExecution)
-    {
-        _globalOptions = globalOptions;
-        _configureExecution = configureExecution;
-        _validator = new QueryValidator();
-    }
-
+    private readonly IQueryValidator _validator = new QueryValidator();
+    
+    /// <inheritdoc />
     public Task<QueryResult<T>> ExecuteAsync<T>(
         IQueryable<T> query,
         QueryOptions options,
@@ -34,16 +20,19 @@ public sealed class FlexQueryProcessor : IFlexQueryProcessor
         var execOptions = CreateExecutionOptions();
         return Task.FromResult(ExecuteCore(query, options, execOptions, null));
     }
-
+    
+    /// <inheritdoc />
     public Task<QueryResult<T>> ExecuteAsync<T>(
         IQueryable<T> query,
         QueryOptions options,
         QueryExecutionOptions execOptions,
         CancellationToken ct = default)
     {
+        BaseQueryOptions.ApplyGlobalDefaults(execOptions, globalOptions);
         return Task.FromResult(ExecuteCore(query, options, execOptions, null));
     }
-
+    
+    /// <inheritdoc />
     public Task<QueryResult<T>> ExecuteAsync<T>(
         IQueryable<T> query,
         QueryOptions options,
@@ -53,7 +42,7 @@ public sealed class FlexQueryProcessor : IFlexQueryProcessor
         var execOptions = CreateExecutionOptions();
         return Task.FromResult(ExecuteCore(query, options, execOptions, config));
     }
-
+    
     private QueryResult<T> ExecuteCore<T>(
         IQueryable<T> query,
         QueryOptions options,
@@ -92,7 +81,7 @@ public sealed class FlexQueryProcessor : IFlexQueryProcessor
     private QueryExecutionOptions CreateExecutionOptions()
     {
         var options = new QueryExecutionOptions();
-        _configureExecution?.Invoke(options);
+        BaseQueryOptions.ApplyGlobalDefaults(options, globalOptions);
         return options;
     }
 }

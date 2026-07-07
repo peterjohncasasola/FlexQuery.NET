@@ -2,23 +2,23 @@ using FlexQuery.NET.Execution;
 using FlexQuery.NET.Options;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace FlexQuery.NET.Configuration;
+namespace FlexQuery.NET.DependencyInjection;
 
 public static class FlexQueryServiceCollectionExtensions
 {
     public static IServiceCollection AddFlexQuery(
         this IServiceCollection services,
-        Action<FlexQueryConfig>? configure = null)
+        Action<FlexQueryOptions>? configure = null)
     {
-        var config = new FlexQueryConfig();
-        configure?.Invoke(config);
+        var options = new FlexQueryOptions();
+        configure?.Invoke(options);
 
-        services.AddSingleton(config.Options);
+        services.AddSingleton(options);
 
         services.AddSingleton<IFlexQueryProcessor>(sp =>
         {
-            var options = sp.GetRequiredService<FlexQueryOptions>();
-            return new FlexQueryProcessor(options, config.ConfigureExecution);
+            var opts = sp.GetRequiredService<FlexQueryOptions>();
+            return new FlexQueryProcessor(opts);
         });
 
         return services;

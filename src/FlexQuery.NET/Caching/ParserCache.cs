@@ -52,7 +52,6 @@ internal static class ParserCache
 /// <summary>
 /// Represents a unique key for a parsed query configuration.
 /// </summary>
-/// <param name="Query">The raw query string.</param>
 /// <param name="Filter">The raw filter expression.</param>
 /// <param name="Sort">The raw sort expression.</param>
 /// <param name="Select">The raw select expression.</param>
