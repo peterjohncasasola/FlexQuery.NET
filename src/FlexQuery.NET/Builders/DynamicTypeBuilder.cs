@@ -1,9 +1,9 @@
+using System.Collections.Concurrent;
 using System.Reflection;
 using System.Reflection.Emit;
-using System.Collections.Concurrent;
 using FlexQuery.NET.Caching;
 
-namespace FlexQuery.NET.Helpers;
+namespace FlexQuery.NET.Builders;
 
 /// <summary>
 /// Builds runtime types dynamically to be used in MemberInitExpressions.

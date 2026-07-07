@@ -2,6 +2,7 @@ using FlexQuery.NET.Caching;
 using FlexQuery.NET.Helpers;
 using FluentAssertions;
 using System.Collections.Concurrent;
+using FlexQuery.NET.Builders;
 using Xunit;
 
 namespace FlexQuery.NET.Tests.Tests;

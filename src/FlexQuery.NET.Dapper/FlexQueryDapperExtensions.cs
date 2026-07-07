@@ -2,6 +2,7 @@ using System.Data;
 using System.Data.Common;
 using System.Text.RegularExpressions;
 using Dapper;
+using FlexQuery.NET.Builders;
 using FlexQuery.NET.Helpers;
 using FlexQuery.NET.Internal;
 using FlexQuery.NET.Models;
