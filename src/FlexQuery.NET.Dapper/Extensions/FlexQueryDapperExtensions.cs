@@ -50,7 +50,7 @@ public static class FlexQueryDapperExtensions
     /// <typeparam name="T">The entity type used for mapping resolution.</typeparam>
     /// <param name="connection">The database connection.</param>
     /// <param name="parameters">The OpenAPI-friendly DTO containing user query parameters.</param>
-    /// <param name="dapperQueryOptions">Optional delegate to configure Dapper-specific options (dialect, mapping registry, etc.).</param>
+    /// <param name="configureQueryOptions">Optional delegate to configure Dapper-specific options (dialect, mapping registry, etc.).</param>
     /// <param name="configureExecution">Optional delegate to configure execution listeners.</param>
     /// <param name="cancellationToken">A <see cref="CancellationToken" /> to observe while waiting for the task to complete.</param>
     /// <returns>A paged query result.</returns>
@@ -58,16 +58,15 @@ public static class FlexQueryDapperExtensions
     public static async Task<QueryResult<object>> FlexQueryAsync<T>(
         this DbConnection connection,
         FlexQueryParameters parameters,
-        Action<DapperQueryOptions>? dapperQueryOptions = null,
+        Action<DapperQueryOptions>? configureQueryOptions = null,
         Action<FlexQueryExecutionConfig>? configureExecution = null,
         CancellationToken cancellationToken = default) where T : class
     {
         var dapperOptions = new DapperQueryOptions();
-        dapperQueryOptions?.Invoke(dapperOptions);
+        configureQueryOptions?.Invoke(dapperOptions);
 
         var options = parameters.ToQueryOptions();
-        var (validatedOptions, ctx) = await PrepareQueryInternalAsync<T>(
-            connection, options, dapperOptions, configureExecution, cancellationToken);
+        var (validatedOptions, ctx) = await PrepareQueryInternalAsync<T>(options, dapperOptions, configureExecution, cancellationToken);
 
         return await ExecuteQueryAsync<T>(connection, validatedOptions, dapperOptions, ctx);
     }
@@ -79,7 +78,7 @@ public static class FlexQueryDapperExtensions
     /// <typeparam name="T">The entity type used for mapping resolution.</typeparam>
     /// <param name="connection">The database connection.</param>
     /// <param name="parameters">Raw query-string key/value pairs (e.g., filter, sort, select, page, pageSize).</param>
-    /// <param name="dapperQueryOptions">Optional delegate to configure Dapper-specific options.</param>
+    /// <param name="configureQueryOptions">Optional delegate to configure Dapper-specific options.</param>
     /// <param name="configureExecution">Optional delegate to configure execution listeners.</param>
     /// <param name="cancellationToken">A <see cref="CancellationToken" /> to observe while waiting for the task to complete.</param>
     /// <returns>A paged query result.</returns>
@@ -87,7 +86,7 @@ public static class FlexQueryDapperExtensions
     public static async Task<QueryResult<object>> FlexQueryAsync<T>(
         this DbConnection connection,
         IDictionary<string, StringValues> parameters,
-        Action<DapperQueryOptions>? dapperQueryOptions = null,
+        Action<DapperQueryOptions>? configureQueryOptions = null,
         Action<FlexQueryExecutionConfig>? configureExecution = null,
         CancellationToken cancellationToken = default) where T : class
     {
@@ -104,7 +103,7 @@ public static class FlexQueryDapperExtensions
             RawParameters = dict
         };
 
-        return await FlexQueryAsync<T>(connection, flexParams, dapperQueryOptions, configureExecution, cancellationToken);
+        return await FlexQueryAsync<T>(connection, flexParams, configureQueryOptions, configureExecution, cancellationToken);
     }
 
     /// <summary>
@@ -131,8 +130,7 @@ public static class FlexQueryDapperExtensions
         ArgumentNullException.ThrowIfNull(options);
 
         var dapperOptions = dapperQueryOptions ?? new DapperQueryOptions();
-        var (validatedOptions, ctx) = await PrepareQueryInternalAsync<T>(
-            connection, options, dapperOptions, configureExecution, cancellationToken);
+        var (validatedOptions, ctx) = await PrepareQueryInternalAsync<T>(options, dapperOptions, configureExecution, cancellationToken);
 
         return await ExecuteQueryAsync<T>(connection, validatedOptions, dapperOptions, ctx);
     }
@@ -144,14 +142,14 @@ public static class FlexQueryDapperExtensions
     private static async Task<QueryResult<object>> ExecuteQueryAsync<T>(
         DbConnection connection,
         QueryOptions options,
-        DapperQueryOptions dapperOptions,
+        DapperQueryOptions dapperQueryOptions,
         FlexQueryExecutionContext? ctx = null) where T : class
     {
         var ct = ctx?.CancellationToken ?? CancellationToken.None;
         await ConnectionHelper.EnsureOpenAsync(connection, ct);
 
-        var dialect = dapperOptions.Dialect ?? SqlDialectResolver.Resolve(connection);
-        var registry = dapperOptions.Model?.Registry ?? new MappingRegistry();
+        var dialect = dapperQueryOptions.Dialect ?? SqlDialectResolver.Resolve(connection);
+        var registry = dapperQueryOptions.Model?.Registry ?? new MappingRegistry();
         options.Items[ContextKeys.EntityType] = typeof(T);
 
         var translator = new SqlTranslator(registry, dialect);
@@ -160,16 +158,16 @@ public static class FlexQueryDapperExtensions
 
         await FireTranslationEventAsync(ctx, command, ct);
 
-        var items = await  QueryMaterializer.MaterializeResultsAsync<T>(connection, command, parameters, options, registry, dapperOptions, ct);
+        var items = await  QueryMaterializer.MaterializeResultsAsync<T>(connection, command, parameters, options, registry, dapperQueryOptions, ct);
 
         int? totalCount = null;
         int? resultCount = null;
-        if (dapperOptions.IncludeTotalCount && (options.IncludeCount ?? true))
+        if (dapperQueryOptions.IncludeTotalCount && (options.IncludeCount ?? true))
         {
-            (totalCount, resultCount) = await CountEvaluator.GetCountsAsync(connection, options, translator, command, parameters, dapperOptions);
+            (totalCount, resultCount) = await CountEvaluator.GetCountsAsync(connection, options, translator, command, parameters, dapperQueryOptions);
         }
 
-        var grandTotals = await AggregateEvaluator.GetGrandTotalsAsync(connection, options, translator, dapperOptions, ct);
+        var grandTotals = await AggregateEvaluator.GetGrandTotalsAsync(connection, options, translator, dapperQueryOptions, ct);
 
         var now = DateTimeOffset.UtcNow;
         if (ctx?.Listener is not null)
@@ -195,16 +193,14 @@ public static class FlexQueryDapperExtensions
     /// Normalized and validates options, sets entity type, and fires the <c>QueryParsed</c> event
     /// if a listener is configured. Returns the validated options and an optional execution context.
     /// </summary>
-    private static async Task<(QueryOptions options, FlexQueryExecutionContext? context)> PrepareQueryInternalAsync<T>(
-            DbConnection connection,
-            QueryOptions options,
-            DapperQueryOptions dapperOptions,
+    private static async Task<(QueryOptions options, FlexQueryExecutionContext? context)> PrepareQueryInternalAsync<T>(QueryOptions options,
+            DapperQueryOptions dapperQueryOptions,
             Action<FlexQueryExecutionConfig>? configureExecution,
             CancellationToken cancellationToken) where T : class
     {
         SetEntityType(options, typeof(T));
         options = options.Normalize();
-        options.ValidateOrThrow(typeof(T), dapperOptions);
+        options.ValidateOrThrow(typeof(T), dapperQueryOptions);
 
         var execConfig = new FlexQueryExecutionConfig();
         configureExecution?.Invoke(execConfig);

@@ -96,19 +96,19 @@ public static class QueryableEfCoreExtensions
     public static async Task<QueryResult<object>> FlexQueryAsync<T>(
         this IQueryable<T> query,
         QueryOptions options,
-        EfCoreQueryOptions execOptions,
+        EfCoreQueryOptions efCoreQueryOptions,
         CancellationToken cancellationToken = default,
         Action<FlexQueryExecutionConfig>? configureExecution = null)
         where T : class
     {
         ArgumentNullException.ThrowIfNull(query);
         ArgumentNullException.ThrowIfNull(options);
-        ArgumentNullException.ThrowIfNull(execOptions);
+        ArgumentNullException.ThrowIfNull(efCoreQueryOptions);
 
         QueryOptionsEfCoreExtensions.EnsureEfCoreOperatorsRegistered();
 
         options = options.Normalize();
-        options.ValidateOrThrow<T>(execOptions);
+        options.ValidateOrThrow<T>(efCoreQueryOptions);
 
         var execConfig = new FlexQueryExecutionConfig();
         configureExecution?.Invoke(execConfig);
@@ -126,52 +126,52 @@ public static class QueryableEfCoreExtensions
 
         var hasProjection = options.HasProjection();
 
-        return await query.ApplyFlexQueryAsync(options, hasProjection, execOptions, ctx);
+        return await query.ApplyFlexQueryAsync(options, hasProjection, efCoreQueryOptions, ctx);
     }
 
     public static async Task<QueryResult<object>> FlexQueryAsync<T>(
         this IQueryable<T> query,
         FlexQueryParameters parameters,
-        QueryExecutionOptions execOptions,
+        QueryExecutionOptions executionOptions,
         CancellationToken cancellationToken = default,
         Action<FlexQueryExecutionConfig>? configureExecution = null)
         where T : class
     {
         return await query.FlexQueryAsync(parameters, new EfCoreQueryOptions
         {
-            IncludeTotalCount = execOptions.IncludeTotalCount,
-            DefaultPageSize = execOptions.DefaultPageSize,
-            MaxPageSize = execOptions.MaxPageSize,
-            CaseInsensitive = execOptions.CaseInsensitive,
-            StrictFieldValidation = execOptions.StrictFieldValidation,
-            MaxFieldDepth = execOptions.MaxFieldDepth,
-            AllowedFields = execOptions.AllowedFields,
-            BlockedFields = execOptions.BlockedFields,
-            AllowedIncludes = execOptions.AllowedIncludes,
-            ExpressionMappings = execOptions.ExpressionMappings,
-            AllowedOperators = execOptions.AllowedOperators,
-            FilterableFields = execOptions.FilterableFields,
-            SortableFields = execOptions.SortableFields,
-            SelectableFields = execOptions.SelectableFields,
-            GroupableFields = execOptions.GroupableFields,
-            AggregatableFields = execOptions.AggregatableFields,
-            DefaultSortField = execOptions.DefaultSortField,
-            DefaultSortDescending = execOptions.DefaultSortDescending,
-            FieldMappings = execOptions.FieldMappings,
-            RoleAllowedFields = execOptions.RoleAllowedFields,
-            CurrentRole = execOptions.CurrentRole,
-            AllowedFieldsResolver = execOptions.AllowedFieldsResolver
+            IncludeTotalCount = executionOptions.IncludeTotalCount,
+            DefaultPageSize = executionOptions.DefaultPageSize,
+            MaxPageSize = executionOptions.MaxPageSize,
+            CaseInsensitive = executionOptions.CaseInsensitive,
+            StrictFieldValidation = executionOptions.StrictFieldValidation,
+            MaxFieldDepth = executionOptions.MaxFieldDepth,
+            AllowedFields = executionOptions.AllowedFields,
+            BlockedFields = executionOptions.BlockedFields,
+            AllowedIncludes = executionOptions.AllowedIncludes,
+            ExpressionMappings = executionOptions.ExpressionMappings,
+            AllowedOperators = executionOptions.AllowedOperators,
+            FilterableFields = executionOptions.FilterableFields,
+            SortableFields = executionOptions.SortableFields,
+            SelectableFields = executionOptions.SelectableFields,
+            GroupableFields = executionOptions.GroupableFields,
+            AggregatableFields = executionOptions.AggregatableFields,
+            DefaultSortField = executionOptions.DefaultSortField,
+            DefaultSortDescending = executionOptions.DefaultSortDescending,
+            FieldMappings = executionOptions.FieldMappings,
+            RoleAllowedFields = executionOptions.RoleAllowedFields,
+            CurrentRole = executionOptions.CurrentRole,
+            AllowedFieldsResolver = executionOptions.AllowedFieldsResolver
         }, cancellationToken, configureExecution);
     }
 
     private static async Task<QueryResult<object>> ApplyFlexQueryAsync<T>(this IQueryable<T> query, 
-        QueryOptions options, bool hasProjection, EfCoreQueryOptions? execOptions = null, FlexQueryExecutionContext? ctx = null)
+        QueryOptions options, bool hasProjection, EfCoreQueryOptions? efCoreQueryOptions = null, FlexQueryExecutionContext? ctx = null)
         where T : class
     {
         var ct = ctx?.CancellationToken ?? CancellationToken.None;
         QueryOptionsEfCoreExtensions.EnsureEfCoreOperatorsRegistered();
 
-        if (execOptions?.UseNoTracking == true)
+        if (efCoreQueryOptions?.UseNoTracking == true)
         {
             query = query.AsNoTracking();
         }
@@ -180,7 +180,7 @@ public static class QueryableEfCoreExtensions
         if (options.Distinct == true)
             filtered = filtered.Distinct();
 
-        var total = execOptions?.IncludeTotalCount == true ? await filtered.CountAsync(ct) : (int?)null;
+        var total = efCoreQueryOptions?.IncludeTotalCount == true ? await filtered.CountAsync(ct) : (int?)null;
 
         if (options.GroupBy is { Count: > 0 })
         {
@@ -194,7 +194,7 @@ public static class QueryableEfCoreExtensions
                     ctx.CancellationToken);
             }
 
-            var resultCount = execOptions?.IncludeTotalCount == true
+            var resultCount = efCoreQueryOptions?.IncludeTotalCount == true
                 ? await CountGroupedQuery(groupedQuery, ct)
                 : (int?)null;
             var data = await ExecuteGroupedQuery(groupedQuery, options, ct);
