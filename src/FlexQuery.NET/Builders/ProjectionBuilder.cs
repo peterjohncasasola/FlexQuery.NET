@@ -100,7 +100,7 @@ internal static class ProjectionBuilder
 
             if (ProjectionMetadataBuilder.ShouldBuildNestedProjection(propType, childNode))
             {
-                var childFilterContext = MergeFilters(
+                var childFilterContext = FilterComposer.MergeFilters(
                     filterContext != null ? FilterAnalyzer.ExtractForNavigation(filterContext!, propName) : null,
                     childNode.Filter);
 
@@ -172,18 +172,6 @@ internal static class ProjectionBuilder
         });
 
         return Expression.MemberInit(newExpr, bindings);
-    }
-
-    private static FilterGroup? MergeFilters(FilterGroup? a, FilterGroup? b)
-    {
-        if (a == null) return b;
-        if (b == null) return a;
-
-        return new FilterGroup
-        {
-            Logic = LogicOperator.And,
-            Groups = [a, b]
-        };
     }
 
     private static void MergeFieldPath(SelectionNode current, string path)

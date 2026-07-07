@@ -3,6 +3,7 @@ using FlexQuery.NET.Adapters.AgGrid.Models;
 using FlexQuery.NET.Constants;
 using FlexQuery.NET.Models;
 using FlexQuery.NET.Builders;
+using FlexQuery.NET.Filters;
 using FlexQuery.NET.Models.Aggregates;
 using FlexQuery.NET.Models.Filters;
 using FlexQuery.NET.Models.Paging;
@@ -54,7 +55,7 @@ internal static class AgGridQueryOptionsParser
         {
             if (groupKeyCount > 0)
             {
-                result.Filter = MergeFilters(
+                result.Filter = FilterComposer.MergeFilters(
                     result.Filter,
                     BuildGroupKeyFilter(rowGroupFields, request.GroupKeys, groupKeyCount));
             }
@@ -325,18 +326,6 @@ internal static class AgGridQueryOptionsParser
         return filter;
     }
 
-    private static FilterGroup MergeFilters(FilterGroup? existing, FilterGroup groupKeyFilter)
-    {
-        if (existing is null)
-        {
-            return groupKeyFilter;
-        }
-
-        var merged = new FilterGroup { Logic = LogicOperator.And };
-        merged.Groups.Add(existing);
-        merged.Groups.Add(groupKeyFilter);
-        return merged;
-    }
 
     private static JsonElement? GetElement(JsonElement element, string propertyName)
     {
