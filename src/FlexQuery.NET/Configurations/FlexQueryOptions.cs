@@ -1,4 +1,4 @@
-namespace FlexQuery.NET.Options;
+namespace FlexQuery.NET.Configurations;
 
 /// <summary>
 /// Global application-wide FlexQuery defaults.

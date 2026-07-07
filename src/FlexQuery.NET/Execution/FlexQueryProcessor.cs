@@ -1,4 +1,5 @@
 using FlexQuery.NET.Builders;
+using FlexQuery.NET.Configurations;
 using FlexQuery.NET.Exceptions;
 using FlexQuery.NET.Models;
 using FlexQuery.NET.Options;
@@ -9,7 +10,7 @@ namespace FlexQuery.NET.Execution;
 /// <inheritdoc/>
 public sealed class FlexQueryProcessor(FlexQueryOptions globalOptions) : IFlexQueryProcessor
 {
-    private readonly IQueryValidator _validator = new QueryValidator();
+    private static readonly IQueryValidator Validator = new QueryValidator();
     
     /// <inheritdoc />
     public Task<QueryResult<T>> ExecuteAsync<T>(
@@ -55,7 +56,7 @@ public sealed class FlexQueryProcessor(FlexQueryOptions globalOptions) : IFlexQu
             ExecutionOptions = execOptions
         };
 
-        var validationResult = _validator.Validate(options, context);
+        var validationResult = Validator.Validate(options, context);
         if (!validationResult.IsValid)
         {
             throw new QueryValidationException(validationResult);

@@ -1,4 +1,5 @@
 using System.Linq.Expressions;
+using FlexQuery.NET.Configurations;
 using FlexQuery.NET.Security;
 
 namespace FlexQuery.NET.Options;
@@ -7,7 +8,7 @@ namespace FlexQuery.NET.Options;
 /// Defines server-side execution rules, validation constraints, and security policies.
 /// This model separates server-side requirements from client-side query parameters.
 /// </summary>
-public class BaseQueryOptions
+public abstract class BaseQueryOptions
 {
 
     /// <summary>

@@ -1,3 +1,4 @@
+using FlexQuery.NET.Configurations;
 using FlexQuery.NET.Execution;
 using FlexQuery.NET.Models;
 using FlexQuery.NET.Options;

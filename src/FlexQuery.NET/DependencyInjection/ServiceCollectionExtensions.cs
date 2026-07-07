@@ -1,3 +1,4 @@
+using FlexQuery.NET.Configurations;
 using FlexQuery.NET.Execution;
 using FlexQuery.NET.Options;
 using Microsoft.Extensions.DependencyInjection;
@@ -15,11 +16,7 @@ public static class ServiceCollectionExtensions
 
         services.AddSingleton(options);
 
-        services.AddSingleton<IFlexQueryProcessor>(sp =>
-        {
-            var opts = sp.GetRequiredService<FlexQueryOptions>();
-            return new FlexQueryProcessor(opts);
-        });
+        services.AddSingleton<IFlexQueryProcessor, FlexQueryProcessor>();
 
         return services;
     }
