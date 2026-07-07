@@ -165,7 +165,7 @@ internal static class QueryBuilder
             return FlatProjectionBuilder.BuildAndApplyMixed(query, tree, options);
         }
 
-        var projection = ProjectionExpressionBuilder.BuildExpression<T>(tree, options);
+        var projection = ProjectionBuilder.BuildExpression<T>(tree, options);
         return query.Select(projection);
     }
 

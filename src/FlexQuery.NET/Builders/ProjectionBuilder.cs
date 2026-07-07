@@ -1,15 +1,14 @@
 using System.Linq.Expressions;
 using System.Reflection;
-using FlexQuery.NET.Builders;
 using FlexQuery.NET.Caching;
 using FlexQuery.NET.Expressions;
-using FlexQuery.NET.Helpers;
 using FlexQuery.NET.Models;
+using FlexQuery.NET.Projection;
 using FlexQuery.NET.Resolvers;
 
-namespace FlexQuery.NET.Projection;
+namespace FlexQuery.NET.Builders;
 
-internal static class ProjectionExpressionBuilder
+internal static class ProjectionBuilder
 {
     private static readonly MethodInfo AsQueryable = ExpressionMethodCache.QueryableAsQueryable();
     private static readonly MethodInfo SelectMethod = ExpressionMethodCache.QueryableSelectSimple();
