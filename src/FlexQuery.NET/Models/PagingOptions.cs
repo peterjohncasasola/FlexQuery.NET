@@ -5,24 +5,22 @@ namespace FlexQuery.NET.Models;
 /// </summary>
 public sealed class PagingOptions
 {
-    private int _page = 1;
-    private int _pageSize = 20;
-    private const int MAX_PAGE_SIZE = 1000;
-    private const int MIN_PAGE_SIZE = 1;
+    private const int MaxPageSize = 1000;
+    private const int MinPageSize = 1;
 
     /// <summary>1-based current page number. Defaults to 1; clamped to >= 1.</summary>
     public int Page
     {
-        get => _page;
-        set => _page = value < 1 ? 1 : value;
-    }
+        get;
+        set => field = value < 1 ? 1 : value;
+    } = 1;
 
     /// <summary>Number of items per page. Defaults to 20; clamped to 1–1000.</summary>
     public int PageSize
     {
-        get => _pageSize;
-        set => _pageSize = value < MIN_PAGE_SIZE ? MIN_PAGE_SIZE : value > MAX_PAGE_SIZE ? MAX_PAGE_SIZE : value;
-    }
+        get;
+        set => field = value < MinPageSize ? MinPageSize : value > MaxPageSize ? MaxPageSize : value;
+    } = 20;
 
     /// <summary>Whether paging is disabled (returns all records).</summary>
     public bool Disabled { get; set; }
