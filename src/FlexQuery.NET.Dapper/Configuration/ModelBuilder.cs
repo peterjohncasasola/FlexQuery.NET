@@ -1,8 +1,9 @@
 using System.Reflection;
-using FlexQuery.NET.Dapper.Configuration;
+using FlexQuery.NET.Dapper.Mapping;
 using FlexQuery.NET.Dapper.Mapping.Builders;
+using FlexQuery.NET.Dapper.Metadata;
 
-namespace FlexQuery.NET.Dapper.Mapping.Configuration;
+namespace FlexQuery.NET.Dapper.Configuration;
 
 /// <summary>
 /// Provides a fluent API for configuring entity mappings used by FlexQuery.NET Dapper.

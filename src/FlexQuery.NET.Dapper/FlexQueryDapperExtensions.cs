@@ -12,6 +12,7 @@ using FlexQuery.NET.Dapper.Dialects;
 using Microsoft.Extensions.Primitives;
 using FlexQuery.NET.Constants;
 using FlexQuery.NET.Dapper.Materialization;
+using FlexQuery.NET.Dapper.Options;
 using FlexQuery.NET.Diagnostics;
 using FlexQuery.NET.Execution;
 

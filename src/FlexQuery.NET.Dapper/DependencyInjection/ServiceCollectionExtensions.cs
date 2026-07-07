@@ -1,6 +1,7 @@
+using FlexQuery.NET.Dapper.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace FlexQuery.NET.Dapper.Configuration;
+namespace FlexQuery.NET.Dapper.DependencyInjection;
 
 public static class ServiceCollectionExtensions
 {

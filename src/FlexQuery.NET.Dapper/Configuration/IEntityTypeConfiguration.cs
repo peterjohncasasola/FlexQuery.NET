@@ -1,6 +1,6 @@
 using FlexQuery.NET.Dapper.Mapping.Builders;
 
-namespace FlexQuery.NET.Dapper.Mapping.Configuration;
+namespace FlexQuery.NET.Dapper.Configuration;
 
 /// <summary>
 /// Defines configuration for an entity type using the Fluent API.

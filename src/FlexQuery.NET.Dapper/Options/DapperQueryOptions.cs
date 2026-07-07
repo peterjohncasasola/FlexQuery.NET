@@ -1,8 +1,8 @@
-using FlexQuery.NET.Dapper.Configuration;
 using FlexQuery.NET.Dapper.Dialects;
+using FlexQuery.NET.Dapper.Metadata;
 using FlexQuery.NET.Options;
 
-namespace FlexQuery.NET.Dapper;
+namespace FlexQuery.NET.Dapper.Options;
 
 /// <summary>
 /// Represents Dapper-specific execution options for FlexQuery.NET.
