@@ -1,3 +1,4 @@
+using FlexQuery.NET.Builders.Fluent;
 using FlexQuery.NET.Models;
 using FlexQuery.NET.Models.Aggregates;
 using FlexQuery.NET.Models.Filters;

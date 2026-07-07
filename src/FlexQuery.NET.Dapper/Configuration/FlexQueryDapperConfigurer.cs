@@ -1,4 +1,5 @@
 using FlexQuery.NET.Dapper.Dialects;
+using FlexQuery.NET.Options;
 
 namespace FlexQuery.NET.Dapper.Configuration;
 
