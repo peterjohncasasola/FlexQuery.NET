@@ -1,18 +1,19 @@
-using System.Data;
 using System.Data.Common;
-using System.Text.RegularExpressions;
-using Dapper;
-using FlexQuery.NET.Builders;
 using FlexQuery.NET.Internal;
 using FlexQuery.NET.Models;
-using FlexQuery.NET.Projection;
 using FlexQuery.NET.Dapper.Mapping;
 using FlexQuery.NET.Dapper.Sql.Translators;
 using FlexQuery.NET.Dapper.Dialects;
 using Microsoft.Extensions.Primitives;
 using FlexQuery.NET.Constants;
+using FlexQuery.NET.Dapper.Execution;
 using FlexQuery.NET.Dapper.Materialization;
 using FlexQuery.NET.Dapper.Options;
+using FlexQuery.NET.Dapper.Sql;
+using FlexQuery.NET.Dapper.Sql.Adapters;
+using FlexQuery.NET.Dapper.Sql.Builders;
+using FlexQuery.NET.Dapper.Sql.Models;
+using FlexQuery.NET.Dapper.Sql.Utilities;
 using FlexQuery.NET.Diagnostics;
 using FlexQuery.NET.Execution;
 
@@ -64,27 +65,11 @@ public static class FlexQueryDapperExtensions
         var dapperOptions = new DapperQueryOptions();
         dapperQueryOptions?.Invoke(dapperOptions);
 
-        var parsedOptions = parameters.ToQueryOptions();
-        SetEntityType(parsedOptions, typeof(T));
+        var options = parameters.ToQueryOptions();
+        var (validatedOptions, ctx) = await PrepareQueryInternalAsync<T>(
+            connection, options, dapperOptions, configureExecution, cancellationToken);
 
-        parsedOptions = parsedOptions.Normalize();
-        parsedOptions.ValidateOrThrow(typeof(T), dapperOptions);
-
-        var execConfig = new FlexQueryExecutionConfig();
-        configureExecution?.Invoke(execConfig);
-        FlexQueryExecutionContext? ctx = null;
-        if (execConfig.Listener is not null)
-        {
-            ctx = new FlexQueryExecutionContext(execConfig, cancellationToken);
-            if (ctx.Listener != null)
-            {
-                await ctx.Listener.QueryParsedAsync(
-                    new QueryParsedEvent(ctx.QueryId, parsedOptions, ctx.Stopwatch.Elapsed, DateTimeOffset.UtcNow),
-                    ctx.CancellationToken);
-            }
-        }
-
-        return await ExecuteQueryAsync<T>(connection, parsedOptions, dapperOptions, ctx);
+        return await ExecuteQueryAsync<T>(connection, validatedOptions, dapperOptions, ctx);
     }
 
     /// <summary>
@@ -146,235 +131,45 @@ public static class FlexQueryDapperExtensions
         ArgumentNullException.ThrowIfNull(options);
 
         var dapperOptions = dapperQueryOptions ?? new DapperQueryOptions();
+        var (validatedOptions, ctx) = await PrepareQueryInternalAsync<T>(
+            connection, options, dapperOptions, configureExecution, cancellationToken);
 
-        SetEntityType(options, typeof(T));
-
-        options = options.Normalize();
-        options.ValidateOrThrow(typeof(T), dapperOptions);
-
-        var execConfig = new FlexQueryExecutionConfig();
-        configureExecution?.Invoke(execConfig);
-        FlexQueryExecutionContext? ctx = null;
-        if (execConfig.Listener is not null)
-        {
-            ctx = new FlexQueryExecutionContext(execConfig, cancellationToken);
-            if (ctx.Listener != null)
-            {
-                await ctx.Listener.QueryParsedAsync(
-                    new QueryParsedEvent(ctx.QueryId, options, ctx.Stopwatch.Elapsed, DateTimeOffset.UtcNow),
-                    ctx.CancellationToken);
-            }
-        }
-
-        return await ExecuteQueryAsync<T>(connection, options, dapperOptions, ctx);
+        return await ExecuteQueryAsync<T>(connection, validatedOptions, dapperOptions, ctx);
     }
-
+    
+    /// <summary>
+    /// Main execution pipeline: opens connection, translates query, materialises results,
+    /// retrieves counts and aggregates, and builds the final <see cref="QueryResult{object}"/>.
+    /// </summary>
     private static async Task<QueryResult<object>> ExecuteQueryAsync<T>(
         DbConnection connection,
         QueryOptions options,
-        DapperQueryOptions dapperQueryOptions,
+        DapperQueryOptions dapperOptions,
         FlexQueryExecutionContext? ctx = null) where T : class
     {
         var ct = ctx?.CancellationToken ?? CancellationToken.None;
+        await ConnectionHelper.EnsureOpenAsync(connection, ct);
 
-        if (connection.State == ConnectionState.Closed)
-        {
-            await connection.OpenAsync(ct);
-        }
-
-        var dialect = dapperQueryOptions.Dialect ?? SqlDialectResolver.Resolve(connection);
-
-        var registry = dapperQueryOptions.Model?.Registry ?? new MappingRegistry();
+        var dialect = dapperOptions.Dialect ?? SqlDialectResolver.Resolve(connection);
+        var registry = dapperOptions.Model?.Registry ?? new MappingRegistry();
         options.Items[ContextKeys.EntityType] = typeof(T);
 
         var translator = new SqlTranslator(registry, dialect);
         var command = translator.Translate(options);
-        var entityType = typeof(T);
-        var mapping = registry.GetMapping(entityType);
+        var parameters = CommandParameterAdapter.CreateParametersFromCommand(command);
 
-        var parameters = new DynamicParameters();
-        foreach (var param in command.Parameters)
-        {
-            var cleanName = param.Key.TrimStart('@', ':', '?');
-            parameters.Add(cleanName, param.Value);
-        }
+        await FireTranslationEventAsync(ctx, command, ct);
 
-        // Emit translation event
-        if (ctx?.Listener is not null)
-        {
-            var queryParameters = command.Parameters
-                .Select(p => new QueryParameter(p.Key, p.Value))
-                .ToList()
-                .AsReadOnly();
-            await ctx.Listener.QueryTranslatedAsync(
-                new QueryTranslatedEvent(ctx.QueryId, command.Sql, queryParameters, ctx.Stopwatch.Elapsed, DateTimeOffset.UtcNow),
-                ctx.CancellationToken);
-        }
-
-        var metadata = ProjectionMetadataBuilder.Build(entityType, options);
-        var useDynamicType = false;
-
-        IReadOnlyList<object> items;
-        if (options.Includes?.Count > 0 || options.Expand?.Count > 0)
-        {
-            var dynamicItems = await connection.QueryAsync(
-                command.Sql,
-                parameters,
-                commandTimeout: dapperQueryOptions.CommandTimeoutSeconds,
-                commandType: CommandType.Text);
-
-            IReadOnlyList<T> hydrated;
-            if (options.Expand?.Count > 0)
-            {
-                hydrated = DapperRowHydrator.HydrateFilteredIncludes<T>(dynamicItems, mapping, registry, options.Expand);
-            }
-            else
-            {
-                hydrated = DapperRowHydrator.HydrateIncludes<T>(dynamicItems, mapping, registry, options.Includes!);
-            }
-            items = hydrated.Cast<object>().ToList();
-        }
-        else if (useDynamicType)
-        {
-            var projectedType = DynamicTypeBuilder.GetDynamicType(
-                new Dictionary<string, Type>(metadata.FieldTypes));
-
-            var dynamicItems = await connection.QueryAsync(
-                projectedType,
-                command.Sql,
-                parameters,
-                commandTimeout: dapperQueryOptions.CommandTimeoutSeconds,
-                commandType: CommandType.Text);
-
-            items = dynamicItems.ToList();
-        }
-        else if (typeof(T) == typeof(object) || options.GroupBy?.Count > 0 || options.Aggregates.Count > 0)
-        {
-            var useDynamicForGrouping = options.GroupBy?.Count > 0 || options.Aggregates.Count > 0;
-
-            var dynamicItems = await connection.QueryAsync(
-                command.Sql,
-                parameters,
-                commandTimeout: dapperQueryOptions.CommandTimeoutSeconds,
-                commandType: CommandType.Text);
-
-            if (useDynamicForGrouping)
-            {
-                var rows = dynamicItems
-                    .Select(d => (IDictionary<string, object>)d)
-                    .ToList();
-
-                if (rows.Count == 0)
-                {
-                    items = [];
-                }
-                else
-                {
-                    var colTypes = rows[0].Keys
-                        .ToDictionary(k => k, _ => typeof(object), StringComparer.OrdinalIgnoreCase);
-                    var projectedType = DynamicTypeBuilder.GetDynamicType(
-                        new Dictionary<string, Type>(colTypes));
-
-                    ct.ThrowIfCancellationRequested();
-
-                    items = rows.Select(row =>
-                    {
-                        var instance = Activator.CreateInstance(projectedType)!;
-                        foreach (var kvp in row)
-                        {
-                            var prop = projectedType.GetProperty(kvp.Key);
-                            if (prop is { CanWrite: true })
-                                prop.SetValue(instance, kvp.Value);
-                        }
-                        return instance;
-                    }).ToList();
-                }
-            }
-            else
-            {
-                items = dynamicItems
-                    .Select(d => (object)new Dictionary<string, object>((IDictionary<string, object>)d, StringComparer.OrdinalIgnoreCase))
-                    .ToList();
-            }
-        }
-        else
-        {
-            var dynamicItems = await connection.QueryAsync(
-                command.Sql,
-                parameters,
-                commandTimeout: dapperQueryOptions.CommandTimeoutSeconds,
-                commandType: CommandType.Text);
-            items = dynamicItems
-                .Select(object (d) => new Dictionary<string, object>((IDictionary<string, object>)d, StringComparer.OrdinalIgnoreCase))
-                .ToList();
-        }
-
-        var shouldIncludeCount = dapperQueryOptions.IncludeTotalCount && (options.IncludeCount ?? true);
+        var items = await  QueryMaterializer.MaterializeResultsAsync<T>(connection, command, parameters, options, registry, dapperOptions, ct);
 
         int? totalCount = null;
         int? resultCount = null;
-        if (shouldIncludeCount)
+        if (dapperOptions.IncludeTotalCount && (options.IncludeCount ?? true))
         {
-            var sourceCountCommand = translator.TranslateSourceCount(options);
-            var sourceCountParameters = new DynamicParameters();
-            foreach (var param in sourceCountCommand.Parameters)
-            {
-                var cleanName = param.Key.TrimStart('@', ':', '?');
-                sourceCountParameters.Add(cleanName, param.Value);
-            }
-
-            totalCount = (int)await connection.QuerySingleAsync<long>(
-                sourceCountCommand.Sql,
-                sourceCountParameters,
-                commandTimeout: dapperQueryOptions.CommandTimeoutSeconds,
-                commandType: CommandType.Text);
-
-            resultCount = options.GroupBy is { Count: > 0 } || options.Distinct == true
-                ? (int)await connection.QuerySingleAsync<long>(
-                    ExtractCountSql(command.Sql),
-                    parameters,
-                    commandTimeout: dapperQueryOptions.CommandTimeoutSeconds,
-                    commandType: CommandType.Text)
-                : totalCount;
+            (totalCount, resultCount) = await CountEvaluator.GetCountsAsync(connection, options, translator, command, parameters, dapperOptions);
         }
 
-        Dictionary<string, Dictionary<string, object>>? grandTotals = null;
-        if (options.Aggregates.Count > 0 && (options.GroupBy == null || options.GroupBy.Count == 0))
-        {
-            var aggCommand = translator.TranslateAggregates(options);
-            var aggParams = new DynamicParameters();
-            foreach (var param in aggCommand.Parameters)
-            {
-                var cleanName = param.Key.TrimStart('@', ':', '?');
-                aggParams.Add(cleanName, param.Value);
-            }
-
-            var aggResult = await connection.QueryFirstOrDefaultAsync(
-                aggCommand.Sql,
-                aggParams,
-                commandTimeout: dapperQueryOptions.CommandTimeoutSeconds,
-                commandType: CommandType.Text);
-
-            if (aggResult != null)
-            {
-                grandTotals = new Dictionary<string, Dictionary<string, object>>(StringComparer.OrdinalIgnoreCase);
-                var rowDict = (IDictionary<string, object>)aggResult;
-                foreach (var agg in options.Aggregates)
-                {
-                    if (rowDict.TryGetValue(agg.Alias, out var val))
-                    {
-                        var fieldName = agg.Field ?? "all";
-                        var fnName = agg.Function;
-                        if (!grandTotals.TryGetValue(fieldName, out var fnDict))
-                        {
-                            fnDict = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase);
-                            grandTotals[fieldName] = fnDict;
-                        }
-                        fnDict[fnName] = val;
-                    }
-                }
-            }
-        }
+        var grandTotals = await AggregateEvaluator.GetGrandTotalsAsync(connection, options, translator, dapperOptions, ct);
 
         var now = DateTimeOffset.UtcNow;
         if (ctx?.Listener is not null)
@@ -386,12 +181,12 @@ public static class FlexQueryDapperExtensions
 
         var queryResult = new QueryResult<object>
         {
-            Data = items,
-            TotalCount = totalCount,
+            Data        = items,
+            TotalCount  = totalCount,
             ResultCount = resultCount,
-            Page = options.Paging.Page,
-            PageSize = options.Paging.PageSize,
-            Aggregates = grandTotals
+            Page        = options.Paging.Page,
+            PageSize    = options.Paging.PageSize,
+            Aggregates  = grandTotals
         };
 
         if (ctx?.Listener is not null)
@@ -403,41 +198,56 @@ public static class FlexQueryDapperExtensions
 
         return queryResult;
     }
+    
+    /// <summary>
+    /// Normalized and validates options, sets entity type, and fires the <c>QueryParsed</c> event
+    /// if a listener is configured. Returns the validated options and an optional execution context.
+    /// </summary>
+    private static async Task<(QueryOptions options, FlexQueryExecutionContext? context)> PrepareQueryInternalAsync<T>(
+            DbConnection connection,
+            QueryOptions options,
+            DapperQueryOptions dapperOptions,
+            Action<FlexQueryExecutionConfig>? configureExecution,
+            CancellationToken cancellationToken) where T : class
+    {
+        SetEntityType(options, typeof(T));
+        options = options.Normalize();
+        options.ValidateOrThrow(typeof(T), dapperOptions);
+
+        var execConfig = new FlexQueryExecutionConfig();
+        configureExecution?.Invoke(execConfig);
+        FlexQueryExecutionContext? ctx = null;
+        if (execConfig.Listener is null) return (options, ctx);
+        ctx = new FlexQueryExecutionContext(execConfig, cancellationToken);
+        
+        if (ctx.Listener != null)
+        {
+            await ctx.Listener.QueryParsedAsync(
+                new QueryParsedEvent(ctx.QueryId, options, ctx.Stopwatch.Elapsed, DateTimeOffset.UtcNow),
+                ctx.CancellationToken);
+        }
+
+        return (options, ctx);
+    }
+    
+    private static async Task FireTranslationEventAsync(
+        FlexQueryExecutionContext? ctx, SqlCommand command, CancellationToken ct)
+    {
+        if (ctx?.Listener is null) return;
+
+        var queryParameters = command.Parameters
+            .Select(p => new QueryParameter(p.Key, p.Value))
+            .ToList()
+            .AsReadOnly();
+
+        await ctx.Listener.QueryTranslatedAsync(
+            new QueryTranslatedEvent(ctx.QueryId, command.Sql, queryParameters,
+                ctx.Stopwatch.Elapsed, DateTimeOffset.UtcNow),
+            ct);
+    }
 
     private static string ExtractCountSql(string sql)
     {
-        var patterns = new[] { @"\bORDER\s+BY\b", @"\bLIMIT\b", @"\bOFFSET\b" };
-        var minIdx = sql.Length;
-
-        foreach (var pattern in patterns)
-        {
-            var match = Regex.Match(sql, pattern, RegexOptions.IgnoreCase);
-            while (match.Success)
-            {
-                if (!IsInsideParentheses(sql, match.Index))
-                {
-                    if (match.Index < minIdx)
-                        minIdx = match.Index;
-                    break;
-                }
-                match = match.NextMatch();
-            }
-        }
-
-        var baseSql = sql[..minIdx];
-        return $"SELECT COUNT(1) FROM ({baseSql.Trim()}) AS CountTable";
-    }
-
-    private static bool IsInsideParentheses(string sql, int index)
-    {
-        int depth = 0;
-        for (int i = 0; i < index; i++)
-        {
-            if (sql[i] == '(')
-                depth++;
-            else if (sql[i] == ')')
-                depth--;
-        }
-        return depth > 0;
+        return SqlCountBuilder.ExtractCountSql(sql);
     }
 }
