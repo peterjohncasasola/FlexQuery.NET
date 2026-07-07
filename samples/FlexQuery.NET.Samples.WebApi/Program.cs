@@ -23,13 +23,13 @@ builder.Services.AddControllers()
     });
 
 //Global Config
-builder.Services.AddFlexQueryDapper(opt =>
+builder.Services.AddFlexQueryDapper(cfg =>
 {
-    opt.UseSqlite();
-    opt.Entity<Customer>()
+    cfg.UseSqlite();
+    cfg.Model.Entity<Customer>()
         .ToTable("Customers")
         .HasMany(c => c.Orders).WithForeignKey("CustomerId");
-    opt.Entity<Order>()
+    cfg.Model.Entity<Order>()
         .ToTable("Orders");
 });
 

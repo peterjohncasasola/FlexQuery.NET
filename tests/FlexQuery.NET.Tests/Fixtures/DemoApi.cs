@@ -1,20 +1,20 @@
 using FlexQuery.NET.AspNetCore.Extensions;
 using FlexQuery.NET.Dapper;
+using FlexQuery.NET.Dapper.Configuration;
 using FlexQuery.NET.Dapper.Dialects;
+using FlexQuery.NET.Dapper.Mapping;
+using FlexQuery.NET.Dapper.Mapping.Configuration;
+using FlexQuery.NET.Dapper.Mapping.Metadata;
+using FlexQuery.NET.Exceptions;
 using FlexQuery.NET.Models;
+using FlexQuery.NET.Tests.Models;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc;
-using System.Data.Common;
-using FlexQuery.NET.Dapper.Mapping;
-using FlexQuery.NET.Dapper.Mapping.Metadata;
 using Microsoft.Extensions.DependencyInjection;
 using System.Data;
-
+using System.Data.Common;
 using System.Text.Json.Serialization;
-using FlexQuery.NET.Adapters.Kendo;
-using FlexQuery.NET.Exceptions;
-using FlexQuery.NET.Tests.Models;
 
 namespace FlexQuery.NET.Tests.Fixtures;
 
@@ -24,7 +24,7 @@ public class DemoApiStartup
     {
         services.AddControllers()
             .AddApplicationPart(typeof(DemoApiStartup).Assembly)
-            .AddJsonOptions(options => 
+            .AddJsonOptions(options =>
             {
                 options.JsonSerializerOptions.DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull;
                 options.JsonSerializerOptions.PropertyNamingPolicy = null;
@@ -71,25 +71,33 @@ public class UsersController : ControllerBase
     {
         try
         {
-            var result = await ((System.Data.Common.DbConnection)_connection).FlexQueryAsync<SqlCustomer>(parameters, opt => 
+            var model = BuildModel();
+            var result = await ((System.Data.Common.DbConnection)_connection).FlexQueryAsync<SqlCustomer>(parameters, opt =>
             {
                 opt.Dialect = _dialect;
-                opt.Entity<SqlCustomer>()
-                    .ToTable("Customers")
-                    .HasOne(c => c.Address).WithForeignKey("CustomerId");
-                opt.Entity<SqlCustomer>().HasMany(c => c.Orders).WithForeignKey("CustomerId");
-                opt.Entity<SqlOrder>()
-                    .ToTable("Orders")
-                    .HasMany(o => o.Items).WithForeignKey("OrderId");
-                opt.Entity<SqlOrderItem>()
-                    .ToTable("OrderItems");
+                opt.UseModel(model);
             });
             return Ok(result);
         }
-        catch (FlexQuery.NET.Exceptions.QueryValidationException ex)
+        catch (QueryValidationException ex)
         {
             return BadRequest(ex.Message);
         }
+    }
+
+    private static FlexQueryModel BuildModel()
+    {
+        var builder = new ModelBuilder();
+        builder.Entity<SqlCustomer>()
+            .ToTable("Customers")
+            .HasOne(c => c.Address).WithForeignKey("CustomerId");
+        builder.Entity<SqlCustomer>().HasMany(c => c.Orders).WithForeignKey("CustomerId");
+        builder.Entity<SqlOrder>()
+            .ToTable("Orders")
+            .HasMany(o => o.Items).WithForeignKey("OrderId");
+        builder.Entity<SqlOrderItem>()
+            .ToTable("OrderItems");
+        return builder.Build();
     }
 }
 
@@ -111,18 +119,11 @@ public class OrdersController : ControllerBase
     {
         try
         {
-            var result = await ((System.Data.Common.DbConnection)_connection).FlexQueryAsync<SqlOrder>(parameters, opt => 
+            var model = BuildModel();
+            var result = await ((System.Data.Common.DbConnection)_connection).FlexQueryAsync<SqlOrder>(parameters, opt =>
             {
                 opt.Dialect = _dialect;
-                opt.Entity<SqlCustomer>()
-                    .ToTable("Customers")
-                    .HasOne(c => c.Address).WithForeignKey("CustomerId");
-                opt.Entity<SqlCustomer>().HasMany(c => c.Orders).WithForeignKey("CustomerId");
-                opt.Entity<SqlOrder>()
-                    .ToTable("Orders")
-                    .HasMany(o => o.Items).WithForeignKey("OrderId");
-                opt.Entity<SqlOrderItem>()
-                    .ToTable("OrderItems");
+                opt.UseModel(model);
             });
             return Ok(result);
         }
@@ -130,6 +131,21 @@ public class OrdersController : ControllerBase
         {
             return BadRequest(ex.Message);
         }
+    }
+
+    private static FlexQueryModel BuildModel()
+    {
+        var builder = new ModelBuilder();
+        builder.Entity<SqlCustomer>()
+            .ToTable("Customers")
+            .HasOne(c => c.Address).WithForeignKey("CustomerId");
+        builder.Entity<SqlCustomer>().HasMany(c => c.Orders).WithForeignKey("CustomerId");
+        builder.Entity<SqlOrder>()
+            .ToTable("Orders")
+            .HasMany(o => o.Items).WithForeignKey("OrderId");
+        builder.Entity<SqlOrderItem>()
+            .ToTable("OrderItems");
+        return builder.Build();
     }
 }
 
@@ -149,19 +165,27 @@ public class ProductsController : ControllerBase
     [HttpGet]
     public async Task<IActionResult> Get([FromQuery] FlexQueryParameters parameters)
     {
-        var result = await ((DbConnection)_connection).FlexQueryAsync<SqlOrderItem>(parameters, opt => 
+        var model = BuildModel();
+        var result = await ((DbConnection)_connection).FlexQueryAsync<SqlOrderItem>(parameters, opt =>
         {
             opt.Dialect = _dialect;
-            opt.Entity<SqlCustomer>()
-                .ToTable("Customers")
-                .HasOne(c => c.Address).WithForeignKey("CustomerId");
-            opt.Entity<SqlCustomer>().HasMany(c => c.Orders).WithForeignKey("CustomerId");
-            opt.Entity<SqlOrder>()
-                .ToTable("Orders")
-                .HasMany(o => o.Items).WithForeignKey("OrderId");
-            opt.Entity<SqlOrderItem>()
-                .ToTable("OrderItems");
+            opt.UseModel(model);
         });
         return Ok(result);
+    }
+
+    private static FlexQueryModel BuildModel()
+    {
+        var builder = new ModelBuilder();
+        builder.Entity<SqlCustomer>()
+            .ToTable("Customers")
+            .HasOne(c => c.Address).WithForeignKey("CustomerId");
+        builder.Entity<SqlCustomer>().HasMany(c => c.Orders).WithForeignKey("CustomerId");
+        builder.Entity<SqlOrder>()
+            .ToTable("Orders")
+            .HasMany(o => o.Items).WithForeignKey("OrderId");
+        builder.Entity<SqlOrderItem>()
+            .ToTable("OrderItems");
+        return builder.Build();
     }
 }

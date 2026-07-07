@@ -1,8 +1,11 @@
 using System.Data.Common;
 using System.Reflection;
 using FlexQuery.NET.Dapper;
+using FlexQuery.NET.Dapper.Configuration;
 using FlexQuery.NET.Dapper.Dialects;
 using FlexQuery.NET.Dapper.Mapping;
+using FlexQuery.NET.Dapper.Mapping.Configuration;
+using DapperModelBuilder = FlexQuery.NET.Dapper.Mapping.Configuration.ModelBuilder;
 using FlexQuery.NET.Models;
 using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
@@ -180,13 +183,15 @@ public class GroupedQueryExecutionTests : IDisposable
 
     private static void ConfigureMappings(DapperQueryOptions options)
     {
-        options.Entity<SqlCustomer>()
+        var builder = new DapperModelBuilder();
+        builder.Entity<SqlCustomer>()
             .ToTable("Customers")
             .HasMany(c => c.Orders).WithForeignKey("CustomerId");
-        options.Entity<SqlOrder>()
+        builder.Entity<SqlOrder>()
             .ToTable("Orders")
             .HasMany(o => o.Items).WithForeignKey("OrderId");
-        options.Entity<SqlOrderItem>().ToTable("OrderItems");
+        builder.Entity<SqlOrderItem>().ToTable("OrderItems");
+        options.UseModel(builder.Build());
     }
 
     private static QueryOptions GroupedOptions(int page, int pageSize)

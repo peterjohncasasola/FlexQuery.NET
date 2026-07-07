@@ -1,11 +1,8 @@
-using System.Data.Common;
 using FlexQuery.NET.Dapper;
 using FlexQuery.NET.Dapper.Dialects;
-using FlexQuery.NET.Dapper.Mapping;
+using DapperModelBuilder = FlexQuery.NET.Dapper.Mapping.Configuration.ModelBuilder;
 using FlexQuery.NET.EntityFrameworkCore;
-using FlexQuery.NET.Extensions;
 using FlexQuery.NET.Models;
-using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
 
 namespace FlexQuery.NET.Tests.Tests;
@@ -261,13 +258,15 @@ public class ResultCountTests
 
     private static DapperQueryOptions CreateRegistry(DapperQueryOptions registry)
     {
-        registry.Entity<SqlCustomer>()
+        var builder = new DapperModelBuilder();
+        builder.Entity<SqlCustomer>()
             .ToTable("Customers")
             .HasMany(c => c.Orders).WithForeignKey("CustomerId");
-        registry.Entity<SqlOrder>()
+        builder.Entity<SqlOrder>()
             .ToTable("Orders")
             .HasMany(o => o.Items).WithForeignKey("OrderId");
-        registry.Entity<SqlOrderItem>().ToTable("OrderItems");
+        builder.Entity<SqlOrderItem>().ToTable("OrderItems");
+        registry.UseModel(builder.Build());
         return registry;
     }
 }

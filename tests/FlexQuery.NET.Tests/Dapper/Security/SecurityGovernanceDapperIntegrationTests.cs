@@ -3,11 +3,14 @@ using System.Reflection;
 using Microsoft.EntityFrameworkCore;
 using FlexQuery.NET.Constants;
 using FlexQuery.NET.Dapper;
+using FlexQuery.NET.Dapper.Configuration;
 using FlexQuery.NET.Dapper.Dialects;
 using FlexQuery.NET.Dapper.Mapping;
+using FlexQuery.NET.Dapper.Mapping.Configuration;
+using DapperModelBuilder = FlexQuery.NET.Dapper.Mapping.Configuration.ModelBuilder;
 using FlexQuery.NET.Dapper.Sql.Translators;
 using FlexQuery.NET.Exceptions;
-using FlexQuery.NET.Extensions;
+using FlexQuery.NET;
 using FlexQuery.NET.Models;
 using FlexQuery.NET.Tests.Fixtures;
 using FluentAssertions;
@@ -527,12 +530,16 @@ public class SecurityGovernanceDapperIntegrationTests
             GroupableFields = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "Id" }
         };
         
+        var modelBuilder = new DapperModelBuilder();
+        modelBuilder.Entity<GovEntity>().ToTable("Entities");
+        var model = modelBuilder.Build();
+
         var dapperOptions = new DapperQueryOptions(execOptions)
         {
             Dialect = new SqliteDialect(),
             IncludeTotalCount = true
         };
-        dapperOptions.Entity<GovEntity>().ToTable("Entities");
+        dapperOptions.UseModel(model);
         var act = async () => await connection.FlexQueryAsync<GovEntity>(options, dapperOptions);
 
         await act.Should().ThrowAsync<QueryValidationException>();
@@ -690,12 +697,16 @@ public class SecurityGovernanceDapperIntegrationTests
             AllowedFields = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "Id", "Name" }
         };
 
+        var modelBuilder = new DapperModelBuilder();
+        modelBuilder.Entity<SortTestRow>().ToTable("SortTest");
+        var model = modelBuilder.Build();
+
         var dapperOptions = new DapperQueryOptions(execOptions)
         {
             Dialect = new SqliteDialect(),
             IncludeTotalCount = true
         };
-        dapperOptions.Entity<SortTestRow>().ToTable("SortTest");
+        dapperOptions.UseModel(model);
         var result = await conn.FlexQueryAsync<SortTestRow>(options, dapperOptions);
 
         result.Data.Should().HaveCount(3);
@@ -734,15 +745,15 @@ public class SecurityGovernanceDapperIntegrationTests
 
     private static void CreateOrderRegistry(DapperQueryOptions options)
     {
-        
-        options.Entity<SqlCustomer>()
+        var builder = new DapperModelBuilder();
+        builder.Entity<SqlCustomer>()
             .ToTable("Customers")
             .HasMany(c => c.Orders).WithForeignKey("CustomerId");
-        options.Entity<SqlOrder>()
+        builder.Entity<SqlOrder>()
             .ToTable("Orders")
             .HasMany(o => o.Items).WithForeignKey("OrderId");
-        options.Entity<SqlOrderItem>().ToTable("OrderItems");
-        
+        builder.Entity<SqlOrderItem>().ToTable("OrderItems");
+        options.UseModel(builder.Build());
     }
 
     // ── Inline entity types for SQL translation tests ──────────────

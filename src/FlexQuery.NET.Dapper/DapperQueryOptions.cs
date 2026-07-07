@@ -1,50 +1,39 @@
 using FlexQuery.NET.Models;
+using FlexQuery.NET.Dapper.Configuration;
 using FlexQuery.NET.Dapper.Dialects;
-using FlexQuery.NET.Dapper.Mapping;
-using FlexQuery.NET.Dapper.Mapping.Builders;
 
 namespace FlexQuery.NET.Dapper;
 
-/// <summary>
-/// Dapper-specific execution options that extends QueryExecutionOptions with SQL dialect configuration.
-/// </summary>
 public sealed class DapperQueryOptions : BaseQueryOptions
 {
-    /// <summary>
-    /// Default constructor with Dapper-specific defaults.
-    /// </summary>
     public DapperQueryOptions()
     {
-        // Dapper defaults
         IncludeTotalCount = true;
     }
 
-    /// <summary>
-    /// Copy constructor - creates a new instance by copying all properties from <paramref name="source"/>.
-    /// </summary>
     public DapperQueryOptions(QueryExecutionOptions source)
     {
         ArgumentNullException.ThrowIfNull(source);
         CopyBaseOptions(source, this);
     }
 
-    /// <summary>Converts to a base QueryExecutionOptions instance.</summary>
+    internal FlexQueryModel? Model { get; private set; }
+
+    public void UseModel(FlexQueryModel model)
+    {
+        Model = model ?? throw new ArgumentNullException(nameof(model));
+    }
+
+    public ISqlDialect? Dialect { get; set; }
+
+    public int CommandTimeoutSeconds { get; set; } = 30;
+
     public QueryExecutionOptions ToQueryExecutionOptions()
     {
         var target = new QueryExecutionOptions();
         CopyBaseOptions(this, target);
         return target;
     }
-    
-    /// <summary>SQL dialect to use for query generation. If null, resolves via SqlDialectResolver</summary>
-    public ISqlDialect? Dialect { get; set; }
-
-    internal MappingRegistry Registry { get; } = new();
-
-    /// <summary>Command timeout in seconds.</summary>
-    public int CommandTimeoutSeconds { get; set; } = 30;
-    
-    public EntityTypeBuilder<TEntity> Entity<TEntity>() where TEntity : class => Registry.Entity<TEntity>();
 
     private static void CopyBaseOptions(BaseQueryOptions source, BaseQueryOptions target)
     {

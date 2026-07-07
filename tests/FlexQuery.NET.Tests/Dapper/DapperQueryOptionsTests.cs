@@ -1,5 +1,7 @@
 using FlexQuery.NET.Dapper;
+using FlexQuery.NET.Dapper.Configuration;
 using FlexQuery.NET.Dapper.Mapping;
+using FlexQuery.NET.Dapper.Mapping.Configuration;
 using FlexQuery.NET.Models;
 using FlexQuery.NET.Security;
 using FluentAssertions;
@@ -90,15 +92,37 @@ public class DapperQueryOptionsTests
     }
 
     [Fact]
-    public void Entity_WhenRegistryIsMissing_PersistsConfiguredMapping()
+    public void UseModel_WhenSet_AppliesConfiguredMappings()
+    {
+        var builder = new ModelBuilder();
+        builder.Entity<TestEntity>()
+            .ToTable("custom_entities")
+            .HasKey(e => e.Id);
+        var model = builder.Build();
+
+        var options = new DapperQueryOptions();
+        options.UseModel(model);
+
+        options.Model.Should().NotBeNull();
+        options.Model.Should().BeSameAs(model);
+    }
+
+    [Fact]
+    public void UseModel_WhenNull_ThrowsArgumentNullException()
     {
         var options = new DapperQueryOptions();
 
-        options.Entity<TestEntity>().ToTable("custom_entities");
+        var act = () => options.UseModel(null!);
 
-        options.Registry.Should().NotBeNull();
-        options.Registry.GetMapping(typeof(TestEntity)).TableName
-            .Should().Be("custom_entities");
+        act.Should().Throw<ArgumentNullException>();
+    }
+
+    [Fact]
+    public void UseModel_ConventionsOnly_WhenNotSet_ReturnsNull()
+    {
+        var options = new DapperQueryOptions();
+
+        options.Model.Should().BeNull();
     }
 
     private sealed class AllowAllResolver : IFieldAccessResolver

@@ -8,10 +8,11 @@ using FlexQuery.NET.Internal;
 using FlexQuery.NET.Models;
 using FlexQuery.NET.Parsers;
 using FlexQuery.NET.Projection;
+using FlexQuery.NET.Dapper.Mapping;
 using FlexQuery.NET.Dapper.Sql;
 using FlexQuery.NET.Dapper.Sql.Translators;
 using FlexQuery.NET.Dapper.Dialects;
-using FlexQuery.NET.Extensions;
+using FlexQuery.NET;
 using Microsoft.Extensions.Primitives;
 using FlexQuery.NET.Constants;
 using FlexQuery.NET.Dapper.Materialization;
@@ -186,7 +187,7 @@ public static class FlexQueryDapperExtensions
 
         var dialect = dapperQueryOptions.Dialect ?? SqlDialectResolver.Resolve(connection);
 
-        var registry = dapperQueryOptions.Registry;
+        var registry = dapperQueryOptions.Model?.Registry ?? new MappingRegistry();
         options.Items[ContextKeys.EntityType] = typeof(T);
 
         var translator = new SqlTranslator(registry, dialect);
