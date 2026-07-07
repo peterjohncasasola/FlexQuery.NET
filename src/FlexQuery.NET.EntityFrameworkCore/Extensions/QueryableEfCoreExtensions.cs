@@ -1,4 +1,5 @@
 using FlexQuery.NET.Builders;
+using FlexQuery.NET.EntityFrameworkCore.Options;
 using FlexQuery.NET.EntityFrameworkCore.SqlFormatting;
 using FlexQuery.NET.Internal;
 using FlexQuery.NET.Models;
@@ -13,9 +14,6 @@ using FlexQuery.NET.Options;
 
 namespace FlexQuery.NET.EntityFrameworkCore;
 
-/// <summary>
-/// EF Core-specific async extensions for materializing query results.
-/// </summary>
 public static class QueryableEfCoreExtensions
 {
     private static readonly MethodInfo ExecuteGroupedQueryMethod = typeof(QueryableEfCoreExtensions)
@@ -24,31 +22,6 @@ public static class QueryableEfCoreExtensions
     private static readonly MethodInfo CountGroupedQueryMethod = typeof(QueryableEfCoreExtensions)
         .GetMethod(nameof(CountGroupedQueryAsync), BindingFlags.NonPublic | BindingFlags.Static)!;
 
-    // ── Include Pipeline ─────────────────────────────────────────────────
-
-    /// <summary>
-    /// Applies the <b>Include Pipeline</b>: translates every
-    /// <see cref="QueryOptions.Expand"/>
-    /// into EF Core <c>Include</c> / <c>ThenInclude</c> calls, each optionally
-    /// filtered by an inline <c>Where</c> clause.
-    ///
-    /// <para>
-    /// This pipeline is <b>completely independent</b> of the WHERE pipeline
-    /// (<c>FlexQueryAsync</c>).
-    /// It must be called <em>before</em> any materialisation (e.g.
-    /// <c>ToListAsync</c>) but after <c>ApplyQueryOptions</c>.
-    /// </para>
-    /// </summary>
-    /// <example>
-    /// <code>
-    /// var options = QueryOptionsParser.Parse(Request.Query);
-    ///
-    /// var result = await _context.Customers
-    ///     .ApplyQueryOptions(options)           // WHERE pipeline
-    ///     .ApplyExpandIncludes(options)       // INCLUDE pipeline
-    ///     .ToListAsync();
-    /// </code>
-    /// </example>
     public static IQueryable<T> ApplyExpandIncludes<T>(
         this IQueryable<T> query,
         QueryOptions options)
@@ -58,46 +31,24 @@ public static class QueryableEfCoreExtensions
         return IncludeBuilder.Apply(query, options);
     }
 
-    /// <summary>
-    /// Parses a <see cref="FlexQueryParameters"/>, validates it against server rules,
-    /// and applies it to the query to return a paged result set asynchronously.
-    /// </summary>
-    /// <param name="query">The source queryable.</param>
-    /// <param name="parameters">The OpenAPI-friendly DTO containing user parameters.</param>
-    /// <param name="configure">Optional configuration for server-side security and execution rules.</param>
-    /// <param name="cancellationToken">A <see cref="CancellationToken" /> to observe while waiting for the task to complete.</param>
-    /// <param name="configureExecution">Optional configuration for the execution pipeline (e.g. event listeners).</param>
-    /// <returns>A paged query result.</returns>
-    /// <exception cref="OperationCanceledException">If the <see cref="CancellationToken" /> is canceled.</exception>
     public static async Task<QueryResult<object>> FlexQueryAsync<T>(
         this IQueryable<T> query,
         FlexQueryParameters parameters,
-        Action<QueryExecutionOptions>? configure = null,
+        Action<EfCoreQueryOptions>? configure = null,
         CancellationToken cancellationToken = default,
         Action<FlexQueryExecutionConfig>? configureExecution = null)
         where T : class
     {
-        var exec = new QueryExecutionOptions();
+        var exec = new EfCoreQueryOptions();
         configure?.Invoke(exec);
 
         return await query.FlexQueryAsync(parameters, exec, cancellationToken, configureExecution);
     }
 
-    /// <summary>
-    /// Parses a <see cref="FlexQueryParameters"/>, validates it against server rules,
-    /// and applies it to the query to return a paged result set asynchronously.
-    /// </summary>
-    /// <param name="query">The source queryable.</param>
-    /// <param name="parameters">The OpenAPI-friendly DTO containing user parameters.</param>
-    /// <param name="execOptions">Server-side security and execution rules.</param>
-    /// <param name="cancellationToken">A <see cref="CancellationToken" /> to observe while waiting for the task to complete.</param>
-    /// <param name="configureExecution">Optional configuration for the execution pipeline (e.g. event listeners).</param>
-    /// <returns>A paged query result.</returns>
-    /// <exception cref="OperationCanceledException">If the <see cref="CancellationToken" /> is canceled.</exception>
     public static async Task<QueryResult<object>> FlexQueryAsync<T>(
         this IQueryable<T> query,
         FlexQueryParameters parameters,
-        QueryExecutionOptions execOptions,
+        EfCoreQueryOptions execOptions,
         CancellationToken cancellationToken = default,
         Action<FlexQueryExecutionConfig>? configureExecution = null)
         where T : class
@@ -130,57 +81,24 @@ public static class QueryableEfCoreExtensions
         return await query.ApplyFlexQueryAsync(options, hasProjection, execOptions, ctx);
     }
 
-    /// <summary>
-    /// Executes a pre-parsed <see cref="QueryOptions"/> against an EF Core queryable
-    /// and returns a paged result set asynchronously.
-    /// </summary>
-    /// <remarks>
-    /// Use this overload when composing with adapter packages (e.g. FlexQuery.NET.Adapters.AgGrid,
-    /// FlexQuery.NET.Parsers.MiniOData) that parse external formats into <see cref="QueryOptions"/>.
-    /// <code>
-    /// // Step 1: Parse (adapter package)
-    /// var options = AgGridQueryOptionsParser.Parse(agGridRequest);
-    ///
-    /// // Step 2: Execute (EF Core package)
-    /// var result = await dbContext.Entities.FlexQueryAsync(options);
-    /// </code>
-    /// </remarks>
-    /// <param name="query">The source queryable.</param>
-    /// <param name="options">Pre-parsed query options from any adapter or manual construction.</param>
-    /// <param name="configure">Optional configuration for server-side security and execution rules.</param>
-    /// <param name="cancellationToken">A <see cref="CancellationToken" /> to observe while waiting for the task to complete.</param>
-    /// <param name="configureExecution">Optional configuration for the execution pipeline (e.g. event listeners).</param>
-    /// <returns>A paged query result.</returns>
-    /// <exception cref="OperationCanceledException">If the <see cref="CancellationToken" /> is canceled.</exception>
     public static async Task<QueryResult<object>> FlexQueryAsync<T>(
         this IQueryable<T> query,
         QueryOptions options,
-        Action<QueryExecutionOptions>? configure = null,
+        Action<EfCoreQueryOptions>? configure = null,
         CancellationToken cancellationToken = default,
         Action<FlexQueryExecutionConfig>? configureExecution = null)
         where T : class
     {
-        var execOptions = new QueryExecutionOptions();
+        var execOptions = new EfCoreQueryOptions();
         configure?.Invoke(execOptions);
 
         return await query.FlexQueryAsync(options, execOptions, cancellationToken, configureExecution);
     }
 
-    /// <summary>
-    /// Executes a pre-parsed <see cref="QueryOptions"/> against an EF Core queryable
-    /// and returns a paged result set asynchronously.
-    /// </summary>
-    /// <param name="query">The source queryable.</param>
-    /// <param name="options">Pre-parsed query options from any adapter or manual construction.</param>
-    /// <param name="execOptions">Server-side security and execution rules.</param>
-    /// <param name="cancellationToken">A <see cref="CancellationToken" /> to observe while waiting for the task to complete.</param>
-    /// <param name="configureExecution">Optional configuration for the execution pipeline (e.g. event listeners).</param>
-    /// <returns>A paged query result.</returns>
-    /// <exception cref="OperationCanceledException">If the <see cref="CancellationToken" /> is canceled.</exception>
     public static async Task<QueryResult<object>> FlexQueryAsync<T>(
         this IQueryable<T> query,
         QueryOptions options,
-        QueryExecutionOptions execOptions,
+        EfCoreQueryOptions execOptions,
         CancellationToken cancellationToken = default,
         Action<FlexQueryExecutionConfig>? configureExecution = null)
         where T : class
@@ -215,8 +133,43 @@ public static class QueryableEfCoreExtensions
         return await query.ApplyFlexQueryAsync(options, hasProjection, execOptions, ctx);
     }
 
+    public static async Task<QueryResult<object>> FlexQueryAsync<T>(
+        this IQueryable<T> query,
+        FlexQueryParameters parameters,
+        QueryExecutionOptions execOptions,
+        CancellationToken cancellationToken = default,
+        Action<FlexQueryExecutionConfig>? configureExecution = null)
+        where T : class
+    {
+        return await query.FlexQueryAsync(parameters, new EfCoreQueryOptions
+        {
+            IncludeTotalCount = execOptions.IncludeTotalCount,
+            DefaultPageSize = execOptions.DefaultPageSize,
+            MaxPageSize = execOptions.MaxPageSize,
+            CaseInsensitive = execOptions.CaseInsensitive,
+            StrictFieldValidation = execOptions.StrictFieldValidation,
+            MaxFieldDepth = execOptions.MaxFieldDepth,
+            AllowedFields = execOptions.AllowedFields,
+            BlockedFields = execOptions.BlockedFields,
+            AllowedIncludes = execOptions.AllowedIncludes,
+            ExpressionMappings = execOptions.ExpressionMappings,
+            AllowedOperators = execOptions.AllowedOperators,
+            FilterableFields = execOptions.FilterableFields,
+            SortableFields = execOptions.SortableFields,
+            SelectableFields = execOptions.SelectableFields,
+            GroupableFields = execOptions.GroupableFields,
+            AggregatableFields = execOptions.AggregatableFields,
+            DefaultSortField = execOptions.DefaultSortField,
+            DefaultSortDescending = execOptions.DefaultSortDescending,
+            FieldMappings = execOptions.FieldMappings,
+            RoleAllowedFields = execOptions.RoleAllowedFields,
+            CurrentRole = execOptions.CurrentRole,
+            AllowedFieldsResolver = execOptions.AllowedFieldsResolver
+        }, cancellationToken, configureExecution);
+    }
+
     private static async Task<QueryResult<object>> ApplyFlexQueryAsync<T>(this IQueryable<T> query, 
-        QueryOptions options, bool hasProjection, QueryExecutionOptions? execOptions = null, FlexQueryExecutionContext? ctx = null)
+        QueryOptions options, bool hasProjection, EfCoreQueryOptions? execOptions = null, FlexQueryExecutionContext? ctx = null)
         where T : class
     {
         var ct = ctx?.CancellationToken ?? CancellationToken.None;
@@ -283,12 +236,8 @@ public static class QueryableEfCoreExtensions
 
         filtered = QueryBuilder.ApplyPaging(filtered, options);
 
-        // Note: ApplySelect already incorporates FilteredIncludes filters into the projection tree,
-        // so calling ApplyExpandIncludes here is technically redundant but ensures consistency
-        // if the projection engine behavior changes.
         filtered = filtered.ApplyExpandIncludes(options);
 
-        // Capture SQL for translation event
         if (ctx?.Listener is not null)
         {
             var (sql, sparams) = TryGetSqlWithParameters(filtered);
@@ -422,5 +371,4 @@ public static class QueryableEfCoreExtensions
             options.GroupBy ?? [],
             options.Aggregates);
     }
-
 }
