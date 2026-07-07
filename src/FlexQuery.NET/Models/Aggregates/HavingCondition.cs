@@ -1,4 +1,4 @@
-namespace FlexQuery.NET.Models;
+namespace FlexQuery.NET.Models.Aggregates;
 
 /// <summary>
 /// Represents a single HAVING condition against an aggregate projection.

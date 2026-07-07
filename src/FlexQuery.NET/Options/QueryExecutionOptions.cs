@@ -1,6 +1,4 @@
-using FlexQuery.NET.Security;
-
-namespace FlexQuery.NET.Models;
+namespace FlexQuery.NET.Options;
 
 /// <summary>
 /// Defines server-side execution rules, validation constraints, and security policies.
@@ -29,7 +27,7 @@ public sealed class QueryExecutionOptions : BaseQueryOptions
 
     /// <summary>
     /// If true, enables expression caching for this query.
-    /// When null (default), the global setting from <see cref="Configuration.FlexQueryOptions"/> is used.
+    /// When null (default), the global setting from <see cref="Options.FlexQueryOptions"/> is used.
     /// </summary>
     public bool? EnableCache { get; set; }
 

@@ -1,4 +1,4 @@
-using FlexQuery.NET.Models;
+using FlexQuery.NET.Internal;
 
 namespace FlexQuery.NET.Projection;
 

@@ -1,4 +1,5 @@
 using FlexQuery.NET.Constants;
+using FlexQuery.NET.Execution;
 using FlexQuery.NET.Models;
 using FlexQuery.NET.Parsers;
 
@@ -16,10 +17,10 @@ internal sealed class HavingAliasIntegrityRule : IValidationRule
     public void Validate(QueryOptions options, QueryContext context, ValidationResult result)
     {
         if (options.Having == null) return;
-        if ((options.Aggregates?.Count ?? 0) == 0) return;
+        if (options.Aggregates.Count == 0) return;
 
         var havingAlias = ParserUtilities.BuildAggregateAlias(options.Having.Function, options.Having.Field);
-        var match = options.Aggregates != null && options.Aggregates.Any(a =>
+        var match = options.Aggregates.Any(a =>
             string.Equals(
                 ParserUtilities.BuildAggregateAlias(a.Function, a.Field),
                 havingAlias,

@@ -1,7 +1,7 @@
 using FlexQuery.NET.Models;
 using FlexQuery.NET.Validation;
-using FlexQuery.NET.Exceptions;
-using System.ComponentModel;
+using FlexQuery.NET.Execution;
+using FlexQuery.NET.Options;
 
 namespace FlexQuery.NET;
 

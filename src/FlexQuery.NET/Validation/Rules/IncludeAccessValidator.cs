@@ -1,8 +1,9 @@
 using FlexQuery.NET.Exceptions;
 using FlexQuery.NET.Models;
+using FlexQuery.NET.Models.Projection;
 using FlexQuery.NET.Constants;
-using System;
-using System.Collections.Generic;
+using FlexQuery.NET.Execution;
+using FlexQuery.NET.Options;
 
 namespace FlexQuery.NET.Validation.Rules;
 
@@ -31,7 +32,7 @@ internal sealed class IncludeAccessValidator : IValidationRule
         // Check flat includes - remove unauthorized ones in non-strict mode
         if (options.Includes is not null)
         {
-            for (int i = options.Includes.Count - 1; i >= 0; i--)
+            for (var i = options.Includes.Count - 1; i >= 0; i--)
             {
                 var include = options.Includes[i];
                 if (!allowedIncludes.Contains(include))
@@ -49,9 +50,9 @@ internal sealed class IncludeAccessValidator : IValidationRule
         }
 
         // Check filtered includes - remove unauthorized ones in non-strict mode
-        if (options.Expand is not null)
+        if (options.Expand is null) return;
         {
-            for (int i = options.Expand.Count - 1; i >= 0; i--)
+            for (var i = options.Expand.Count - 1; i >= 0; i--)
             {
                 var node = options.Expand[i];
                 if (ShouldRemoveIncludeNode(node, string.Empty, allowedIncludes, execOptions, result))
@@ -82,7 +83,7 @@ internal sealed class IncludeAccessValidator : IValidationRule
             result.Errors.Add(new ValidationError(message, ValidationErrorCodes.IncludeAccessDenied, currentPath));
             
             // Remove unauthorized child nodes
-            for (int i = node.Children.Count - 1; i >= 0; i--)
+            for (var i = node.Children.Count - 1; i >= 0; i--)
             {
                 ShouldRemoveIncludeNode(node.Children[i], currentPath, allowedIncludes, options, result);
             }
@@ -91,7 +92,7 @@ internal sealed class IncludeAccessValidator : IValidationRule
         }
 
         // Check children recursively
-        for (int i = node.Children.Count - 1; i >= 0; i--)
+        for (var i = node.Children.Count - 1; i >= 0; i--)
         {
             var child = node.Children[i];
             if (ShouldRemoveIncludeNode(child, currentPath, allowedIncludes, options, result))

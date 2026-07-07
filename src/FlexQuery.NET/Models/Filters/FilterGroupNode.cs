@@ -1,4 +1,4 @@
-namespace FlexQuery.NET.Models;
+namespace FlexQuery.NET.Models.Filters;
 
 /// <summary>
 /// A group of filter nodes joined by a logical operator.

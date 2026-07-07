@@ -1,8 +1,9 @@
 using System.Linq.Expressions;
-using System.Reflection;
 using FlexQuery.NET.Caching;
 using FlexQuery.NET.Models;
-using FlexQuery.NET.Projection;
+using FlexQuery.NET.Models.Filters;
+using FlexQuery.NET.Models.Paging;
+using FlexQuery.NET.Models.Projection;
 using FlexQuery.NET.Security;
 using FlexQuery.NET.Expressions;
 

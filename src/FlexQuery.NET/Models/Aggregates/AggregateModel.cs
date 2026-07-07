@@ -1,4 +1,4 @@
-namespace FlexQuery.NET.Models;
+namespace FlexQuery.NET.Models.Aggregates;
 
 /// <summary>
 /// Represents an aggregate projection expression (sum/count/avg).

@@ -1,4 +1,6 @@
-namespace FlexQuery.NET.Models;
+using FlexQuery.NET.Models;
+
+namespace FlexQuery.NET.Diagnostics;
 
 /// <summary>
 /// Event data raised after query options have been successfully parsed from the request.

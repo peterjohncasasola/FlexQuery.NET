@@ -3,7 +3,7 @@ using System.Reflection;
 using System.Text.Json;
 using FlexQuery.NET.Caching;
 using FlexQuery.NET.Expressions;
-using FlexQuery.NET.Models;
+using FlexQuery.NET.Models.Paging;
 using FlexQuery.NET.Validation;
 
 namespace FlexQuery.NET.Builders;

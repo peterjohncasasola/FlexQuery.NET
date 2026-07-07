@@ -1,6 +1,7 @@
 using FlexQuery.NET.Caching;
 using FlexQuery.NET.Helpers;
 using FlexQuery.NET.Metadata;
+using FlexQuery.NET.Internal;
 using FlexQuery.NET.Models;
 using FlexQuery.NET.Security;
 

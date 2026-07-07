@@ -1,7 +1,7 @@
 using System.Security.Cryptography;
 using System.Text;
 using FlexQuery.NET.Constants;
-using FlexQuery.NET.Models;
+using FlexQuery.NET.Models.Filters;
 
 namespace FlexQuery.NET.Filters;
 

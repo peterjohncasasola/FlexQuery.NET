@@ -1,4 +1,4 @@
-using FlexQuery.NET.Models;
+using FlexQuery.NET.Models.Paging;
 
 namespace FlexQuery.NET.Builders.Fluent;
 

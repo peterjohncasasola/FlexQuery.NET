@@ -1,4 +1,4 @@
-namespace FlexQuery.NET.Models;
+namespace FlexQuery.NET.Models.Projection;
 
 /// <summary>
 /// Defines how projected data should be shaped.

@@ -1,6 +1,7 @@
-using FlexQuery.NET.Caching;
 using FlexQuery.NET.Constants;
+using FlexQuery.NET.Execution;
 using FlexQuery.NET.Models;
+using FlexQuery.NET.Models.Projection;
 using FlexQuery.NET.Security;
 
 namespace FlexQuery.NET.Validation.Rules;

@@ -1,5 +1,4 @@
-using FlexQuery.NET.Configuration;
-using FlexQuery.NET.Models;
+using FlexQuery.NET.Options;
 
 namespace FlexQuery.NET.Internal;
 

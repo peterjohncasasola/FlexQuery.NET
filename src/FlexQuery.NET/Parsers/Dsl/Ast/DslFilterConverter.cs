@@ -1,5 +1,5 @@
 using FlexQuery.NET.Constants;
-using FlexQuery.NET.Models;
+using FlexQuery.NET.Models.Filters;
 
 namespace FlexQuery.NET.Parsers.Dsl;
 

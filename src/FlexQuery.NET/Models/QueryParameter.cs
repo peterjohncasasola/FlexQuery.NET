@@ -1,3 +1,5 @@
+using FlexQuery.NET.Models.Enums;
+
 namespace FlexQuery.NET.Models;
 
 /// <summary>

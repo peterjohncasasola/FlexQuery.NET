@@ -1,4 +1,7 @@
-namespace FlexQuery.NET.Models;
+using FlexQuery.NET.Diagnostics;
+using FlexQuery.NET.Models;
+
+namespace FlexQuery.NET.Execution;
 
 /// <summary>
 /// Observes read-only execution events during a FlexQuery pipeline run.

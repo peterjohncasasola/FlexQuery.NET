@@ -1,4 +1,6 @@
-namespace FlexQuery.NET.Models;
+using FlexQuery.NET.Models;
+
+namespace FlexQuery.NET.Diagnostics;
 
 /// <summary>
 /// Event data raised after the query has been translated into the underlying query representation

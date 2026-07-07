@@ -1,5 +1,7 @@
 using System.Text.Json;
+using FlexQuery.NET.Internal;
 using FlexQuery.NET.Models;
+using FlexQuery.NET.Models.Projection;
 
 namespace FlexQuery.NET.Helpers;
 

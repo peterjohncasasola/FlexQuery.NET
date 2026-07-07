@@ -1,5 +1,6 @@
 using System.Text.RegularExpressions;
-using FlexQuery.NET.Models;
+using FlexQuery.NET.Models.Filters;
+using FlexQuery.NET.Models.Projection;
 using FlexQuery.NET.Parsers.Dsl;
 
 namespace FlexQuery.NET.Parsers;

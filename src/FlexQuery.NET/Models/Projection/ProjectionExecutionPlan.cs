@@ -1,6 +1,6 @@
 using System.Linq.Expressions;
 
-namespace FlexQuery.NET.Models;
+namespace FlexQuery.NET.Models.Projection;
 
 /// <summary>
 /// Represents metadata and artifacts generated during projection planning.

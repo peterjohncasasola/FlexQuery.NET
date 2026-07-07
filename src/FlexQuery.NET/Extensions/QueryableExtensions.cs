@@ -1,9 +1,8 @@
 using FlexQuery.NET.Builders;
 using FlexQuery.NET.Exceptions;
-using FlexQuery.NET;
 using FlexQuery.NET.Models;
-using FlexQuery.NET.Parsers;
 using System.ComponentModel;
+using FlexQuery.NET.Options;
 
 namespace FlexQuery.NET;
 

@@ -1,8 +1,8 @@
 using System.Linq.Expressions;
 using System.Reflection;
 using FlexQuery.NET.Expressions;
-using FlexQuery.NET.Helpers;
 using FlexQuery.NET.Models;
+using FlexQuery.NET.Models.Aggregates;
 using FlexQuery.NET.Parsers;
 using FlexQuery.NET.Resolvers;
 using FlexQuery.NET.Security;

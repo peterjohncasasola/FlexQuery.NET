@@ -1,5 +1,5 @@
 using FlexQuery.NET.Caching;
-using FlexQuery.NET.Models;
+using FlexQuery.NET.Models.Aggregates;
 
 namespace FlexQuery.NET.Builders;
 

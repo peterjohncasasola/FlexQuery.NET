@@ -1,4 +1,6 @@
-namespace FlexQuery.NET.Models;
+using FlexQuery.NET.Options;
+
+namespace FlexQuery.NET.Execution;
 
 /// <summary>
 /// Provides contextual information for the query validation process.

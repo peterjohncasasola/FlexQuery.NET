@@ -1,4 +1,4 @@
-namespace FlexQuery.NET.Models;
+namespace FlexQuery.NET.Models.Filters;
 
 /// <summary>
 /// A single field-level filter condition.

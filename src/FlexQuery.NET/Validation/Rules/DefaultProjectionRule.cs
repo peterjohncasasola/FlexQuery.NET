@@ -1,6 +1,8 @@
 using FlexQuery.NET.Caching;
+using FlexQuery.NET.Execution;
 using FlexQuery.NET.Models;
 using FlexQuery.NET.Metadata;
+using FlexQuery.NET.Options;
 using FlexQuery.NET.Security;
 
 namespace FlexQuery.NET.Validation.Rules;
@@ -26,7 +28,7 @@ internal static class DefaultProjectionHelper
 {
     public static void InjectDefaultProjection(QueryOptions options, QueryContext ctx, QueryExecutionOptions execOptions)
     {
-        if (options.Select != null && options.Select.Count > 0) return;
+        if (options.Select is { Count: > 0 }) return;
         if (options.SelectTree != null) return;
         if (options.HasProjection()) return;
 
@@ -51,7 +53,7 @@ internal static class DefaultProjectionHelper
             return;
         }
 
-        if (execOptions.BlockedFields?.Count > 0 && ctx?.TargetType != null)
+        if (execOptions.BlockedFields?.Count > 0 && ctx.TargetType != null)
         {
             var allScalars = ReflectionCache.GetProperties(ctx.TargetType)
                 .Where(p => TypeClassification.IsScalarType(p.PropertyType))
@@ -99,7 +101,7 @@ internal static class DefaultProjectionHelper
 
         if (string.IsNullOrEmpty(pathBeforeStar))
         {
-            ExpandUnderType(type, string.Empty, pattern, result);
+            ExpandUnderType(type, string.Empty, result);
         }
         else
         {
@@ -116,11 +118,11 @@ internal static class DefaultProjectionHelper
                 if (currentType == null) return;
             }
 
-            ExpandUnderType(currentType, string.Join(".", prefix), pattern, result);
+            ExpandUnderType(currentType, string.Join(".", prefix), result);
         }
     }
 
-    private static void ExpandUnderType(Type type, string prefix, string originalPattern, List<string> result)
+    private static void ExpandUnderType(Type type, string prefix, List<string> result)
     {
         var allProps = ReflectionCache.GetProperties(type);
 
@@ -141,7 +143,7 @@ internal static class DefaultProjectionHelper
                 if (childType != null && childType != type)
                 {
                     var childPrefix = string.IsNullOrEmpty(prefix) ? prop.Name : $"{prefix}.{prop.Name}";
-                    ExpandUnderType(childType, childPrefix, originalPattern, result);
+                    ExpandUnderType(childType, childPrefix, result);
                 }
             }
         }

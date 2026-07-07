@@ -3,7 +3,9 @@ using System.Reflection;
 using FlexQuery.NET.Caching;
 using FlexQuery.NET.Expressions;
 using FlexQuery.NET.Filters;
+using FlexQuery.NET.Internal;
 using FlexQuery.NET.Models;
+using FlexQuery.NET.Models.Filters;
 using FlexQuery.NET.Projection;
 using FlexQuery.NET.Resolvers;
 

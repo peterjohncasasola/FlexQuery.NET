@@ -1,8 +1,6 @@
-using System.Collections.Concurrent;
 using System.Linq.Expressions;
 using FlexQuery.NET.Builders;
 using FlexQuery.NET.Models;
-using FlexQuery.NET.Projection;
 
 namespace FlexQuery.NET.Caching;
 

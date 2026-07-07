@@ -4,6 +4,7 @@ using FlexQuery.NET.Caching;
 using FlexQuery.NET.Constants;
 using FlexQuery.NET.Helpers;
 using FlexQuery.NET.Models;
+using FlexQuery.NET.Models.Filters;
 using FlexQuery.NET.Resolvers;
 using FlexQuery.NET.Security;
 

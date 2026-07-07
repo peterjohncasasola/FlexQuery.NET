@@ -1,5 +1,6 @@
 using FlexQuery.NET.Models;
 using System.Linq.Expressions;
+using FlexQuery.NET.Diagnostics;
 using FlexQuery.NET.Expressions;
 
 namespace FlexQuery.NET;

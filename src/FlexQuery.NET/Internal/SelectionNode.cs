@@ -1,6 +1,7 @@
 using System.Collections.ObjectModel;
+using FlexQuery.NET.Models.Filters;
 
-namespace FlexQuery.NET.Models;
+namespace FlexQuery.NET.Internal;
 
 /// <summary>
 /// Represents a merged field/navigation selection tree.

@@ -1,11 +1,9 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Linq.Expressions;
 using FlexQuery.NET.Models;
 using FlexQuery.NET.Security;
 using FlexQuery.NET.Helpers;
 using FlexQuery.NET.Constants;
+using FlexQuery.NET.Options;
 
 namespace FlexQuery.NET.Resolvers;
 

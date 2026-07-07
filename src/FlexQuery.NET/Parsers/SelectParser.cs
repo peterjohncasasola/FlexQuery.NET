@@ -1,4 +1,5 @@
 using FlexQuery.NET.Models;
+using FlexQuery.NET.Models.Aggregates;
 using System.Text.RegularExpressions;
 using FlexQuery.NET.Constants;
 

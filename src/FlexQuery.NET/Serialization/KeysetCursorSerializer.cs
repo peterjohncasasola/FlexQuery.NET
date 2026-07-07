@@ -1,7 +1,7 @@
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using FlexQuery.NET.Models;
+using FlexQuery.NET.Internal;
 
 namespace FlexQuery.NET.Serialization;
 

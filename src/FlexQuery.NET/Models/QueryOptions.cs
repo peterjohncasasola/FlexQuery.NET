@@ -1,4 +1,10 @@
 
+using FlexQuery.NET.Internal;
+using FlexQuery.NET.Models.Aggregates;
+using FlexQuery.NET.Models.Filters;
+using FlexQuery.NET.Models.Paging;
+using FlexQuery.NET.Models.Projection;
+
 namespace FlexQuery.NET.Models;
 
 /// <summary>
@@ -13,7 +19,7 @@ public sealed class QueryOptions
     public FilterGroup? Filter { get; set; }
 
     /// <summary>The sorting expressions.</summary>
-    public List<SortNode> Sort { get; set; } = new();
+    public List<SortNode> Sort { get; set; } = [];
 
     /// <summary>Flat dot-notation selection paths (e.g. "Id", "Profile.Name").</summary>
     public List<string>? Select { get; set; }

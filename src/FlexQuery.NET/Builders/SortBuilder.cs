@@ -2,6 +2,7 @@ using System.Linq.Expressions;
 using System.Reflection;
 using FlexQuery.NET.Expressions;
 using FlexQuery.NET.Models;
+using FlexQuery.NET.Models.Paging;
 using FlexQuery.NET.Resolvers;
 using FlexQuery.NET.Security;
 

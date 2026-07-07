@@ -1,9 +1,12 @@
 using System.Linq.Expressions;
 using System.Text;
-using FlexQuery.NET.Builders;
 using FlexQuery.NET.Constants;
 using FlexQuery.NET.Filters;
+using FlexQuery.NET.Internal;
 using FlexQuery.NET.Models;
+using FlexQuery.NET.Models.Aggregates;
+using FlexQuery.NET.Models.Paging;
+using FlexQuery.NET.Models.Projection;
 
 namespace FlexQuery.NET.Caching;
 

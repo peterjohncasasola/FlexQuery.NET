@@ -1,4 +1,4 @@
-namespace FlexQuery.NET.Models;
+namespace FlexQuery.NET.Models.Paging;
 
 /// <summary>
 /// Specifies a sort field and direction in the query tree.

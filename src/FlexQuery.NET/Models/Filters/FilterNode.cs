@@ -1,4 +1,4 @@
-namespace FlexQuery.NET.Models;
+namespace FlexQuery.NET.Models.Filters;
 
 /// <summary>
 /// Base class for all filter nodes in the query tree.

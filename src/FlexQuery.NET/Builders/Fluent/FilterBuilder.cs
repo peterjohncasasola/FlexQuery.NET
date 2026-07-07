@@ -1,5 +1,5 @@
 using System.Linq.Expressions;
-using FlexQuery.NET.Models;
+using FlexQuery.NET.Models.Filters;
 
 namespace FlexQuery.NET.Builders.Fluent;
 

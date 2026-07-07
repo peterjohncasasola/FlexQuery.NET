@@ -1,6 +1,6 @@
-using FlexQuery.NET.Models;
 using System.Text.RegularExpressions;
 using FlexQuery.NET.Constants;
+using FlexQuery.NET.Models.Paging;
 
 namespace FlexQuery.NET.Parsers;
 

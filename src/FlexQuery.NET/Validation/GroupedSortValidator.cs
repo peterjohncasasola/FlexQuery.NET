@@ -1,5 +1,6 @@
 using FlexQuery.NET.Builders;
-using FlexQuery.NET.Models;
+using FlexQuery.NET.Models.Aggregates;
+using FlexQuery.NET.Models.Paging;
 
 namespace FlexQuery.NET.Validation;
 
@@ -27,7 +28,7 @@ internal static class GroupedSortValidator
 {
     /// <summary>
     /// Validates the given sorts against the group-by fields and aggregates,
-    /// returning a sanitised list that is safe to apply to a grouped query.
+    /// returning a sanitized list that is safe to apply to a grouped query.
     /// </summary>
     /// <param name="sorts">The raw sort nodes from the query options.</param>
     /// <param name="groupByFields">The GROUP BY field paths.</param>
@@ -86,7 +87,6 @@ internal static class GroupedSortValidator
                     Field = alias,
                     Descending = sort.Descending
                 });
-                continue;
             }
         }
 

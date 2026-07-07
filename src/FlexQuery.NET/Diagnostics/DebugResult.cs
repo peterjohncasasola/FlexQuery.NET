@@ -1,4 +1,4 @@
-namespace FlexQuery.NET.Models;
+namespace FlexQuery.NET.Diagnostics;
 
 /// <summary>
 /// Contains detailed information about the generated query for debugging purposes.

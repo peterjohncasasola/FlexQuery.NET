@@ -1,4 +1,4 @@
-namespace FlexQuery.NET.Models;
+namespace FlexQuery.NET.Models.Projection;
 
 /// <summary>
 /// Represents metadata about a single projected field.

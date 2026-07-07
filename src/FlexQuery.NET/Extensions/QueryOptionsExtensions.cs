@@ -1,9 +1,14 @@
-using FlexQuery.NET.Builders;
 using FlexQuery.NET.Caching;
 using FlexQuery.NET.Constants;
 using FlexQuery.NET.Exceptions;
 using FlexQuery.NET.Filters;
+using FlexQuery.NET.Internal;
 using FlexQuery.NET.Models;
+using FlexQuery.NET.Models.Aggregates;
+using FlexQuery.NET.Models.Filters;
+using FlexQuery.NET.Models.Paging;
+using FlexQuery.NET.Models.Projection;
+using FlexQuery.NET.Options;
 using FlexQuery.NET.Serialization;
 using FlexQuery.NET.Validation;
 

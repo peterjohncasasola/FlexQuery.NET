@@ -1,4 +1,5 @@
-using FlexQuery.NET.Models;
+using FlexQuery.NET.Models.Filters;
+using FlexQuery.NET.Models.Projection;
 
 namespace FlexQuery.NET.Parsers;
 

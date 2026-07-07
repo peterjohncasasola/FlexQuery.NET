@@ -1,7 +1,7 @@
 using System.Linq.Expressions;
 using FlexQuery.NET.Security;
 
-namespace FlexQuery.NET.Models;
+namespace FlexQuery.NET.Options;
 
 /// <summary>
 /// Defines server-side execution rules, validation constraints, and security policies.

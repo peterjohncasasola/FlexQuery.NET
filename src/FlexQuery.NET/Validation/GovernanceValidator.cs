@@ -1,5 +1,5 @@
 using FlexQuery.NET.Exceptions;
-using FlexQuery.NET.Models;
+using FlexQuery.NET.Options;
 using FlexQuery.NET.Security;
 using FlexQuery.NET.Validation.Rules;
 

@@ -1,4 +1,6 @@
-namespace FlexQuery.NET.Models;
+using FlexQuery.NET.Models.Filters;
+
+namespace FlexQuery.NET.Models.Projection;
 
 /// <summary>
 /// Represents one level of a filtered include path.

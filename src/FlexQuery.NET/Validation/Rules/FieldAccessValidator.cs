@@ -1,10 +1,15 @@
 using FlexQuery.NET.Caching;
+using FlexQuery.NET.Internal;
 using FlexQuery.NET.Models;
+using FlexQuery.NET.Models.Filters;
 using FlexQuery.NET.Security;
 using FlexQuery.NET.Exceptions;
 using System.Collections.Concurrent;
 using FlexQuery.NET.Constants;
+using FlexQuery.NET.Execution;
 using FlexQuery.NET.Metadata;
+using FlexQuery.NET.Models.Paging;
+using FlexQuery.NET.Options;
 
 namespace FlexQuery.NET.Validation.Rules;
 
@@ -37,24 +42,21 @@ internal sealed class FieldAccessValidator : IValidationRule
         // 3. Process Filters - remove unauthorized in non-strict mode
         if (options.Filter != null)
         {
-            ValidateFilterGroup(options.Filter, options, context, result, execOptions);
+            ValidateFilterGroup(options.Filter, context, result, execOptions);
         }
 
         // 4. Process Sorts - remove unauthorized in non-strict mode
-        if (options.Sort != null)
+        for (var i = options.Sort.Count - 1; i >= 0; i--)
         {
-            for (int i = options.Sort.Count - 1; i >= 0; i--)
+            var sort = options.Sort[i];
+            if (!string.IsNullOrWhiteSpace(sort.Field))
             {
-                var sort = options.Sort[i];
-                if (!string.IsNullOrWhiteSpace(sort.Field))
+                var accessField = ResolveSortAccessField(options, sort.Field);
+                if (!CheckAccess(accessField, QueryOperation.Sort, context, result))
                 {
-                    var accessField = ResolveSortAccessField(options, sort.Field);
-                    if (!CheckAccess(accessField, QueryOperation.Sort, context, result))
+                    if (!execOptions.StrictFieldValidation)
                     {
-                        if (!execOptions.StrictFieldValidation)
-                        {
-                            options.Sort.RemoveAt(i);
-                        }
+                        options.Sort.RemoveAt(i);
                     }
                 }
             }
@@ -98,9 +100,7 @@ internal sealed class FieldAccessValidator : IValidationRule
 
             // Mirror flat-Select behavior: inject default projection when tree is emptied
             if (!execOptions.StrictFieldValidation &&
-                options.SelectTree != null &&
-                !options.SelectTree.HasChildren &&
-                !options.SelectTree.IncludeAllScalars)
+                options.SelectTree is { HasChildren: false, IncludeAllScalars: false })
             {
                 options.SelectTree = null;
                 DefaultProjectionHelper.InjectDefaultProjection(options, context, execOptions);
@@ -127,19 +127,16 @@ internal sealed class FieldAccessValidator : IValidationRule
         }
 
         // 7. Process Aggregates - remove unauthorized in non-strict mode
-        if (options.Aggregates != null)
+        for (var i = options.Aggregates.Count - 1; i >= 0; i--)
         {
-            for (int i = options.Aggregates.Count - 1; i >= 0; i--)
+            var aggregate = options.Aggregates[i];
+            if (!string.IsNullOrWhiteSpace(aggregate.Field))
             {
-                var aggregate = options.Aggregates[i];
-                if (!string.IsNullOrWhiteSpace(aggregate.Field))
+                if (!CheckAccess(aggregate.Field, QueryOperation.Aggregate, context, result))
                 {
-                    if (!CheckAccess(aggregate.Field, QueryOperation.Aggregate, context, result))
+                    if (!execOptions.StrictFieldValidation)
                     {
-                        if (!execOptions.StrictFieldValidation)
-                        {
-                            options.Aggregates.RemoveAt(i);
-                        }
+                        options.Aggregates.RemoveAt(i);
                     }
                 }
             }
@@ -231,7 +228,7 @@ internal sealed class FieldAccessValidator : IValidationRule
             {
                 ValidateSelectTree(kvp.Value, childPath, childType, context, result, execOptions);
 
-                if (!execOptions.StrictFieldValidation && !kvp.Value.HasChildren && !kvp.Value.IncludeAllScalars)
+                if (!execOptions.StrictFieldValidation && kvp.Value is { HasChildren: false, IncludeAllScalars: false })
                 {
                     node.RemoveChild(kvp.Key);
                 }
@@ -279,14 +276,13 @@ internal sealed class FieldAccessValidator : IValidationRule
 
     private void ValidateFilterGroup(
         FilterGroup group,
-        QueryOptions options,
         QueryContext context,
         ValidationResult result,
         QueryExecutionOptions execOptions,
         string? prefix = null)
     {
         // Iterate backwards to allow removal during enumeration
-        for (int i = group.Filters.Count - 1; i >= 0; i--)
+        for (var i = group.Filters.Count - 1; i >= 0; i--)
         {
             var filter = group.Filters[i];
             var fieldPath = string.IsNullOrEmpty(prefix) ? filter.Field : $"{prefix}.{filter.Field}";
@@ -305,14 +301,14 @@ internal sealed class FieldAccessValidator : IValidationRule
 
             if (filter.ScopedFilter != null)
             {
-                ValidateFilterGroup(filter.ScopedFilter, options, context, result, execOptions, fieldPath);
+                ValidateFilterGroup(filter.ScopedFilter, context, result, execOptions, fieldPath);
             }
         }
 
         // Process nested groups (backwards to allow removal)
         for (int i = group.Groups.Count - 1; i >= 0; i--)
         {
-            ValidateFilterGroup(group.Groups[i], options, context, result, execOptions, prefix);
+            ValidateFilterGroup(group.Groups[i], context, result, execOptions, prefix);
         }
     }
 

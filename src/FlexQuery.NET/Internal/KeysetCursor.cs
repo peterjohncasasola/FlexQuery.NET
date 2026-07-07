@@ -1,4 +1,4 @@
-namespace FlexQuery.NET.Models;
+namespace FlexQuery.NET.Internal;
 
 internal sealed class KeysetCursor(params object?[] values)
 {

@@ -1,6 +1,6 @@
 using FlexQuery.NET.Constants;
 using FlexQuery.NET.Internal;
-using FlexQuery.NET.Models;
+using FlexQuery.NET.Models.Filters;
 
 namespace FlexQuery.NET.Builders.Fluent;
 

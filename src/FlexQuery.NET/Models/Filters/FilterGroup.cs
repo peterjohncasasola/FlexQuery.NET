@@ -1,4 +1,4 @@
-namespace FlexQuery.NET.Models;
+namespace FlexQuery.NET.Models.Filters;
 
 /// <summary>
 /// Represents a lightweight filter tree used by include/projection validation
@@ -6,7 +6,7 @@ namespace FlexQuery.NET.Models;
 /// </summary>
 public sealed class FilterGroup
 {
-    /// <summary>How to combine the filters and sub-groups.</summary>
+    /// <summary>How to combine the filters and subgroups.</summary>
     public LogicOperator Logic { get; set; } = LogicOperator.And;
 
     /// <summary>Top-level filter conditions in this group.</summary>
@@ -24,7 +24,7 @@ public sealed class FilterGroup
     /// <param name="group">The source filter group to convert.</param>
     /// <returns>A <see cref="FilterGroupNode"/> representing the same filter structure as the source group.</returns>
     public static implicit operator FilterGroupNode?(FilterGroup? group)
-        => group is null ? null : group.ToFilterGroupNode();
+        => group?.ToFilterGroupNode();
 
     /// <summary>
     /// Converts a <see cref="FilterGroupNode"/> to a <see cref="FilterGroup"/> implicitly.

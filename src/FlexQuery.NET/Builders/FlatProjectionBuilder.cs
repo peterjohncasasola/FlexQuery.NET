@@ -1,9 +1,8 @@
 using System.Linq.Expressions;
 using System.Reflection;
+using FlexQuery.NET.Internal;
 using FlexQuery.NET.Models;
-using FlexQuery.NET.Security;
 using FlexQuery.NET.Caching;
-using FlexQuery.NET.Helpers;
 using FlexQuery.NET.Constants;
 using FlexQuery.NET.Expressions;
 using FlexQuery.NET.Metadata;

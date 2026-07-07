@@ -1,4 +1,4 @@
-using FlexQuery.NET.Models;
+using FlexQuery.NET.Models.Filters;
 using FlexQuery.NET.Constants;
 
 namespace FlexQuery.NET.Parsers;

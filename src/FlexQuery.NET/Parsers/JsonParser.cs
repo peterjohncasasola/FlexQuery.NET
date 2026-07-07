@@ -2,6 +2,7 @@ using System.Text.Json;
 using FlexQuery.NET.Constants;
 using FlexQuery.NET.Helpers;
 using FlexQuery.NET.Models;
+using FlexQuery.NET.Models.Filters;
 
 namespace FlexQuery.NET.Parsers;
 internal static class JsonParser

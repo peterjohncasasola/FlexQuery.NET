@@ -1,4 +1,4 @@
-namespace FlexQuery.NET.Models;
+namespace FlexQuery.NET.Models.Enums;
 
 /// <summary>Defines the database column types supported for query parameters and projections.</summary>
 public enum QueryDbType

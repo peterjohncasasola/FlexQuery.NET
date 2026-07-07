@@ -1,4 +1,4 @@
-namespace FlexQuery.NET.Models;
+namespace FlexQuery.NET.Execution;
 
 /// <summary>
 /// Per-execution configuration for a single FlexQuery call.

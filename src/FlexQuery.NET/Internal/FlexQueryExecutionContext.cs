@@ -1,5 +1,5 @@
 using System.Diagnostics;
-using FlexQuery.NET.Models;
+using FlexQuery.NET.Execution;
 
 namespace FlexQuery.NET.Internal;
 

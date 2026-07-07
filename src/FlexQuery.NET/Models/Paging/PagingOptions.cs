@@ -1,4 +1,4 @@
-namespace FlexQuery.NET.Models;
+namespace FlexQuery.NET.Models.Paging;
 
 /// <summary>
 /// Pagination parameters. All values are validated and clamped at usage time.

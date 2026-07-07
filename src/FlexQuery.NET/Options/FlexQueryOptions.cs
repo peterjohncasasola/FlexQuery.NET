@@ -1,4 +1,4 @@
-namespace FlexQuery.NET.Configuration;
+namespace FlexQuery.NET.Options;
 
 /// <summary>
 /// Global application-wide FlexQuery defaults.
@@ -35,9 +35,4 @@ public sealed class FlexQueryOptions
     /// The maximum depth of nested field paths allowed.
     /// </summary>
     public int MaxFieldDepth { get; set; } = 5;
-
-    /// <summary>
-    /// Whether to apply AsNoTracking() to EF Core queries by default.
-    /// </summary>
-    public bool UseNoTracking { get; set; } = true;
 }
