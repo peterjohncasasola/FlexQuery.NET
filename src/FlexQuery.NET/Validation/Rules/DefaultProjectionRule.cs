@@ -26,7 +26,7 @@ internal sealed class DefaultProjectionRule : IValidationRule
 
 internal static class DefaultProjectionHelper
 {
-    public static void InjectDefaultProjection(QueryOptions options, QueryContext ctx, QueryExecutionOptions execOptions)
+    public static void InjectDefaultProjection(QueryOptions options, QueryContext ctx, BaseQueryOptions execOptions)
     {
         if (options.Select is { Count: > 0 }) return;
         if (options.SelectTree != null) return;

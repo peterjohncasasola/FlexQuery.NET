@@ -134,7 +134,7 @@ public static class QueryableExtensions
         }
     }
 
-    private static QueryResult<object> ApplyFlexQuery<T>(this IQueryable<T> query, QueryOptions options, bool hasProjection, QueryExecutionOptions? execOptions = null)
+    private static QueryResult<object> ApplyFlexQuery<T>(this IQueryable<T> query, QueryOptions options, bool hasProjection, BaseQueryOptions? execOptions = null)
     {
         var filtered = ApplyFilter(query, options);
         if (options.Distinct == true)
@@ -180,7 +180,7 @@ public static class QueryableExtensions
     }
 
     private static int? TryGetTotalCount<T>(
-        this IQueryable<T> filteredQuery, QueryOptions options, QueryExecutionOptions? execOptions = null)
+        this IQueryable<T> filteredQuery, QueryOptions options, BaseQueryOptions? execOptions = null)
     {
         if (options.IsKeysetMode)
         {

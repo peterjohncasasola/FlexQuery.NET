@@ -149,7 +149,7 @@ internal sealed class FieldAccessValidator : IValidationRule
         }
     }
 
-    private static void ApplyDefaultSort(QueryOptions options, QueryExecutionOptions execOptions)
+    private static void ApplyDefaultSort(QueryOptions options, BaseQueryOptions execOptions)
     {
         if (string.IsNullOrWhiteSpace(execOptions.DefaultSortField)) return;
         if (options.Sort.Count > 0) return;
@@ -182,7 +182,7 @@ internal sealed class FieldAccessValidator : IValidationRule
         Type? currentType,
         QueryContext context,
         ValidationResult result,
-        QueryExecutionOptions execOptions)
+        BaseQueryOptions execOptions)
     {
         if (node.IncludeAllScalars && currentType != null)
         {
@@ -260,7 +260,7 @@ internal sealed class FieldAccessValidator : IValidationRule
         return null;
     }
 
-    private bool IsSecurityActive(QueryExecutionOptions options)
+    private bool IsSecurityActive(BaseQueryOptions options)
     {
         return options.MaxFieldDepth.HasValue ||
                options.AllowedFields?.Count > 0 ||
@@ -278,7 +278,7 @@ internal sealed class FieldAccessValidator : IValidationRule
         FilterGroup group,
         QueryContext context,
         ValidationResult result,
-        QueryExecutionOptions execOptions,
+        BaseQueryOptions execOptions,
         string? prefix = null)
     {
         // Iterate backwards to allow removal during enumeration
@@ -403,7 +403,7 @@ internal sealed class FieldAccessValidator : IValidationRule
     /// Call this at application startup to catch configuration errors early.
     /// Throws <see cref="QueryValidationException"/> if DefaultSortField violates governance.
     /// </summary>
-    public static void ValidateDefaultSortFieldConfiguration(QueryExecutionOptions execOptions)
+    public static void ValidateDefaultSortFieldConfiguration(BaseQueryOptions execOptions)
     {
         if (string.IsNullOrWhiteSpace(execOptions.DefaultSortField))
             return;
@@ -443,7 +443,7 @@ internal sealed class FieldAccessValidator : IValidationRule
 
     private static void AddDenied(
         ValidationResult result,
-        QueryExecutionOptions options,
+        BaseQueryOptions options,
         string field,
         string message)
     {
@@ -458,7 +458,7 @@ internal sealed class FieldAccessValidator : IValidationRule
         result.Errors.Add(new ValidationError(message, ValidationErrorCodes.FieldAccessDenied, field));
     }
 
-    private string NormalizeField(string rawField, QueryExecutionOptions options)
+    private string NormalizeField(string rawField, BaseQueryOptions options)
     {
         if (options.FieldMappings != null && options.FieldMappings.TryGetValue(rawField, out var mapped))
         {

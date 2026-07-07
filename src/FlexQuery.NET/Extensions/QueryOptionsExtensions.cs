@@ -28,7 +28,7 @@ public static class QueryOptionsExtensions
     /// <exception cref="QueryValidationException">Thrown when validation fails.</exception>
     public static void ValidateOrThrow<T>(
         this QueryOptions options,
-        QueryExecutionOptions? execOptions = null)
+        BaseQueryOptions? execOptions = null)
     {
         options.ValidateOrThrow(typeof(T), execOptions);
     }
@@ -43,9 +43,10 @@ public static class QueryOptionsExtensions
     public static void ValidateOrThrow(
         this QueryOptions options,
         Type entityType,
-        QueryExecutionOptions? execOptions = null)
+        BaseQueryOptions? execOptions = null)
     {
         execOptions ??= new QueryExecutionOptions();
+
 
         if (execOptions.ExpressionMappings != null)
         {
@@ -70,14 +71,14 @@ public static class QueryOptionsExtensions
     /// <returns>A <see cref="ValidationResult"/> indicating success or failure with details.</returns>
     public static ValidationResult ValidateSafe<T>(
         this QueryOptions options,
-        QueryExecutionOptions? execOptions = null)
+        BaseQueryOptions? execOptions = null)
     {
         return ValidateInternal<T>(options, execOptions);
     }
 
     private static ValidationResult ValidateInternal<T>(
         QueryOptions options,
-        QueryExecutionOptions? execOptions)
+        BaseQueryOptions? execOptions)
     {
         execOptions ??= new QueryExecutionOptions();
 
@@ -89,6 +90,7 @@ public static class QueryOptionsExtensions
         var result = options.Validate(typeof(T), execOptions);
 
         return result;
+
     }
 
     /// <summary>

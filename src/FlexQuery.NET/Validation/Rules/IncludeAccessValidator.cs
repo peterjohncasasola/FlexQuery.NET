@@ -26,7 +26,7 @@ internal sealed class IncludeAccessValidator : IValidationRule
             return; // No include restrictions
         }
 
-        var comparer = execOptions.CaseInsensitiveFields ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal;
+        var comparer = execOptions.CaseInsensitive ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal;
         var allowedIncludes = new HashSet<string>(execOptions.AllowedIncludes, comparer);
 
         // Check flat includes - remove unauthorized ones in non-strict mode
@@ -67,7 +67,7 @@ internal sealed class IncludeAccessValidator : IValidationRule
         IncludeNode node,
         string parentPath,
         HashSet<string> allowedIncludes,
-        QueryExecutionOptions options,
+        BaseQueryOptions options,
         ValidationResult result)
     {
         var currentPath = string.IsNullOrEmpty(parentPath) ? node.Path : $"{parentPath}.{node.Path}";

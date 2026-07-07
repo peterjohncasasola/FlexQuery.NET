@@ -23,7 +23,7 @@ internal sealed class TypeCompatibilityRule : IValidationRule
         ValidateFilterGroup(options.Filter, context.TargetType, context.ExecutionOptions, result);
     }
 
-    private void ValidateFilterGroup(FilterGroup group, Type entityType, QueryExecutionOptions? executionOptions, ValidationResult result)
+    private void ValidateFilterGroup(FilterGroup group, Type entityType, BaseQueryOptions? executionOptions, ValidationResult result)
     {
         foreach (var filter in group.Filters)
         {

@@ -28,7 +28,7 @@ public static class ValidationExtensions
     /// <param name="entityType">The entity type being queried.</param>
     /// <param name="execOptions">The execution options defining server-side constraints.</param>
     /// <returns>A <see cref="ValidationResult"/> indicating success or failure with details.</returns>
-    public static ValidationResult Validate(this QueryOptions options, Type entityType, QueryExecutionOptions execOptions)
+    public static ValidationResult Validate(this QueryOptions options, Type entityType, BaseQueryOptions execOptions)
     {
         var context = new QueryContext { TargetType = entityType, ExecutionOptions = execOptions };
         return _defaultValidator.Validate(options, context);
@@ -42,7 +42,7 @@ public static class ValidationExtensions
     /// <param name="options">The query options to validate.</param>
     /// <param name="execOptions">The execution options defining server-side constraints.</param>
     /// <returns>A <see cref="ValidationResult"/> indicating success or failure with details.</returns>
-    public static ValidationResult Validate<T>(this IQueryable<T> query, QueryOptions options, QueryExecutionOptions execOptions)
+    public static ValidationResult Validate<T>(this IQueryable<T> query, QueryOptions options, BaseQueryOptions execOptions)
         => query.Validate(options, execOptions, _defaultValidator);
 
     
@@ -56,7 +56,7 @@ public static class ValidationExtensions
     /// <param name="validator">The validator to use.</param>
     /// <returns>A <see cref="ValidationResult"/> indicating success or failure with details.</returns>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="validator"/> is null.</exception>
-    internal static ValidationResult Validate<T>(this IQueryable<T> query, QueryOptions options, QueryExecutionOptions execOptions, IQueryValidator validator)
+    internal static ValidationResult Validate<T>(this IQueryable<T> query, QueryOptions options, BaseQueryOptions execOptions, IQueryValidator validator)
     {
         ArgumentNullException.ThrowIfNull(validator);
         var context = new QueryContext { TargetType = typeof(T), ExecutionOptions = execOptions };

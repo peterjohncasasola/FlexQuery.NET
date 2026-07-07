@@ -19,7 +19,7 @@ internal static class GovernanceValidator
     /// </summary>
     /// <param name="execOptions">The execution options containing governance configuration to validate.</param>
     /// <exception cref="QueryValidationException">Thrown when configuration errors are found.</exception>
-    public static void ValidateConfiguration(QueryExecutionOptions execOptions)
+    public static void ValidateConfiguration(BaseQueryOptions execOptions)
     {
         if (execOptions.AllowedFields?.Count > 0 && execOptions.BlockedFields?.Count > 0)
         {
