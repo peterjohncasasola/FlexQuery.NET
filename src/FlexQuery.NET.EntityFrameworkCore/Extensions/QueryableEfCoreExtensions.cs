@@ -6,6 +6,7 @@ using FlexQuery.NET.Validation;
 using Microsoft.EntityFrameworkCore;
 using System.Reflection;
 using FlexQuery.NET.Diagnostics;
+using FlexQuery.NET.EntityFrameworkCore.Includes;
 using FlexQuery.NET.Execution;
 using FlexQuery.NET.Models.Paging;
 using FlexQuery.NET.Options;
