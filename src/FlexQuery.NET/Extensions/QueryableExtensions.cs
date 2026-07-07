@@ -1,5 +1,5 @@
 using FlexQuery.NET.Builders;
-using FlexQuery.NET.Exceptions;
+using FlexQuery.NET.Configurations;
 using FlexQuery.NET.Models;
 using System.ComponentModel;
 using FlexQuery.NET.Options;
@@ -12,6 +12,8 @@ namespace FlexQuery.NET;
 /// </summary>
 public static class QueryableExtensions
 {
+    private static readonly Execution.FlexQueryProcessor Processor = new(new FlexQueryOptions());
+    
     /// <summary>
     /// Applies filter, sort, and paging in sequence.
     /// </summary>
@@ -79,16 +81,7 @@ public static class QueryableExtensions
         configure?.Invoke(exec);
 
         var options = parameters.ToQueryOptions();
-
-        ValidatePaginationMode(options);
-
-        options = options.Normalize();
-        options.ValidateOrThrow<T>(exec);
-
-        var hasProjection = options.HasProjection();
-
-        return query.ApplyFlexQuery(options, hasProjection, exec);
-
+        return Processor.Execute(query, options, exec).ToObjectResult();
     }
 
     /// <summary>
@@ -106,86 +99,7 @@ public static class QueryableExtensions
     {
         var exec = new QueryExecutionOptions();
         configure?.Invoke(exec);
-
-        ValidatePaginationMode(options);
-
-        options = options.Normalize();
-        options.ValidateOrThrow<T>(exec);
-
-        var hasProjection = options.HasProjection();
-
-        return query.ApplyFlexQuery(options, hasProjection, exec);
-
+        return Processor.Execute(query, options, exec).ToObjectResult();
     }
-
-    private static void ValidatePaginationMode(QueryOptions options)
-    {
-        if (!options.IsKeysetMode) return;
-
-        if (options.OffsetExplicitlyRequested)
-        {
-            throw new QueryValidationException(
-                "Offset pagination parameters cannot be used together with Keyset Pagination. " +
-                "Choose either Offset Pagination or Keyset Pagination.");
-        }
-    }
-
-    private static QueryResult<object> ApplyFlexQuery<T>(this IQueryable<T> query, QueryOptions options, bool hasProjection, BaseQueryOptions? execOptions = null)
-    {
-        var filtered = ApplyFilter(query, options);
-        if (options.Distinct == true)
-            filtered = filtered.Distinct();
-
-        filtered = ApplySort(filtered, options);
-        var total = filtered.TryGetTotalCount(options, execOptions);
-
-        Dictionary<string, Dictionary<string, object>>? grandTotals = null;
-
-        if (options.Aggregates.Count > 0 &&
-            (options.GroupBy == null || options.GroupBy.Count == 0))
-        {
-            var aggregateQuery = GroupByBuilder.Apply(filtered, options);
-            var aggRow = aggregateQuery.FirstOrDefault();
-            grandTotals = AggregateResultBuilder.Build(
-                aggRow,
-                options.Aggregates);
-        }
-
-        filtered = options.IsKeysetMode
-            ? QueryBuilder.ApplyKeysetPaging(filtered, options)
-            : QueryBuilder.ApplyPaging(filtered, options);
-
-        if (hasProjection)
-        {
-            var data = QueryBuilder.ApplySelect(filtered, options).ToList();
-            return options.BuildQueryResult(data, total, grandTotals);
-        }
-
-        return options.BuildQueryResult(filtered.ToList(), total, grandTotals).ToObjectResult();
-    }
-
-    /// <summary>
-    /// Applies both filtering and sorting to the query.
-    /// </summary>
-    [EditorBrowsable(EditorBrowsableState.Never)]
-    internal static IQueryable<T> ApplyFilterAndSort<T>(this IQueryable<T> query, QueryOptions options)
-    {
-        query = ApplyFilter(query, options);
-        query = ApplySort(query, options);
-        return query;
-    }
-
-    private static int? TryGetTotalCount<T>(
-        this IQueryable<T> filteredQuery, QueryOptions options, BaseQueryOptions? execOptions = null)
-    {
-        if (options.IsKeysetMode)
-        {
-            return options.IncludeCount == true ? filteredQuery.Count() : null;
-        }
-
-        return (options.IncludeCount == true && (execOptions?.IncludeTotalCount ?? true))
-            ? filteredQuery.Count() 
-            : null;
-    }
+    
 }
-
