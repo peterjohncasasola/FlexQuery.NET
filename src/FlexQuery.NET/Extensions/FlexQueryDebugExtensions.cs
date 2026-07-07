@@ -1,7 +1,6 @@
-using FlexQuery.NET.Builders;
-using FlexQuery.NET.QueryDebug;
 using FlexQuery.NET.Models;
 using System.Linq.Expressions;
+using FlexQuery.NET.Expressions;
 
 namespace FlexQuery.NET;
 
@@ -24,7 +23,7 @@ public static class FlexQueryDebugExtensions
         var debugQuery = provider.CreateQuery<T>(query.Expression);
         
         // This will trigger the DebugQueryProvider to capture the expression
-        var applied = debugQuery.Apply(options);
+        debugQuery.Apply(options);
         
         return new DebugResult
         {
@@ -55,9 +54,9 @@ public static class FlexQueryDebugExtensions
 
         private static Type GetElementType(Type type)
         {
-            var iface = type.GetInterfaces()
+            var interfaceType = type.GetInterfaces()
                 .FirstOrDefault(i => i.IsGenericType && i.GetGenericTypeDefinition() == typeof(IEnumerable<>));
-            return iface?.GetGenericArguments()[0] ?? type;
+            return interfaceType?.GetGenericArguments()[0] ?? type;
         }
     }
 

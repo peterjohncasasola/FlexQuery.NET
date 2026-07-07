@@ -2,7 +2,7 @@ using System.Linq.Expressions;
 using System.Reflection;
 using System.Text;
 
-namespace FlexQuery.NET.QueryDebug;
+namespace FlexQuery.NET.Expressions;
 
 /// <summary>
 /// Utility to convert LINQ Expressions into readable C# syntax.

@@ -1,7 +1,7 @@
 using System.Linq.Expressions;
 using System.Text;
 
-namespace FlexQuery.NET.QueryDebug;
+namespace FlexQuery.NET.Expressions;
 
 /// <summary>
 /// Utility to visualize the structure of an Expression Tree.
