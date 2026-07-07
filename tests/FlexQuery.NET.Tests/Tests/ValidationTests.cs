@@ -3,7 +3,7 @@ using FlexQuery.NET.Parsers;
 using FlexQuery.NET.Parsers.Jql;
 using FlexQuery.NET.Validation;
 using FlexQuery.NET.Exceptions;
-using FlexQuery.NET.Extensions;
+using FlexQuery.NET;
 using FluentAssertions;
 using Microsoft.Extensions.Primitives;
 using Xunit;

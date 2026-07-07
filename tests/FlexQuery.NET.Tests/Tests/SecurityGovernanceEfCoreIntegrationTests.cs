@@ -1,6 +1,6 @@
 using FlexQuery.NET.EntityFrameworkCore;
 using FlexQuery.NET.Exceptions;
-using FlexQuery.NET.Extensions;
+using FlexQuery.NET;
 using FlexQuery.NET.Models;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;

@@ -1,16 +1,9 @@
 using FlexQuery.NET.Models;
 using FlexQuery.NET.Dapper.Mapping;
-using FlexQuery.NET.Dapper.Sql;
 using FlexQuery.NET.Dapper.Sql.Translators;
 using FlexQuery.NET.Dapper.Dialects;
-using FlexQuery.NET.Parsers;
 using FlexQuery.NET.Parsers.Dsl;
-using FlexQuery.NET.Validation;
 using FlexQuery.NET.Exceptions;
-using FlexQuery.NET.Extensions;
-using FluentAssertions;
-using Microsoft.Extensions.Primitives;
-using Xunit;
 
 namespace FlexQuery.NET.Tests.Dapper.Security;
 

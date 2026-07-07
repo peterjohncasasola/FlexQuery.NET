@@ -1,4 +1,4 @@
-using FlexQuery.NET.Extensions;
+using FlexQuery.NET;
 using FlexQuery.NET.Caching;
 using FlexQuery.NET.Models;
 using FlexQuery.NET.Parsers;

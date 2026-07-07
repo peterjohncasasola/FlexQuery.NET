@@ -1,6 +1,6 @@
 using FlexQuery.NET.Builders;
 using FlexQuery.NET.Exceptions;
-using FlexQuery.NET.Extensions;
+using FlexQuery.NET;
 using FlexQuery.NET.Models;
 using FlexQuery.NET.Parsers;
 using System.ComponentModel;
@@ -139,7 +139,7 @@ public static class QueryableExtensions
     {
         var filtered = ApplyFilter(query, options);
         if (options.Distinct == true)
-            filtered = Queryable.Distinct(filtered);
+            filtered = filtered.Distinct();
 
         filtered = ApplySort(filtered, options);
         var total = filtered.TryGetTotalCount(options, execOptions);

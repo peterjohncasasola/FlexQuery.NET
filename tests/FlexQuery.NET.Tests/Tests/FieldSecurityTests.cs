@@ -3,7 +3,7 @@ using FlexQuery.NET.Parsers;
 using FlexQuery.NET.Parsers.Jql;
 using FlexQuery.NET.Validation;
 using FlexQuery.NET.Exceptions;
-using FlexQuery.NET.Extensions;
+using FlexQuery.NET;
 using FlexQuery.NET.Security;
 using FlexQuery.NET.Configuration;
 using FlexQuery.NET.Validation.Rules;

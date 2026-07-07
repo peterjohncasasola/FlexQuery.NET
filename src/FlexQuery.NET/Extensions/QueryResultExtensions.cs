@@ -1,6 +1,6 @@
 using FlexQuery.NET.Models;
 
-namespace FlexQuery.NET.Extensions;
+namespace FlexQuery.NET;
 
 /// <summary>
 /// Extensions for <see cref="QueryResult{T}"/>.

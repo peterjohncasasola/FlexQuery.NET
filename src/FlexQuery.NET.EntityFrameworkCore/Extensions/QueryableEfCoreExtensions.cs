@@ -1,6 +1,6 @@
 using FlexQuery.NET.Builders;
 using FlexQuery.NET.EntityFrameworkCore.SqlFormatting;
-using FlexQuery.NET.Extensions;
+using FlexQuery.NET;
 using FlexQuery.NET.Internal;
 using FlexQuery.NET.Models;
 using FlexQuery.NET.Parsers;
