@@ -6,11 +6,18 @@ namespace FlexQuery.NET.Diagnostics;
 public sealed class DebugResult
 {
     /// <summary>
-    /// The raw AST produced by the parser (JQL, DSL, etc.).
+    /// Gets the raw abstract syntax tree (AST) produced by the parser
+    /// (JQL, DSL, AG Grid, Kendo, DataTables, etc.).
     /// </summary>
     public object? Ast { get; internal set; }
 
+    /// <summary>
+    /// Gets the generated expression tree in a human-readable format.
+    /// </summary>
     public string ExpressionTree { get; internal set; } = string.Empty;
 
+    /// <summary>
+    /// Gets the generated LINQ lambda expression in a human-readable format.
+    /// </summary>
     public string LinqLambda { get; internal set; } = string.Empty;
 }
