@@ -85,16 +85,19 @@ public sealed class FlexQueryProcessor(FlexQueryOptions globalOptions) : IFlexQu
         {
             var groupedQuery = GroupByBuilder.ApplyUntyped(filtered, queryOptions);
 
-            var resultCount = options.IncludeTotalCount ? 
-                GroupedQueryExecutor.CountGroupedQuery(groupedQuery) : (int?)null;
-            
+            var resultCount = options.IncludeTotalCount
+                ? GroupedQueryExecutor.CountGroupedQuery(groupedQuery)
+                : (int?)null;
+
             var data = GroupedQueryExecutor.ExecuteGroupedQuery(groupedQuery, queryOptions);
             var groupResult = queryOptions.BuildQueryResult(data, total, resultCount: resultCount);
-            
-            if (executionContext?.Listener is null) return groupResult;
 
-            await executionContext.NotifyExecutedAsync(data.Count);
-            await executionContext.NotifyMaterializedAsync(groupResult);
+            if (executionContext?.Listener is not null)
+            {
+                await executionContext.NotifyExecutedAsync(data.Count);
+                await executionContext.NotifyMaterializedAsync(groupResult);
+            }
+
             return groupResult;
         }
         
