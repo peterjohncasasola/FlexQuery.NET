@@ -6,7 +6,7 @@ internal static class SqlParameterExtractor
 {
     private const string ParamSetPrefix = ".param set ";
 
-    public static (string Sql, IReadOnlyList<QueryParameter> Parameters) Extract(string sql)
+    public static (string Sql, IReadOnlyList<QueryParameter> Parameters) Extract(string? sql)
     {
         if (string.IsNullOrWhiteSpace(sql))
             return (sql ?? string.Empty, []);
