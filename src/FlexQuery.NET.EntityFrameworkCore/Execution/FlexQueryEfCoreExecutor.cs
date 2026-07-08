@@ -75,7 +75,9 @@ internal static class FlexQueryEfCoreExecutor
             grandTotals = AggregateResultBuilder.Build(aggRow, queryOptions.Aggregates);
         }
 
-        filtered = QueryBuilder.ApplyPaging(filtered, queryOptions);
+        filtered = queryOptions.IsKeysetMode 
+            ? QueryBuilder.ApplyKeysetPaging(filtered, queryOptions)
+            : QueryBuilder.ApplyPaging(filtered, queryOptions);
 
         // Note: ApplySelect already incorporates FilteredIncludes filters into the projection tree,
         // so calling ApplyExpand here is technically redundant but ensures consistency
