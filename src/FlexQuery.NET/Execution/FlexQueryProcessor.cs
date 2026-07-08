@@ -1,6 +1,8 @@
 using FlexQuery.NET.Builders;
 using FlexQuery.NET.Configurations;
+using FlexQuery.NET.Constants;
 using FlexQuery.NET.Exceptions;
+using FlexQuery.NET.Internal;
 using FlexQuery.NET.Models;
 using FlexQuery.NET.Options;
 using FlexQuery.NET.Validation;
@@ -12,123 +14,153 @@ public sealed class FlexQueryProcessor(FlexQueryOptions globalOptions) : IFlexQu
     private static readonly IQueryValidator Validator = new QueryValidator();
     
     /// <inheritdoc />
-    public Task<QueryResult<T>> ExecuteAsync<T>(
+    public async Task<QueryResult<object>> ExecuteAsync<T>(
         IQueryable<T> query,
-        QueryOptions options,
+        QueryOptions queryOptions,
         CancellationToken ct = default)
     {
         var execOptions = new QueryExecutionOptions();
         BaseQueryOptions.ApplyGlobalDefaults(execOptions, globalOptions);
-        return Task.FromResult(ToTypedResult<T>(ExecuteCore(query, options, execOptions, null)));
+
+        return await ExecuteCore(query, queryOptions, execOptions, ct);
+
     }
     
     /// <inheritdoc />
-    public Task<QueryResult<T>> ExecuteAsync<T>(
+    public async Task<QueryResult<object>> ExecuteAsync<T>(
         IQueryable<T> query,
-        QueryOptions options,
-        QueryExecutionOptions execOptions,
+        QueryOptions queryOptions,
+        QueryExecutionOptions? options = null,
         CancellationToken ct = default)
     {
-        BaseQueryOptions.ApplyGlobalDefaults(execOptions, globalOptions);
-        return Task.FromResult(ToTypedResult<T>(ExecuteCore(query, options, execOptions, null)));
+        options ??= new  QueryExecutionOptions();
+        BaseQueryOptions.ApplyGlobalDefaults(options, globalOptions);
+
+        return await ExecuteCore(query, queryOptions, options, ct);
+
     }
     
-    /// <inheritdoc />
-    public Task<QueryResult<T>> ExecuteAsync<T>(
+    private static async Task<QueryResult<object>> ExecuteCore<T>(
         IQueryable<T> query,
-        QueryOptions options,
-        FlexQueryExecutionConfig config,
-        CancellationToken ct = default)
+        QueryOptions queryOptions,
+        QueryExecutionOptions options,
+        CancellationToken cancellationToken = default)
     {
-        var execOptions = new QueryExecutionOptions();
-        BaseQueryOptions.ApplyGlobalDefaults(execOptions, globalOptions);
-        return Task.FromResult(ToTypedResult<T>(ExecuteCore(query, options, execOptions, config)));
-    }
+        queryOptions = queryOptions.Normalize();
 
-    internal QueryResult<T> Execute<T>(
-        IQueryable<T> query,
-        QueryOptions options,
-        QueryExecutionOptions execOptions)
-    {
-        return ToTypedResult<T>(ExecuteCore(query, options, execOptions, null));
-    }
+        var listener = options.Listener;
+        
+        var executionContext = listener is not null
+            ? new FlexQueryExecutionContext(listener, cancellationToken)
+            : null;
 
-    private static QueryResult<T> ToTypedResult<T>(QueryResult<object> result)
-    {
-        return new QueryResult<T>
+        IReadOnlyList<object>? dataList = null;
+        QueryResult<object>? result;
+
+        if (options.ExpressionMappings != null)
         {
-            TotalCount = result.TotalCount,
-            ResultCount = result.ResultCount,
-            Page = result.Page,
-            PageSize = result.PageSize,
-            Aggregates = result.Aggregates,
-            Data = result.Data.Cast<T>().ToList(),
-            NextCursorToken = result.NextCursorToken
-        };
-    }
-
-    private QueryResult<object> ExecuteCore<T>(
-        IQueryable<T> query,
-        QueryOptions options,
-        QueryExecutionOptions execOptions,
-        FlexQueryExecutionConfig? config)
-    {
-        options = options.Normalize();
-
-        ValidatePaginationMode(options);
+            queryOptions.Items[ContextKeys.ExpressionMappings] = options.ExpressionMappings;
+        }
 
         var context = new QueryContext
         {
             TargetType = typeof(T),
-            ExecutionOptions = execOptions
+            ExecutionOptions = options
         };
 
-        var validationResult = Validator.Validate(options, context);
+        var validationResult = Validator.Validate(queryOptions, context);
         if (!validationResult.IsValid)
         {
             throw new QueryValidationException(validationResult);
         }
 
-        var filtered = QueryBuilder.ApplyFilter(query, options);
-        if (options.Distinct == true)
+        var filtered = QueryBuilder.ApplyFilter(query, queryOptions);
+        if (queryOptions.Distinct == true)
             filtered = filtered.Distinct();
 
-        var sorted = QueryBuilder.ApplySort(filtered, options);
 
-        var total = TryGetTotalCount(sorted, options, execOptions);
+        var total = TryGetTotalCount(filtered, queryOptions, options);
+
+        if (queryOptions.GroupBy is { Count: > 0 })
+        {
+            var groupedQuery = GroupByBuilder.ApplyUntyped(filtered, queryOptions);
+
+            var resultCount = options.IncludeTotalCount ? 
+                GroupedQueryExecutor.CountGroupedQuery(groupedQuery) : (int?)null;
+            
+            var data = GroupedQueryExecutor.ExecuteGroupedQuery(groupedQuery, queryOptions);
+            var groupResult = queryOptions.BuildQueryResult(data, total, resultCount: resultCount);
+            
+            if (executionContext?.Listener is null) return groupResult;
+
+            await executionContext.NotifyExecutedAsync(data.Count);
+            await executionContext.NotifyMaterializedAsync(groupResult);
+            return groupResult;
+        }
+        
+        filtered = QueryBuilder.ApplySort(filtered, queryOptions);
 
         Dictionary<string, Dictionary<string, object>>? grandTotals = null;
-        if (options.Aggregates.Count > 0 &&
-            (options.GroupBy == null || options.GroupBy.Count == 0))
+        if (queryOptions.Aggregates.Count > 0 &&
+            (queryOptions.GroupBy == null || queryOptions.GroupBy.Count == 0))
         {
-            var aggregateQuery = GroupByBuilder.Apply(sorted, options);
+            var aggregateQuery = GroupByBuilder.Apply(filtered, queryOptions);
             var aggRow = aggregateQuery.FirstOrDefault();
-            grandTotals = AggregateResultBuilder.Build(aggRow, options.Aggregates);
+            grandTotals = AggregateResultBuilder.Build(aggRow, queryOptions.Aggregates);
         }
+        
 
-        var paged = options.IsKeysetMode
-            ? QueryBuilder.ApplyKeysetPaging(sorted, options)
-            : QueryBuilder.ApplyPaging(sorted, options);
+        filtered = queryOptions.IsKeysetMode 
+            ? QueryBuilder.ApplyKeysetPaging(filtered, queryOptions) 
+            : QueryBuilder.ApplyPaging(filtered, queryOptions);
 
-        if (options.HasProjection())
+        try
         {
-            var data = QueryBuilder.ApplySelect(paged, options).ToList();
-            return options.BuildQueryResult(data, total, grandTotals);
+            if (queryOptions.HasProjection())
+            {
+                var projectedData = filtered.ApplySelect(queryOptions).ToList();
+                dataList = projectedData;
+
+                if (executionContext?.Listener is not null)
+                {
+                    await executionContext.NotifyExecutedAsync(projectedData.Count);
+                }
+                
+                result = queryOptions.BuildQueryResult(projectedData, total, grandTotals).ToObjectResult();
+                
+            }
+            else
+            {
+                var filteredData = filtered.ToList();
+                dataList = (IReadOnlyList<object>?)filteredData;
+                
+                if (executionContext?.Listener is not null)
+                {
+                    await executionContext.NotifyExecutedAsync(filteredData.Count);
+                }
+                
+                result = queryOptions.BuildQueryResult(filteredData, total, grandTotals).ToObjectResult();
+            }
+            
+
         }
-
-        return options.BuildQueryResult(paged.ToList(), total, grandTotals).ToObjectResult();
-    }
-
-    private static void ValidatePaginationMode(QueryOptions options)
-    {
-        if (!options.IsKeysetMode) return;
-
-        if (options.OffsetExplicitlyRequested)
+        catch (Exception exception)
         {
-            throw new QueryValidationException(
-                "Offset pagination parameters cannot be used together with Keyset Pagination. " +
-                "Choose either Offset Pagination or Keyset Pagination.");
+            if (executionContext?.Listener is null) throw;
+            
+            if (dataList is not null)
+            {
+                await executionContext.NotifyMaterializedAsync(null, exception);
+            }
+            else
+            {
+                await executionContext.NotifyExecutedAsync(null, exception);
+            }
+            throw;
         }
+
+        return result;
+
     }
 
     private static int? TryGetTotalCount<T>(
@@ -139,7 +171,7 @@ public sealed class FlexQueryProcessor(FlexQueryOptions globalOptions) : IFlexQu
             return options.IncludeCount == true ? filteredQuery.Count() : null;
         }
 
-        return (options.IncludeCount == true && (execOptions?.IncludeTotalCount ?? true))
+        return options.IncludeCount == true && (execOptions?.IncludeTotalCount ?? true)
             ? filteredQuery.Count()
             : null;
     }

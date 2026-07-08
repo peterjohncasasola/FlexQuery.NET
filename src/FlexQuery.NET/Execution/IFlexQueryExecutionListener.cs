@@ -1,12 +1,13 @@
 using FlexQuery.NET.Diagnostics;
 using FlexQuery.NET.Models;
+using FlexQuery.NET.Options;
 
 namespace FlexQuery.NET.Execution;
 
 /// <summary>
 /// Observes read-only execution events during a FlexQuery pipeline run.
 /// Implementations receive immutable event records at each stage boundary.
-/// Set on <see cref="FlexQueryExecutionConfig.Listener"/> before execution.
+/// Set on <see cref="BaseQueryOptions.Listener"/> before execution.
 /// </summary>
 public interface IFlexQueryExecutionListener
 {

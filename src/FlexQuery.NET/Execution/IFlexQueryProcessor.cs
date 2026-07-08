@@ -4,7 +4,7 @@ using FlexQuery.NET.Options;
 namespace FlexQuery.NET.Execution;
 
 /// <summary>
-/// Defines the contract for executing FlexQuery.NET queries against an
+/// Defines the contract for executing FlexQueryAsync.NET queries against an
 /// <see cref="IQueryable{T}"/> data source.
 /// </summary>
 /// <remarks>
@@ -19,14 +19,14 @@ public interface IFlexQueryProcessor
     /// </summary>
     /// <typeparam name="T">The element type of the query.</typeparam>
     /// <param name="query">The queryable data source.</param>
-    /// <param name="options">The query options to apply.</param>
+    /// <param name="queryOptions">The query options to apply.</param>
     /// <param name="ct">A cancellation token.</param>
     /// <returns>
     /// A <see cref="QueryResult{T}"/> containing the query results.
     /// </returns>
-    Task<QueryResult<T>> ExecuteAsync<T>(
+    Task<QueryResult<object>> ExecuteAsync<T>(
         IQueryable<T> query,
-        QueryOptions options,
+        QueryOptions queryOptions,
         CancellationToken ct = default);
 
     /// <summary>
@@ -34,36 +34,17 @@ public interface IFlexQueryProcessor
     /// </summary>
     /// <typeparam name="T">The element type of the query.</typeparam>
     /// <param name="query">The queryable data source.</param>
-    /// <param name="options">The query options to apply.</param>
-    /// <param name="execOptions">
-    /// The execution options that control query behavior.
+    /// <param name="queryOptions">The query options to apply.</param>
+    /// <param name="options">
+    /// The execution options that control query behaviour.
     /// </param>
     /// <param name="ct">A cancellation token.</param>
     /// <returns>
     /// A <see cref="QueryResult{T}"/> containing the query results.
     /// </returns>
-    Task<QueryResult<T>> ExecuteAsync<T>(
+    Task<QueryResult<object>> ExecuteAsync<T>(
         IQueryable<T> query,
-        QueryOptions options,
-        QueryExecutionOptions execOptions,
-        CancellationToken ct = default);
-
-    /// <summary>
-    /// Executes the specified query using the provided execution configuration.
-    /// </summary>
-    /// <typeparam name="T">The element type of the query.</typeparam>
-    /// <param name="query">The queryable data source.</param>
-    /// <param name="options">The query options to apply.</param>
-    /// <param name="config">
-    /// The execution configuration used during query processing.
-    /// </param>
-    /// <param name="ct">A cancellation token.</param>
-    /// <returns>
-    /// A <see cref="QueryResult{T}"/> containing the query results.
-    /// </returns>
-    Task<QueryResult<T>> ExecuteAsync<T>(
-        IQueryable<T> query,
-        QueryOptions options,
-        FlexQueryExecutionConfig config,
+        QueryOptions queryOptions,
+        QueryExecutionOptions? options = null,
         CancellationToken ct = default);
 }
