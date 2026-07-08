@@ -1,7 +1,7 @@
 using FlexQuery.NET.Builders;
 using FlexQuery.NET.Configurations;
+using FlexQuery.NET.Execution;
 using FlexQuery.NET.Models;
-using System.ComponentModel;
 using FlexQuery.NET.Options;
 
 namespace FlexQuery.NET;
@@ -12,8 +12,7 @@ namespace FlexQuery.NET;
 /// </summary>
 public static class QueryableExtensions
 {
-    private static readonly Execution.FlexQueryProcessor Processor = new(new FlexQueryOptions());
-    
+    private static readonly FlexQueryProcessor Processor = new(new FlexQueryOptions());
     /// <summary>
     /// Applies filter, sort, and paging in sequence.
     /// </summary>
@@ -81,7 +80,9 @@ public static class QueryableExtensions
         configure?.Invoke(exec);
 
         var options = parameters.ToQueryOptions();
-        return Processor.Execute(query, options, exec).ToObjectResult();
+        return Processor.ExecuteAsync(query, options, exec)
+            .GetAwaiter()
+            .GetResult();
     }
 
     /// <summary>
@@ -90,16 +91,20 @@ public static class QueryableExtensions
     /// </summary>
     /// <typeparam name="T">The entity type.</typeparam>
     /// <param name="query">The source queryable.</param>
-    /// <param name="options">The query options.</param>
+    /// <param name="queryOptions">The query options.</param>
     /// <param name="configure">Optional configuration for server-side security and execution rules.</param>
     public static QueryResult<object> FlexQuery<T>(
         this IQueryable<T> query,
-        QueryOptions options,
+        QueryOptions queryOptions,
         Action<QueryExecutionOptions>? configure = null)
     {
         var exec = new QueryExecutionOptions();
         configure?.Invoke(exec);
-        return Processor.Execute(query, options, exec).ToObjectResult();
+        
+        return Processor.ExecuteAsync(query, queryOptions, exec)
+            .GetAwaiter()
+            .GetResult();
+        
     }
     
 }
