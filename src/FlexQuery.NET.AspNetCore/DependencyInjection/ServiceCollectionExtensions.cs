@@ -1,7 +1,6 @@
 using Microsoft.Extensions.DependencyInjection;
 using FlexQuery.NET.AspNetCore.Filters;
-using FlexQuery.NET.Configurations;
-using FlexQuery.NET.Options;
+using FlexQuery.NET.Configuration;
 
 namespace FlexQuery.NET.AspNetCore.DependencyInjection;
 
