@@ -1,4 +1,4 @@
-using FlexQuery.NET.Configurations;
+using FlexQuery.NET.Configuration;
 using FlexQuery.NET.Execution;
 using FlexQuery.NET.Options;
 using Microsoft.Extensions.DependencyInjection;

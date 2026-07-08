@@ -1,5 +1,5 @@
 using FlexQuery.NET.Builders;
-using FlexQuery.NET.Configurations;
+using FlexQuery.NET.Configuration;
 using FlexQuery.NET.Constants;
 using FlexQuery.NET.Exceptions;
 using FlexQuery.NET.Internal;

@@ -1,5 +1,5 @@
 using System.Linq.Expressions;
-using FlexQuery.NET.Configurations;
+using FlexQuery.NET.Configuration;
 using FlexQuery.NET.Execution;
 using FlexQuery.NET.Security;
 
