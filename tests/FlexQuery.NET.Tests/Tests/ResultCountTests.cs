@@ -257,7 +257,7 @@ public class ResultCountTests
 
         return await connection.FlexQueryAsync<SqlOrder>(
             options,
-            dapperQueryOptions: CreateRegistry(dapperOptions));
+            options: CreateRegistry(dapperOptions));
     }
 
     private static DapperQueryOptions CreateRegistry(DapperQueryOptions registry)

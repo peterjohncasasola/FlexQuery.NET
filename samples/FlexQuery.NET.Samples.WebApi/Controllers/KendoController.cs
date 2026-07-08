@@ -31,8 +31,8 @@ public sealed class KendoController : ControllerBase
         var result = await _db.Customers
             .AsNoTracking()
             .FlexQueryAsync(options,
-                cancellationToken: cancellationToken,
-                configureExecution: cfg => cfg.Listener = collector);
+                configure: cfg => cfg.Listener = collector,
+                cancellationToken: cancellationToken);
 
         var report = collector.BuildReport(provider: "EF Core", translator: "Sqlite");
 

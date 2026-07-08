@@ -30,7 +30,7 @@ public class FilteredIncludeTests : IDisposable
         var result = await _db.Customers
             .AsNoTracking()
             .Apply(options)     // filter root
-            .ApplyExpandIncludes(options) // filter includes
+            .ApplyExpand(options) // filter includes
             .ToListAsync();
 
         // Assert

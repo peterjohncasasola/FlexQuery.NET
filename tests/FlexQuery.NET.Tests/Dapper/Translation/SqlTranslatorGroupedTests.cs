@@ -3,6 +3,7 @@ using FlexQuery.NET.Dapper;
 using FlexQuery.NET.Dapper.Dialects;
 using FlexQuery.NET.Dapper.Mapping;
 using FlexQuery.NET.Dapper.Sql;
+using FlexQuery.NET.Dapper.Sql.Builders;
 using FlexQuery.NET.Dapper.Sql.Models;
 using FlexQuery.NET.Dapper.Sql.Translators;
 using FlexQuery.NET.Models;
@@ -106,7 +107,7 @@ public class SqlTranslatorGroupedTests
         options.Paging = new PagingOptions { Page = 2, PageSize = 10 };
 
         var command = Translate(options);
-        var countSql = ExtractCountSql(command.Sql);
+        var countSql = SqlCountBuilder.ExtractCountSql(command.Sql);
 
         countSql.Should().StartWith("SELECT COUNT(1) FROM (SELECT");
         countSql.Should().Contain("GROUP BY");
@@ -124,7 +125,7 @@ public class SqlTranslatorGroupedTests
     public void ExtractCountSql_TopLevelOrderBy_IsStripped()
     {
         var sql = "SELECT Id, Name FROM Users ORDER BY Id";
-        var countSql = ExtractCountSql(sql);
+        var countSql =  SqlCountBuilder.ExtractCountSql(sql);
         countSql.Should().Be("SELECT COUNT(1) FROM (SELECT Id, Name FROM Users) AS CountTable");
     }
 
@@ -132,7 +133,7 @@ public class SqlTranslatorGroupedTests
     public void ExtractCountSql_TopLevelOrderByAndLimit_AreStripped()
     {
         var sql = "SELECT * FROM Orders ORDER BY CreatedAt DESC LIMIT 10";
-        var countSql = ExtractCountSql(sql);
+        var countSql = SqlCountBuilder.ExtractCountSql(sql);
         countSql.Should().Be("SELECT COUNT(1) FROM (SELECT * FROM Orders) AS CountTable");
     }
 
@@ -140,7 +141,7 @@ public class SqlTranslatorGroupedTests
     public void ExtractCountSql_TopLevelOrderByOffsetFetch_AreStripped()
     {
         var sql = "SELECT Id, Name FROM Users ORDER BY Name OFFSET 10 ROWS FETCH NEXT 20 ROWS ONLY";
-        var countSql = ExtractCountSql(sql);
+        var countSql = SqlCountBuilder.ExtractCountSql(sql);
         countSql.Should().Be("SELECT COUNT(1) FROM (SELECT Id, Name FROM Users) AS CountTable");
     }
 
@@ -148,7 +149,7 @@ public class SqlTranslatorGroupedTests
     public void ExtractCountSql_OrderByInsideSubquery_IsPreserved()
     {
         var sql = "SELECT * FROM (SELECT * FROM Orders ORDER BY Id) AS sub OFFSET 20 ROWS FETCH NEXT 10 ROWS ONLY";
-        var countSql = ExtractCountSql(sql);
+        var countSql = SqlCountBuilder.ExtractCountSql(sql);
         countSql.Should().Be("SELECT COUNT(1) FROM (SELECT * FROM (SELECT * FROM Orders ORDER BY Id) AS sub) AS CountTable");
     }
 
@@ -156,7 +157,7 @@ public class SqlTranslatorGroupedTests
     public void ExtractCountSql_LimitInsideSubquery_IsPreserved()
     {
         var sql = "SELECT * FROM (SELECT * FROM Items LIMIT 5) AS topItems WHERE Active = 1 ORDER BY Name LIMIT 10";
-        var countSql = ExtractCountSql(sql);
+        var countSql = SqlCountBuilder.ExtractCountSql(sql);
         countSql.Should().Be("SELECT COUNT(1) FROM (SELECT * FROM (SELECT * FROM Items LIMIT 5) AS topItems WHERE Active = 1) AS CountTable");
     }
 
@@ -164,7 +165,7 @@ public class SqlTranslatorGroupedTests
     public void ExtractCountSql_OffsetInsideSubquery_IsPreserved()
     {
         var sql = "SELECT * FROM (SELECT * FROM Orders OFFSET 5 ROWS FETCH NEXT 5 ROWS ONLY) AS page WHERE Total > 100 ORDER BY Total";
-        var countSql = ExtractCountSql(sql);
+        var countSql = SqlCountBuilder.ExtractCountSql(sql);
         countSql.Should().Be("SELECT COUNT(1) FROM (SELECT * FROM (SELECT * FROM Orders OFFSET 5 ROWS FETCH NEXT 5 ROWS ONLY) AS page WHERE Total > 100) AS CountTable");
     }
 
@@ -172,7 +173,7 @@ public class SqlTranslatorGroupedTests
     public void ExtractCountSql_NoPagingClauses_ReturnsWrappedSql()
     {
         var sql = "SELECT Id, Name FROM Users WHERE Active = 1";
-        var countSql = ExtractCountSql(sql);
+        var countSql = SqlCountBuilder.ExtractCountSql(sql);
         countSql.Should().Be("SELECT COUNT(1) FROM (SELECT Id, Name FROM Users WHERE Active = 1) AS CountTable");
     }
 
@@ -180,7 +181,7 @@ public class SqlTranslatorGroupedTests
     public void ExtractCountSql_KeywordInAlias_DoesNotTriggerFalsePositive()
     {
         var sql = "SELECT MAX(Price) AS maxPrice, MIN(Price) AS minPrice, SUM(Quantity) AS totalOrdered FROM Orders ORDER BY totalOrdered";
-        var countSql = ExtractCountSql(sql);
+        var countSql =SqlCountBuilder.ExtractCountSql(sql);
         countSql.Should().NotContain("ORDER BY");
     }
 
@@ -188,7 +189,7 @@ public class SqlTranslatorGroupedTests
     public void ExtractCountSql_DeeplyNestedSubqueries_OnlyStripsTopLevelClauses()
     {
         var sql = "SELECT * FROM (SELECT * FROM T1 ORDER BY Id LIMIT 10) AS sub WHERE Active = 1 ORDER BY Name";
-        var countSql = ExtractCountSql(sql);
+        var countSql =SqlCountBuilder.ExtractCountSql(sql);
         countSql.Should().Contain("T1 ORDER BY Id LIMIT 10");
         countSql.Should().NotContain("ORDER BY Name");
     }

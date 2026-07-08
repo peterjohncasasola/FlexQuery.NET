@@ -28,8 +28,7 @@ public sealed class EfCustomersController(AppDbContext db) : ControllerBase
         var result = await db.Customers
             .AsNoTracking()
             .FlexQueryAsync(parameters,
-                cancellationToken: cancellationToken,
-                configureExecution: cfg => cfg.Listener = collector);
+                cancellationToken: cancellationToken);
         sw.Stop();
 
         var report = collector.BuildReport(provider: "EF Core", translator: "Sqlite");

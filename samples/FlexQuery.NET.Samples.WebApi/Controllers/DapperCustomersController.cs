@@ -28,7 +28,7 @@ public sealed class DapperCustomersController(AppDbContext db) : ControllerBase
 
         var result = await connection.FlexQueryAsync<Customer>(parameters,
             cancellationToken: cancellationToken,
-            configureExecution: cfg => cfg.Listener = collector);
+            configure: cfg => cfg.Listener = collector);
 
         sw.Stop();
 
