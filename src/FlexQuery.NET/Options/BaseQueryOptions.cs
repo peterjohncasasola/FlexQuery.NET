@@ -1,5 +1,6 @@
 using System.Linq.Expressions;
 using FlexQuery.NET.Configurations;
+using FlexQuery.NET.Execution;
 using FlexQuery.NET.Security;
 
 namespace FlexQuery.NET.Options;
@@ -161,4 +162,11 @@ public abstract class BaseQueryOptions
         
         target.MaxFieldDepth ??= global.MaxFieldDepth;
     }
+    
+    /// <summary>
+    /// Optional listener that receives read-only execution events.
+    /// The listener is called synchronously within the query pipeline.
+    /// Slow listeners will delay query execution.
+    /// </summary>
+    public IFlexQueryExecutionListener? Listener { get; set; }
 }

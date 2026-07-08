@@ -16,7 +16,9 @@ public sealed class QueryValidationException : Exception
     /// Creates a new validation exception from a full result.
     /// </summary>
     public QueryValidationException(ValidationResult result)
-        : base("Query validation failed. Check the Result property for details.")
+        : base(result.Errors.Count > 0
+            ? string.Join("; ", result.Errors.Select(e => e.Message))
+            : "Query validation failed. Check the Result property for details.")
     {
         Result = result;
     }

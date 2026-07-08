@@ -17,8 +17,8 @@ public static class FlexQueryDebugExtensions
     /// <typeparam name="T">The entity type.</typeparam>
     /// <param name="query">The source queryable to analyze.</param>
     /// <param name="options">The query options to apply for analysis.</param>
-    /// <returns>A <see cref="DebugResult"/> containing the AST, expression tree, and LINQ lambda string.</returns>
-    public static DebugResult ToFlexQueryDebug<T>(this IQueryable<T> query, QueryOptions options)
+    /// <returns>A <see cref="QueryDebugInfo"/> containing the AST, expression tree, and LINQ lambda string.</returns>
+    public static QueryDebugInfo ToFlexQueryDebug<T>(this IQueryable<T> query, QueryOptions options)
     {
         var provider = new DebugQueryProvider(query.Provider);
         var debugQuery = provider.CreateQuery<T>(query.Expression);
@@ -26,7 +26,7 @@ public static class FlexQueryDebugExtensions
         // This will trigger the DebugQueryProvider to capture the expression
         debugQuery.Apply(options);
         
-        return new DebugResult
+        return new QueryDebugInfo
         {
             LinqLambda = ExpressionPrinter.Print(provider.LastExpression),
             ExpressionTree = ExpressionTreeVisualizer.Visualize(provider.LastExpression)

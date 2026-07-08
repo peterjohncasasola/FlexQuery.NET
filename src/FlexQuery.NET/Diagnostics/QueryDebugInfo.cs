@@ -3,7 +3,7 @@ namespace FlexQuery.NET.Diagnostics;
 /// <summary>
 /// Contains detailed information about the generated query for debugging purposes.
 /// </summary>
-public sealed class DebugResult
+public sealed class QueryDebugInfo
 {
     /// <summary>
     /// Gets the raw abstract syntax tree (AST) produced by the parser

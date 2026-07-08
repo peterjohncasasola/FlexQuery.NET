@@ -1,4 +1,4 @@
-namespace FlexQuery.NET.Models.Enums;
+namespace FlexQuery.NET.Models;
 
 /// <summary>Specifies the direction of a query parameter for data access operations.</summary>
 public enum QueryParameterDirection
