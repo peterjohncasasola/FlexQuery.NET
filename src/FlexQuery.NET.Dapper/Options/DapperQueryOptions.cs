@@ -4,23 +4,49 @@ using FlexQuery.NET.Options;
 
 namespace FlexQuery.NET.Dapper.Options;
 
+/// <summary>
+/// Represents Dapper-specific execution options for a FlexQuery request.
+/// </summary>
 /// <inheritdoc/>
 public sealed class DapperQueryOptions : BaseQueryOptions
 {
+    /// <summary>
+    /// Initializes a new instance of the <see cref="DapperQueryOptions"/> class.
+    /// </summary>
     /// <inheritdoc/>
     public DapperQueryOptions()
     {
         IncludeTotalCount = true;
     }
 
+    /// <summary>
+    /// Gets the entity metadata model used to translate FlexQuery requests into SQL.
+    /// </summary>
     internal FlexQueryModel? Model { get; private set; }
 
+    /// <summary>
+    /// Sets the metadata model used during SQL translation.
+    /// </summary>
+    /// <param name="model">The metadata model.</param>
+    /// <exception cref="ArgumentNullException">
+    /// Thrown when <paramref name="model"/> is <see langword="null"/>.
+    /// </exception>
     public void UseModel(FlexQueryModel model)
     {
         Model = model ?? throw new ArgumentNullException(nameof(model));
     }
 
+    /// <summary>
+    /// Gets or sets the SQL dialect used to translate FlexQuery expressions.
+    /// If not specified, the dialect is resolved automatically from the database connection.
+    /// </summary>
     public ISqlDialect? Dialect { get; set; }
 
+    /// <summary>
+    /// Gets or sets the database command timeout, in seconds.
+    /// </summary>
+    /// <value>
+    /// The command timeout in seconds. The default value is <c>30</c>.
+    /// </value>
     public int CommandTimeoutSeconds { get; set; } = 30;
 }

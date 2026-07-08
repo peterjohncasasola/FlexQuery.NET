@@ -2,12 +2,10 @@ using System.Data;
 using System.Data.Common;
 using Dapper;
 using FlexQuery.NET.Dapper.Options;
-using FlexQuery.NET.Dapper.Sql;
 using FlexQuery.NET.Dapper.Sql.Adapters;
 using FlexQuery.NET.Dapper.Sql.Builders;
 using FlexQuery.NET.Dapper.Sql.Models;
 using FlexQuery.NET.Dapper.Sql.Translators;
-using FlexQuery.NET.Dapper.Sql.Utilities;
 using FlexQuery.NET.Models;
 
 namespace FlexQuery.NET.Dapper.Execution;
@@ -16,30 +14,28 @@ internal static class CountEvaluator
 {
     public static async Task<(int? totalCount, int? resultCount)> GetCountsAsync(
         DbConnection connection,
-        QueryOptions options,
+        QueryOptions queryOptions,
         SqlTranslator translator,
         SqlCommand mainCommand,
         DynamicParameters mainParams,
-        DapperQueryOptions dapperOptions)
+        DapperQueryOptions options)
     {
-        var sourceCountCmd = translator.TranslateSourceCount(options);
-        var sourceCountParams =  CommandParameterAdapter.CreateParametersFromCommand(sourceCountCmd);
+        
+        var shouldIncludeCount = options.IncludeTotalCount && (queryOptions.IncludeCount ?? true);
+        if (!shouldIncludeCount) return (null, null);
+
+        var sourceCountCommand = translator.TranslateSourceCount(queryOptions);
+        var sourceCountParameters = CommandParameterAdapter.ToDynamicParameters(sourceCountCommand);
 
         var totalCount = (int)await connection.QuerySingleAsync<long>(
-            sourceCountCmd.Sql,
-            sourceCountParams,
-            commandTimeout: dapperOptions.CommandTimeoutSeconds,
-            commandType: CommandType.Text);
+            sourceCountCommand.Sql, sourceCountParameters,
+            commandTimeout: options.CommandTimeoutSeconds, commandType: CommandType.Text);
 
-        var resultCount = totalCount;
-        if (options.GroupBy is { Count: > 0 } || options.Distinct == true)
-        {
-            resultCount = (int)await connection.QuerySingleAsync<long>(
-                SqlCountBuilder.ExtractCountSql(mainCommand.Sql),
-                mainParams,
-                commandTimeout: dapperOptions.CommandTimeoutSeconds,
-                commandType: CommandType.Text);
-        }
+        var resultCount = queryOptions.GroupBy is { Count: > 0 } || queryOptions.Distinct == true
+            ? (int)await connection.QuerySingleAsync<long>(
+                SqlCountBuilder.ExtractCountSql(mainCommand.Sql), mainParams,
+                commandTimeout: options.CommandTimeoutSeconds, commandType: CommandType.Text)
+            : totalCount;
 
         return (totalCount, resultCount);
     }

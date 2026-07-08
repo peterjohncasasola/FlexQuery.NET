@@ -5,7 +5,7 @@ namespace FlexQuery.NET.Dapper.Sql.Adapters;
 
 internal static class CommandParameterAdapter
 {
-    public static DynamicParameters CreateParametersFromCommand(SqlCommand command)
+    public static DynamicParameters ToDynamicParameters(SqlCommand command)
     {
         var parameters = new DynamicParameters();
         foreach (var param in command.Parameters)

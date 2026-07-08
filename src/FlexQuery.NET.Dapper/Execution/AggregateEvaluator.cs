@@ -12,31 +12,27 @@ internal static class AggregateEvaluator
 {
     public static async Task<Dictionary<string, Dictionary<string, object>>?> GetGrandTotalsAsync(
         DbConnection connection,
-        QueryOptions options,
+        QueryOptions queryOptions,
         SqlTranslator translator,
-        DapperQueryOptions dapperOptions,
+        DapperQueryOptions options,
         CancellationToken ct)
     {
-        if (options.Aggregates.Count == 0 || (options.GroupBy?.Count > 0))
-            return null;
+        var isGrouped = queryOptions.GroupBy is { Count: > 0 };
+        if (queryOptions.Aggregates.Count == 0 || isGrouped) return null;
 
-        ct.ThrowIfCancellationRequested();
-
-        var aggCommand = translator.TranslateAggregates(options);
-        var aggParams =  CommandParameterAdapter.CreateParametersFromCommand(aggCommand);
+        var aggCommand = translator.TranslateAggregates(queryOptions);
+        var aggParameters = CommandParameterAdapter.ToDynamicParameters(aggCommand);
 
         var aggResult = await connection.QueryFirstOrDefaultAsync(
-            aggCommand.Sql,
-            aggParams,
-            commandTimeout: dapperOptions.CommandTimeoutSeconds,
-            commandType: CommandType.Text);
+            aggCommand.Sql, aggParameters,
+            commandTimeout: options.CommandTimeoutSeconds, commandType: CommandType.Text);
 
         if (aggResult is null) return null;
 
         var grandTotals = new Dictionary<string, Dictionary<string, object>>(StringComparer.OrdinalIgnoreCase);
         var rowDict = (IDictionary<string, object>)aggResult;
 
-        foreach (var agg in options.Aggregates)
+        foreach (var agg in queryOptions.Aggregates)
         {
             if (!rowDict.TryGetValue(agg.Alias, out var val)) continue;
             
