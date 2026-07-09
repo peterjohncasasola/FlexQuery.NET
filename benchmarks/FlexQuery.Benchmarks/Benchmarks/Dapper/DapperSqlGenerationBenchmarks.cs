@@ -29,7 +29,6 @@ public class DapperSqlGenerationBenchmarks
     }
 
     private IMappingRegistry _registry = null!;
-    private ISqlDialect _dialect = null!;
     private SqlTranslator _translator = null!;
     private QueryOptions _simpleOptions = null!;
     private QueryOptions _complexFilterOptions = null!;
@@ -41,8 +40,7 @@ public class DapperSqlGenerationBenchmarks
         _registry = new MappingRegistry();
         _registry.Entity<SqlEntity>().ToTable("SqlEntities");
 
-        _dialect = new SqlServerDialect();
-        _translator = new SqlTranslator(_registry, _dialect);
+        _translator = new SqlTranslator(_registry, new SqlServerDialect());
 
         _simpleOptions = BuildSimpleQuery();
         _complexFilterOptions = BuildComplexFilterQuery();
