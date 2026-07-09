@@ -23,16 +23,16 @@ namespace FlexQuery.NET.Tests.Tests;
     }
 
     [Fact]
-    public void Having_AggregateAlias_WithField_ReturnsFieldPrefixPlusFunction()
+    public void Having_AggregateAlias_WithField_ReturnsPascalCasePrefixPlusFunction()
     {
         var alias = ParserUtilities.BuildAggregateAlias("sum", "total");
-        alias.Should().Be("totalSum");
+        alias.Should().Be("TotalSum");
     }
 
     [Fact]
-    public void Having_AggregateAlias_WithMultiWordField_ReturnsCamelCase()
+    public void Having_AggregateAlias_WithMultiWordField_ReturnsPascalCase()
     {
         var alias = ParserUtilities.BuildAggregateAlias("sum", "grand_total");
-        alias.Should().Be("grandTotalSum");
+        alias.Should().Be("GrandTotalSum");
     }
 }

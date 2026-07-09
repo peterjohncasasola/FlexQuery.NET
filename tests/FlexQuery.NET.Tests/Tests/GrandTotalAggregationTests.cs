@@ -22,7 +22,7 @@ public class GrandTotalAggregationTests : IDisposable
     {
         var options = Parse(new()
         {
-            ["select"] = "sum(Total),count(Id),min(Total),max(Total),avg(Total)"
+            ["aggregates"] = "Total:sum,Id:count,Total:min,Total:max,Total:avg"
         });
 
         // Act
@@ -56,7 +56,7 @@ public class GrandTotalAggregationTests : IDisposable
     {
         var options = Parse(new()
         {
-            ["select"] = "sum(Total),count(Id),min(Total),max(Total),avg(Total)"
+            ["aggregates"] = "Total:sum,Id:count,Total:min,Total:max,Total:avg"
         });
 
         // Act

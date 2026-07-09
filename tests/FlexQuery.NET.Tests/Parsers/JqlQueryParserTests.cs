@@ -14,7 +14,8 @@ public class JqlQueryParserTests
 
     private static QueryOptions JqlParse(string? filter = null, string? sort = null,
         string? groupBy = null, string? select = null, string? having = null,
-        string? aggregates = null)
+        string? aggregates = null, string? include = null, bool? distinct = null,
+        int? page = null, int? pageSize = null)
     {
         return JqlParse(new FlexQueryParameters
         {
@@ -23,7 +24,11 @@ public class JqlQueryParserTests
             GroupBy = groupBy,
             Select = select,
             Having = having,
-            Aggregates = aggregates
+            Aggregates = aggregates,
+            Include = include,
+            Distinct = distinct,
+            Page = page,
+            PageSize = pageSize
         });
     }
 
@@ -138,6 +143,28 @@ public class JqlQueryParserTests
         filter.Filters[0].Field.Should().Be("deletedAt");
         filter.Filters[0].Operator.Should().Be(FilterOperators.IsNotNull);
         filter.Filters[0].Value.Should().BeNull();
+    }
+
+    [Fact]
+    public void Jql_StartsWithOperator_ParsedCorrectly()
+    {
+        var filter = JqlParseFilter("name STARTSWITH \"admin\"");
+
+        filter.Filters.Should().ContainSingle();
+        filter.Filters[0].Field.Should().Be("name");
+        filter.Filters[0].Operator.Should().Be(FilterOperators.StartsWith);
+        filter.Filters[0].Value.Should().Be("admin");
+    }
+
+    [Fact]
+    public void Jql_EndsWithOperator_ParsedCorrectly()
+    {
+        var filter = JqlParseFilter("email ENDSWITH \".com\"");
+
+        filter.Filters.Should().ContainSingle();
+        filter.Filters[0].Field.Should().Be("email");
+        filter.Filters[0].Operator.Should().Be(FilterOperators.EndsWith);
+        filter.Filters[0].Value.Should().Be(".com");
     }
 
     [Fact]
@@ -524,6 +551,16 @@ public class JqlQueryParserTests
         result.Aggregates[1].Alias.Should().Be("DateMax");
     }
 
+    [Fact]
+    public void JqlAggregate_InvalidFunction_IsIgnored()
+    {
+        var result = JqlParse(aggregates: "INVALID(Amount), SUM(Price)");
+
+        result.Aggregates.Should().ContainSingle();
+        result.Aggregates[0].Function.Should().Be("sum");
+        result.Aggregates[0].Field.Should().Be("Price");
+    }
+
     // ─── GroupBy Parser Tests ─────────────────────────────────────────
 
     [Fact]
@@ -624,41 +661,76 @@ public class JqlQueryParserTests
     public void JqlIntegration_AllParameters_ParsedCorrectly()
     {
         var result = JqlParse(
-            filter: "Status = 'Shipped' AND Amount > 100",
-            sort: "Customer.Name ASC, CreatedDate DESC",
-            groupBy: "Customer.Region",
-            aggregates: "SUM(Amount) AS TotalSales, COUNT(*) AS Orders, AVG(Amount)",
-            having: "SUM(Amount) > 1000"
+            filter: "((status = 'Open' OR status = 'Pending') AND amount > 100) OR customer.name CONTAINS 'john'",
+            sort: "createdAt DESC, name ASC",
+            select: "Id,Name,CustomerName",
+            include: "Orders,Profile",
+            groupBy: "customerId,category",
+            aggregates: "SUM(Amount) AS TotalSales, COUNT(Id), AVG(Price)",
+            having: "SUM(Amount) > 1000",
+            distinct: true,
+            page: 2,
+            pageSize: 25
         );
 
-        // Filter
+        // Filter — ((status = Open OR status = Pending) AND amount > 100) OR customer.name contains john
         result.Filter.Should().NotBeNull();
-        result.Filter!.Filters.Should().HaveCount(2);
+        result.Filter!.Logic.Should().Be(LogicOperator.Or);
+        result.Filter.Filters.Should().ContainSingle(f => f.Field == "customer.name"
+            && f.Operator == FilterOperators.Contains && f.Value == "john");
+        result.Filter.Groups.Should().ContainSingle();
+        var innerAnd = result.Filter.Groups[0];
+        innerAnd.Logic.Should().Be(LogicOperator.And);
+        innerAnd.Filters.Should().ContainSingle(f => f.Field == "amount"
+            && f.Operator == FilterOperators.GreaterThan && f.Value == "100");
+        innerAnd.Groups.Should().ContainSingle();
+        var innerOr = innerAnd.Groups[0];
+        innerOr.Logic.Should().Be(LogicOperator.Or);
+        innerOr.Filters.Should().HaveCount(2);
+        innerOr.Filters.Should().Contain(f => f.Field == "status" && f.Value == "Open");
+        innerOr.Filters.Should().Contain(f => f.Field == "status" && f.Value == "Pending");
 
         // Sort
         result.Sort.Should().HaveCount(2);
-        result.Sort[0].Field.Should().Be("Customer.Name");
-        result.Sort[0].Descending.Should().BeFalse();
-        result.Sort[1].Field.Should().Be("CreatedDate");
-        result.Sort[1].Descending.Should().BeTrue();
+        result.Sort[0].Field.Should().Be("createdAt");
+        result.Sort[0].Descending.Should().BeTrue();
+        result.Sort[1].Field.Should().Be("name");
+        result.Sort[1].Descending.Should().BeFalse();
+
+        // Select
+        result.Select.Should().BeEquivalentTo(["Id", "Name", "CustomerName"]);
+
+        // Include
+        result.Includes.Should().BeEquivalentTo(["Orders", "Profile"]);
 
         // GroupBy
-        result.GroupBy.Should().ContainSingle();
-        result.GroupBy[0].Should().Be("Customer.Region");
+        result.GroupBy.Should().BeEquivalentTo(["customerId", "category"]);
 
         // Aggregates
         result.Aggregates.Should().HaveCount(3);
         result.Aggregates[0].Function.Should().Be("sum");
+        result.Aggregates[0].Field.Should().Be("Amount");
         result.Aggregates[0].Alias.Should().Be("TotalSales");
         result.Aggregates[1].Function.Should().Be("count");
-        result.Aggregates[1].Alias.Should().Be("Orders");
+        result.Aggregates[1].Field.Should().Be("Id");
+        result.Aggregates[1].Alias.Should().Be("IdCount");
         result.Aggregates[2].Function.Should().Be("avg");
-        result.Aggregates[2].Alias.Should().Be("AmountAvg");
+        result.Aggregates[2].Field.Should().Be("Price");
+        result.Aggregates[2].Alias.Should().Be("PriceAvg");
 
         // Having
         result.Having.Should().NotBeNull();
         result.Having!.Function.Should().Be("sum");
+        result.Having.Field.Should().Be("Amount");
         result.Having.Operator.Should().Be("gt");
         result.Having.Value.Should().Be("1000");
+
+        // Distinct
+        result.Distinct.Should().BeTrue();
+
+        // Paging
+        result.Paging.Page.Should().Be(2);
+        result.Paging.PageSize.Should().Be(25);
     }
 }
+

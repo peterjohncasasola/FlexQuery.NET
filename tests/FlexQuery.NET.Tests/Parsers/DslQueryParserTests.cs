@@ -1,4 +1,5 @@
 using FlexQuery.NET.Models;
+using FlexQuery.NET.Models.Aggregates;
 using FlexQuery.NET.Models.Filters;
 using FlexQuery.NET.Parsers;
 using Microsoft.Extensions.Primitives;
@@ -475,7 +476,8 @@ public class DslQueryParserTests
         var opts = Parse(new()
         {
             ["group"] = "category,status",
-            ["select"] = "category,sum(total),count(id)",
+            ["select"] = "category",
+            ["aggregates"] = "total:sum,id:count",
             ["having"] = "sum(total):gt:10000"
         });
 
@@ -561,6 +563,311 @@ public class DslQueryParserTests
         opts.Having.Field.Should().Be("total");
         opts.Having.Operator.Should().Be(FilterOperators.GreaterThan);
         opts.Having.Value.Should().Be("100");
+    }
+
+    [Fact]
+    public void DslHaving_EmptyString_ReturnsNull()
+    {
+        var opts = Parse(new()
+        {
+            ["having"] = ""
+        });
+
+        opts.Having.Should().BeNull();
+    }
+
+    [Fact]
+    public void DslHaving_NestedField_ParsedCorrectly()
+    {
+        var opts = Parse(new()
+        {
+            ["group"] = "status",
+            ["select"] = "status",
+            ["aggregates"] = "Orders.Total:sum",
+            ["having"] = "sum(Orders.Total):gt:500"
+        });
+
+        opts.Having.Should().NotBeNull();
+        opts.Having!.Function.Should().Be("sum");
+        opts.Having.Field.Should().Be("Orders.Total");
+        opts.Having.Operator.Should().Be(FilterOperators.GreaterThan);
+        opts.Having.Value.Should().Be("500");
+    }
+
+    // ════════════════════════════════════════════════════════════════════
+    // Aggregates
+    // ════════════════════════════════════════════════════════════════════
+
+    [Fact]
+    public void DslAggregate_SingleField_ParsedCorrectly()
+    {
+        var opts = Parse(new()
+        {
+            ["aggregates"] = "Amount:sum"
+        });
+
+        opts.Aggregates.Should().ContainSingle();
+        opts.Aggregates[0].Function.Should().Be("sum");
+        opts.Aggregates[0].Field.Should().Be("Amount");
+        opts.Aggregates[0].Alias.Should().Be("AmountSum");
+    }
+
+    [Fact]
+    public void DslAggregate_WithAlias_ParsedCorrectly()
+    {
+        var opts = Parse(new()
+        {
+            ["aggregates"] = "Amount:sum:TotalSales"
+        });
+
+        opts.Aggregates.Should().ContainSingle();
+        opts.Aggregates[0].Function.Should().Be("sum");
+        opts.Aggregates[0].Field.Should().Be("Amount");
+        opts.Aggregates[0].Alias.Should().Be("TotalSales");
+    }
+
+    [Fact]
+    public void DslAggregate_Multiple_ParsedCorrectly()
+    {
+        var opts = Parse(new()
+        {
+            ["aggregates"] = "Amount:sum,Price:avg,Id:count"
+        });
+
+        opts.Aggregates.Should().HaveCount(3);
+        opts.Aggregates[0].Function.Should().Be("sum");
+        opts.Aggregates[0].Field.Should().Be("Amount");
+        opts.Aggregates[1].Function.Should().Be("avg");
+        opts.Aggregates[1].Field.Should().Be("Price");
+        opts.Aggregates[2].Function.Should().Be("count");
+        opts.Aggregates[2].Field.Should().Be("Id");
+    }
+
+    [Fact]
+    public void DslAggregate_DefaultAlias_GeneratedCorrectly()
+    {
+        var opts = Parse(new()
+        {
+            ["aggregates"] = "Price:avg"
+        });
+
+        opts.Aggregates.Should().ContainSingle();
+        opts.Aggregates[0].Function.Should().Be("avg");
+        opts.Aggregates[0].Field.Should().Be("Price");
+        opts.Aggregates[0].Alias.Should().Be("PriceAvg");
+    }
+
+    [Fact]
+    public void DslAggregate_NestedField_AliasGeneratedCorrectly()
+    {
+        var opts = Parse(new()
+        {
+            ["aggregates"] = "Orders.Total:sum"
+        });
+
+        opts.Aggregates.Should().ContainSingle();
+        opts.Aggregates[0].Function.Should().Be("sum");
+        opts.Aggregates[0].Field.Should().Be("Orders.Total");
+        opts.Aggregates[0].Alias.Should().Be("OrdersTotalSum");
+    }
+
+    [Fact]
+    public void DslAggregate_InvalidFunction_IsIgnored()
+    {
+        var opts = Parse(new()
+        {
+            ["aggregates"] = "Amount:invalid,Price:sum"
+        });
+
+        opts.Aggregates.Should().ContainSingle();
+        opts.Aggregates[0].Function.Should().Be("sum");
+        opts.Aggregates[0].Field.Should().Be("Price");
+    }
+
+    [Fact]
+    public void DslAggregate_EmptyString_ReturnsEmptyList()
+    {
+        var opts = Parse(new()
+        {
+            ["aggregates"] = ""
+        });
+
+        opts.Aggregates.Should().BeEmpty();
+    }
+
+    [Fact]
+    public void DslAggregate_Null_ReturnsEmptyList()
+    {
+        var opts = Parse(new());
+
+        opts.Aggregates.Should().BeEmpty();
+    }
+
+    [Fact]
+    public void DslAggregate_CountStar_ParsedCorrectly()
+    {
+        var opts = Parse(new()
+        {
+            ["aggregates"] = "*:count"
+        });
+
+        opts.Aggregates.Should().ContainSingle();
+        opts.Aggregates[0].Function.Should().Be("count");
+        opts.Aggregates[0].Field.Should().BeNull();
+        opts.Aggregates[0].Alias.Should().Be("Count");
+    }
+
+    [Fact]
+    public void DslAggregate_CaseInsensitiveFunctions_ParsedCorrectly()
+    {
+        var opts = Parse(new()
+        {
+            ["aggregates"] = "Amount:SUM,Price:Avg,Id:count"
+        });
+
+        opts.Aggregates.Should().HaveCount(3);
+        opts.Aggregates[0].Function.Should().Be("sum");
+        opts.Aggregates[1].Function.Should().Be("avg");
+        opts.Aggregates[2].Function.Should().Be("count");
+    }
+
+    [Fact]
+    public void DslAggregate_MinMax_ParsedCorrectly()
+    {
+        var opts = Parse(new()
+        {
+            ["aggregates"] = "Date:min,Date:max"
+        });
+
+        opts.Aggregates.Should().HaveCount(2);
+        opts.Aggregates[0].Function.Should().Be("min");
+        opts.Aggregates[0].Alias.Should().Be("DateMin");
+
+        opts.Aggregates[1].Alias.Should().Be("DateMax");
+    }
+
+    // ════════════════════════════════════════════════════════════════════
+    // Filter — Additional Operators
+    // ════════════════════════════════════════════════════════════════════
+
+    [Fact]
+    public void DslFilter_LikeOperator_ParsedCorrectly()
+    {
+        var opts = Parse(new()
+        {
+            ["filter"] = "name:like:%john%"
+        });
+
+        opts.Filter.Should().NotBeNull();
+        opts.Filter!.Filters.Should().ContainSingle(f =>
+            f.Field == "name" && f.Operator == FilterOperators.Like && f.Value == "%john%");
+    }
+
+    [Fact]
+    public void DslFilter_StartsWith_ParsedCorrectly()
+    {
+        var opts = Parse(new()
+        {
+            ["filter"] = "name:startswith:admin"
+        });
+
+        opts.Filter.Should().NotBeNull();
+        opts.Filter!.Filters.Should().ContainSingle(f =>
+            f.Field == "name" && f.Operator == FilterOperators.StartsWith && f.Value == "admin");
+    }
+
+    [Fact]
+    public void DslFilter_EndsWith_ParsedCorrectly()
+    {
+        var opts = Parse(new()
+        {
+            ["filter"] = "email:endswith:.com"
+        });
+
+        opts.Filter.Should().NotBeNull();
+        opts.Filter!.Filters.Should().ContainSingle(f =>
+            f.Field == "email" && f.Operator == FilterOperators.EndsWith && f.Value == ".com");
+    }
+
+    // ════════════════════════════════════════════════════════════════════
+    // Integration — All Parameters
+    // ════════════════════════════════════════════════════════════════════
+
+    [Fact]
+    public void DslIntegration_AllParameters_ParsedCorrectly()
+    {
+        var opts = Parse(new()
+        {
+            ["filter"] = "((status:eq:Open|status:eq:Pending)&amount:gt:100)|customer.name:contains:john",
+            ["sort"] = "createdAt:desc,name:asc",
+            ["select"] = "Id,Name,CustomerName",
+            ["include"] = "Orders,Profile",
+            ["group"] = "customerId,category",
+            ["aggregates"] = "Amount:sum:TotalSales,Id:count,Price:avg",
+            ["having"] = "sum(Amount):gt:1000",
+            ["distinct"] = "true",
+            ["page"] = "2",
+            ["pageSize"] = "25"
+        });
+
+        // Filter — ((status = Open OR status = Pending) AND amount > 100) OR customer.name contains john
+        opts.Filter.Should().NotBeNull();
+        opts.Filter!.Logic.Should().Be(LogicOperator.Or);
+        opts.Filter.Filters.Should().ContainSingle(f => f.Field == "customer.name"
+            && f.Operator == FilterOperators.Contains && f.Value == "john");
+        opts.Filter.Groups.Should().ContainSingle();
+        var innerAnd = opts.Filter.Groups[0];
+        innerAnd.Logic.Should().Be(LogicOperator.And);
+        innerAnd.Filters.Should().ContainSingle(f => f.Field == "amount"
+            && f.Operator == FilterOperators.GreaterThan && f.Value == "100");
+        innerAnd.Groups.Should().ContainSingle();
+        var innerOr = innerAnd.Groups[0];
+        innerOr.Logic.Should().Be(LogicOperator.Or);
+        innerOr.Filters.Should().HaveCount(2);
+        innerOr.Filters.Should().Contain(f => f.Field == "status" && f.Value == "Open");
+        innerOr.Filters.Should().Contain(f => f.Field == "status" && f.Value == "Pending");
+
+        // Sort
+        opts.Sort.Should().HaveCount(2);
+        opts.Sort[0].Field.Should().Be("createdAt");
+        opts.Sort[0].Descending.Should().BeTrue();
+        opts.Sort[1].Field.Should().Be("name");
+        opts.Sort[1].Descending.Should().BeFalse();
+
+        // Select
+        opts.Select.Should().BeEquivalentTo(["Id", "Name", "CustomerName"]);
+
+        // Include
+        opts.Includes.Should().BeEquivalentTo(["Orders", "Profile"]);
+
+        // GroupBy
+        opts.GroupBy.Should().BeEquivalentTo(["customerId", "category"]);
+
+        // Aggregates
+        opts.Aggregates.Should().HaveCount(3);
+        opts.Aggregates[0].Function.Should().Be("sum");
+        opts.Aggregates[0].Field.Should().Be("Amount");
+        opts.Aggregates[0].Alias.Should().Be("TotalSales");
+        opts.Aggregates[1].Function.Should().Be("count");
+        opts.Aggregates[1].Field.Should().Be("Id");
+        opts.Aggregates[1].Alias.Should().Be("IdCount");
+
+        opts.Aggregates[2].Function.Should().Be("avg");
+        opts.Aggregates[2].Alias.Should().Be("PriceAvg");
+
+        // Having
+        opts.Having.Should().NotBeNull();
+        opts.Having!.Function.Should().Be("sum");
+        opts.Having.Field.Should().Be("Amount");
+        opts.Having.Operator.Should().Be("gt");
+        opts.Having.Value.Should().Be("1000");
+
+        // Distinct
+        opts.Distinct.Should().BeTrue();
+
+        // Paging
+        opts.Paging.Page.Should().Be(2);
+        opts.Paging.PageSize.Should().Be(25);
     }
 
     // ════════════════════════════════════════════════════════════════════
