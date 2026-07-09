@@ -9,7 +9,7 @@ public sealed class FlexQueryParameters : FlexQueryBase
 {
     /// <summary>
     /// Optional raw dictionary of query parameters.
-    /// Used by parsers for syntax auto-detection (e.g., detecting OData $ prefix).
+    /// Retained for internal use only; removed in the next major version.
     /// </summary>
-    public IDictionary<string, string>? RawParameters { get; set; }
+    internal IDictionary<string, string>? RawParameters { get; set; }
 }

@@ -48,4 +48,11 @@ public abstract class FlexQueryBase
     /// providing significantly better performance for large datasets.
     /// </summary>
     public bool UseKeysetPagination { get; set; }
+
+    /// <summary>
+    /// Internal: when true, the DSL parser preserves the original filter order
+    /// instead of normalizing. Set automatically when parameters originate from
+    /// a raw query string (e.g. <c>QueryOptionsParser.Parse(IEnumerable&lt;KV&gt;)</c>).
+    /// </summary>
+    internal bool PreserveRawOrder { get; set; }
 }
