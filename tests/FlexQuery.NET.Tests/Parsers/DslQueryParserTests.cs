@@ -484,10 +484,10 @@ public class DslQueryParserTests
         opts.GroupBy.Should().BeEquivalentTo(["category", "status"]);
         opts.Select.Should().BeEquivalentTo(["category"]);
         opts.Aggregates.Should().HaveCount(2);
-        opts.Aggregates.Should().Contain(a => a.Function == "sum" && a.Field == "total");
-        opts.Aggregates.Should().Contain(a => a.Function == "count" && a.Field == "id");
+        opts.Aggregates.Should().Contain(a => a.Function == AggregateFunction.Sum && a.Field == "total");
+        opts.Aggregates.Should().Contain(a => a.Function == AggregateFunction.Count && a.Field == "id");
         opts.Having.Should().NotBeNull();
-        opts.Having!.Function.Should().Be("sum");
+        opts.Having!.Function.Should().Be(AggregateFunction.Sum);
         opts.Having.Operator.Should().Be(FilterOperators.GreaterThan);
         opts.Having.Value.Should().Be("10000");
     }
@@ -525,7 +525,7 @@ public class DslQueryParserTests
         });
 
         opts.Having.Should().NotBeNull();
-        opts.Having!.Function.Should().Be("count");
+        opts.Having!.Function.Should().Be(AggregateFunction.Count);
         opts.Having.Field.Should().BeNull();
         opts.Having.Operator.Should().Be(FilterOperators.GreaterThan);
         opts.Having.Value.Should().Be("20");
@@ -542,7 +542,7 @@ public class DslQueryParserTests
         });
 
         opts.Having.Should().NotBeNull();
-        opts.Having!.Function.Should().Be("sum");
+        opts.Having!.Function.Should().Be(AggregateFunction.Sum);
         opts.Having.Field.Should().Be("total");
         opts.Having.Operator.Should().Be(FilterOperators.GreaterThan);
         opts.Having.Value.Should().Be("100");
@@ -559,7 +559,7 @@ public class DslQueryParserTests
         });
 
         opts.Having.Should().NotBeNull();
-        opts.Having!.Function.Should().Be("sum");
+        opts.Having!.Function.Should().Be(AggregateFunction.Sum);
         opts.Having.Field.Should().Be("total");
         opts.Having.Operator.Should().Be(FilterOperators.GreaterThan);
         opts.Having.Value.Should().Be("100");
@@ -588,7 +588,7 @@ public class DslQueryParserTests
         });
 
         opts.Having.Should().NotBeNull();
-        opts.Having!.Function.Should().Be("sum");
+        opts.Having!.Function.Should().Be(AggregateFunction.Sum);
         opts.Having.Field.Should().Be("Orders.Total");
         opts.Having.Operator.Should().Be(FilterOperators.GreaterThan);
         opts.Having.Value.Should().Be("500");
@@ -607,7 +607,7 @@ public class DslQueryParserTests
         });
 
         opts.Aggregates.Should().ContainSingle();
-        opts.Aggregates[0].Function.Should().Be("sum");
+        opts.Aggregates[0].Function.Should().Be(AggregateFunction.Sum);
         opts.Aggregates[0].Field.Should().Be("Amount");
         opts.Aggregates[0].Alias.Should().Be("AmountSum");
     }
@@ -621,7 +621,7 @@ public class DslQueryParserTests
         });
 
         opts.Aggregates.Should().ContainSingle();
-        opts.Aggregates[0].Function.Should().Be("sum");
+        opts.Aggregates[0].Function.Should().Be(AggregateFunction.Sum);
         opts.Aggregates[0].Field.Should().Be("Amount");
         opts.Aggregates[0].Alias.Should().Be("TotalSales");
     }
@@ -635,11 +635,11 @@ public class DslQueryParserTests
         });
 
         opts.Aggregates.Should().HaveCount(3);
-        opts.Aggregates[0].Function.Should().Be("sum");
+        opts.Aggregates[0].Function.Should().Be(AggregateFunction.Sum);
         opts.Aggregates[0].Field.Should().Be("Amount");
-        opts.Aggregates[1].Function.Should().Be("avg");
+        opts.Aggregates[1].Function.Should().Be(AggregateFunction.Avg);
         opts.Aggregates[1].Field.Should().Be("Price");
-        opts.Aggregates[2].Function.Should().Be("count");
+        opts.Aggregates[2].Function.Should().Be(AggregateFunction.Count);
         opts.Aggregates[2].Field.Should().Be("Id");
     }
 
@@ -652,7 +652,7 @@ public class DslQueryParserTests
         });
 
         opts.Aggregates.Should().ContainSingle();
-        opts.Aggregates[0].Function.Should().Be("avg");
+        opts.Aggregates[0].Function.Should().Be(AggregateFunction.Avg);
         opts.Aggregates[0].Field.Should().Be("Price");
         opts.Aggregates[0].Alias.Should().Be("PriceAvg");
     }
@@ -666,7 +666,7 @@ public class DslQueryParserTests
         });
 
         opts.Aggregates.Should().ContainSingle();
-        opts.Aggregates[0].Function.Should().Be("sum");
+        opts.Aggregates[0].Function.Should().Be(AggregateFunction.Sum);
         opts.Aggregates[0].Field.Should().Be("Orders.Total");
         opts.Aggregates[0].Alias.Should().Be("OrdersTotalSum");
     }
@@ -680,7 +680,7 @@ public class DslQueryParserTests
         });
 
         opts.Aggregates.Should().ContainSingle();
-        opts.Aggregates[0].Function.Should().Be("sum");
+        opts.Aggregates[0].Function.Should().Be(AggregateFunction.Sum);
         opts.Aggregates[0].Field.Should().Be("Price");
     }
 
@@ -712,7 +712,7 @@ public class DslQueryParserTests
         });
 
         opts.Aggregates.Should().ContainSingle();
-        opts.Aggregates[0].Function.Should().Be("count");
+        opts.Aggregates[0].Function.Should().Be(AggregateFunction.Count);
         opts.Aggregates[0].Field.Should().BeNull();
         opts.Aggregates[0].Alias.Should().Be("Count");
     }
@@ -726,9 +726,9 @@ public class DslQueryParserTests
         });
 
         opts.Aggregates.Should().HaveCount(3);
-        opts.Aggregates[0].Function.Should().Be("sum");
-        opts.Aggregates[1].Function.Should().Be("avg");
-        opts.Aggregates[2].Function.Should().Be("count");
+        opts.Aggregates[0].Function.Should().Be(AggregateFunction.Sum);
+        opts.Aggregates[1].Function.Should().Be(AggregateFunction.Avg);
+        opts.Aggregates[2].Function.Should().Be(AggregateFunction.Count);
     }
 
     [Fact]
@@ -740,7 +740,7 @@ public class DslQueryParserTests
         });
 
         opts.Aggregates.Should().HaveCount(2);
-        opts.Aggregates[0].Function.Should().Be("min");
+        opts.Aggregates[0].Function.Should().Be(AggregateFunction.Min);
         opts.Aggregates[0].Alias.Should().Be("DateMin");
 
         opts.Aggregates[1].Alias.Should().Be("DateMax");
@@ -845,19 +845,19 @@ public class DslQueryParserTests
 
         // Aggregates
         opts.Aggregates.Should().HaveCount(3);
-        opts.Aggregates[0].Function.Should().Be("sum");
+        opts.Aggregates[0].Function.Should().Be(AggregateFunction.Sum);
         opts.Aggregates[0].Field.Should().Be("Amount");
         opts.Aggregates[0].Alias.Should().Be("TotalSales");
-        opts.Aggregates[1].Function.Should().Be("count");
+        opts.Aggregates[1].Function.Should().Be(AggregateFunction.Count);
         opts.Aggregates[1].Field.Should().Be("Id");
         opts.Aggregates[1].Alias.Should().Be("IdCount");
 
-        opts.Aggregates[2].Function.Should().Be("avg");
+        opts.Aggregates[2].Function.Should().Be(AggregateFunction.Avg);
         opts.Aggregates[2].Alias.Should().Be("PriceAvg");
 
         // Having
         opts.Having.Should().NotBeNull();
-        opts.Having!.Function.Should().Be("sum");
+        opts.Having!.Function.Should().Be(AggregateFunction.Sum);
         opts.Having.Field.Should().Be("Amount");
         opts.Having.Operator.Should().Be("gt");
         opts.Having.Value.Should().Be("1000");

@@ -484,15 +484,15 @@ public class AgGridQueryParserTests
     }
 
     [Theory]
-    [InlineData("sum", "sum", "QuantitySum")]
-    [InlineData("avg", "avg", "QuantityAvg")]
-    [InlineData("average", "avg", "QuantityAvg")]
-    [InlineData("min", "min", "QuantityMin")]
-    [InlineData("max", "max", "QuantityMax")]
-    [InlineData("count", "count", "QuantityCount")]
+    [InlineData("sum", AggregateFunction.Sum, "QuantitySum")]
+    [InlineData("avg", AggregateFunction.Avg, "QuantityAvg")]
+    [InlineData("average", AggregateFunction.Avg, "QuantityAvg")]
+    [InlineData("min", AggregateFunction.Min, "QuantityMin")]
+    [InlineData("max", AggregateFunction.Max, "QuantityMax")]
+    [InlineData("count", AggregateFunction.Count, "QuantityCount")]
     public void Aggregates_PreserveCanonicalFunctionAndAlias(
         string agGridFunction,
-        string expectedFunction,
+        AggregateFunction expectedFunction,
         string expectedAlias)
     {
         var result = AgGridQueryOptionsParser.Parse(new AgGridRequest
@@ -520,7 +520,7 @@ public class AgGridQueryParserTests
                 new AggregateModel
                 {
                     Field = "quantity",
-                    Function = "sum",
+                    Function = AggregateFunction.Sum,
                     Alias = "quantitySum"
                 }
             ]
@@ -552,7 +552,7 @@ public class AgGridQueryParserTests
             GroupBy = ["oldGroup"],
             Aggregates =
             [
-                new AggregateModel { Field = "oldValue", Function = "max", Alias = "oldValueMax" }
+                new AggregateModel { Field = "oldValue", Function = AggregateFunction.Max, Alias = "oldValueMax" }
             ]
         };
 
@@ -604,7 +604,7 @@ public class AgGridQueryParserTests
         // Pivot fields are out of scope and do not pollute QueryOptions.
         request.Aggregates.Should().ContainSingle();
         request.Aggregates[0].Field.Should().Be("gold");
-        request.Aggregates[0].Function.Should().Be("sum");
+        request.Aggregates[0].Function.Should().Be(AggregateFunction.Sum);
     }
 
     [Fact]
@@ -688,7 +688,7 @@ public class AgGridQueryParserTests
 
         result.Aggregates.Should().HaveCount(5);
         result.Aggregates.Select(a => a.Alias).Should().Equal("QuantitySum", "PriceAvg", "PriceMin", "PriceMax", "IdCount");
-        result.Aggregates.Select(a => a.Function).Should().Equal("sum", "avg", "min", "max", "count");
+        result.Aggregates.Select(a => a.Function).Should().Equal(AggregateFunction.Sum, AggregateFunction.Avg, AggregateFunction.Min, AggregateFunction.Max, AggregateFunction.Count);
     }
 
     [Fact]

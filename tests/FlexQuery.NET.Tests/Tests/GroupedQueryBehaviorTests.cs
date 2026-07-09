@@ -100,7 +100,7 @@ public class GroupedQueryEfCoreTests : IDisposable
 
             GroupBy = ["CustomerId"],
 
-            Aggregates = [new AggregateModel { Field = "Total", Function = "sum", Alias = "totalSum" }],
+            Aggregates = [new AggregateModel { Field = "Total", Function = AggregateFunction.Sum, Alias = "totalSum" }],
 
             Sort = [new SortNode { Field = "Id" }],
 
@@ -140,7 +140,7 @@ public class GroupedQueryEfCoreTests : IDisposable
 
             GroupBy = ["CustomerId"],
 
-            Aggregates = [new AggregateModel { Field = "Total", Function = "sum", Alias = "totalSum" }],
+            Aggregates = [new AggregateModel { Field = "Total", Function = AggregateFunction.Sum, Alias = "totalSum" }],
 
             Sort = [
 
@@ -178,7 +178,7 @@ public class GroupedQueryEfCoreTests : IDisposable
 
             GroupBy = ["CustomerId"],
 
-            Aggregates = [new AggregateModel { Field = "Total", Function = "sum", Alias = "totalSum" }],
+            Aggregates = [new AggregateModel { Field = "Total", Function = AggregateFunction.Sum, Alias = "totalSum" }],
 
             Sort = [new SortNode { Field = "totalSum", Descending = true }],
 
@@ -210,7 +210,7 @@ public class GroupedQueryEfCoreTests : IDisposable
 
             GroupBy = ["CustomerId"],
 
-            Aggregates = [new AggregateModel { Field = "Total", Function = "sum", Alias = "totalSum" }],
+            Aggregates = [new AggregateModel { Field = "Total", Function = AggregateFunction.Sum, Alias = "totalSum" }],
 
             Sort = [new SortNode { Field = "Total", Descending = true }],
 
@@ -242,7 +242,7 @@ public class GroupedQueryEfCoreTests : IDisposable
 
             GroupBy = ["CustomerId"],
 
-            Aggregates = [new AggregateModel { Field = "Total", Function = "sum", Alias = "totalSum" }],
+            Aggregates = [new AggregateModel { Field = "Total", Function = AggregateFunction.Sum, Alias = "totalSum" }],
 
             Sort = [new SortNode { Field = "CustomerId", Descending = true }],
 
@@ -278,7 +278,7 @@ public class GroupedQueryEfCoreTests : IDisposable
 
             GroupBy = ["CustomerId"],
 
-            Aggregates = [new AggregateModel { Field = "Total", Function = "sum", Alias = "totalSum" }],
+            Aggregates = [new AggregateModel { Field = "Total", Function = AggregateFunction.Sum, Alias = "totalSum" }],
 
             Paging = { Page = 1, PageSize = 2 },
 
@@ -294,7 +294,7 @@ public class GroupedQueryEfCoreTests : IDisposable
 
             GroupBy = ["CustomerId"],
 
-            Aggregates = [new AggregateModel { Field = "Total", Function = "sum", Alias = "totalSum" }],
+            Aggregates = [new AggregateModel { Field = "Total", Function = AggregateFunction.Sum, Alias = "totalSum" }],
 
             Paging = { Page = 2, PageSize = 2 },
 
@@ -406,7 +406,7 @@ public class GroupedQueryDapperTests
 
             GroupBy = ["CustomerId"],
 
-            Aggregates = [new AggregateModel { Field = "Total", Function = "sum", Alias = "totalSum" }],
+            Aggregates = [new AggregateModel { Field = "Total", Function = AggregateFunction.Sum, Alias = "totalSum" }],
 
             Paging = { Disabled = true }
 
@@ -550,7 +550,7 @@ public class GroupedQueryDapperTests
 
             GroupBy = ["CustomerId"],
 
-            Aggregates = [new AggregateModel { Field = "Total", Function = "sum", Alias = "totalSum" }],
+            Aggregates = [new AggregateModel { Field = "Total", Function = AggregateFunction.Sum, Alias = "totalSum" }],
 
             Paging = { Page = 2, PageSize = 10 }
 

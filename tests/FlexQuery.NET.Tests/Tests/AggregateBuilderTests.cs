@@ -1,4 +1,5 @@
 using FlexQuery.NET.Builders.Fluent;
+using FlexQuery.NET.Models.Aggregates;
 
 namespace FlexQuery.NET.Tests.Tests;
 
@@ -21,7 +22,7 @@ public class AggregateBuilderTests
         var result = builder.Build();
 
         result.Should().ContainSingle();
-        result[0].Function.Should().Be("count");
+        result[0].Function.Should().Be(AggregateFunction.Count);
         result[0].Field.Should().BeNull();
         result[0].Alias.Should().Be("Total");
     }

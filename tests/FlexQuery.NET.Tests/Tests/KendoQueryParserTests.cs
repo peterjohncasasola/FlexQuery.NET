@@ -3,6 +3,7 @@ using FlexQuery.NET.Adapters.Kendo;
 using FlexQuery.NET.Adapters.Kendo.Models;
 using FlexQuery.NET.Adapters.Kendo.Parsers;
 using FlexQuery.NET.Models;
+using FlexQuery.NET.Models.Aggregates;
 using FlexQuery.NET.Models.Filters;
 
 namespace FlexQuery.NET.Tests.Tests;
@@ -329,9 +330,9 @@ public class KendoQueryParserTests
 
         result.Aggregates.Should().HaveCount(2);
         result.Aggregates[0].Field.Should().Be("gold");
-        result.Aggregates[0].Function.Should().Be("sum");
+        result.Aggregates[0].Function.Should().Be(AggregateFunction.Sum);
         result.Aggregates[1].Field.Should().Be("silver");
-        result.Aggregates[1].Function.Should().Be("avg");
+        result.Aggregates[1].Function.Should().Be(AggregateFunction.Avg);
     }
 
     [Fact]
@@ -394,7 +395,7 @@ public class KendoQueryParserTests
         // Verify aggregates
         result.Aggregates.Should().ContainSingle();
         result.Aggregates[0].Field.Should().Be("gold");
-        result.Aggregates[0].Function.Should().Be("sum");
+        result.Aggregates[0].Function.Should().Be(AggregateFunction.Sum);
     }
 
     [Fact]
@@ -461,9 +462,9 @@ public class KendoQueryParserTests
         result.GroupBy.Should().Equal("country");
         result.Aggregates.Should().HaveCount(2);
         result.Aggregates[0].Field.Should().Be("gold");
-        result.Aggregates[0].Function.Should().Be("sum");
+        result.Aggregates[0].Function.Should().Be(AggregateFunction.Sum);
         result.Aggregates[1].Field.Should().Be("silver");
-        result.Aggregates[1].Function.Should().Be("count");
+        result.Aggregates[1].Function.Should().Be(AggregateFunction.Count);
     }
 
     [Fact]
@@ -549,7 +550,7 @@ public class KendoQueryParserTests
         });
 
         result.Aggregates.Should().ContainSingle();
-        result.Aggregates[0].Function.Should().Be("avg");
+        result.Aggregates[0].Function.Should().Be(AggregateFunction.Avg);
     }
 
     [Fact]

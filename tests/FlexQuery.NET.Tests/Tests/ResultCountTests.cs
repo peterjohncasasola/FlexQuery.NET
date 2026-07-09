@@ -115,7 +115,7 @@ public class ResultCountTests
                 new AggregateModel
                 {
                     Field = "Total",
-                    Function = "sum",
+                    Function = AggregateFunction.Sum,
                     Alias = "totalSum"
                 }
             ],
@@ -135,14 +135,14 @@ public class ResultCountTests
                 new AggregateModel
                 {
                     Field = "Total",
-                    Function = "sum",
+                    Function = AggregateFunction.Sum,
                     Alias = "totalSum"
                 }
             ],
             Having = new HavingCondition
             {
                 Field = "Total",
-                Function = "sum",
+                Function = AggregateFunction.Sum,
                 Operator = FilterOperators.GreaterThan,
                 Value = "100"
             },

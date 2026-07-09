@@ -1,4 +1,5 @@
 using FlexQuery.NET.Models;
+using FlexQuery.NET.Models.Aggregates;
 using FlexQuery.NET.Models.Filters;
 using FlexQuery.NET.Parsers.Jql;
 
@@ -475,7 +476,7 @@ public class JqlQueryParserTests
         var result = JqlParse(aggregates: "SUM(Amount) AS TotalSales");
 
         result.Aggregates.Should().ContainSingle();
-        result.Aggregates[0].Function.Should().Be("sum");
+        result.Aggregates[0].Function.Should().Be(AggregateFunction.Sum);
         result.Aggregates[0].Field.Should().Be("Amount");
         result.Aggregates[0].Alias.Should().Be("TotalSales");
     }
@@ -486,7 +487,7 @@ public class JqlQueryParserTests
         var result = JqlParse(aggregates: "COUNT(*)");
 
         result.Aggregates.Should().ContainSingle();
-        result.Aggregates[0].Function.Should().Be("count");
+        result.Aggregates[0].Function.Should().Be(AggregateFunction.Count);
         result.Aggregates[0].Field.Should().BeNull();
         result.Aggregates[0].Alias.Should().Be("Count");
     }
@@ -497,11 +498,11 @@ public class JqlQueryParserTests
         var result = JqlParse(aggregates: "SUM(Amount), AVG(Price), COUNT(*) AS Orders");
 
         result.Aggregates.Should().HaveCount(3);
-        result.Aggregates[0].Function.Should().Be("sum");
+        result.Aggregates[0].Function.Should().Be(AggregateFunction.Sum);
         result.Aggregates[0].Field.Should().Be("Amount");
-        result.Aggregates[1].Function.Should().Be("avg");
+        result.Aggregates[1].Function.Should().Be(AggregateFunction.Avg);
         result.Aggregates[1].Field.Should().Be("Price");
-        result.Aggregates[2].Function.Should().Be("count");
+        result.Aggregates[2].Function.Should().Be(AggregateFunction.Count);
         result.Aggregates[2].Field.Should().BeNull();
         result.Aggregates[2].Alias.Should().Be("Orders");
     }
@@ -512,7 +513,7 @@ public class JqlQueryParserTests
         var result = JqlParse(aggregates: "AVG(Price)");
 
         result.Aggregates.Should().ContainSingle();
-        result.Aggregates[0].Function.Should().Be("avg");
+        result.Aggregates[0].Function.Should().Be(AggregateFunction.Avg);
         result.Aggregates[0].Field.Should().Be("Price");
         result.Aggregates[0].Alias.Should().Be("PriceAvg");
     }
@@ -523,7 +524,7 @@ public class JqlQueryParserTests
         var result = JqlParse(aggregates: "SUM(Orders.Total)");
 
         result.Aggregates.Should().ContainSingle();
-        result.Aggregates[0].Function.Should().Be("sum");
+        result.Aggregates[0].Function.Should().Be(AggregateFunction.Sum);
         result.Aggregates[0].Field.Should().Be("Orders.Total");
         result.Aggregates[0].Alias.Should().Be("OrdersTotalSum");
     }
@@ -534,9 +535,9 @@ public class JqlQueryParserTests
         var result = JqlParse(aggregates: "sum(Amount), COUNT(*), Avg(Price)");
 
         result.Aggregates.Should().HaveCount(3);
-        result.Aggregates[0].Function.Should().Be("sum");
-        result.Aggregates[1].Function.Should().Be("count");
-        result.Aggregates[2].Function.Should().Be("avg");
+        result.Aggregates[0].Function.Should().Be(AggregateFunction.Sum);
+        result.Aggregates[1].Function.Should().Be(AggregateFunction.Count);
+        result.Aggregates[2].Function.Should().Be(AggregateFunction.Avg);
     }
 
     [Fact]
@@ -545,9 +546,9 @@ public class JqlQueryParserTests
         var result = JqlParse(aggregates: "MIN(Date), MAX(Date)");
 
         result.Aggregates.Should().HaveCount(2);
-        result.Aggregates[0].Function.Should().Be("min");
+        result.Aggregates[0].Function.Should().Be(AggregateFunction.Min);
         result.Aggregates[0].Alias.Should().Be("DateMin");
-        result.Aggregates[1].Function.Should().Be("max");
+        result.Aggregates[1].Function.Should().Be(AggregateFunction.Max);
         result.Aggregates[1].Alias.Should().Be("DateMax");
     }
 
@@ -557,7 +558,7 @@ public class JqlQueryParserTests
         var result = JqlParse(aggregates: "INVALID(Amount), SUM(Price)");
 
         result.Aggregates.Should().ContainSingle();
-        result.Aggregates[0].Function.Should().Be("sum");
+        result.Aggregates[0].Function.Should().Be(AggregateFunction.Sum);
         result.Aggregates[0].Field.Should().Be("Price");
     }
 
@@ -598,7 +599,7 @@ public class JqlQueryParserTests
         var result = JqlParse(having: "COUNT(*) > 5");
 
         result.Having.Should().NotBeNull();
-        result.Having!.Function.Should().Be("count");
+        result.Having!.Function.Should().Be(AggregateFunction.Count);
         result.Having.Field.Should().BeNull();
         result.Having.Operator.Should().Be("gt");
         result.Having.Value.Should().Be("5");
@@ -610,7 +611,7 @@ public class JqlQueryParserTests
         var result = JqlParse(having: "SUM(Amount) > 1000");
 
         result.Having.Should().NotBeNull();
-        result.Having!.Function.Should().Be("sum");
+        result.Having!.Function.Should().Be(AggregateFunction.Sum);
         result.Having.Field.Should().Be("Amount");
         result.Having.Operator.Should().Be("gt");
         result.Having.Value.Should().Be("1000");
@@ -641,7 +642,7 @@ public class JqlQueryParserTests
         var result = JqlParse(having: "SUM(Orders.Total) > 500");
 
         result.Having.Should().NotBeNull();
-        result.Having!.Function.Should().Be("sum");
+        result.Having!.Function.Should().Be(AggregateFunction.Sum);
         result.Having.Field.Should().Be("Orders.Total");
         result.Having.Operator.Should().Be("gt");
         result.Having.Value.Should().Be("500");
@@ -708,19 +709,19 @@ public class JqlQueryParserTests
 
         // Aggregates
         result.Aggregates.Should().HaveCount(3);
-        result.Aggregates[0].Function.Should().Be("sum");
+        result.Aggregates[0].Function.Should().Be(AggregateFunction.Sum);
         result.Aggregates[0].Field.Should().Be("Amount");
         result.Aggregates[0].Alias.Should().Be("TotalSales");
-        result.Aggregates[1].Function.Should().Be("count");
+        result.Aggregates[1].Function.Should().Be(AggregateFunction.Count);
         result.Aggregates[1].Field.Should().Be("Id");
         result.Aggregates[1].Alias.Should().Be("IdCount");
-        result.Aggregates[2].Function.Should().Be("avg");
+        result.Aggregates[2].Function.Should().Be(AggregateFunction.Avg);
         result.Aggregates[2].Field.Should().Be("Price");
         result.Aggregates[2].Alias.Should().Be("PriceAvg");
 
         // Having
         result.Having.Should().NotBeNull();
-        result.Having!.Function.Should().Be("sum");
+        result.Having!.Function.Should().Be(AggregateFunction.Sum);
         result.Having.Field.Should().Be("Amount");
         result.Having.Operator.Should().Be("gt");
         result.Having.Value.Should().Be("1000");
