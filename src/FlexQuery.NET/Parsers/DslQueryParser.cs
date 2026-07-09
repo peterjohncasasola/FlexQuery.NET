@@ -13,21 +13,6 @@ internal sealed class DslQueryParser : IQueryParser
     public QuerySyntax Syntax => QuerySyntax.NativeDsl;
 
     /// <inheritdoc />
-    public bool CanParse(FlexQueryParameters parameters)
-    {
-        // Native DSL is the fallback, but we can specifically check for non-OData keys
-        // or just return true if it's not obviously OData.
-        if (parameters.RawParameters != null)
-        {
-            foreach (var key in parameters.RawParameters.Keys)
-            {
-                if (key.StartsWith("$")) return false;
-            }
-        }
-        return true;
-    }
-
-    /// <inheritdoc />
     public QueryOptions Parse(FlexQueryParameters parameters)
     {
         var options = QueryOptionsFactory.Create(parameters);
@@ -45,7 +30,7 @@ internal sealed class DslQueryParser : IQueryParser
             var ast = DslAstParser.Parse(parameters.Filter.TrimStart());
             options.Filter = DslFilterConverter.ToFilterGroup(ast);
 
-            if (parameters.RawParameters is null)
+            if (!parameters.PreserveRawOrder)
             {
                 options.Filter = FilterNormalizer.NormalizeOrder(options.Filter);
             }
