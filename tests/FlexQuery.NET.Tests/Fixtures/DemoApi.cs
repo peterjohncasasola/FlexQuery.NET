@@ -1,6 +1,5 @@
 using FlexQuery.NET.Dapper;
 using FlexQuery.NET.Dapper.Configuration;
-using FlexQuery.NET.Dapper.Dialects;
 using FlexQuery.NET.Dapper.Metadata;
 using FlexQuery.NET.Exceptions;
 using FlexQuery.NET.Models;
@@ -51,12 +50,10 @@ public class DiagnosticController : ControllerBase
 public class UsersController : ControllerBase
 {
     private readonly IDbConnection _connection;
-    private readonly ISqlDialect _dialect;
 
-    public UsersController(IDbConnection connection, ISqlDialect dialect)
+    public UsersController(IDbConnection connection)
     {
         _connection = connection;
-        _dialect = dialect;
     }
 
     [HttpGet("health")]
@@ -70,7 +67,6 @@ public class UsersController : ControllerBase
             var model = BuildModel();
             var result = await ((System.Data.Common.DbConnection)_connection).FlexQueryAsync<SqlCustomer>(parameters, opt =>
             {
-                opt.Dialect = _dialect;
                 opt.UseModel(model);
             });
             return Ok(result);
@@ -102,12 +98,10 @@ public class UsersController : ControllerBase
 public class OrdersController : ControllerBase
 {
     private readonly IDbConnection _connection;
-    private readonly ISqlDialect _dialect;
 
-    public OrdersController(IDbConnection connection, ISqlDialect dialect)
+    public OrdersController(IDbConnection connection)
     {
         _connection = connection;
-        _dialect = dialect;
     }
 
     [HttpGet]
@@ -118,7 +112,6 @@ public class OrdersController : ControllerBase
             var model = BuildModel();
             var result = await ((System.Data.Common.DbConnection)_connection).FlexQueryAsync<SqlOrder>(parameters, opt =>
             {
-                opt.Dialect = _dialect;
                 opt.UseModel(model);
             });
             return Ok(result);
@@ -150,12 +143,10 @@ public class OrdersController : ControllerBase
 public class ProductsController : ControllerBase
 {
     private readonly IDbConnection _connection;
-    private readonly ISqlDialect _dialect;
 
-    public ProductsController(IDbConnection connection, ISqlDialect dialect)
+    public ProductsController(IDbConnection connection)
     {
         _connection = connection;
-        _dialect = dialect;
     }
 
     [HttpGet]
@@ -164,7 +155,6 @@ public class ProductsController : ControllerBase
         var model = BuildModel();
         var result = await ((DbConnection)_connection).FlexQueryAsync<SqlOrderItem>(parameters, opt =>
         {
-            opt.Dialect = _dialect;
             opt.UseModel(model);
         });
         return Ok(result);

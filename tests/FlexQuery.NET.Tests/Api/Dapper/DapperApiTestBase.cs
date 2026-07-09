@@ -1,5 +1,4 @@
 using System.Data;
-using FlexQuery.NET.Dapper.Dialects;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.Hosting;
@@ -13,8 +12,6 @@ public abstract class DapperApiTestBase : IDisposable
     protected readonly IHost Host;
     protected readonly HttpClient Client;
     protected readonly IDbConnection Connection;
-
-    protected abstract ISqlDialect Dialect { get; }
 
     protected DapperApiTestBase()
     {
@@ -30,7 +27,6 @@ public abstract class DapperApiTestBase : IDisposable
                 webBuilder.UseStartup<DemoApiStartup>();
                 webBuilder.ConfigureTestServices(services =>
                 {
-                    services.AddSingleton(Dialect);
                     services.AddSingleton(Connection);
                 });
             })
