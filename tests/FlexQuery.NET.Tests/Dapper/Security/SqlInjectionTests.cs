@@ -241,7 +241,7 @@ public class SqlInjectionTests
             GroupBy = new List<string> { "Name" },
             Having = new HavingCondition
             {
-                Function = "count",
+                Function = AggregateFunction.Count,
                 Field = "Id",
                 Operator = "gt",
                 Value = "5; DROP TABLE Users;--"
@@ -264,7 +264,7 @@ public class SqlInjectionTests
         var options = new QueryOptions
         {
             GroupBy = ["Id"],
-            Aggregates = { new AggregateModel { Function = "sum", Field = "Price", Alias = "Total" } },
+            Aggregates = { new AggregateModel { Function = AggregateFunction.Sum, Field = "Price", Alias = "Total" } },
             Paging = { Disabled = true }
         };
         options.Items[ContextKeys.EntityType] = typeof(TestEntity);
@@ -281,7 +281,7 @@ public class SqlInjectionTests
         var options = new QueryOptions
         {
             GroupBy = ["Id"],
-            Aggregates = { new AggregateModel { Function = "count", Field = "Id", Alias = "Cnt); DROP TABLE Users;--" } },
+            Aggregates = { new AggregateModel { Function = AggregateFunction.Count, Field = "Id", Alias = "Cnt); DROP TABLE Users;--" } },
             Paging = { Disabled = true }
         };
         options.Items[ContextKeys.EntityType] = typeof(TestEntity);
@@ -297,7 +297,7 @@ public class SqlInjectionTests
     {
         var options = new QueryOptions
         {
-            Aggregates = { new AggregateModel { Function = "sum", Field = "Price", Alias = "Total" } },
+            Aggregates = { new AggregateModel { Function = AggregateFunction.Sum, Field = "Price", Alias = "Total" } },
             Paging = { Disabled = true }
         };
         options.Items[ContextKeys.EntityType] = typeof(TestEntity);

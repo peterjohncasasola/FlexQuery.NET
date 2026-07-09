@@ -155,8 +155,8 @@ public class GroupedQueryExecutionTests : IDisposable
             GroupBy = ["CustomerId"],
             Aggregates =
             [
-                new AggregateModel { Field = "Id", Function = "count", Alias = "idCount" },
-                new AggregateModel { Field = "Total", Function = "sum", Alias = "totalSum" }
+                new AggregateModel { Field = "Id", Function = AggregateFunction.Count, Alias = "idCount" },
+                new AggregateModel { Field = "Total", Function = AggregateFunction.Sum, Alias = "totalSum" }
             ],
             Filter = NumberPrefixFilter("COUNT-"),
             Sort = [new SortNode { Field = "CustomerId" }],
@@ -203,7 +203,7 @@ public class GroupedQueryExecutionTests : IDisposable
                 new AggregateModel
                 {
                     Field = "Total",
-                    Function = "sum",
+                    Function = AggregateFunction.Sum,
                     Alias = "totalSum"
                 }
             ],
@@ -221,7 +221,7 @@ public class GroupedQueryExecutionTests : IDisposable
                 new AggregateModel
                 {
                     Field = "Total",
-                    Function = "sum",
+                    Function = AggregateFunction.Sum,
                     Alias = "totalSum"
                 }
             ],
@@ -235,7 +235,7 @@ public class GroupedQueryExecutionTests : IDisposable
         options.Having = new HavingCondition
         {
             Field = "Total",
-            Function = "sum",
+            Function = AggregateFunction.Sum,
             Operator = FilterOperators.GreaterThan,
             Value = minimumTotal.ToString(System.Globalization.CultureInfo.InvariantCulture)
         };
@@ -252,14 +252,14 @@ public class GroupedQueryExecutionTests : IDisposable
                 new AggregateModel
                 {
                     Field = "Id",
-                    Function = "count",
+                    Function = AggregateFunction.Count,
                     Alias = "idCount"
                 }
             ],
             Having = new HavingCondition
             {
                 Field = "Id",
-                Function = "count",
+                Function = AggregateFunction.Count,
                 Operator = FilterOperators.GreaterThan,
                 Value = minimumCount.ToString(System.Globalization.CultureInfo.InvariantCulture)
             },

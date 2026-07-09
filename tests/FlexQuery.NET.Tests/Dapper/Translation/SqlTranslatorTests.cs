@@ -155,7 +155,7 @@ public class SqlTranslatorTests
     {
         var options = NoPaging(new QueryOptions
         {
-            Aggregates = [new AggregateModel { Function = "count", Alias = "TotalCount" }]
+            Aggregates = [new AggregateModel { Function = AggregateFunction.Count, Alias = "TotalCount" }]
         });
         options.Items[ContextKeys.EntityType] = typeof(TestEntity);
 
@@ -276,7 +276,7 @@ public class SqlTranslatorTests
                 Field = "Amount",
                 Operator = "gt",
                 Value = "100",
-                Function = "sum"
+                Function = AggregateFunction.Sum
             }
         });
         options.Items[ContextKeys.EntityType] = typeof(TestEntity);
@@ -295,10 +295,10 @@ public class SqlTranslatorTests
         var options = NoPaging(new QueryOptions
         {
             GroupBy = ["Status"],
-            Aggregates = [new AggregateModel { Function = "count", Alias = "Count" }],
+            Aggregates = [new AggregateModel { Function = AggregateFunction.Count, Alias = "Count" }],
             Having = new HavingCondition
             {
-                Function = "count",
+                Function = AggregateFunction.Count,
                 Operator = "gt",
                 Value = "20"
             }
@@ -320,10 +320,10 @@ public class SqlTranslatorTests
         var options = NoPaging(new QueryOptions
         {
             GroupBy = ["Status"],
-            Aggregates = [new AggregateModel { Function = "count", Alias = "Count" }],
+            Aggregates = [new AggregateModel { Function = AggregateFunction.Count, Alias = "Count" }],
             Having = new HavingCondition
             {
-                Function = "count",
+                Function = AggregateFunction.Count,
                 Operator = "gt",
                 Value = "20"
             }
@@ -346,7 +346,7 @@ public class SqlTranslatorTests
         var options = NoPaging(new QueryOptions
         {
             GroupBy = ["Status"],
-            Aggregates = [new AggregateModel { Function = "count", Alias = "Count" }],
+            Aggregates = [new AggregateModel { Function = AggregateFunction.Count, Alias = "Count" }],
         });
         options.Items[ContextKeys.EntityType] = typeof(TestEntity);
 

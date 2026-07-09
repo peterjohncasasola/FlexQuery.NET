@@ -64,7 +64,7 @@ public class SqlTranslatorGroupedTests
         options.Having = new HavingCondition
         {
             Field = "Total",
-            Function = "sum",
+            Function = AggregateFunction.Sum,
             Operator = FilterOperators.GreaterThan,
             Value = "100"
         };
@@ -99,7 +99,7 @@ public class SqlTranslatorGroupedTests
         options.Having = new HavingCondition
         {
             Field = "Total",
-            Function = "sum",
+            Function = AggregateFunction.Sum,
             Operator = FilterOperators.GreaterThan,
             Value = "100"
         };
@@ -210,7 +210,7 @@ public class SqlTranslatorGroupedTests
                 new AggregateModel
                 {
                     Field = "Total",
-                    Function = "sum",
+                    Function = AggregateFunction.Sum,
                     Alias = "totalSum"
                 }
             ],
