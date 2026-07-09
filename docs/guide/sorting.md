@@ -1,6 +1,12 @@
 # Sorting
 
+## Overview
+
 FlexQuery.NET supports multi-field sorting with simple syntax, including aggregate-based sorting on related collections.
+
+## Why this feature exists
+
+Frontend data grids require dynamic sort control — clicking a column header should immediately reorder results. Without a library like FlexQuery, each sortable column requires explicit `switch/case` handling on the backend. FlexQuery translates any valid sort expression into an optimized, multi-level `ORDER BY` chain.
 
 ---
 
@@ -77,7 +83,7 @@ GET /api/users?sort=orders.min(amount):asc
 ### Using QueryBuilder.ApplySort Directly
 
 ```csharp
-var options = QueryOptionsParser.Parse(parameters);
+var options = parameters.ToQueryOptions();
 var query = _context.Users.AsQueryable();
 var sorted = query.ApplySort(options);
 var data = await sorted.ToListAsync();
@@ -125,14 +131,20 @@ GET /api/users?sort=createdAt:desc&page=1&pageSize=3
 **Response:**
 ```json
 {
-  "data": [
-    { "id": 10, "name": "Zara Khan",  "createdAt": "2025-11-20T09:00:00Z" },
-    { "id": 9,  "name": "Yuki Tanaka","createdAt": "2025-10-15T14:30:00Z" },
-    { "id": 8,  "name": "Xan Torres", "createdAt": "2025-09-01T08:00:00Z" }
-  ],
   "totalCount": 48,
+  "resultCount": 48,
   "page": 1,
-  "pageSize": 3
+  "pageSize": 3,
+  "totalPages": 16,
+  "hasNextPage": true,
+  "hasPreviousPage": false,
+  "aggregates": null,
+  "data": [
+    { "id": 10, "name": "Zara Khan",   "createdAt": "2025-11-20T09:00:00Z" },
+    { "id": 9,  "name": "Yuki Tanaka", "createdAt": "2025-10-15T14:30:00Z" },
+    { "id": 8,  "name": "Xan Torres",  "createdAt": "2025-09-01T08:00:00Z" }
+  ],
+  "nextCursorToken": null
 }
 ```
 

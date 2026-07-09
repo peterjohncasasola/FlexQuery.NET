@@ -56,6 +56,14 @@ GET /api/orders?filter=createdAt:between:2024-01-01,2024-12-31,status:in:pending
 **Response:**
 ```json
 {
+  "totalCount": 143,
+  "resultCount": 143,
+  "page": 1,
+  "pageSize": 25,
+  "totalPages": 6,
+  "hasNextPage": true,
+  "hasPreviousPage": false,
+  "aggregates": null,
   "data": [
     {
       "id": 1001,
@@ -72,9 +80,7 @@ GET /api/orders?filter=createdAt:between:2024-01-01,2024-12-31,status:in:pending
       "customer": { "name": "Bob Smith" }
     }
   ],
-  "totalCount": 143,
-  "page": 1,
-  "pageSize": 25
+  "nextCursorToken": null
 }
 ```
 
@@ -177,6 +183,14 @@ GET /api/products?filter=category:eq:electronics,price:lte:500
 **Response:**
 ```json
 {
+  "totalCount": 28,
+  "resultCount": 28,
+  "page": 1,
+  "pageSize": 10,
+  "totalPages": 3,
+  "hasNextPage": true,
+  "hasPreviousPage": false,
+  "aggregates": null,
   "data": [
     {
       "id": 5,
@@ -196,9 +210,7 @@ GET /api/products?filter=category:eq:electronics,price:lte:500
       "reviews": []
     }
   ],
-  "totalCount": 28,
-  "page": 1,
-  "pageSize": 10
+  "nextCursorToken": null
 }
 ```
 
@@ -239,12 +251,17 @@ GET /api/reports/revenue?filter=createdAt:between:2024-01-01,2024-12-31,status:e
 **Response:**
 ```json
 {
+  "totalCount": 3,
+  "resultCount": 3,
+  "page": 1,
+  "pageSize": 20,
+  "aggregates": null,
   "data": [
     { "region": "North America", "allCount": 512, "amountSum": 128000.00, "amountAvg": 250.00 },
     { "region": "Europe",        "allCount": 380, "amountSum": 95000.00,  "amountAvg": 250.00 },
     { "region": "Asia Pacific",  "allCount": 210, "amountSum": 52500.00,  "amountAvg": 250.00 }
   ],
-  "totalCount": 3
+  "nextCursorToken": null
 }
 ```
 

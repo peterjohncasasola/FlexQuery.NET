@@ -44,10 +44,10 @@ GET /api/users?filter=age:gte:18
 GET /api/users?filter=name:contains:alice
 ```
 
-**Compound (AND by default):**
+**Compound (AND — URL-encode `&` as `%26`):**
 
-```
-GET /api/users?filter=status:eq:active,age:gte:18
+```http
+GET /api/users?filter=status:eq:active%26age:gte:18
 ```
 
 ### JQL Format (SQL-like)
@@ -133,7 +133,7 @@ GET /api/users?filter[0].field=status&filter[0].operator=eq&filter[0].value=acti
 ### Manual Filter Application
 
 ```csharp
-var options = QueryOptionsParser.Parse(parameters);
+var options = parameters.ToQueryOptions();
 var query = _context.Users.AsQueryable();
 var filtered = query.ApplyFilter(options);
 var users = await filtered.ToListAsync();
@@ -201,14 +201,20 @@ GET /api/users?filter=status:eq:active&page=1&pageSize=3
 **Response:**
 ```json
 {
+  "totalCount": 48,
+  "resultCount": 48,
+  "page": 1,
+  "pageSize": 3,
+  "totalPages": 16,
+  "hasNextPage": true,
+  "hasPreviousPage": false,
+  "aggregates": null,
   "data": [
     { "id": 1, "name": "Alice Chen",  "status": "active" },
     { "id": 2, "name": "Bob Smith",   "status": "active" },
     { "id": 5, "name": "Carol White", "status": "active" }
   ],
-  "totalCount": 48,
-  "page": 1,
-  "pageSize": 3
+  "nextCursorToken": null
 }
 ```
 

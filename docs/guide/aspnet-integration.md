@@ -1,6 +1,18 @@
 # ASP.NET Core Integration
 
-The `FlexQuery.NET.AspNetCore` package provides optional integration helpers for ASP.NET Core applications. These are primarily focused on declarative security and automated validation.
+## Overview
+
+The `FlexQuery.NET.AspNetCore` package provides optional integration helpers for ASP.NET Core applications. It bridges the gap between raw HTTP requests and the FlexQuery.NET execution engine, primarily focusing on declarative security, global error handling, and `HttpContext` binding.
+
+## Why this feature exists
+
+While you can manually instantiate `FlexQueryParameters` and pass lambdas to `FlexQueryAsync` everywhere, large MVC applications often prefer convention over configuration. This package provides the `[FieldAccess]` attribute, allowing you to define your security rules directly on your controller methods alongside your HTTP verb attributes, keeping your actions clean and standardized.
+
+## When to use
+
+- You are building an ASP.NET Core MVC or Web API application.
+- You want to use declarative `[FieldAccess]` attributes on your controllers instead of configuring security inside lambda expressions in every endpoint.
+- You want to globally catch and format query validation errors.
 
 ---
 
@@ -12,59 +24,52 @@ dotnet add package FlexQuery.NET.AspNetCore
 
 ---
 
-## Overview
-
-FlexQuery.NET is designed to be **dependency-injection free** by default. You do not need to register any services to use the core library.
-
-The ASP.NET Core integration package provides two primary features:
-1. **`FieldAccessFilter`**: An action filter that automatically applies security rules from attributes.
-2. **`FlexQueryParameters`**: A unified DTO for query-string binding.
-
----
-
 ## Service Registration
 
-To enable the declarative security attributes, register the security filters in `Program.cs`:
+Unlike v3, FlexQuery.NET v4 relies on a robust dependency injection container. To enable the declarative security attributes, register the core engine, your execution provider, and the ASP.NET Core security filters in `Program.cs`:
 
 ```csharp
-using FlexQuery.NET.AspNetCore.Extensions;
+using FlexQuery.NET.DependencyInjection;
+using FlexQuery.NET.EntityFrameworkCore.DependencyInjection;
+using FlexQuery.NET.AspNetCore.DependencyInjection;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// For MVC/Web API Controllers
+// 1. Register Core Engine
+builder.Services.AddFlexQuery();
+
+// 2. Register Execution Provider (e.g. EF Core)
+builder.Services.AddFlexQueryEntityFrameworkCore();
+
+// 3. Register MVC with FlexQuery Security
 builder.Services.AddControllers()
     .AddFlexQuerySecurity();
 
-// OR manual filter registration
-builder.Services.AddControllers(options =>
-{
-    options.Filters.Add<FieldAccessFilter>();
-});
+var app = builder.Build();
 ```
 
 > [!NOTE]
-> `AddFlexQuerySecurity()` only registers the `FieldAccessFilter`. It does not provide a full DI framework for the core library, which remains intentionally decoupled from the ASP.NET Core container.
+> `AddFlexQuerySecurity()` registers the `FieldAccessFilter` into the ASP.NET Core MVC pipeline. It requires the core `AddFlexQuery()` engine to be registered first.
 
 ---
 
 ## Declarative Security: `[FieldAccess]`
 
-The `[FieldAccess]` attribute allows you to define field security rules directly on your controller actions.
+The `[FieldAccess]` attribute allows you to define field security rules directly on your controller actions. It accepts the same properties found on `BaseQueryOptions`.
 
 ```csharp
 [HttpGet]
 [FieldAccess(
-    Allowed    = ["id", "name", "email", "status"],
-    Filterable = ["name", "status"],
-    Sortable   = ["name", "createdAt"],
-    MaxDepth   = 2
+    AllowedFields    = new[] { "Id", "Name", "Email", "Status" },
+    FilterableFields = new[] { "Name", "Status" },
+    SortableFields   = new[] { "Name", "CreatedAt" },
+    MaxFieldDepth    = 2
 )]
-public async Task<IActionResult> GetUsers(
-    [FromQuery] FlexQueryParameters parameters)
+public async Task<IActionResult> GetUsers([FromQuery] FlexQueryParameters parameters)
 {
-    // The FieldAccessFilter automatically populates execution options 
-    // into the HttpContext. The FlexQueryAsync overload picks it up.
-    var result = await _context.Users.FlexQueryAsync<User>(parameters, HttpContext);
+    // The FlexQueryAsync overload natively extracts the security rules 
+    // from the HttpContext metadata populated by the [FieldAccess] filter.
+    var result = await _context.Users.FlexQueryAsync(parameters, HttpContext);
     
     return Ok(result);
 }
@@ -72,17 +77,21 @@ public async Task<IActionResult> GetUsers(
 
 ### How it Works
 1. The **`FieldAccessFilter`** intercepts the request.
-2. It looks for a **`[FieldAccess]`** attribute on the action or controller.
+2. It looks for a **`[FieldAccess]`** attribute on the action or controller metadata.
 3. If found, it populates a **`QueryExecutionOptions`** object and stores it in **`HttpContext.Items`**.
-4. The **`FlexQueryAsync(..., HttpContext)`** extension method retrieves it and enforces the server-owned policy.
+4. The **`FlexQueryAsync(..., HttpContext)`** extension method retrieves the options and enforces the declarative policy during query compilation.
 
 ---
 
 ## Global Exception Handling
 
-You can handle query validation errors globally using an Exception Filter or Middleware.
+FlexQuery.NET halts execution and throws a `QueryValidationException` when a client requests an unauthorized field or violates max depth constraints. You can handle this globally using an Exception Filter or ASP.NET Core Middleware.
 
 ```csharp
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.Filters;
+using FlexQuery.NET.Exceptions;
+
 public class FlexQueryExceptionFilter : IExceptionFilter
 {
     public void OnException(ExceptionContext context)
@@ -100,49 +109,58 @@ public class FlexQueryExceptionFilter : IExceptionFilter
 }
 
 // Register globally
-builder.Services.AddControllers(o => o.Filters.Add<FlexQueryExceptionFilter>());
+builder.Services.AddControllers(o => 
+{
+    o.Filters.Add<FlexQueryExceptionFilter>();
+});
 ```
 
 ---
 
 ## OpenAPI / Swagger Integration
 
-`FlexQueryParameters` is a standard POCO that maps naturally to OpenAPI/Swagger.
+`FlexQueryParameters` is a standard POCO that maps naturally to OpenAPI/Swagger documentation generators like Swashbuckle or NSwag.
 
 ```csharp
 [HttpGet]
 public async Task<ActionResult<QueryResult<User>>> GetUsers(
     [FromQuery] FlexQueryParameters parameters)
 {
-    return await _context.Users.FlexQueryAsync<User>(parameters);
+    return await _context.Users.FlexQueryAsync(parameters, HttpContext);
 }
 ```
 
-Swagger UI will automatically display the query parameters:
+Swagger UI will automatically display the query string parameters bound to the object:
 - `filter`
 - `sort`
 - `select`
 - `page`
 - `pageSize`
 - `includeCount`
+- `mode`
 
 ---
 
 ## Minimal APIs
 
-The security attributes are currently designed for MVC/Web API Controllers. For Minimal APIs, we recommend manual configuration:
+The `[FieldAccess]` attribute and `AddFlexQuerySecurity()` pipeline are designed specifically for the MVC/Web API Controller pipeline. For Minimal APIs, we strongly recommend manual configuration using the inline lambda, which is highly performant and explicit:
 
 ```csharp
 app.MapGet("/api/users", async (
     [AsParameters] FlexQueryParameters parameters,
     AppDbContext db) =>
 {
-    var result = await db.Users.FlexQueryAsync<User>(parameters, exec =>
+    var result = await db.Users.FlexQueryAsync(parameters, exec =>
     {
-        exec.AllowedFields = ["id", "name", "email"];
+        exec.AllowedFields = ["Id", "Name", "Email"];
         exec.MaxFieldDepth = 2;
     });
 
     return Results.Ok(result);
 });
 ```
+
+## Best Practices
+
+- **Mix and Match:** You can apply `[FieldAccess]` at the class level to secure the entire controller, and then apply tighter `[FieldAccess]` bounds on specific `[HttpGet]` actions.
+- **Always Catch Validation Exceptions:** Ensure you have registered the `FlexQueryExceptionFilter` (or a similar middleware) so that malicious query probes return `400 Bad Request` instead of crashing the request with an unhandled `500 Internal Server Error`.

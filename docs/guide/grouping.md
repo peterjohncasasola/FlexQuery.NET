@@ -1,6 +1,12 @@
 # Grouping & Aggregates
 
-FlexQuery.NET supports server-side GROUP BY with aggregate projections (sum, count, avg) and HAVING conditions — all driven by query parameters.
+## Overview
+
+FlexQuery.NET supports server-side GROUP BY with aggregate projections (count, sum, avg) and HAVING conditions — all driven by query parameters with no custom backend code required.
+
+## Why this feature exists
+
+Reporting and analytics endpoints historically require custom SQL procedures or hardcoded LINQ statements for every aggregate view ("total orders by status", "revenue by region", etc.). By exposing grouping and aggregates as a first-class query feature, FlexQuery.NET allows a single generic endpoint to power an entire report dashboard, where the frontend decides what groupings to apply dynamically.
 
 ---
 
@@ -43,12 +49,15 @@ GET /api/users?select=status,count()&groupBy=status
 **Response:**
 ```json
 {
+  "totalCount": 3,
+  "resultCount": 3,
+  "page": 1,
+  "pageSize": 20,
   "data": [
     { "status": "active",   "allCount": 42 },
     { "status": "inactive", "allCount": 6  },
     { "status": "pending",  "allCount": 12 }
-  ],
-  "totalCount": 3
+  ]
 }
 ```
 

@@ -1,6 +1,12 @@
 # Validation
 
+## Overview
+
 FlexQuery.NET validates every query before execution. The validation pipeline checks field paths, operators, access rules, and depth — and returns structured errors.
+
+## Why this feature exists
+
+Client-provided query strings are inherently untrusted input. The validation layer ensures that no unauthorized field names, operators, or navigation path depths can reach the LINQ expression builder or the database. This is the security boundary between the public API and your database schema.
 
 ---
 

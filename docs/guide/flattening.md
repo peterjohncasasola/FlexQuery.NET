@@ -1,6 +1,12 @@
 # Flattening
 
+## Overview
+
 FlexQuery.NET supports three projection modes. The **Flat** and **FlatMixed** modes reshape nested objects into flat key-value structures — useful for grid views, CSV exports, and analytics tools.
+
+## Why this feature exists
+
+Different consumers need different data shapes. A mobile application prefers clean, nested JSON objects. An older Kendo UI grid might expect a flat row dictionary where all fields are at the top level. A CSV export pipeline needs a completely flat structure. The `mode` parameter lets you serve all these consumers from a single endpoint without writing format-specific controllers.
 
 ---
 
@@ -113,7 +119,7 @@ The `mode` query parameter is automatically parsed:
 GET /api/users?select=id,name&mode=flat
 ```
 
-Valid values: `nested`, `flat`, `flat-mixed`
+Valid values: `Nested`, `Flat`, `FlatMixed` (case-insensitive when parsing from URL).
 
 ---
 

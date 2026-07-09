@@ -1,6 +1,12 @@
 # How FlexQuery.NET Works
 
+## Overview
+
 FlexQuery.NET sits between your HTTP controller and your `IQueryable`. It translates client-provided query parameters into validated, server-safe LINQ expression trees that EF Core compiles to SQL.
+
+## Why this feature exists
+
+Understanding the internal pipeline helps you debug unexpected results, audit generated SQL, and make intelligent decisions about where to insert custom logic (e.g., multi-tenant pre-filters). This page describes the exact transformation chain.
 
 ---
 
@@ -28,8 +34,8 @@ HTTP Query String
         ├── ApplyFilter()        → WHERE clause (expression tree)
         ├── ApplySort()          → ORDER BY (expression tree)
         ├── CountAsync()         → SELECT COUNT(*) (optional)
-        ├── ApplyPaging()        → SKIP / TAKE
-        ├── ApplyFilteredIncludes() → Include pipeline (independent)
+        ├── ApplyPaging()        → SKIP / TAKE or Keyset Cursor
+        ├── ApplyExpand()        → Include pipeline (independent)
         └── ApplySelect()        → Dynamic projection
                   │
                   ▼
@@ -170,7 +176,7 @@ query = ApplyPaging(query, options);
 Handles related collection loading with optional filters.
 
 ```csharp
-query = query.ApplyFilteredIncludes(options);
+query = query.ApplyExpand(options);
 ```
 
 The include pipeline is **completely independent** from the WHERE pipeline. Filtering a collection inside `include=Orders(status:eq:shipped)` does **not** affect which root entities are returned.

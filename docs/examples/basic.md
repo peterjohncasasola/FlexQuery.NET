@@ -32,14 +32,20 @@ public async Task<IActionResult> GetUsers([FromQuery] FlexQueryParameters parame
 **Response:**
 ```json
 {
+  "totalCount": 42,
+  "resultCount": 42,
+  "page": 1,
+  "pageSize": 20,
+  "totalPages": 3,
+  "hasNextPage": true,
+  "hasPreviousPage": false,
+  "aggregates": null,
   "data": [
     { "id": 1,  "name": "Alice Chen",  "email": "alice@example.com",  "status": "active", "createdAt": "2024-03-15T10:00:00Z" },
     { "id": 2,  "name": "Bob Smith",   "email": "bob@example.com",    "status": "active", "createdAt": "2024-04-01T09:30:00Z" },
     { "id": 5,  "name": "Carol White", "email": "carol@example.com",  "status": "active", "createdAt": "2024-04-20T14:00:00Z" }
   ],
-  "totalCount": 42,
-  "page": 1,
-  "pageSize": 20
+  "nextCursorToken": null
 }
 ```
 
@@ -64,14 +70,20 @@ OFFSET 0 ROWS FETCH NEXT 10 ROWS ONLY
 **Response:**
 ```json
 {
+  "totalCount": 3,
+  "resultCount": 3,
+  "page": 1,
+  "pageSize": 10,
+  "totalPages": 1,
+  "hasNextPage": false,
+  "hasPreviousPage": false,
+  "aggregates": null,
   "data": [
     { "id": 1,  "name": "Alice Chen",  "status": "active" },
     { "id": 8,  "name": "Ali Hassan",  "status": "active" },
     { "id": 12, "name": "Alicia Park", "status": "inactive" }
   ],
-  "totalCount": 3,
-  "page": 1,
-  "pageSize": 10
+  "nextCursorToken": null
 }
 ```
 
@@ -98,13 +110,19 @@ OFFSET 0 ROWS FETCH NEXT 50 ROWS ONLY
 **Response:**
 ```json
 {
+  "totalCount": 42,
+  "resultCount": 42,
+  "page": 1,
+  "pageSize": 50,
+  "totalPages": 1,
+  "hasNextPage": false,
+  "hasPreviousPage": false,
+  "aggregates": null,
   "data": [
     { "id": 1, "name": "Alice Chen",  "email": "alice@example.com" },
     { "id": 2, "name": "Bob Smith",   "email": "bob@example.com"   }
   ],
-  "totalCount": 42,
-  "page": 1,
-  "pageSize": 50
+  "nextCursorToken": null
 }
 ```
 
@@ -134,13 +152,19 @@ GET /api/users?query=(name = "alice" OR name = "bob") AND status = "active"&page
 **Response:**
 ```json
 {
+  "totalCount": 2,
+  "resultCount": 2,
+  "page": 1,
+  "pageSize": 10,
+  "totalPages": 1,
+  "hasNextPage": false,
+  "hasPreviousPage": false,
+  "aggregates": null,
   "data": [
     { "id": 1, "name": "Alice Chen",  "status": "active" },
     { "id": 2, "name": "Bob Smith",   "status": "active" }
   ],
-  "totalCount": 2,
-  "page": 1,
-  "pageSize": 10
+  "nextCursorToken": null
 }
 ```
 
@@ -203,10 +227,13 @@ GET /api/users?filter=status:eq:active&page=1&pageSize=20&includeCount=false
 **Response:**
 ```json
 {
-  "data": [ ... ],
   "totalCount": null,
+  "resultCount": null,
   "page": 1,
-  "pageSize": 20
+  "pageSize": 20,
+  "aggregates": null,
+  "data": [ "..." ],
+  "nextCursorToken": null
 }
 ```
 

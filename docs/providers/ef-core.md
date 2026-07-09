@@ -70,7 +70,7 @@ IQueryable<T> (your DbSet)
      │
      ▼ ApplyPaging() — OFFSET/FETCH via Skip/Take
      │
-     ▼ ApplyFilteredIncludes() — EF Core Include/ThenInclude chain
+     ▼ ApplyExpand() — EF Core Include/ThenInclude chain
      │
      ├── HasProjection? ──Yes──► ApplySelect() → ToListAsync() → Projected results
      │
@@ -100,11 +100,12 @@ query
 If you need to apply includes separately from the main query:
 
 ```csharp
-var options = QueryOptionsParser.Parse(Request.Query);
+var options = parameters.ToQueryOptions();
 
 var result = await _context.Customers
-    .ApplyQueryOptions(options)        // WHERE pipeline
-    .ApplyFilteredIncludes(options)    // INCLUDE pipeline
+    .ApplyFilter(options)              // WHERE pipeline
+    .ApplySort(options)                // ORDER BY
+    .ApplyExpand(options)              // INCLUDE pipeline
     .ToListAsync();
 ```
 
@@ -133,12 +134,7 @@ For nested projections with includes:
 FlexQuery supports grand total aggregation via LINQ:
 
 ```csharp
-var parameters = new FlexQueryParameters
-{
-    // No GroupBy — triggers grand total mode
-};
-
-var options = QueryOptionsParser.Parse(parameters);
+var options = parameters.ToQueryOptions();
 options.Aggregates = new List<AggregateModel>
 {
     new() { Function = "sum", Field = "Price", Alias = "priceSum" },
@@ -172,15 +168,15 @@ var result = await _context.Products.FlexQueryAsync(parameters, opts =>
 Inspect the SQL that EF Core will generate without executing the query:
 
 ```csharp
-var options = QueryOptionsParser.Parse(parameters);
-var query = _context.Products.ApplyQueryOptions(options);
-string sql = query.ToSqlPreview();
+var options = parameters.ToQueryOptions();
+var query = _context.Products.AsQueryable().ApplyFilter(options);
+string sql = query.ToQueryString(); // EF Core built-in method
 
 // Returns the generated SQL or a diagnostic message
 Console.WriteLine(sql);
 ```
 
-**Note:** `ToSqlPreview()` requires the `IQueryable` to be backed by an EF Core provider. If the queryable is an in-memory collection, it returns `"<Not available: query is not EF Core translatable>"`.
+**Note:** `ToQueryString()` is an EF Core built-in method. It is available after any step in the `IQueryable` pipeline.
 
 ## Real-World Example: Multi-Tenant API
 

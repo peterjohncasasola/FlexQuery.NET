@@ -1,121 +1,99 @@
-
 # Comparison: FlexQuery.NET vs .NET Query Libraries
 
-This page compares FlexQuery.NET with several popular .NET query libraries including:
+## Overview
 
+This page compares FlexQuery.NET with several popular .NET query libraries including:
 - Gridify
 - Sieve
 - System.Linq.Dynamic.Core
 
-The goal is not to declare a “winner”, but to clarify the different design philosophies, strengths, and tradeoffs of each approach.
+The goal is not to declare a universal "winner", but to clarify the different design philosophies, strengths, and tradeoffs of each approach. Different libraries solve different problems.
 
-Different libraries solve different problems.
+## Why this comparison exists
+
+When building dynamic APIs in .NET, teams often evaluate a spectrum of tools ranging from simple string-to-LINQ mappers to full execution engines. This guide exists to help architects understand where FlexQuery.NET sits on that spectrum, particularly compared to heavily utilized libraries like `System.Linq.Dynamic.Core` and `Gridify`. 
+
+## When to choose which
+
+- **Simple internal CRUD filtering**: Gridify
+- **Attribute-driven filtering**: Sieve
+- **Runtime-generated LINQ expressions**: Dynamic.Core
+- **Public APIs with validation/projection**: FlexQuery.NET
+- **Reporting endpoints with grouping/aggregates**: FlexQuery.NET
 
 ---
 
-# Overview
+## High-Level Matrix
 
 | | FlexQuery.NET | Gridify | Sieve | System.Linq.Dynamic.Core |
 | :--- | :--- | :--- | :--- | :--- |
-| Primary focus | Unified query pipeline | Lightweight filtering | Attribute-based filtering | Dynamic LINQ expressions |
-| Input style | DSL, JQL, JSON, Indexed | Custom DSL | Query model | LINQ expression strings |
-| Projection (`select`) | ✅ | ❌ | ❌ | ✅ |
-| Grouping / Aggregates | ✅ | ❌ | ❌ | ✅ |
-| Filtered includes | ✅ | ❌ | ❌ | ❌ |
-| Validation pipeline | ✅ Built-in | ❌ External | ⚠️ Attribute-based | ❌ External |
-| Field-level restrictions | ✅ | ❌ | ⚠️ Attribute-based | ❌ |
-| Multiple query formats | ✅ | ❌ | ❌ | ❌ |
-| Async EF Core pipeline | ✅ | ✅ | ✅ | ⚠️ Manual composition |
-| OpenAPI-friendly DTO | ✅ | ✅ | ✅ | ❌ |
+| **Primary focus** | Unified query pipeline | Lightweight filtering | Attribute-based filtering | Dynamic LINQ expressions |
+| **Input style** | DSL, JQL, JSON, Indexed | Custom DSL | Query model | LINQ expression strings |
+| **Projection (`select`)** | ✅ | ❌ | ❌ | ✅ |
+| **Grouping / Aggregates**| ✅ | ❌ | ❌ | ✅ |
+| **Filtered includes** | ✅ | ❌ | ❌ | ❌ |
+| **Validation pipeline** | ✅ Built-in | ❌ External | ⚠️ Attribute-based | ❌ External |
+| **Field restrictions** | ✅ | ❌ | ⚠️ Attribute-based | ❌ |
+| **Multiple formats** | ✅ | ❌ | ❌ | ❌ |
+| **Async EF Core pipeline**| ✅ | ✅ | ✅ | ⚠️ Manual composition |
+| **OpenAPI-friendly DTO** | ✅ | ✅ | ✅ | ❌ |
 
 ---
 
-# Different Philosophies
+## Different Philosophies
 
-## FlexQuery.NET
+### FlexQuery.NET
 
 FlexQuery.NET is designed as a higher-level query framework focused on:
-
 - API-driven querying
 - validation
-- projection
-- grouping
-- aggregates
+- projection (SELECT)
+- grouping and aggregates
 - field-level access control
 - reusable query pipelines
 
-It is intended for scenarios where query safety, flexibility, and composability are important.
-
-Typical use cases:
-- public APIs
-- multi-tenant systems
-- reporting endpoints
-- admin dashboards
-- advanced search systems
+It is intended for scenarios where query safety, flexibility, and composability are paramount, such as public APIs, multi-tenant systems, and reporting endpoints.
 
 ---
 
-## Gridify
+### Gridify
 
-Gridify focuses on simplicity and minimal setup.
+Gridify focuses on simplicity and minimal setup. It provides lightweight filtering, sorting, and paging with a small API surface and quick onboarding experience. 
 
-It provides lightweight filtering, sorting, and paging with a small API surface and quick onboarding experience.
-
-Typical use cases:
-- internal CRUD APIs
-- admin tools
-- lightweight filtering scenarios
-- rapid prototyping
-
-Applications requiring projection, aggregates, or field-level validation may require additional infrastructure.
+It is ideal for internal CRUD APIs and rapid prototyping. Applications requiring projection, aggregates, or field-level validation may require additional custom infrastructure on top of Gridify.
 
 ---
 
-## Sieve
+### Sieve
 
-Sieve uses attribute-based configuration to enable filtering and sorting.
+Sieve uses attribute-based configuration to enable filtering and sorting. It integrates naturally with ASP.NET-style conventions and works well for teams preferring declarative entity configuration.
 
-It integrates naturally with ASP.NET-style conventions and works well for teams preferring declarative entity configuration.
-
-Typical use cases:
-- attribute-driven APIs
-- simple filtering/sorting requirements
-- convention-based applications
+It is best suited for attribute-driven APIs and simple filtering/sorting requirements.
 
 ---
 
-## System.Linq.Dynamic.Core
+### System.Linq.Dynamic.Core
 
-System.Linq.Dynamic.Core provides highly flexible runtime LINQ expression execution using string-based expressions.
+System.Linq.Dynamic.Core provides highly flexible runtime LINQ expression execution using string-based expressions. It is extremely powerful for advanced dynamic query generation scenarios (like runtime report builders).
 
-It is extremely powerful for advanced dynamic query generation scenarios.
-
-Typical use cases:
-- runtime-generated LINQ
-- advanced admin tooling
-- dynamic report builders
-- expression-driven systems
-
-Because expressions are string-based, applications typically need their own validation and restriction layers for public-facing APIs.
+Because expressions are string-based and parsed blindly, applications typically need to build their own extensive validation and restriction layers to expose it safely to public-facing APIs.
 
 ---
 
-# The Same Query Across Libraries
+## The Same Query Across Libraries
 
-Goal:
-
-- status == "active"
-- age >= 18
-- sort by name ascending
-- page 2
-- page size 10
+**Goal:**
+- `status == "active"`
+- `age >= 18`
+- Sort by `name` ascending
+- Page 2, Page size 10
 
 ---
 
-## FlexQuery.NET
+### FlexQuery.NET
 
 ```http
-GET /api/users?filter=status:eq:active&age:gte:18&sort=name:asc&page=2&pageSize=10
+GET /api/users?filter=status:eq:active%26age:gte:18&sort=name:asc&page=2&pageSize=10
 ```
 
 ```csharp
@@ -124,6 +102,7 @@ public async Task<IActionResult> GetUsers([FromQuery] FlexQueryParameters parame
 {
     var result = await _context.Users.FlexQueryAsync(parameters, exec =>
     {
+        // Enforce server policy
         exec.AllowedFields = new HashSet<string>
         {
             "name",
@@ -138,7 +117,7 @@ public async Task<IActionResult> GetUsers([FromQuery] FlexQueryParameters parame
 
 ---
 
-## Gridify
+### Gridify
 
 ```http
 GET /api/users?filter=status=active,age>=18&orderBy=name&page=2&pageSize=10
@@ -153,11 +132,11 @@ public async Task<IActionResult> GetUsers([FromQuery] GridifyQuery query)
 }
 ```
 
-Gridify intentionally keeps configuration lightweight and focused on filtering/sorting/paging.
+Gridify intentionally keeps configuration lightweight and focused purely on filtering/sorting/paging.
 
 ---
 
-## Sieve
+### Sieve
 
 ```http
 GET /api/users?filters=Status==active,Age>=18&sorts=Name&page=2&pageSize=10
@@ -166,10 +145,7 @@ GET /api/users?filters=Status==active,Age>=18&sorts=Name&page=2&pageSize=10
 ```csharp
 public class UserSieveProcessor : SieveProcessor
 {
-    public UserSieveProcessor(IOptions<SieveOptions> options)
-        : base(options)
-    {
-    }
+    public UserSieveProcessor(IOptions<SieveOptions> options) : base(options) { }
 }
 
 public class User
@@ -196,7 +172,7 @@ Sieve emphasizes declarative configuration through attributes.
 
 ---
 
-## System.Linq.Dynamic.Core
+### System.Linq.Dynamic.Core
 
 ```csharp
 [HttpGet]
@@ -231,11 +207,11 @@ public async Task<IActionResult> GetUsers(
 }
 ```
 
-Dynamic.Core provides maximum flexibility, but applications typically implement their own validation, paging, and restriction layers.
+Dynamic.Core provides maximum flexibility, but applications typically implement their own validation, paging, and projection layers.
 
 ---
 
-# Feature Matrix
+## Feature Matrix
 
 | Feature | FlexQuery.NET | Gridify | Sieve | Dynamic.Core |
 | :--- | :---: | :---: | :---: | :---: |
@@ -252,104 +228,47 @@ Dynamic.Core provides maximum flexibility, but applications typically implement 
 | OpenAPI DTO | ✅ | ✅ | ✅ | ❌ |
 | Query result envelope | ✅ | ⚠️ Partial | ❌ | ❌ |
 | Async EF Core support | ✅ | ✅ | ✅ | ⚠️ Manual |
-| Strongly-typed query model | ✅ | ❌ | ❌ | ❌ |
+| Strongly-typed AST | ✅ | ❌ | ❌ | ❌ |
 
 ---
 
-# Tradeoffs
+## Tradeoffs
 
-## FlexQuery.NET
+### FlexQuery.NET
 
-### Strengths
-- Unified query pipeline
-- Projection support
-- Aggregates and grouping
-- Validation and field-level restrictions
-- Multiple query formats
-- Strongly-typed query model
+**Strengths**
+- Unified query pipeline that handles everything from parsing to SQL execution.
+- Projection support (dynamic SELECT) minimizes database I/O.
+- Built-in validation and field-level restrictions.
+- Standardized REST envelope (`QueryResult<T>`).
 
-### Tradeoffs
-- More concepts to learn initially
-- Heavier than lightweight filtering libraries
-- More configuration surface area
+**Tradeoffs**
+- More concepts to learn initially compared to minimal libraries.
 
----
+### Gridify
 
-## Gridify
+**Strengths**
+- Extremely simple setup with minimal configuration.
+- Lightweight API surface and fast onboarding experience.
 
-### Strengths
-- Extremely simple setup
-- Minimal configuration
-- Lightweight API surface
-- Fast onboarding experience
+**Tradeoffs**
+- Advanced query scenarios (Projection, Aggregates, Included filtering) require additional infrastructure.
 
-### Tradeoffs
-- Focused primarily on filtering/sorting/paging
-- Advanced query scenarios may require additional infrastructure
+### Sieve
 
----
+**Strengths**
+- Declarative attribute-based configuration fits nicely with Entity configuration.
+- Clean integration with ASP.NET conventions.
 
-## Sieve
+**Tradeoffs**
+- Requires heavy entity annotations.
+- Limited advanced query features.
 
-### Strengths
-- Declarative attribute-based configuration
-- Familiar ASP.NET-style conventions
-- Clean integration with entity models
+### System.Linq.Dynamic.Core
 
-### Tradeoffs
-- Requires entity annotations
-- Limited advanced query features
-- Primarily focused on filtering/sorting
+**Strengths**
+- Full runtime LINQ expression support makes it exceptionally powerful.
 
----
-
-## System.Linq.Dynamic.Core
-
-### Strengths
-- Extremely flexible
-- Full runtime LINQ expression support
-- Powerful dynamic query generation
-
-### Tradeoffs
-- String-based expressions can become difficult to validate
-- Public APIs often require additional restriction layers
-- Paging/projection pipelines are typically composed manually
-
----
-
-# Choosing the Right Tool
-
-| Scenario | Recommended Approach |
-| :--- | :--- |
-| Simple internal CRUD filtering | Gridify |
-| Attribute-driven filtering | Sieve |
-| Runtime-generated LINQ expressions | Dynamic.Core |
-| Public APIs with validation/projection | FlexQuery.NET |
-| Multi-tenant field-restricted APIs | FlexQuery.NET |
-| Reporting endpoints with grouping/aggregates | FlexQuery.NET |
-
----
-
-# Final Thoughts
-
-Each library optimizes for different priorities:
-
-| Library | Primary Priority |
-| :--- | :--- |
-| Gridify | Simplicity |
-| Sieve | Declarative conventions |
-| Dynamic.Core | Flexibility |
-| FlexQuery.NET | Unified query pipeline |
-
-FlexQuery.NET is designed for applications requiring more than simple filtering — particularly scenarios involving:
-
-- projection
-- grouping
-- aggregates
-- validation
-- field-level access control
-- reusable query pipelines
-
-For lightweight CRUD filtering, smaller libraries may provide a simpler experience.
-
-For advanced API querying scenarios, FlexQuery.NET aims to provide a more complete query abstraction layer.
+**Tradeoffs**
+- Public APIs often require additional restriction layers to prevent malicious strings.
+- Paging/projection pipelines are typically composed manually.

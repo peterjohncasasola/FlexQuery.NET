@@ -1,6 +1,12 @@
 # Include Filtering
 
+## Overview
+
 Filtered Includes let you load related entity collections with inline `WHERE` conditions — without affecting the root query's results or count.
+
+## Why this feature exists
+
+When a user views an order details page, they need to see the root Order with all its related Items. But when viewing a list of Users in a data grid, they might only want to see each user's *active* subscriptions, not all of them. The `include` parameter with inline filters solves this — you can load related data with discriminating conditions without polluting the root entity's row count.
 
 ---
 
@@ -74,7 +80,7 @@ GET /api/users?include=Orders(status:eq:active).Items
 ### Applying Filtered Includes
 
 ```csharp
-var options = QueryOptionsParser.Parse(parameters);
+var options = parameters.ToQueryOptions();
 
 var query = _context.Users.AsQueryable();
 query = query.ApplyFilter(options);
@@ -85,7 +91,7 @@ var total = await query.CountAsync();
 query = query.ApplyPaging(options);
 
 // Apply include pipeline AFTER paging, BEFORE materialization
-query = query.ApplyFilteredIncludes(options);
+query = query.ApplyExpand(options);
 
 var data = await query.ToListAsync();
 ```
@@ -113,6 +119,14 @@ GET /api/users?include=Orders(status:eq:shipped)&select=id,name&page=1&pageSize=
 **Response:**
 ```json
 {
+  "totalCount": 48,
+  "resultCount": 48,
+  "page": 1,
+  "pageSize": 2,
+  "totalPages": 24,
+  "hasNextPage": true,
+  "hasPreviousPage": false,
+  "aggregates": null,
   "data": [
     {
       "id": 1,
@@ -128,9 +142,7 @@ GET /api/users?include=Orders(status:eq:shipped)&select=id,name&page=1&pageSize=
       "orders": []
     }
   ],
-  "totalCount": 48,
-  "page": 1,
-  "pageSize": 2
+  "nextCursorToken": null
 }
 ```
 
@@ -183,7 +195,7 @@ query = query.ApplyFilteredIncludes(options); // too late
 
 ```csharp
 // CORRECT — apply includes before materialization
-query = query.ApplyFilteredIncludes(options);
+query = query.ApplyExpand(options);
 var data = await query.ToListAsync();
 ```
 

@@ -1,6 +1,12 @@
 # Projection
 
+## Overview
+
 Projection lets clients control which fields are returned in the response. Instead of always returning the full entity, clients request only what they need.
+
+## Why this feature exists
+
+Without projection, every API request transfers the entire row for every entity returned. For entities with 30+ columns (including large blobs, internal audit fields, or sensitive data), this is wasteful. Projection enables a single generic endpoint to serve different UI views efficiently without requiring custom DTOs or multiple endpoints per page.
 
 ---
 
@@ -118,7 +124,7 @@ Scalar navigation is flattened; collections remain nested:
 ### Applying Projection
 
 ```csharp
-var options = QueryOptionsParser.Parse(parameters);
+var options = parameters.ToQueryOptions();
 
 var query = _context.Users.AsQueryable();
 query = query.ApplyFilter(options);
@@ -169,14 +175,20 @@ GET /api/users?select=id,name,email&page=1&pageSize=3
 **Response:**
 ```json
 {
+  "totalCount": 48,
+  "resultCount": 48,
+  "page": 1,
+  "pageSize": 3,
+  "totalPages": 16,
+  "hasNextPage": true,
+  "hasPreviousPage": false,
+  "aggregates": null,
   "data": [
     { "id": 1, "name": "Alice Chen",  "email": "alice@example.com" },
     { "id": 2, "name": "Bob Smith",   "email": "bob@example.com" },
     { "id": 3, "name": "Carol White", "email": "carol@example.com" }
   ],
-  "totalCount": 48,
-  "page": 1,
-  "pageSize": 3
+  "nextCursorToken": null
 }
 ```
 
