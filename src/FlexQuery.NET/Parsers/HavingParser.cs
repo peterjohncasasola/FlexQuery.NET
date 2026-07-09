@@ -25,15 +25,15 @@ internal static class HavingParser
         var match = HavingPattern.Match(rawHaving.Trim());
         if (!match.Success) return null;
 
-        var fn = match.Groups[QueryOptionKeys.Fn].Value.ToLowerInvariant();
-        if (fn == "average") fn = "avg";
+        var fnRaw = match.Groups[QueryOptionKeys.Fn].Value.ToLowerInvariant();
+        if (fnRaw == "average") fnRaw = "avg";
         var field = match.Groups[QueryOptionKeys.Field].Success 
             ? match.Groups[QueryOptionKeys.Field].Value 
             : (match.Groups[QueryOptionKeys.Field2].Success ? match.Groups[QueryOptionKeys.Field2].Value : null);
 
         return new HavingCondition
         {
-            Function = fn,
+            Function = AggregateFunctionConverter.Parse(fnRaw),
             Field = string.IsNullOrWhiteSpace(field) ? null : field,
             Operator = FilterOperators.Normalize(match.Groups["op"].Value),
             Value = match.Groups[QueryOptionKeys.Value].Value

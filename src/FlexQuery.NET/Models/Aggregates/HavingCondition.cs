@@ -5,8 +5,8 @@ namespace FlexQuery.NET.Models.Aggregates;
 /// </summary>
 public sealed class HavingCondition
 {
-    /// <summary>Aggregate function name (sum, count, avg).</summary>
-    public string Function { get; set; } = string.Empty;
+    /// <summary>Aggregate function.</summary>
+    public AggregateFunction Function { get; set; }
 
     /// <summary>Aggregate field path. Optional for count.</summary>
     public string? Field { get; set; }

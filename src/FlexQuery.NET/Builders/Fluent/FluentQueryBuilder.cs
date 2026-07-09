@@ -2,6 +2,7 @@ using FlexQuery.NET.Internal;
 using FlexQuery.NET.Models;
 using FlexQuery.NET.Models.Aggregates;
 using FlexQuery.NET.Models.Projection;
+using FlexQuery.NET.Parsers;
 
 namespace FlexQuery.NET.Builders.Fluent;
 
@@ -88,7 +89,7 @@ public sealed class FluentQueryBuilder
     {
         _options.Having = new HavingCondition
         {
-            Function = function,
+            Function = AggregateFunctionConverter.Parse(function),
             Field = field,
             Operator = op,
             Value = value

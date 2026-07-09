@@ -4,11 +4,6 @@ namespace FlexQuery.NET.Parsers;
 
 internal static class AggregateParser
 {
-    private static readonly HashSet<string> AllowedFunctions = new(StringComparer.OrdinalIgnoreCase)
-    {
-        "sum", "count", "avg", "average", "min", "max"
-    };
-
     public static List<AggregateModel> Parse(string? rawAggregates)
     {
         if (string.IsNullOrWhiteSpace(rawAggregates))
@@ -28,10 +23,19 @@ internal static class AggregateParser
             if (parts.Length < 2) continue;
 
             var field = parts[0];
-            var function = parts[1].ToLowerInvariant();
-            if (function == "average") function = "avg";
+            AggregateFunction function;
+            string functionName;
 
-            if (!AllowedFunctions.Contains(function)) continue;
+            try
+            {
+                functionName = parts[1].ToLowerInvariant();
+                if (functionName == "average") functionName = "avg";
+                function = AggregateFunctionConverter.Parse(functionName);
+            }
+            catch
+            {
+                continue;
+            }
 
             string? alias = parts.Length >= 3 ? parts[2] : null;
 
@@ -41,7 +45,7 @@ internal static class AggregateParser
             {
                 Function = function,
                 Field = aggregateField,
-                Alias = alias ?? ParserUtilities.BuildAggregateAlias(function, aggregateField)
+                Alias = alias ?? ParserUtilities.BuildAggregateAlias(functionName, aggregateField)
             });
         }
 
