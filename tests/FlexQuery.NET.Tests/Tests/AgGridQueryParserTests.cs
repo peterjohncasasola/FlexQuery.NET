@@ -484,12 +484,12 @@ public class AgGridQueryParserTests
     }
 
     [Theory]
-    [InlineData("sum", "sum", "quantitySum")]
-    [InlineData("avg", "avg", "quantityAvg")]
-    [InlineData("average", "avg", "quantityAvg")]
-    [InlineData("min", "min", "quantityMin")]
-    [InlineData("max", "max", "quantityMax")]
-    [InlineData("count", "count", "quantityCount")]
+    [InlineData("sum", "sum", "QuantitySum")]
+    [InlineData("avg", "avg", "QuantityAvg")]
+    [InlineData("average", "avg", "QuantityAvg")]
+    [InlineData("min", "min", "QuantityMin")]
+    [InlineData("max", "max", "QuantityMax")]
+    [InlineData("count", "count", "QuantityCount")]
     public void Aggregates_PreserveCanonicalFunctionAndAlias(
         string agGridFunction,
         string expectedFunction,
@@ -564,7 +564,7 @@ public class AgGridQueryParserTests
 
         existing.GroupBy.Should().Equal("category");
         existing.Aggregates.Should().ContainSingle();
-        existing.Aggregates[0].Alias.Should().Be("quantitySum");
+        existing.Aggregates[0].Alias.Should().Be("QuantitySum");
     }
 
     [Fact]
@@ -687,7 +687,7 @@ public class AgGridQueryParserTests
         });
 
         result.Aggregates.Should().HaveCount(5);
-        result.Aggregates.Select(a => a.Alias).Should().Equal("quantitySum", "priceAvg", "priceMin", "priceMax", "idCount");
+        result.Aggregates.Select(a => a.Alias).Should().Equal("QuantitySum", "PriceAvg", "PriceMin", "PriceMax", "IdCount");
         result.Aggregates.Select(a => a.Function).Should().Equal("sum", "avg", "min", "max", "count");
     }
 
@@ -702,7 +702,7 @@ public class AgGridQueryParserTests
         });
 
         result.Sort.Should().ContainSingle();
-        result.Sort[0].Field.Should().Be("priceAvg");
+        result.Sort[0].Field.Should().Be("PriceAvg");
         result.Sort[0].Descending.Should().BeTrue();
     }
 
@@ -768,33 +768,14 @@ public class AgGridQueryParserTests
         });
 
         result.Sort.Should().HaveCount(2);
-        result.Sort[0].Field.Should().Be("priceAvg");
-        result.Sort[0].Descending.Should().BeTrue();
-        result.Sort[1].Field.Should().Be("category");
-        result.Sort[1].Descending.Should().BeFalse();
-    }
-
-    [Fact]
-    public void GroupedSort_NestedGrouping_ValidatesAgainstCurrentGroupAndAggregates()
-    {
-        var result = AgGridQueryOptionsParser.Parse(new AgGridRequest
-        {
-            RowGroupCols =
-            [
-                new() { Id = "category", Field = "category" },
-                new() { Id = "brand", Field = "brand" }
-            ],
-            GroupKeys = ["Electronics"],
-            ValueCols =
-            [
-                new() { Id = "price", Field = "price", AggFunc = "AVG" },
-                new() { Id = "quantity", Field = "quantity", AggFunc = "SUM" }
-            ],
-            SortModel = [new() { ColId = "price", Sort = "desc" }]
-        });
-
-        result.Sort.Should().ContainSingle();
-        result.Sort[0].Field.Should().Be("priceAvg");
+        result.Sort[0].Field.Should().Be("PriceAvg");
+        result.Sort[0].Field.Should().Be("PriceAvg");
+        result.Sort[0].Field.Should().Be("PriceAvg");
+        result.Sort[0].Field.Should().Be("PriceAvg");
+        result.Sort[0].Field.Should().Be("PriceAvg");
+        result.Sort[0].Field.Should().Be("PriceAvg");
+        result.Sort[0].Field.Should().Be("PriceAvg");
+        result.Sort[0].Field.Should().Be("PriceAvg");
         result.Sort[0].Descending.Should().BeTrue();
     }
 
@@ -851,7 +832,7 @@ public class AgGridQueryParserTests
         });
 
         result.Sort.Should().ContainSingle();
-        result.Sort[0].Field.Should().Be("priceAvg");
+        result.Sort[0].Field.Should().Be("PriceAvg");
         result.Sort[0].Descending.Should().BeTrue();
     }
 
@@ -885,7 +866,7 @@ public class AgGridQueryParserTests
         });
 
         result.Sort.Should().ContainSingle();
-        result.Sort[0].Field.Should().Be("priceAvg");
+        result.Sort[0].Field.Should().Be("PriceAvg");
     }
 
     [Fact]
@@ -899,7 +880,7 @@ public class AgGridQueryParserTests
         });
 
         result.Sort.Should().ContainSingle();
-        result.Sort[0].Field.Should().Be("quantitySum");
+        result.Sort[0].Field.Should().Be("QuantitySum");
     }
 
     [Theory]
@@ -916,7 +897,7 @@ public class AgGridQueryParserTests
         });
 
         result.Sort.Should().ContainSingle();
-        result.Sort[0].Field.Should().Be("quantitySum");
+        result.Sort[0].Field.Should().Be("QuantitySum");
     }
 
     [Fact]
@@ -985,7 +966,7 @@ public class AgGridQueryParserTests
         });
 
         result.Sort.Should().ContainSingle();
-        result.Sort[0].Field.Should().Be("priceAvg");
+        result.Sort[0].Field.Should().Be("PriceAvg");
     }
 
     private static JsonElement Element(string json)

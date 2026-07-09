@@ -28,8 +28,8 @@ public class AgGridResponseConverterTests
             TotalCount = 2,
             Data =
             [
-                new { category = "Automotive", quantitySum = 998, childCount = 2 },
-                new { category = "Electronics", quantitySum = 450, childCount = 3 }
+                new { category = "Automotive", QuantitySum = 998, childCount = 2 },
+                new { category = "Electronics", QuantitySum = 450, childCount = 3 }
             ]
         };
 
@@ -43,7 +43,7 @@ public class AgGridResponseConverterTests
         response.RowData[0]["leafGroup"].Should().Be(false);
         response.RowData[0]["childCount"].Should().Be(2);
         response.RowData[0]["quantity"].Should().Be(998);
-        response.RowData[0].Should().NotContainKey("quantitySum");
+        response.RowData[0].Should().NotContainKey("QuantitySum");
     }
 
     [Fact]
@@ -68,8 +68,8 @@ public class AgGridResponseConverterTests
             TotalCount = 2,
             Data =
             [
-                new { brand = "Globex", quantitySum = 365 },
-                new { brand = "Innotech", quantitySum = 633 }
+                new { brand = "Globex", QuantitySum = 365 },
+                new { brand = "Innotech", QuantitySum = 633 }
             ]
         };
 
@@ -83,7 +83,7 @@ public class AgGridResponseConverterTests
         response.RowData[0]["groupKeys"].Should().BeAssignableTo<IReadOnlyList<string>>();
         ((IReadOnlyList<string>)response.RowData[0]["groupKeys"]!).Should().Equal("Automotive", "Globex");
         response.RowData[0]["quantity"].Should().Be(365);
-        response.RowData[0].Should().NotContainKey("quantitySum");
+        response.RowData[0].Should().NotContainKey("QuantitySum");
     }
 
     [Fact]
@@ -141,10 +141,10 @@ public class AgGridResponseConverterTests
                 new
                 {
                     category = "Electronics",
-                    quantitySum = 100,
-                    quantityAvg = 25,
-                    quantityMin = 10,
-                    quantityMax = 40,
+                    QuantitySum = 100,
+                    QuantityAvg = 25,
+                    QuantityMin = 10,
+                    QuantityMax = 40,
                     quantityCount = 4
                 }
             ]
@@ -157,10 +157,10 @@ public class AgGridResponseConverterTests
         {
             ["group"] = true,
             ["key"] = "Electronics",
-            ["quantitySum"] = 100,
-            ["quantityAvg"] = 25,
-            ["quantityMin"] = 10,
-            ["quantityMax"] = 40,
+            ["QuantitySum"] = 100,
+            ["QuantityAvg"] = 25,
+            ["QuantityMin"] = 10,
+            ["QuantityMax"] = 40,
             ["quantityCount"] = 4
         });
         response.RowData[0].Should().NotContainKey("quantity");
@@ -348,14 +348,14 @@ public class AgGridResponseConverterTests
             TotalCount = 1,
             Data =
             [
-                new { category = "Food", quantitySum = 100, quantityAvg = 25 }
+                new { category = "Food", QuantitySum = 100, QuantityAvg = 25 }
             ]
         };
 
         var response = AgGridResponseConverter.Convert(request, result);
 
-        response.RowData[0]["quantitySum"].Should().Be(100);
-        response.RowData[0]["quantityAvg"].Should().Be(25);
+        response.RowData[0]["QuantitySum"].Should().Be(100);
+        response.RowData[0]["QuantityAvg"].Should().Be(25);
     }
 
     [Fact]
