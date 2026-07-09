@@ -18,6 +18,7 @@ public static class AgGridExtensions
     /// <returns>A FlexQuery.NET QueryOptions object.</returns>
     public static QueryOptions ToQueryOptions(this AgGridRequest request)
     {
+        ArgumentNullException.ThrowIfNull(request);
         return AgGridQueryOptionsParser.Parse(request);
     }
 
@@ -39,6 +40,9 @@ public static class AgGridExtensions
     /// <returns>The modified QueryOptions instance.</returns>
     public static QueryOptions ApplyAgGridRequest(this QueryOptions queryOptions, AgGridRequest agGridRequest)
     {
+        ArgumentNullException.ThrowIfNull(queryOptions);
+        ArgumentNullException.ThrowIfNull(agGridRequest);
+        
         var agGridOptions = AgGridQueryOptionsParser.Parse(agGridRequest);
         
         // Apply filters

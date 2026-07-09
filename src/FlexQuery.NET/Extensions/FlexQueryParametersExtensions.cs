@@ -38,6 +38,7 @@ public static class FlexQueryParametersExtensions
     /// </remarks>
     public static QueryOptions ToQueryOptions(this FlexQueryParameters parameters)
     {
+        ArgumentNullException.ThrowIfNull(parameters);
         return QueryOptionsParser.Parse(parameters);
     }
 }

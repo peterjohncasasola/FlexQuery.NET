@@ -45,6 +45,7 @@ public static class FlexQueryRequestExtensions
     /// </remarks>
     public static QueryOptions ToQueryOptions(this FlexQueryRequest request)
     {
+        ArgumentNullException.ThrowIfNull(request);
         var queryOptions = new QueryOptions
         {
             Aggregates = request.Aggregates,

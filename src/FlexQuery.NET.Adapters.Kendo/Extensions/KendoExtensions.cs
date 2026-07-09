@@ -17,6 +17,7 @@ public static class KendoExtensions
     /// <returns>A FlexQuery.NET QueryOptions object.</returns>
     public static QueryOptions ToQueryOptions(this KendoRequest request)
     {
+        ArgumentNullException.ThrowIfNull(request);
         return KendoQueryOptionsParser.Parse(request);
     }
 
@@ -38,6 +39,8 @@ public static class KendoExtensions
     /// <returns>The modified QueryOptions instance.</returns>
     public static QueryOptions ApplyKendoRequest(this QueryOptions queryOptions, KendoRequest kendoRequest)
     {
+        ArgumentNullException.ThrowIfNull(queryOptions);
+        ArgumentNullException.ThrowIfNull(kendoRequest);
         var kendoOptions = KendoQueryOptionsParser.Parse(kendoRequest);
         
         // Apply filters
