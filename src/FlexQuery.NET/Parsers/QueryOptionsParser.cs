@@ -12,82 +12,43 @@ namespace FlexQuery.NET.Parsers;
 public static class QueryOptionsParser
 {
     /// <summary>
-    /// Gets or sets the default query syntax used when <see cref="QuerySyntax.AutoDetect"/> is specified.
-    /// Defaults to <see cref="QuerySyntax.NativeDsl"/>.
+    /// The default query syntax used when no per-execution override is supplied.
+    /// Set via <c>AddFlexQuery</c> during startup.
     /// </summary>
-    public static QuerySyntax DefaultSyntax { get; set; } = QuerySyntax.NativeDsl;
-    private static List<IQueryParser> _parsers = new()
-    {
-        new DslQueryParser()
-    };
-
-    static QueryOptionsParser()
-    {
-        RegisterIfAvailable("FlexQuery.NET.MiniOData.Parsers.MiniODataParser, FlexQuery.NET.Parsers.MiniOData");
-        RegisterIfAvailable("FlexQuery.NET.Parsers.Jql.JqlQueryParser, FlexQuery.NET.Parsers.Jql");
-    }
+    private static QuerySyntax _defaultSyntax = QuerySyntax.NativeDsl;
 
     /// <summary>
-    /// Registers a new query parser implementation.
-    /// New parsers are given priority over existing ones.
-    /// Thread-safe: uses copy-on-write so in-progress Parse calls are not affected.
+    /// Sets the global query syntax used when no per-execution override is supplied.
+    /// Called by <c>AddFlexQuery</c> during startup.
     /// </summary>
-    /// <param name="parser">The parser instance to register.</param>
-    public static void RegisterParser(IQueryParser parser)
-    {
-        var updated = new List<IQueryParser>(_parsers);
-        updated.Insert(0, parser);
-        _parsers = updated;
-    }
-
-    private static void RegisterIfAvailable(string typeName)
-    {
-        try
-        {
-            if (Type.GetType(typeName) is { } type && Activator.CreateInstance(type) is IQueryParser parser)
-                RegisterParser(parser);
-        }
-        catch
-        {
-        }
-    }
+    internal static void SetGlobalSyntax(QuerySyntax syntax) => _defaultSyntax = syntax;
 
     /// <summary>
     /// Parses a strongly typed <see cref="FlexQueryParameters"/> into <see cref="QueryOptions"/>.
     /// </summary>
     /// <param name="parameters">The query parameters to parse.</param>
-    /// <param name="syntax">The expected query syntax. Defaults to <see cref="QuerySyntax.AutoDetect"/>, which uses <see cref="DefaultSyntax"/>.</param>
+    /// <param name="syntax">The expected query syntax. Defaults to the globally configured syntax (or <see cref="QuerySyntax.NativeDsl"/>).</param>
     /// <returns>The parsed <see cref="QueryOptions"/>.</returns>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="parameters"/> is null.</exception>
-    public static QueryOptions Parse(FlexQueryParameters parameters, QuerySyntax syntax = QuerySyntax.AutoDetect)
+    /// <exception cref="InvalidOperationException">Thrown when the request parser is unavailable.</exception>
+    public static QueryOptions Parse(FlexQueryParameters parameters, QuerySyntax? syntax = null)
     {
         ArgumentNullException.ThrowIfNull(parameters);
 
-        string? rawKey = null;
-        if (parameters.RawParameters != null && parameters.RawParameters.Count > 0)
-        {
-            rawKey = string.Join("&", parameters.RawParameters
-                .OrderBy(x => x.Key)
-                .Select(x => $"{x.Key}={x.Value}"));
-        }
+        var effectiveSyntax = syntax ?? _defaultSyntax;
 
-        if (syntax == QuerySyntax.AutoDetect)
-        {
-            syntax = DefaultSyntax;
-        }
+        var parser = QueryParserRegistry.Resolve(effectiveSyntax);
 
         var cacheKey = new ParsedQueryCacheKey(
             parameters.Filter, parameters.Sort, parameters.Select,
             parameters.Include, parameters.GroupBy, parameters.Having,
             parameters.Page, parameters.PageSize, parameters.IncludeCount,
-            parameters.Distinct, parameters.Mode, parameters.Cursor, parameters.UseKeysetPagination, rawKey, syntax.ToString());
+            parameters.Distinct, parameters.Mode, parameters.Cursor, parameters.UseKeysetPagination, Version: effectiveSyntax.ToString());
 
         if (ParserCache.TryGet(cacheKey, out var cached))
         {
             return cached!;
         }
-
-        var parser = _parsers.FirstOrDefault(p => p.Syntax == syntax) ?? _parsers.First();
 
         var parsedOptions = parser.Parse(parameters);
         ParserCache.Set(cacheKey, parsedOptions);
@@ -96,7 +57,7 @@ public static class QueryOptionsParser
     }
 
     /// <summary>
-    /// Parses raw query-string key-value pairs into <see cref="QueryOptions"/> using the configured <see cref="DefaultSyntax"/>.
+    /// Parses raw query-string key-value pairs into <see cref="QueryOptions"/> using the globally configured syntax.
     /// Resilient: invalid or unrecognized keys are silently ignored.
     /// </summary>
     /// <param name="queryString">The raw query string key-value pairs.</param>
@@ -122,10 +83,9 @@ public static class QueryOptionsParser
             Mode = TryGet(QueryOptionKeys.Mode),
             Cursor = TryGet(QueryOptionKeys.Cursor),
             UseKeysetPagination = grouped.TryGetValue(QueryOptionKeys.UseKeysetPagination, out var ukp) && ukp.Equals("true", StringComparison.OrdinalIgnoreCase),
-            RawParameters = grouped
+            PreserveRawOrder = true
         };
 
         return Parse(parameters);
     }
-
 }

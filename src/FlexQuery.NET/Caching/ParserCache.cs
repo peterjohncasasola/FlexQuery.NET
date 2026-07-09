@@ -65,7 +65,6 @@ internal static class ParserCache
 /// <param name="Mode">The projection mode.</param>
 /// <param name="Cursor">The cursor token for keyset pagination.</param>
 /// <param name="UseKeysetPagination">Whether keyset pagination is explicitly requested.</param>
-/// <param name="RawKey">Optional raw parameter key for additional uniqueness.</param>
 /// <param name="Version">The version identifier for cache invalidation.</param>
 internal sealed record ParsedQueryCacheKey(
     string? Filter,
@@ -81,7 +80,6 @@ internal sealed record ParsedQueryCacheKey(
     string? Mode,
     string? Cursor = null,
     bool UseKeysetPagination = false,
-    string? RawKey = null,
-    string Version = "v2"
+    string Version = "v3"
 );
 
