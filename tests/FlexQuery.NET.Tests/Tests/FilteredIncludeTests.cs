@@ -137,7 +137,7 @@ public class FilteredIncludeTests : IDisposable
         var parameters = new FlexQueryParameters
         {
             Filter = "Id:eq:1",
-            Includes = "Orders(Total:gt:100)",
+            Include = "Orders(Total:gt:100)",
             Select = "Id,Name,Orders.Number,Orders.Total"
         };
 
@@ -168,7 +168,7 @@ public class FilteredIncludeTests : IDisposable
         var parameters = new FlexQueryParameters
         {
             Filter = "Id:eq:1",
-            Includes = "Orders(Total:gt:100)",
+            Include = "Orders(Total:gt:100)",
             Select = "Id,Orders.Number" // We ONLY want Number, not Total!
         };
 
@@ -199,7 +199,7 @@ public class FilteredIncludeTests : IDisposable
         var parameters = new FlexQueryParameters
         {
             Filter = "Id:eq:1",
-            Includes = "Orders(Total:gt:100)",
+            Include = "Orders(Total:gt:100)",
             Select = "Id,Orders.Number,Orders.Total"
         };
 
@@ -226,7 +226,7 @@ public class FilteredIncludeTests : IDisposable
         var parameters = new FlexQueryParameters
         {
             Filter = "Id:eq:1",
-            Includes = "Orders(Total:gt:100).items(Sku:eq:SKU-AAA)",
+            Include = "Orders(Total:gt:100).items(Sku:eq:SKU-AAA)",
             Select = "Id,Orders.Number,Orders.Items.Sku"
         };
 
@@ -260,7 +260,7 @@ public class FilteredIncludeTests : IDisposable
         var parameters = new FlexQueryParameters
         {
             Filter = "Id:eq:1",
-            Includes = "Orders(Total:gt:100) . items(Sku:eq:SKU-AAA)",
+            Include = "Orders(Total:gt:100) . items(Sku:eq:SKU-AAA)",
             Select = "Id,Orders.Number,Orders.Items.Sku"
         };
 

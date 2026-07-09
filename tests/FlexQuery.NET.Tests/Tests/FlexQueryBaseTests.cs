@@ -1,46 +1,48 @@
 using FlexQuery.NET.Models;
+using FlexQuery.NET.Models.Aggregates;
+using FlexQuery.NET.Models.Filters;
+using FlexQuery.NET.Models.Paging;
+using FlexQuery.NET.Models.Projection;
 
 namespace FlexQuery.NET.Tests.Tests;
 
 public class FlexQueryBaseTests
 {
     [Fact]
-    public void FlexQueryRequest_IsFlexQueryBase()
+    public void FlexQueryRequest_PopulatesAllProperties()
     {
         var request = new FlexQueryRequest
         {
-            Filter = "Age gt 18",
-            Sort = "Name:asc",
-            Select = "Id,Name",
-            Include = "Orders",
-            GroupBy = "Category",
-            Having = "count(Id) gt 5",
-            Page = 2,
-            PageSize = 25,
+            Filter = new FilterGroup
+            {
+                Logic = LogicOperator.And,
+                Filters = [new FilterCondition { Field = "Age", Operator = "gt", Value = "18" }]
+            },
+            Sort = [new SortNode { Field = "Name", Descending = false }],
+            Select = ["Id", "Name"],
+            Includes = ["Orders"],
+            GroupBy = ["Category"],
+            Having = new HavingCondition { Function = "count", Field = "Id", Operator = "gt", Value = "5" },
+            Paging = new PagingOptions { Page = 2, PageSize = 25 },
             IncludeCount = false,
             Distinct = true,
-            Mode = "Flat"
+            ProjectionMode = ProjectionMode.Flat
         };
 
-        request.Filter.Should().Be("Age gt 18");
-        request.Sort.Should().Be("Name:asc");
-        request.Select.Should().Be("Id,Name");
-        request.Include.Should().Be("Orders");
-        request.GroupBy.Should().Be("Category");
-        request.Having.Should().Be("count(Id) gt 5");
-        request.Page.Should().Be(2);
-        request.PageSize.Should().Be(25);
+        request.Filter.Should().NotBeNull();
+        request.Filter!.Filters.Should().Contain(f => f.Field == "Age" && f.Operator == "gt" && f.Value == "18");
+        request.Sort.Should().Contain(s => s.Field == "Name" && !s.Descending);
+        request.Select.Should().BeEquivalentTo("Id", "Name");
+        request.Includes.Should().BeEquivalentTo("Orders");
+        request.GroupBy.Should().BeEquivalentTo("Category");
+        request.Having.Should().NotBeNull();
+        request.Having!.Function.Should().Be("count");
+        request.Having.Field.Should().Be("Id");
+        request.Paging.Page.Should().Be(2);
+        request.Paging.PageSize.Should().Be(25);
         request.IncludeCount.Should().BeFalse();
         request.Distinct.Should().BeTrue();
-        request.Mode.Should().Be("Flat");
-    }
-
-    [Fact]
-    public void FlexQueryRequest_IncludesAlias_IsObsolete()
-    {
-        var request = new FlexQueryRequest();
-        request.Includes = "Orders,Profile";
-        request.Include.Should().Be("Orders,Profile");
+        request.ProjectionMode.Should().Be(ProjectionMode.Flat);
     }
 
     [Fact]
