@@ -5,6 +5,8 @@ using FlexQuery.NET.Dapper.Options;
 using FlexQuery.NET.Dapper.Sql.Adapters;
 using FlexQuery.NET.Dapper.Sql.Translators;
 using FlexQuery.NET.Models;
+using FlexQuery.NET.Models.Aggregates;
+using FlexQuery.NET.Parsers;
 
 namespace FlexQuery.NET.Dapper.Execution;
 
@@ -44,7 +46,7 @@ internal static class AggregateEvaluator
                 grandTotals[fieldName] = fnDict;
             }
             
-            fnDict[agg.Function] = val;
+            fnDict[agg.Function.ToKeyword()] = val;
         }
 
         return grandTotals;

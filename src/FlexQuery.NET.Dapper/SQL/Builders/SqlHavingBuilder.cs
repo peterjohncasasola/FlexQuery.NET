@@ -3,6 +3,7 @@ using FlexQuery.NET.Dapper.Mapping;
 using FlexQuery.NET.Dapper.Sql.Converters;
 using FlexQuery.NET.Dapper.Sql.Models;
 using FlexQuery.NET.Models.Aggregates;
+using FlexQuery.NET.Parsers;
 
 namespace FlexQuery.NET.Dapper.Sql.Builders;
 
@@ -23,7 +24,7 @@ internal static class SqlHavingBuilder
         }
 
         var isCountStar =
-            having.Function.Equals("count", StringComparison.OrdinalIgnoreCase) &&
+            having.Function == AggregateFunction.Count &&
             string.IsNullOrWhiteSpace(having.Field);
 
         string aggregateExpression;
@@ -40,7 +41,7 @@ internal static class SqlHavingBuilder
                 mapping);
 
             aggregateExpression =
-                $"{having.Function.ToUpperInvariant()}({column})";
+                $"{having.Function.ToKeyword().ToUpperInvariant()}({column})";
         }
 
         var value = ConvertValue(
@@ -65,7 +66,7 @@ internal static class SqlHavingBuilder
         object? convertedValue;
 
         var isCountStar =
-            having.Function.Equals("count", StringComparison.OrdinalIgnoreCase) &&
+            having.Function == AggregateFunction.Count &&
             string.IsNullOrWhiteSpace(having.Field);
 
         if (isCountStar || string.IsNullOrWhiteSpace(having.Field))

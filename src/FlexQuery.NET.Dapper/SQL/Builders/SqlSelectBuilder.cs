@@ -1,4 +1,5 @@
 using FlexQuery.NET.Models;
+using FlexQuery.NET.Models.Aggregates;
 using FlexQuery.NET.Dapper.Mapping;
 using FlexQuery.NET.Dapper.Mapping.Metadata;
 using FlexQuery.NET.Dapper.Dialects;
@@ -6,6 +7,7 @@ using FlexQuery.NET.Metadata;
 using System.Reflection;
 using FlexQuery.NET.Internal;
 using FlexQuery.NET.Models.Projection;
+using FlexQuery.NET.Parsers;
 
 namespace FlexQuery.NET.Dapper.Sql.Builders;
 
@@ -33,13 +35,13 @@ internal sealed class SqlSelectBuilder(IMappingRegistry mappingRegistry, ISqlDia
             var column = mapping.GetColumnName(agg.Field ?? "*");
             var quoted = SqlSyntaxBuilder.QuoteColumn(dialect, column, mapping);
 
-            if (agg.Function.Equals("count", StringComparison.OrdinalIgnoreCase) && (string.IsNullOrEmpty(agg.Field) || agg.Field == "*"))
+            if (agg.Function == AggregateFunction.Count && (string.IsNullOrEmpty(agg.Field) || agg.Field == "*"))
             {
                 selectParts.Add($"COUNT(1) AS {dialect.QuoteIdentifier(agg.Alias)}");
             }
             else
             {
-                selectParts.Add($"{agg.Function.ToUpperInvariant()}({quoted}) AS {dialect.QuoteIdentifier(agg.Alias)}");
+                selectParts.Add($"{agg.Function.ToKeyword().ToUpperInvariant()}({quoted}) AS {dialect.QuoteIdentifier(agg.Alias)}");
             }
         }
         return selectParts;
