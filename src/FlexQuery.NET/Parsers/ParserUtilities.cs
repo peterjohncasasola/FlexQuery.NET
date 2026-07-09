@@ -54,7 +54,7 @@ internal static class ParserUtilities
         => d.TryGetValue(key, out var raw) && int.TryParse(raw, out var val) ? val : defaultValue;
     
     /// <summary>
-    /// Builds a camelCase alias for aggregate functions (e.g., "totalSum" or "Count").
+    /// Builds a PascalCase alias for aggregate functions (e.g., "TotalSum" or "Count").
     /// For field-less aggregates (e.g. count()) the alias is just the function name (e.g. "Count").
     /// </summary>
     public static string BuildAggregateAlias(string function, string? field)
@@ -67,9 +67,7 @@ internal static class ParserUtilities
 
         var normalized = string.Join("", field.Replace('.', '_')
             .Split('_', StringSplitOptions.RemoveEmptyEntries)
-            .Select((part, i) => i == 0
-                ? char.ToLowerInvariant(part[0]) + part[1..]
-                : char.ToUpperInvariant(part[0]) + part[1..]));
+            .Select(part => $"{char.ToUpperInvariant(part[0])}{part[1..]}"));
 
         return $"{normalized}{functionName}";
     }
