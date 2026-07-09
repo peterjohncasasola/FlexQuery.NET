@@ -38,25 +38,6 @@ internal static class ParserUtilities
             ? (raw.Equals("true", StringComparison.OrdinalIgnoreCase) || raw == "1")
             : defaultValue;
 
-    public static SortedDictionary<int, Dictionary<string, string>> CollectIndexed(
-        IDictionary<string, string> d, string prefix)
-    {
-        var result = new SortedDictionary<int, Dictionary<string, string>>();
-        var prefixSpan = prefix.AsSpan();
-
-        foreach (var kv in d)
-        {
-            if (TryParseIndexedKey(kv.Key.AsSpan(), prefixSpan, out var idx, out var subkey))
-            {
-                if (!result.TryGetValue(idx, out var inner))
-                    result[idx] = inner = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-                inner[subkey] = kv.Value;
-            }
-        }
-
-        return result;
-    }
-    
     public static ProjectionMode ParseProjectionMode(string? mode)
     {
         if (string.IsNullOrWhiteSpace(mode)) return ProjectionMode.Nested;
@@ -93,37 +74,4 @@ internal static class ParserUtilities
         return $"{normalized}{functionName}";
     }
 
-    private static bool TryParseIndexedKey(
-        ReadOnlySpan<char> key,
-        ReadOnlySpan<char> prefix,
-        out int index,
-        out string subKey)
-    {
-        index = 0;
-        subKey = string.Empty;
-
-        if (!key.StartsWith(prefix, StringComparison.OrdinalIgnoreCase)) return false;
-        var pos = prefix.Length;
-        if (pos >= key.Length || key[pos++] != '[') return false;
-
-        var start = pos;
-        while (pos < key.Length && char.IsDigit(key[pos])) pos++;
-        if (start == pos || pos >= key.Length || key[pos++] != ']') return false;
-        
-#if NET6_0_OR_GREATER
-        if (!int.TryParse(key[start..(pos - 1)], out index)) return false;
-#else
-        if (!int.TryParse(key[start..(pos - 1)].ToString(), out index)) return false;
-#endif
-
-        if (pos >= key.Length || (key[pos] != '.' && key[pos] != '[')) return false;
-        pos++;
-
-        var subStart = pos;
-        while (pos < key.Length && key[pos] != ']' && !char.IsWhiteSpace(key[pos])) pos++;
-        if (subStart == pos) return false;
-
-        subKey = key[subStart..pos].ToString().ToLowerInvariant();
-        return true;
-    }
 }

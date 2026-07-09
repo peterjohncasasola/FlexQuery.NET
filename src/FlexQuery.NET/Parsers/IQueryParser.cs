@@ -41,16 +41,6 @@ public enum QuerySyntax
     NativeDsl,
     
     /// <summary>
-    /// Uses JSON filter payloads (e.g. filter={"logic":"and","filters":[...]}).
-    /// </summary>
-    Json,
-    
-    /// <summary>
-    /// Uses the generic indexed query-string syntax (e.g. filter[0].field=name).
-    /// </summary>
-    Generic,
-    
-    /// <summary>
     /// Uses the JQL syntax (e.g. $filter=name = 'john').
     /// </summary>
     Jql,

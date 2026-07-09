@@ -1,6 +1,5 @@
-using System.Text.Json;
-using FlexQuery.NET.Internal;
-using FlexQuery.NET.Models;
+    using FlexQuery.NET.Internal;
+    using FlexQuery.NET.Models;
 using FlexQuery.NET.Models.Projection;
 
 namespace FlexQuery.NET.Builders;
@@ -136,35 +135,4 @@ internal static class SelectTreeBuilder
         }
     }
 
-    /// <summary>Parses a JSON select element into a <see cref="SelectionNode"/> tree.</summary>
-    /// <param name="element">The JSON element to parse.</param>
-    /// <returns>A <see cref="SelectionNode"/> representing the JSON selection.</returns>
-    public static SelectionNode ParseJsonSelect(JsonElement element)
-    {
-        var node = new SelectionNode();
-        if (element.ValueKind == JsonValueKind.Object)
-        {
-            foreach (var prop in element.EnumerateObject())
-            {
-                if (prop.Value.ValueKind == JsonValueKind.Object)
-                {
-                    MergeTree(node.GetOrAddChild(prop.Name), ParseJsonSelect(prop.Value));
-                }
-                else if (prop.Value.ValueKind == JsonValueKind.True || prop.Value.ValueKind == JsonValueKind.String)
-                {
-                    node.GetOrAddChild(prop.Name);
-                }
-            }
-        }
-        else if (element.ValueKind == JsonValueKind.Array)
-        {
-            foreach (var item in element.EnumerateArray())
-            {
-                if (item.ValueKind == JsonValueKind.String)
-                    node.GetOrAddChild(item.GetString()!);
-            }
-        }
-
-        return node;
-    }
 }

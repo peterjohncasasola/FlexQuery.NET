@@ -14,7 +14,7 @@ public class MiniODataIntegrationTests
     }
 
     [Fact]
-    public void AutoDetect_WithODataParameters_UsesMiniODataParser()
+    public void ExplicitSyntax_ODataParameters_UsesMiniODataParser()
     {
         // Arrange
         var parameters = new FlexQueryParameters
@@ -27,7 +27,7 @@ public class MiniODataIntegrationTests
         };
 
         // Act
-        var options = QueryOptionsParser.Parse(parameters);
+        var options = QueryOptionsParser.Parse(parameters, QuerySyntax.MiniOData);
 
         // Assert
         options.Filter.Should().NotBeNull();
@@ -41,7 +41,7 @@ public class MiniODataIntegrationTests
     }
 
     [Fact]
-    public void AutoDetect_WithNativeParameters_UsesDslParser()
+    public void DefaultSyntax_WithNativeParameters_UsesDslParser()
     {
         // Arrange
         var parameters = new FlexQueryParameters
@@ -65,7 +65,7 @@ public class MiniODataIntegrationTests
     }
 
     [Fact]
-    public void ExplicitSyntax_OverridesAutoDetect()
+    public void ExplicitSyntax_OverridesDefault()
     {
         // Arrange
         var parameters = new FlexQueryParameters

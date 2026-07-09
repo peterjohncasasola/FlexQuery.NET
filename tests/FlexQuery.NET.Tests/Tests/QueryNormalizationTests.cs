@@ -199,13 +199,6 @@ public class QueryNormalizationTests
         new QueryOptions { Expand = [new IncludeNode { Path = "Orders" }] }.HasProjection().Should().BeTrue();
         new QueryOptions { GroupBy = ["Status"] }.HasProjection().Should().BeTrue();
         new QueryOptions { Aggregates = [new AggregateModel { Function = "count", Alias = "Count" }] }.HasProjection().Should().BeTrue();
-
-        var jsonSelect = Parse(new Dictionary<string, string>
-        {
-            ["filter"] = """{"select":{"id":true}}"""
-        });
-
-        jsonSelect.HasProjection().Should().BeTrue();
     }
 
     [Fact]

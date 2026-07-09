@@ -1,8 +1,8 @@
 using FlexQuery.NET.Helpers;
+using FlexQuery.NET.Internal;
 using FlexQuery.NET.Models;
 using Microsoft.EntityFrameworkCore;
 using System.Text.RegularExpressions;
-using System.Text.Json;
 using FlexQuery.NET.Builders;
 
 namespace FlexQuery.NET.Tests.Tests;
@@ -156,17 +156,15 @@ public class SelectTests : IDisposable
     }
 
     [Fact]
-    public async Task Select_JsonTree_BuildsComplexProjection()
+    public async Task Select_Tree_BuildsComplexProjection()
     {
-        var json = """
-        {
-          "Id": true,
-          "Profile": { "Bio": true },
-          "Orders": { "Total": true }
-        }
-        """;
-        
-        var selectTree = SelectTreeBuilder.ParseJsonSelect(JsonDocument.Parse(json).RootElement);
+        var selectTree = new SelectionNode();
+        selectTree.GetOrAddChild("Id");
+        var profile = selectTree.GetOrAddChild("Profile");
+        profile.GetOrAddChild("Bio");
+        var ordersNode = selectTree.GetOrAddChild("Orders");
+        ordersNode.GetOrAddChild("Total");
+
         var options = new QueryOptions { SelectTree = selectTree };
         
         var query = _db.Entities.Where(e => e.Id == 1).ApplySelect(options);

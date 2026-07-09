@@ -40,16 +40,9 @@ internal sealed class DslQueryParser : IQueryParser
     {
         if (string.IsNullOrWhiteSpace(parameters.Filter)) return;
 
-        var filterVal = parameters.Filter.TrimStart();
-        if (filterVal.StartsWith('{'))
-        {
-            JsonParser.Parse(options, filterVal);
-            return;
-        }
-
         try
         {
-            var ast = DslAstParser.Parse(filterVal);
+            var ast = DslAstParser.Parse(parameters.Filter.TrimStart());
             options.Filter = DslFilterConverter.ToFilterGroup(ast);
 
             if (parameters.RawParameters is null)

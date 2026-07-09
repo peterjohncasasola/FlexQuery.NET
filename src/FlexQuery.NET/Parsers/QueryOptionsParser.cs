@@ -7,13 +7,17 @@ namespace FlexQuery.NET.Parsers;
 
 /// <summary>
 /// Entry point for parsing query-string parameters into unified <see cref="QueryOptions"/>.
-/// Supports multiple formats: Generic, JSON, and DSL.
+/// Supports multiple formats: DSL, JQL, and MiniOData.
 /// </summary>
 public static class QueryOptionsParser
 {
+    /// <summary>
+    /// Gets or sets the default query syntax used when <see cref="QuerySyntax.AutoDetect"/> is specified.
+    /// Defaults to <see cref="QuerySyntax.NativeDsl"/>.
+    /// </summary>
+    public static QuerySyntax DefaultSyntax { get; set; } = QuerySyntax.NativeDsl;
     private static List<IQueryParser> _parsers = new()
     {
-        new JsonQueryParser(),
         new DslQueryParser()
     };
 
@@ -52,7 +56,7 @@ public static class QueryOptionsParser
     /// Parses a strongly typed <see cref="FlexQueryParameters"/> into <see cref="QueryOptions"/>.
     /// </summary>
     /// <param name="parameters">The query parameters to parse.</param>
-    /// <param name="syntax">The expected query syntax. Defaults to AutoDetect.</param>
+    /// <param name="syntax">The expected query syntax. Defaults to <see cref="QuerySyntax.AutoDetect"/>, which uses <see cref="DefaultSyntax"/>.</param>
     /// <returns>The parsed <see cref="QueryOptions"/>.</returns>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="parameters"/> is null.</exception>
     public static QueryOptions Parse(FlexQueryParameters parameters, QuerySyntax syntax = QuerySyntax.AutoDetect)
@@ -67,6 +71,11 @@ public static class QueryOptionsParser
                 .Select(x => $"{x.Key}={x.Value}"));
         }
 
+        if (syntax == QuerySyntax.AutoDetect)
+        {
+            syntax = DefaultSyntax;
+        }
+
         var cacheKey = new ParsedQueryCacheKey(
             parameters.Filter, parameters.Sort, parameters.Select,
             parameters.Include, parameters.GroupBy, parameters.Having,
@@ -78,22 +87,7 @@ public static class QueryOptionsParser
             return cached!;
         }
 
-        if (ShouldParseGeneric(parameters, syntax))
-        {
-            var options = IndexedFilterParser.Parse(parameters);
-            ParserCache.Set(cacheKey, options);
-            return options;
-        }
-
-        var parsers = _parsers;
-        IQueryParser? parser = null;
-
-        if (syntax != QuerySyntax.AutoDetect)
-        {
-            parser = parsers.FirstOrDefault(p => p.Syntax == syntax);
-        }
-
-        parser ??= parsers.FirstOrDefault(p => p.CanParse(parameters)) ?? parsers.Last();
+        var parser = _parsers.FirstOrDefault(p => p.Syntax == syntax) ?? _parsers.First();
 
         var parsedOptions = parser.Parse(parameters);
         ParserCache.Set(cacheKey, parsedOptions);
@@ -102,7 +96,7 @@ public static class QueryOptionsParser
     }
 
     /// <summary>
-    /// Auto-detects the query-string format and parses into <see cref="QueryOptions"/>.
+    /// Parses raw query-string key-value pairs into <see cref="QueryOptions"/> using the configured <see cref="DefaultSyntax"/>.
     /// Resilient: invalid or unrecognized keys are silently ignored.
     /// </summary>
     /// <param name="queryString">The raw query string key-value pairs.</param>
@@ -134,38 +128,4 @@ public static class QueryOptionsParser
         return Parse(parameters);
     }
 
-    private static bool ShouldParseGeneric(FlexQueryParameters parameters, QuerySyntax syntax)
-    {
-        if (syntax != QuerySyntax.AutoDetect && syntax != QuerySyntax.Generic)
-        {
-            return false;
-        }
-
-        if (IndexedFilterParser.HasIndexFilters(parameters.RawParameters))
-        {
-            return true;
-        }   
-
-        return string.IsNullOrWhiteSpace(parameters.Filter)
-            && IndexedFilterParser.HasIndexedSort(parameters.RawParameters);
-    }
-    
-    private static void TryRegisterParser(string typeName)
-    {
-        try
-        {
-            var type = Type.GetType(typeName);
-
-            if (type == null)
-                return;
-
-            if (Activator.CreateInstance(type) is IQueryParser parser)
-            {
-                RegisterParser(parser);
-            }
-        }
-        catch
-        {
-        }
-    }
 }

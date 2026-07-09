@@ -6,88 +6,30 @@ using Microsoft.Extensions.Primitives;
 
 namespace FlexQuery.NET.Tests.Tests;
 
-/// <summary>
-/// Tests for QueryOptionsParser covering all query-string formats
-/// and JqlParser for JQL-lite syntax.
-/// </summary>
-public class ParserTests
-{
-    // ── Helpers ──────────────────────────────────────────────────────────
-
-    private static QueryOptions Parse(Dictionary<string, string> raw)
+    /// <summary>
+    /// Tests for QueryOptionsParser covering all query-string formats
+    /// and JqlParser for JQL-lite syntax.
+    /// </summary>
+    public class ParserTests
     {
-        var kvps = raw.Select(kv =>
-            new KeyValuePair<string, StringValues>(kv.Key, new StringValues(kv.Value)));
-        return QueryOptionsParser.Parse(kvps);
-    }
+        // ── Helpers ──────────────────────────────────────────────────────────
 
-    private static FilterGroup JqlParse(string jql) =>
-        new JqlQueryParser().Parse(jql);
-
-    // ════════════════════════════════════════════════════════════════════
-    // 1. Generic Format
-    // ════════════════════════════════════════════════════════════════════
-
-    [Fact]
-    public void Generic_SingleFilter_ParsedCorrectly()
-    {
-        var opts = Parse(new()
+        private static QueryOptions Parse(Dictionary<string, string> raw)
         {
-            ["filter[0].field"]    = "Name",
-            ["filter[0].operator"] = "contains",
-            ["filter[0].value"]    = "john",
-            ["page"]               = "1",
-            ["pageSize"]           = "10"
-        });
+            var kvps = raw.Select(kv =>
+                new KeyValuePair<string, StringValues>(kv.Key, new StringValues(kv.Value)));
+            return QueryOptionsParser.Parse(kvps);
+        }
 
-        opts.Filter.Should().NotBeNull();
-        opts.Filter!.Filters.Should().HaveCount(1);
-        opts.Filter.Filters[0].Field.Should().Be("Name");
-        opts.Filter.Filters[0].Operator.Should().Be(FilterOperators.Contains);
-        opts.Filter.Filters[0].Value.Should().Be("john");
-        opts.Paging.Page.Should().Be(1);
-        opts.Paging.PageSize.Should().Be(10);
-    }
+        private static FilterGroup JqlParse(string jql) =>
+            new JqlQueryParser().Parse(jql);
 
-    [Fact]
-    public void Generic_MultipleFilters_AllParsed()
-    {
-        var opts = Parse(new()
-        {
-            ["filter[0].field"]    = "Name",
-            ["filter[0].operator"] = "contains",
-            ["filter[0].value"]    = "Alice",
-            ["filter[1].field"]    = "Age",
-            ["filter[1].operator"] = "gt",
-            ["filter[1].value"]    = "25",
-            ["logic"]              = "and"
-        });
+        // ════════════════════════════════════════════════════════════════════
+        // 1. General Format
+        // ════════════════════════════════════════════════════════════════════
 
-        opts.Filter!.Filters.Should().HaveCount(2);
-        opts.Filter.Logic.Should().Be(LogicOperator.And);
-        opts.Filter.Filters[1].Operator.Should().Be(FilterOperators.GreaterThan);
-    }
-
-    [Fact]
-    public void Generic_Sort_ParsedCorrectly()
-    {
-        var opts = Parse(new()
-        {
-            ["sort[0].field"] = "Age",
-            ["sort[0].desc"]  = "true",
-            ["sort[1].field"] = "Name",
-            ["sort[1].desc"]  = "false"
-        });
-
-        opts.Sort.Should().HaveCount(2);
-        opts.Sort[0].Field.Should().Be("Age");
-        opts.Sort[0].Descending.Should().BeTrue();
-        opts.Sort[1].Field.Should().Be("Name");
-        opts.Sort[1].Descending.Should().BeFalse();
-    }
-
-    [Fact]
-    public void Generic_SortString_MultiField_ParsedCorrectly()
+        [Fact]
+        public void Generic_SortString_MultiField_ParsedCorrectly()
     {
         var opts = Parse(new()
         {
@@ -183,19 +125,6 @@ public class ParserTests
     }
 
     [Fact]
-    public void Generic_OrLogic_SetCorrectly()
-    {
-        var opts = Parse(new()
-        {
-            ["filter[0].field"] = "City",
-            ["filter[0].value"] = "London",
-            ["logic"]           = "or"
-        });
-
-        opts.Filter!.Logic.Should().Be(LogicOperator.Or);
-    }
-
-    [Fact]
     public void Generic_EmptyInput_ReturnsDefaultOptions()
     {
         var opts = Parse(new());
@@ -208,119 +137,7 @@ public class ParserTests
     }
 
     // ════════════════════════════════════════════════════════════════════
-    // 2. JSON Filter Format
-    // ════════════════════════════════════════════════════════════════════
-
-    [Fact]
-    public void JsonFilter_SingleCondition_ParsedCorrectly()
-    {
-        var opts = Parse(new()
-        {
-            ["filter"] = """{"logic":"and","filters":[{"field":"Name","operator":"contains","value":"john"}]}"""
-        });
-
-        opts.Filter.Should().NotBeNull();
-        opts.Filter!.Logic.Should().Be(LogicOperator.And);
-        opts.Filter.Filters.Should().HaveCount(1);
-        opts.Filter.Filters[0].Field.Should().Be("Name");
-        opts.Filter.Filters[0].Operator.Should().Be(FilterOperators.Contains);
-        opts.Filter.Filters[0].Value.Should().Be("john");
-    }
-
-    [Fact]
-    public void JsonFilter_MultipleConditions_AllParsed()
-    {
-        var opts = Parse(new()
-        {
-            ["filter"] = """
-            {
-              "logic": "or",
-              "filters": [
-                {"field": "City",  "operator": "eq",  "value": "London"},
-                {"field": "Age",   "operator": "gt",  "value": "30"}
-              ]
-            }
-            """
-        });
-
-        opts.Filter!.Logic.Should().Be(LogicOperator.Or);
-        opts.Filter.Filters.Should().HaveCount(2);
-    }
-
-    [Fact]
-    public void JsonFilter_NestedGroup_ParsedRecursively()
-    {
-        var opts = Parse(new()
-        {
-            ["filter"] = """
-            {
-              "logic": "and",
-              "filters": [
-                {"field": "Age", "operator": "gt", "value": "20"},
-                {
-                  "logic": "or",
-                  "filters": [
-                    {"field": "City", "operator": "eq", "value": "London"},
-                    {"field": "City", "operator": "eq", "value": "Berlin"}
-                  ]
-                }
-              ]
-            }
-            """
-        });
-
-        opts.Filter!.Filters.Should().HaveCount(1);
-        opts.Filter.Groups.Should().HaveCount(1);
-        opts.Filter.Groups[0].Logic.Should().Be(LogicOperator.Or);
-        opts.Filter.Groups[0].Filters.Should().HaveCount(2);
-    }
-
-    [Fact]
-    public void JsonFilter_MalformedJson_IsIgnoredGracefully()
-    {
-        var opts = Parse(new()
-        {
-            ["filter"] = "{ this is not valid json"
-        });
-
-        opts.Filter.Should().BeNull();
-    }
-
-    [Fact]
-    public void JsonFilter_ExplicitJsonSyntax_ParsedCorrectly()
-    {
-        var opts = QueryOptionsParser.Parse(
-            new FlexQueryParameters
-            {
-                Filter = """{"logic":"or","filters":[{"field":"City","operator":"eq","value":"London"},{"field":"Age","operator":"gt","value":"30"}]}"""
-            },
-            QuerySyntax.Json);
-
-        opts.Filter.Should().NotBeNull();
-        opts.Filter!.Logic.Should().Be(LogicOperator.Or);
-        opts.Filter.Filters.Should().HaveCount(2);
-        opts.Filter.Filters.Should().Contain(f => f.Field == "City" && f.Operator == FilterOperators.Equal && f.Value == "London");
-        opts.Filter.Filters.Should().Contain(f => f.Field == "Age" && f.Operator == FilterOperators.GreaterThan && f.Value == "30");
-    }
-
-    [Fact]
-    public void JsonFilter_ExplicitDslSyntax_StillParsesJsonPayload()
-    {
-        var opts = QueryOptionsParser.Parse(
-            new FlexQueryParameters
-            {
-                Filter = """{"logic":"and","filters":[{"field":"Name","operator":"contains","value":"john"}]}"""
-            },
-            QuerySyntax.NativeDsl);
-
-        opts.Filter.Should().NotBeNull();
-        opts.Filter!.Logic.Should().Be(LogicOperator.And);
-        opts.Filter.Filters.Should().ContainSingle(f =>
-            f.Field == "Name" && f.Operator == FilterOperators.Contains && f.Value == "john");
-    }
-
-    // ════════════════════════════════════════════════════════════════════
-    // 3. Syncfusion Format
+    // 2. DSL Filter Format
     // ════════════════════════════════════════════════════════════════════
 
     [Fact]
@@ -595,7 +412,7 @@ public class ParserTests
     }
 
     // ════════════════════════════════════════════════════════════════════
-    // 5. JQL-lite Format (via JqlParser from FlexQuery.NET.Parsers.Jql)
+    // 3. JQL-lite Format (via JqlParser from FlexQuery.NET.Parsers.Jql)
     // ════════════════════════════════════════════════════════════════════
 
     [Fact]
@@ -756,7 +573,7 @@ public class ParserTests
     }
 
     // ════════════════════════════════════════════════════════════════════
-    // 6. Scoped Collection Filters (via JqlParser)
+    // 4. Scoped Collection Filters (via JqlParser)
     // ════════════════════════════════════════════════════════════════════
 
     [Fact]

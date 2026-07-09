@@ -6,44 +6,13 @@ namespace FlexQuery.NET.Parsers;
 
 /// <summary>
 /// Parses sort expressions including aggregate sorts.
-/// Supports both indexed format (sort[n].field) and string format (field:asc,field:desc).
+/// Supports string format (field:asc,field:desc).
 /// </summary>
 internal static class SortParser
 {
     private static readonly Regex AggregateSortPattern = new(
         @"^(?<collection>[A-Za-z_][A-Za-z0-9_\.]*)\.(?<fn>sum|count|max|min|avg)\((?<field>[A-Za-z_][A-Za-z0-9_\.]*)?\)$",
         RegexOptions.Compiled | RegexOptions.IgnoreCase);
-
-    /// <summary>
-    /// Parses all sorts from a dictionary, including indexed sorts and sort string.
-    /// </summary>
-    public static List<SortNode> Parse(IDictionary<string, string> d)
-    {
-        var result = new List<SortNode>();
-        
-        // Parse indexed sorts: sort[n].field, sort[n].desc
-        var sortMap = ParserUtilities.CollectIndexed(d, QueryOptionKeys.Sort);
-        foreach (var (_, fields) in sortMap.OrderBy(x => x.Key))
-        {
-            var field = fields.GetValueOrDefault(QueryOptionKeys.Field);
-            if (!string.IsNullOrWhiteSpace(field))
-            {
-                result.Add(new SortNode
-                {
-                    Field = field,
-                    Descending = ParserUtilities.ParseBool(fields.GetValueOrDefault(QueryOptionKeys.Desc))
-                });
-            }
-        }
-
-        // Parse sort string: field:asc,field:desc or collection.aggregate(field):desc
-        if (d.TryGetValue(QueryOptionKeys.Sort, out var sortRaw))
-        {
-            result.AddRange(ParseFromString(sortRaw));
-        }
-
-        return result;
-    }
 
     /// <summary>
     /// Parses a sort string into a list of SortNodes.

@@ -1,3 +1,5 @@
+using FlexQuery.NET.Parsers;
+
 namespace FlexQuery.NET.Configuration;
 
 /// <summary>
@@ -35,4 +37,14 @@ public sealed class FlexQueryOptions
     /// The maximum depth of nested field paths allowed.
     /// </summary>
     public int MaxFieldDepth { get; set; } = 5;
+
+    /// <summary>
+    /// Gets or sets the default query syntax used when no explicit syntax is specified.
+    /// Maps to <see cref="QueryOptionsParser.DefaultSyntax"/>.
+    /// </summary>
+    public QuerySyntax FilterSyntax
+    {
+        get => QueryOptionsParser.DefaultSyntax;
+        set => QueryOptionsParser.DefaultSyntax = value;
+    }
 }
