@@ -96,7 +96,7 @@ public static class FlexQueryDapperExtensions
             Include = dict.GetValueOrDefault(QueryOptionKeys.Include) ?? dict.GetValueOrDefault(QueryOptionKeys.Expand) ?? dict.GetValueOrDefault($"${QueryOptionKeys.Expand}"),
             Page = dict.TryGetValue(QueryOptionKeys.Page, out var p) && int.TryParse(p, out var page) ? page : null,
             PageSize = dict.TryGetValue(QueryOptionKeys.PageSize, out var ps) && int.TryParse(ps, out var pageSize) ? pageSize : null,
-            RawParameters = dict
+            PreserveRawOrder = true
         };
 
         return await FlexQueryAsync<T>(connection, flexParams, configure, cancellationToken);
