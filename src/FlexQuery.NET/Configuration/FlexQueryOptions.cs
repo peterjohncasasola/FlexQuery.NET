@@ -39,12 +39,8 @@ public sealed class FlexQueryOptions
     public int MaxFieldDepth { get; set; } = 5;
 
     /// <summary>
-    /// Gets or sets the default query syntax used when no explicit syntax is specified.
-    /// Maps to <see cref="QueryOptionsParser.DefaultSyntax"/>.
+    /// The query syntax used for all requests unless overridden per execution.
+    /// Defaults to <see cref="QuerySyntax.NativeDsl"/>.
     /// </summary>
-    public QuerySyntax FilterSyntax
-    {
-        get => QueryOptionsParser.DefaultSyntax;
-        set => QueryOptionsParser.DefaultSyntax = value;
-    }
+    public QuerySyntax QuerySyntax { get; set; } = QuerySyntax.NativeDsl;
 }
