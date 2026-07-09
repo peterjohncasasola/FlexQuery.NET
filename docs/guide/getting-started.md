@@ -1,21 +1,32 @@
 # Getting Started
 
-This guide will get you from zero to a working, secure API endpoint in under 10 minutes.
+## Overview
+
+This guide provides a comprehensive walkthrough for installing and configuring FlexQuery.NET. It takes you from an empty ASP.NET Core project to a fully secured, dynamic API endpoint in under 10 minutes.
+
+## Why this feature exists
+
+Setting up dynamic querying often requires piecing together multiple libraries, writing custom MVC binders, or overriding default Entity Framework behaviors. FlexQuery.NET is designed to be plug-and-play. The built-in integration packages abstract away the complexity of model binding and dependency injection, so you can focus on writing your security policies.
+
+## When to use
+
+- Read this guide when you are setting up FlexQuery.NET in a new project.
+- Use the **Manual Pipeline** section when you need fine-grained control over exactly when the query is executed (e.g., if you need to run secondary database checks midway through the execution pipeline).
 
 ---
 
 ## Installation
 
-Install the packages that match your stack:
+FlexQuery.NET is modular. Install only the packages that match your stack:
 
 ```bash
-# Core library (filtering, sorting, paging, projection, validation)
+# Core library (parsers, AST, validation, FlexQueryParameters)
 dotnet add package FlexQuery.NET
 
-# EF Core async execution (FlexQueryAsync, ApplyFilteredIncludes)
+# EF Core async execution provider
 dotnet add package FlexQuery.NET.EntityFrameworkCore
 
-# ASP.NET Core integration ([FieldAccess] attribute, FieldAccessFilter)
+# ASP.NET Core integration ([FieldAccess] attribute, global exceptions)
 dotnet add package FlexQuery.NET.AspNetCore
 ```
 
@@ -23,48 +34,40 @@ dotnet add package FlexQuery.NET.AspNetCore
 
 ## Basic Setup (ASP.NET Core + EF Core)
 
-### Step 1: Install Packages
+### Step 1: Configure Services
 
-```bash
-# Core library (filtering, sorting, paging, projection, validation)
-dotnet add package FlexQuery.NET
-
-# EF Core async execution (FlexQueryAsync, ApplyFilteredIncludes)
-dotnet add package FlexQuery.NET.EntityFrameworkCore
-
-# ASP.NET Core integration ([FieldAccess] attribute, FieldAccessFilter)
-dotnet add package FlexQuery.NET.AspNetCore
-```
-
-### Step 2: Configure Services
-
-In `Program.cs`:
+In `Program.cs`, you must register the core engine and your execution provider.
 
 ```csharp
-using FlexQuery.NET.AspNetCore.Extensions;
+using FlexQuery.NET.DependencyInjection;
+using FlexQuery.NET.EntityFrameworkCore.DependencyInjection;
+using FlexQuery.NET.AspNetCore.DependencyInjection;
+using Microsoft.AspNetCore.Builder;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Register EF Core DbContext
 builder.Services.AddDbContext<AppDbContext>(opt =>
-    opt.UseSqlServer(
-        builder.Configuration.GetConnectionString("Default")
-    ));
+    opt.UseSqlServer(builder.Configuration.GetConnectionString("Default")));
 
-// Configure FlexQuery.NET globally (recommended)
+// 1. Register FlexQuery Core globally
 builder.Services.AddFlexQuery(options =>
 {
     options.MaxPageSize = 1000;
     options.DefaultPageSize = 50;
     options.CaseInsensitive = true;
     options.IncludeTotalCount = true;
-    options.StrictFieldValidation = true;
+    options.StrictFieldValidation = true; // Security: Throws on unauthorized access
     options.MaxFieldDepth = 5;
-    options.UseNoTracking = true;
 });
 
-// Register MVC + optional FlexQuery security integration
+// 2. Register the EF Core Provider
+builder.Services.AddFlexQueryEntityFrameworkCore();
+
+// 3. Register MVC and optional declarative Security ([FieldAccess])
 builder.Services
     .AddControllers()
     .AddFlexQuerySecurity();
@@ -72,41 +75,20 @@ builder.Services
 var app = builder.Build();
 
 app.MapControllers();
-
 app.Run();
 ```
 
----
+### What does `AddFlexQuerySecurity()` do?
 
-## What does `AddFlexQuerySecurity()` do?
-
-This optional integration automatically registers:
-
-- `FieldAccessFilter`
-- attribute-based field-level security
-- MVC filter pipeline integration
-
-This enables features such as:
+This optional integration automatically registers the `FieldAccessFilter` into the ASP.NET Core MVC pipeline. This enables you to use declarative security attributes directly on your controllers:
 
 ```csharp
 [FieldAccess(AllowedFields = new[] { "Id", "Name", "Email" })]
+[HttpGet]
+public async Task<IActionResult> GetUsers() { ... }
 ```
 
-on controllers and actions.
-
----
-
-## When do I need `AddFlexQuerySecurity()`?
-
-You only need it if you use:
-
-- `[FieldAccess]`
-- automatic MVC field-level security
-- global `FieldAccessFilter` behavior
-
-If you only use inline configuration with `FlexQueryAsync(parameters, exec => ...)`, you can skip this registration.
-
-### 2. Your Entity
+### Step 2: Define Your Entity
 
 ```csharp
 public class User
@@ -123,13 +105,17 @@ public class User
 
 ---
 
-## Your First Endpoint
+## Your First Endpoint (Complete Runnable Example)
 
-This is the recommended production pattern using `FlexQueryAsync`:
+This is the recommended production pattern using `FlexQueryAsync`, which automatically handles parsing, validation, and execution in a single line.
 
 ```csharp
 using FlexQuery.NET.EntityFrameworkCore;
 using FlexQuery.NET.Models;
+using FlexQuery.NET.Exceptions;
+using Microsoft.AspNetCore.Mvc;
+using System.Threading.Tasks;
+using System.Collections.Generic;
 
 [ApiController]
 [Route("api/[controller]")]
@@ -142,40 +128,57 @@ public class UsersController : ControllerBase
     [HttpGet]
     public async Task<IActionResult> GetUsers([FromQuery] FlexQueryParameters parameters)
     {
-        var result = await _context.Users.FlexQueryAsync<User>(parameters, exec =>
+        try
         {
-            // Declare which fields clients are allowed to use
-            exec.AllowedFields = new HashSet<string>
+            var result = await _context.Users.FlexQueryAsync(parameters, exec =>
             {
-                "id", "name", "email", "status", "age", "createdAt"
-            };
+                // Security: Declare which fields clients are allowed to view/filter/sort
+                exec.AllowedFields = new HashSet<string>
+                {
+                    "Id", "Name", "Email", "Status", "Age", "CreatedAt"
+                };
 
-            // Limit nesting depth (prevents deep path traversal)
-            exec.MaxFieldDepth = 2;
-        });
+                // Block highly sensitive fields absolutely
+                exec.BlockedFields = new HashSet<string> { "PasswordHash" };
 
-        return Ok(result);
+                // Limit nesting depth (prevents infinite traversal via includes)
+                exec.MaxFieldDepth = 2;
+            });
+
+            return Ok(result);
+        }
+        catch (QueryValidationException ex)
+        {
+            // Always return 400 Bad Request if the client violates the AllowedFields policy
+            return BadRequest(new { errors = ex.ValidationResult.Errors });
+        }
     }
 }
 ```
 
 ### Sample Request
 
-```
-GET /api/users?filter=status:eq:active&sort=name:asc&page=1&pageSize=10&select=id,name,email
+```http
+GET /api/users?filter=Status:eq:active&sort=Name:asc&page=1&pageSize=10&select=Id,Name,Email
 ```
 
 ### Sample Response
 
 ```json
 {
+  "totalCount": 48,
+  "resultCount": 48,
+  "page": 1,
+  "pageSize": 10,
+  "totalPages": 5,
+  "hasNextPage": true,
+  "hasPreviousPage": false,
+  "aggregates": null,
   "data": [
     { "id": 1, "name": "Alice Chen", "email": "alice@example.com" },
     { "id": 2, "name": "Bob Smith",  "email": "bob@example.com" }
   ],
-  "totalCount": 48,
-  "page": 1,
-  "pageSize": 10
+  "nextCursorToken": null
 }
 ```
 
@@ -183,43 +186,44 @@ GET /api/users?filter=status:eq:active&sort=name:asc&page=1&pageSize=10&select=i
 
 ## Understanding FlexQueryParameters
 
-`FlexQueryParameters` is the public-facing DTO. Bind it directly from the query string.
+`FlexQueryParameters` is the public-facing DTO. Bind it directly from the query string in GET requests.
 
 ```csharp
-public sealed class FlexQueryParameters
+public class FlexQueryParameters
 {
-    public string? Query    { get; set; }  // JQL: query=status = "active"
+    public string? Query    { get; set; }  // JQL: query=status="active"
     public string? Filter   { get; set; }  // DSL: filter=status:eq:active
     public string? Sort     { get; set; }  // sort=name:asc,createdAt:desc
     public string? Select   { get; set; }  // select=id,name,email
-    public string? Includes { get; set; }  // includes=Orders,Profile
+    public string? Include  { get; set; }  // include=Orders,Profile
     public string? GroupBy  { get; set; }  // groupBy=status
-    public string? Having   { get; set; }  // having=count():gt:5
+    public string? Having   { get; set; }  // having=count:gt:5
     public int?    Page     { get; set; }  // page=1
     public int?    PageSize { get; set; }  // pageSize=20
     public bool?   IncludeCount { get; set; }  // includeCount=true
     public bool?   Distinct     { get; set; }  // distinct=true
-    public string? Mode     { get; set; }  // mode=flat
+    public string? Mode     { get; set; }  // mode=Flat
+    public bool?   UseKeysetPagination { get; set; }
+    public string? Cursor   { get; set; }
 }
 ```
 
 **Why `FlexQueryParameters` and not `Request.Query` directly?**
 
-- It is an **OpenAPI-compatible DTO** — Swagger generates proper documentation.
-- It is **type-safe** — all values are strings, ints, or bools; no injection risk.
-- It is **easier to test** — create instances directly in unit tests.
-- It is **explicit** — all supported parameters are visible in the class definition.
+- It is an **OpenAPI-compatible DTO** — Swagger generates proper documentation automatically.
+- It is **type-safe** — all values are bound strongly; mitigating generic string injection risks.
+- It is **testable** — you can instantiate it directly in unit tests without mocking an `HttpContext`.
 
 ---
 
-## How FlexQueryAsync Works
+## How FlexQueryAsync Works Under the Hood
 
-`FlexQueryAsync` is the unified high-level method. It does everything in one call:
+`FlexQueryAsync` is the unified high-level method. It internally manages the entire query lifecycle:
 
-```
+```text
 FlexQueryParameters
     → Parse (QueryOptionsParser)
-    → Validate (field access, operators, depth)
+    → Validate (field access, operators, depth against Server Policy)
     → ApplyFilter
     → ApplySort
     → CountAsync (for totalCount)
@@ -230,45 +234,42 @@ FlexQueryParameters
     → QueryResult<object>
 ```
 
-```csharp
-var result = await _context.Users.FlexQueryAsync<User>(parameters, exec =>
-{
-    exec.AllowedFields = new HashSet<string> { "id", "name", "email" };
-});
-```
-
 ---
 
 ## Manual Pipeline (Mid-Level Control)
 
-When you need custom logic between steps, use the manual pipeline:
+When you need custom logic between steps (e.g., executing business rules before pagination), you can manually orchestrate the pipeline instead of using `FlexQueryAsync`:
 
 ```csharp
-[HttpGet]
-public async Task<IActionResult> GetUsers([FromQuery] FlexQueryParameters parameters)
+using FlexQuery.NET;
+using FlexQuery.NET.EntityFrameworkCore;
+
+[HttpGet("manual")]
+public async Task<IActionResult> GetUsersManual([FromQuery] FlexQueryParameters parameters)
 {
     // 1. Parse
-    var options = QueryOptionsParser.Parse(parameters);
+    var options = parameters.ToQueryOptions();
 
     // 2. Validate
     var execOptions = new QueryExecutionOptions
     {
-        AllowedFields = new HashSet<string> { "id", "name", "email", "status" }
+        AllowedFields = new HashSet<string> { "Id", "Name", "Email", "Status" }
     };
     options.ValidateOrThrow<User>(execOptions);
 
-    // 3. Apply pipeline
+    // 3. Start composing the IQueryable
     var query = _context.Users.AsQueryable();
     query = query.ApplyFilter(options);
     query = query.ApplySort(options);
 
-    // 4. Count before paging
+    // 4. Manual intervention: Count the filtered rows *before* paging cuts them off
     var total = await query.CountAsync();
 
+    // 5. Apply pagination and includes
     query = query.ApplyPaging(options);
-    query = query.ApplyFilteredIncludes(options);
+    query = query.ApplyExpand(options);
 
-    // 5. Project and execute
+    // 6. Project and execute
     var data = await query.ApplySelect(options).ToListAsync();
 
     return Ok(options.BuildQueryResult(data, total));
@@ -284,18 +285,18 @@ public async Task<IActionResult> GetUsers([FromQuery] FlexQueryParameters parame
 ```csharp
 var execOptions = new QueryExecutionOptions
 {
-    AllowedFields     = new HashSet<string> { "name", "email", "status" },
-    BlockedFields     = new HashSet<string> { "passwordHash", "internalNotes" },
-    FilterableFields  = new HashSet<string> { "name", "status" },
-    SortableFields    = new HashSet<string> { "name", "createdAt" },
-    SelectableFields  = new HashSet<string> { "id", "name", "email" },
+    AllowedFields     = new HashSet<string> { "Name", "Email", "Status" },
+    BlockedFields     = new HashSet<string> { "PasswordHash", "InternalNotes" },
+    FilterableFields  = new HashSet<string> { "Name", "Status" },
+    SortableFields    = new HashSet<string> { "Name", "CreatedAt" },
+    SelectableFields  = new HashSet<string> { "Id", "Name", "Email" },
     MaxFieldDepth     = 2
 };
 
 options.ValidateOrThrow<User>(execOptions);
 ```
 
-To return structured errors instead of throwing:
+If you prefer to avoid exceptions for control flow, you can use `ValidateSafe<T>` to return structured errors:
 
 ```csharp
 var result = options.ValidateSafe<User>(execOptions);
@@ -306,55 +307,29 @@ if (!result.IsValid)
 }
 ```
 
-
 ---
 
 ## Performance & Optimization
 
-For high-traffic APIs, you can enable **Expression Caching** to skip the overhead of building LINQ trees for repeated query shapes.
+For extremely high-traffic APIs using the EF Core provider, you can enable **Expression Caching**. This instructs FlexQuery to cache the compiled LINQ Expression Trees for repeated query shapes, bypassing the CPU overhead of reflection and tree generation on subsequent identical requests.
 
-In `Program.cs`:
+In `Program.cs` (Global configuration):
 
 ```csharp
 using FlexQuery.NET.Caching;
 
-// Enable global caching
+// Enable global expression caching
 FlexQueryCacheSettings.EnableCache = true;
 FlexQueryCacheSettings.MaxCacheSize = 5000;
 ```
 
----
+## Best Practices
 
-## Recommended Production Setup
+- **Global Error Handling:** Do not wrap every controller method in a `try/catch`. Instead, register an ASP.NET Core Exception Middleware to globally catch `QueryValidationException` and map it to a `400 Bad Request`.
+- **Always Validate:** Even if you use the manual pipeline, never skip the `ValidateOrThrow` step.
 
-```csharp
-[HttpGet]
-public async Task<IActionResult> GetUsers([FromQuery] FlexQueryParameters parameters)
-{
-    try
-    {
-        var result = await _context.Users.FlexQueryAsync<User>(parameters, exec =>
-        {
-            exec.AllowedFields    = new HashSet<string> { "id", "name", "email", "status", "age", "createdAt" };
-            exec.BlockedFields    = new HashSet<string> { "passwordHash", "twoFactorSecret" };
-            exec.SortableFields   = new HashSet<string> { "name", "createdAt", "age" };
-            exec.SelectableFields = new HashSet<string> { "id", "name", "email" };
-            exec.MaxFieldDepth    = 2;
-        });
+## Related Topics
 
-        return Ok(result);
-    }
-    catch (QueryValidationException ex)
-    {
-        return BadRequest(new { errors = ex.ValidationResult.Errors });
-    }
-}
-```
-
-This gives you:
-
-- ✅ Parsing from query string
-- ✅ Field-level security validation
-- ✅ Safe filter/sort/page execution
-- ✅ Optional projection
-- ✅ Structured error response on bad input
+- [Filtering and Sorting](/guide/filtering)
+- [Pagination](/guide/paging)
+- [Security Governance](/guide/security-governance)

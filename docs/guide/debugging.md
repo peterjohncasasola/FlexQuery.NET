@@ -1,49 +1,37 @@
 # Debugging
 
-FlexQuery.NET includes built-in debugging tools that let you inspect the parsed query AST, generated expression trees, and execution pipeline state — without touching a database.
+## Overview
 
----
+FlexQuery.NET includes built-in debugging tools that allow you to inspect the parsed query Abstract Syntax Tree (AST), the generated expression trees, and the execution pipeline state — without necessarily touching a database.
 
-## What You Can Debug
+## Why this feature exists
 
-- The parsed filter AST (Abstract Syntax Tree)
-- The normalized filter form (used for caching)
-- The generated LINQ expression as a string
-- Paging, sort, and projection state
+When building dynamic, client-driven querying APIs, it can sometimes be difficult to determine *why* a query failed or why the generated SQL looks a certain way. Is the frontend sending malformed URL encoded strings? Is the security validation stripping out a valid field? FlexQuery provides deep introspection capabilities so you can trace the exact lifecycle of a request from the HTTP boundary down to the ADO.NET command.
+
+## When to use
+
+- Read this guide when you are encountering unexpected `QueryValidationExceptions`.
+- Read this guide when you want to intercept and log the generated SQL strings in production.
+- Use the `IFlexQueryExecutionListener` when building global APM telemetry integrations.
 
 ---
 
 ## Inspecting the Parsed AST
 
-After parsing, the `QueryOptions.Ast` property holds the raw parsed AST (if using DSL or JQL format):
-
-```csharp
-var options = QueryOptionsParser.Parse(parameters);
-
-// The raw parser output (JQL or DSL AST node)
-Console.WriteLine(options.Ast);
-
-// The resolved FilterGroup tree
-Console.WriteLine(options.Filter?.ToString());
-```
-
----
-
-## Inspecting QueryOptions in a Controller
-
-Add a debug endpoint to inspect what FlexQuery.NET parsed from a request:
+Before execution, you can inspect exactly what FlexQuery.NET parsed from the HTTP request by calling `.ToQueryOptions()`.
 
 ```csharp
 [HttpGet("debug")]
 public IActionResult DebugQuery([FromQuery] FlexQueryParameters parameters)
 {
-    var options = QueryOptionsParser.Parse(parameters);
+    // The internal parsed model
+    QueryOptions options = parameters.ToQueryOptions();
 
     return Ok(new
     {
-        filter = options.Filter,
-        sort   = options.Sort,
-        select = options.Select,
+        filter = options.Filter, // The nested AND/OR tree
+        sort   = options.Sort,   // Ordered list of sorts
+        select = options.Select, // Projected field paths
         paging = new
         {
             page     = options.Paging.Page,
@@ -53,13 +41,12 @@ public IActionResult DebugQuery([FromQuery] FlexQueryParameters parameters)
         projectionMode = options.ProjectionMode.ToString(),
         groupBy        = options.GroupBy,
         aggregates     = options.Aggregates,
-        includes       = options.Includes,
-        caseInsensitive = options.CaseInsensitive
+        includes       = options.Expand, // v4 uses Expand
     });
 }
 ```
 
-**Sample output for `?filter=status:eq:active&sort=name:asc&page=2&pageSize=10`:**
+**Sample output for `?filter=Status:eq:active&sort=Name:asc&page=2&pageSize=10`:**
 
 ```json
 {
@@ -67,14 +54,14 @@ public IActionResult DebugQuery([FromQuery] FlexQueryParameters parameters)
     "logic": "And",
     "children": [
       {
-        "field": "status",
+        "field": "Status",
         "operator": "eq",
         "value": "active"
       }
     ]
   },
   "sort": [
-    { "field": "name", "descending": false }
+    { "field": "Name", "descending": false }
   ],
   "select": null,
   "paging": {
@@ -85,8 +72,7 @@ public IActionResult DebugQuery([FromQuery] FlexQueryParameters parameters)
   "projectionMode": "Nested",
   "groupBy": null,
   "aggregates": [],
-  "includes": null,
-  "caseInsensitive": true
+  "includes": null
 }
 ```
 
@@ -94,13 +80,14 @@ public IActionResult DebugQuery([FromQuery] FlexQueryParameters parameters)
 
 ## Inspecting the Validation Result
 
-Capture the validation result before throwing:
+If a query is failing and you want to capture the validation result before throwing an exception, you can run validation manually:
 
 ```csharp
-var options = QueryOptionsParser.Parse(parameters);
+var options = parameters.ToQueryOptions();
+
 var execOptions = new QueryExecutionOptions
 {
-    AllowedFields = new HashSet<string> { "id", "name", "status" }
+    AllowedFields = new HashSet<string> { "Id", "Name", "Status" }
 };
 
 var validation = options.ValidateSafe<User>(execOptions);
@@ -114,73 +101,42 @@ foreach (var error in validation.Errors)
 
 **Sample output:**
 
-```
+```text
 IsValid: False
-  [FIELD_ACCESS_DENIED] salary: Field 'salary' is not in the global allowed list.
-  [FIELD_ACCESS_DENIED] internalNotes: Field 'internalNotes' is explicitly blocked.
+  [FIELD_ACCESS_DENIED] Salary: Field 'Salary' is not in the global allowed list.
+  [FIELD_ACCESS_DENIED] InternalNotes: Field 'InternalNotes' is explicitly blocked.
 ```
 
 ---
 
-## Inspecting the Filter Normalizer
+## Diagnostic Logging (`IFlexQueryExecutionListener`)
 
-The `FilterNormalizer` canonicalizes a filter AST. Use it to verify cache key stability:
+In v4, FlexQuery introduces a formal diagnostic telemetry hook: the `IFlexQueryExecutionListener`.
+
+You can pass a custom listener into your `options` lambda to receive real-time execution metrics.
 
 ```csharp
-using FlexQuery.NET.Builders;
-
-var options1 = QueryOptionsParser.Parse(new FlexQueryParameters
+var result = await _db.Products.FlexQueryAsync(parameters, options =>
 {
-    Filter = "status:eq:active,age:gte:18"
+    options.AllowedFields = ["Id", "Name", "Price"];
+    
+    // Attach a listener for debugging
+    options.Listener = new ConsoleDiagnosticsListener();
 });
 
-var options2 = QueryOptionsParser.Parse(new FlexQueryParameters
+// Custom Listener Implementation
+public class ConsoleDiagnosticsListener : IFlexQueryExecutionListener
 {
-    Filter = "age:gte:18,status:eq:active"
-});
-
-var key1 = options1.GetCacheKey(typeof(User), "predicate");
-var key2 = options2.GetCacheKey(typeof(User), "predicate");
-
-Console.WriteLine(key1 == key2); // true — normalized form is identical
-```
-
----
-
-## Viewing the Cache Key
-
-```csharp
-var cacheKey = options.GetCacheKey(typeof(User), "predicate");
-Console.WriteLine(cacheKey);
-// e.g., "predicate:MyApp.Models.User:ci:a3f8c2d1|1|20|name_asc|id,name"
-
-var hash = options.GetQueryHash();
-Console.WriteLine(hash);
-// e.g., "SHA256: 3a7f2c..."
-```
-
----
-
-## Logging Integration
-
-For production debugging, log the parsed options:
-
-```csharp
-[HttpGet]
-public async Task<IActionResult> GetUsers(
-    [FromQuery] FlexQueryParameters parameters,
-    ILogger<UsersController> logger)
-{
-    var options = QueryOptionsParser.Parse(parameters);
-
-    logger.LogDebug(
-        "FlexQuery parsed: filter={Filter}, sort={Sort}, page={Page}, pageSize={PageSize}",
-        options.Filter != null ? "present" : "none",
-        options.Sort.Count,
-        options.Paging.Page,
-        options.Paging.PageSize);
-
-    // ... rest of pipeline
+    public void OnQueryExecuted(FlexQueryExecutionEvent executionEvent)
+    {
+        Console.WriteLine($"Query executed in {executionEvent.ElapsedMilliseconds}ms");
+        Console.WriteLine($"Total Records Found: {executionEvent.TotalCount}");
+        
+        if (executionEvent.Exception != null)
+        {
+            Console.WriteLine($"Failed with: {executionEvent.Exception.Message}");
+        }
+    }
 }
 ```
 
@@ -188,18 +144,19 @@ public async Task<IActionResult> GetUsers(
 
 ## Viewing Generated SQL (EF Core)
 
-Use EF Core's built-in logging to see the SQL FlexQuery.NET generates:
+If you are using the EF Core provider, you can use EF Core's built-in logging to see the SQL FlexQuery.NET generates:
 
 ```csharp
 // In Program.cs or DbContext OnConfiguring
 optionsBuilder.LogTo(Console.WriteLine, LogLevel.Information);
 ```
 
-Or use `ToQueryString()` to inspect the SQL without executing:
+Or you can use `ToQueryString()` in the manual pipeline to inspect the SQL without executing:
 
 ```csharp
-var options = QueryOptionsParser.Parse(parameters);
+var options = parameters.ToQueryOptions();
 var query = _context.Users.AsQueryable();
+
 query = query.ApplyFilter(options);
 query = query.ApplySort(options);
 
@@ -223,20 +180,16 @@ ORDER BY [u].[Name]
 
 ### "My filter isn't working"
 
-1. Check `options.Filter` — is it null? The format might not have been recognized.
-2. Try JSON format as the most explicit: `filter={"logic":"and","filters":[...]}`
-3. Check the operator — typos are silently ignored. Use `FilterOperators.Normalize("myop")` to verify.
+1. Check `options.Filter` in the parsed AST — is it null? The format might not have been recognized, or a URL decoding issue occurred (e.g., using `&` instead of `%26` for multiple filters).
+2. Check the operator — typos in operator strings are silently ignored during parsing but caught during validation. 
 
 ### "Results are empty but shouldn't be"
 
-1. Verify case sensitivity: `options.CaseInsensitive` is `true` by default.
-2. Check if a server-side pre-filter is excluding results before FlexQuery runs.
-3. Use `query.ToQueryString()` to see the exact SQL.
-
-### "I'm getting a double-filter in SQL"
-
-You are using a deprecated v1 method pattern. See [Execution Pipeline](/guide/execution) for the correct approach.
+1. Verify case sensitivity: `options.CaseInsensitive` is `true` by default, but if you turned it off, "Alice" and "alice" will not match.
+2. Check if a server-side pre-filter is excluding results before FlexQuery runs (e.g., `_context.Users.Where(u => u.TenantId == 1).FlexQueryAsync(...)`).
+3. Use `query.ToQueryString()` or SQL Profiler to see the exact SQL generated.
 
 ### "Validation is rejecting a valid field"
 
-Check `AllowedFields`. Field matching is **case-insensitive** by default. If you set `AllowedFields = { "Name" }` and the client sends `filter=name:eq:alice`, it will still pass.
+1. Check `AllowedFields`.
+2. Remember that if `StrictFieldValidation` is true, the query will completely abort on the first infraction. Check your frontend network tab to see if the UI is requesting a deeply nested relationship field that exceeds your `MaxFieldDepth` setting.

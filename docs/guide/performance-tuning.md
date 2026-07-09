@@ -161,7 +161,7 @@ FlexQueryCacheSettings.CacheCompiledLambdas = true;
 You can override the global setting on individual requests via `QueryOptions`:
 
 ```csharp
-var options = QueryOptionsParser.Parse(request);
+var options = parameters.ToQueryOptions();
 
 // Force cache for this specific heavy query, even if global cache is off
 options.EnableCache = true; 

@@ -47,13 +47,16 @@ OFFSET 0 ROWS FETCH NEXT 20 ROWS ONLY
 **Response:**
 ```json
 {
+  "totalCount": 2,
+  "resultCount": 2,
+  "page": 1,
+  "pageSize": 20,
+  "aggregates": null,
   "data": [
     { "id": 1, "name": "Alice Chen" },
     { "id": 5, "name": "Carol White" }
   ],
-  "totalCount": 2,
-  "page": 1,
-  "pageSize": 20
+  "nextCursorToken": null
 }
 ```
 
@@ -274,7 +277,7 @@ GET /api/users?select=id,name,salary
 public async Task<IActionResult> GetOrders([FromQuery] FlexQueryParameters parameters, CancellationToken ct)
 {
     // Parse
-    var options = QueryOptionsParser.Parse(parameters);
+    var options = parameters.ToQueryOptions();
 
     // Validate
     var execOptions = new QueryExecutionOptions
@@ -296,7 +299,7 @@ public async Task<IActionResult> GetOrders([FromQuery] FlexQueryParameters param
     var total = await query.CountAsync(ct);
 
     query = query.ApplyPaging(options);
-    query = query.ApplyFilteredIncludes(options);
+    query = query.ApplyExpand(options);
 
     var data = await query.ApplySelect(options).ToListAsync(ct);
 

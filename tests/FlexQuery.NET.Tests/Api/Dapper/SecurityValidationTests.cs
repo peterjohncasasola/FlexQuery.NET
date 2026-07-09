@@ -1,4 +1,3 @@
-using FlexQuery.NET.Dapper.Dialects;
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
@@ -7,8 +6,6 @@ namespace FlexQuery.NET.Tests.Api.Dapper;
 
 public class SecurityTests : DapperApiTestBase
 {
-    protected override ISqlDialect Dialect => new SqliteDialect();
-
     public SecurityTests() { }
 
     [Fact]
@@ -39,8 +36,6 @@ public class SecurityTests : DapperApiTestBase
 
 public class ValidationTests : DapperApiTestBase
 {
-    protected override ISqlDialect Dialect => new SqliteDialect();
-
     public ValidationTests() { }
 
     [Fact]

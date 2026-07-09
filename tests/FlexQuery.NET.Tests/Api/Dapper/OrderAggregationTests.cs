@@ -1,4 +1,3 @@
-using FlexQuery.NET.Dapper.Dialects;
 using System.Net.Http.Json;
 using System.Text.Json;
 
@@ -6,8 +5,6 @@ namespace FlexQuery.NET.Tests.Api.Dapper;
 
 public class OrderAggregationTests : DapperApiTestBase
 {
-    protected override ISqlDialect Dialect => new SqliteDialect();
-
     public OrderAggregationTests() { }
 
     [Fact]

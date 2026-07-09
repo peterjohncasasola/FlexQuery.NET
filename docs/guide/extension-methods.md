@@ -1,49 +1,41 @@
 # Extension Methods
 
-FlexQuery.NET is built entirely around `IQueryable<T>` extension methods. This ensures it plays nicely with Entity Framework Core (or any other LINQ provider) without forcing you to inherit from base controllers or rewrite your data access layer.
+## Overview
 
-This page documents the core extension methods and when to use each one.
+FlexQuery.NET is built entirely around `IQueryable<T>` extension methods. This ensures it integrates seamlessly with Entity Framework Core (or any LINQ provider) without forcing you to inherit from base controllers or rewrite your data access layer.
 
-## 1. `FlexQueryAsync` (Recommended)
+## Why this feature exists
 
-This is the all-in-one unified pipeline method. It handles parsing, validation, filtering, sorting, paging, includes, and projection in a single secure call.
+Extension methods preserve the idiomatic .NET style. Your controller logic stays clean and declarative, and the query composition remains fully compatible with any pre-existing `IQueryable` chain you have already constructed (e.g., `_context.Products.Where(p => p.TenantId == tenantId).FlexQueryAsync(...)`).
 
-**Example:**
+---
+
+## `FlexQueryAsync` ⭐ Recommended
+
+The all-in-one unified pipeline method. Handles parsing, validation, filtering, sorting, paging, includes, and projection in a single secure call.
+
 ```csharp
 [HttpGet]
 public async Task<IActionResult> Get([FromQuery] FlexQueryParameters parameters)
 {
-    // Unified pipeline execution
-    var result = await _context.Users.FlexQueryAsync<User>(parameters, exec =>
+    var result = await _context.Users.FlexQueryAsync(parameters, exec =>
     {
-        exec.AllowedFields = new HashSet<string> { "id", "name", "email" };
+        exec.AllowedFields = ["Id", "Name", "Email"];
+        exec.MaxFieldDepth = 2;
     });
 
     return Ok(result);
 }
 ```
 
-## 2. `Apply` (Low-Level All-in-One)
+---
 
-Applies Filter, Sort, and Paging in sequence. It returns the modified `IQueryable<T>`. It does **not** apply projection or validation.
+## Atomic Pipeline Methods
 
-**Example:**
-```csharp
-var options = QueryOptionsParser.Parse(parameters);
-
-// Returns IQueryable<User> (Filtered, Sorted, and Paged)
-var query = _context.Users.AsQueryable();
-var query = query.Apply(options);
-
-var data = await query.ToListAsync();
-```
-
-## 3. Atomic Pipeline Methods
-
-Use these when you need to apply only specific parts of the FlexQuery logic.
+Use these when you need to apply only specific parts of the FlexQuery logic in a custom orchestration.
 
 ### `.ApplyFilter(options)`
-Applies the `WHERE` clause.
+Applies the `WHERE` clause from the parsed AST.
 ```csharp
 query = query.ApplyFilter(options);
 ```
@@ -55,37 +47,38 @@ query = query.ApplySort(options);
 ```
 
 ### `.ApplyPaging(options)`
-Applies `SKIP` and `TAKE`.
+Applies `SKIP` / `TAKE` (offset) or a keyset cursor `WHERE`.
 ```csharp
 query = query.ApplyPaging(options);
 ```
 
-### `.ApplySelect(options)`
-Applies the dynamic projection (`select`). Returns `IQueryable<object>`.
-```csharp
-var projected = query.ApplySelect(options);
-```
-
-### `.ApplyFilteredIncludes(options)`
+### `.ApplyExpand(options)`
 Applies EF Core filtered includes (e.g., `Include(x => x.Orders.Where(...))`).
 ```csharp
-query = query.ApplyFilteredIncludes(options);
+query = query.ApplyExpand(options);
+```
+
+### `.ApplySelect(options)`
+Applies dynamic projection. Returns `IQueryable<object>`.
+```csharp
+var projected = query.ApplySelect(options);
+var data = await projected.ToListAsync();
 ```
 
 ---
 
-## 4. Security & Validation
+## Security & Validation
 
-If you are not using `FlexQueryAsync`, you should manually validate the options before executing them.
+If you are using the manual pipeline instead of `FlexQueryAsync`, you **must** manually validate the options before executing them.
 
-### `.ValidateOrThrow<T>(execOptions)`
-Throws a `QueryValidationException` if validation fails.
+### `.ValidateOrThrow(execOptions)`
+Throws a `QueryValidationException` if any field access violation, depth violation, or operator mismatch is found.
 ```csharp
 options.ValidateOrThrow<User>(execOptions);
 ```
 
-### `.ValidateSafe<T>(execOptions)`
-Returns a `ValidationResult`. Non-throwing.
+### `.ValidateSafe(execOptions)`
+Returns a `ValidationResult`. Non-throwing — use this when you prefer structured error returns over exceptions.
 ```csharp
 var result = options.ValidateSafe<User>(execOptions);
 if (!result.IsValid)
@@ -93,3 +86,21 @@ if (!result.IsValid)
     return BadRequest(result.Errors);
 }
 ```
+
+---
+
+## `BuildQueryResult`
+
+After a manual pipeline execution, use this helper to construct the standardized `QueryResult<T>` envelope.
+
+```csharp
+var total = await filteredQuery.CountAsync();
+var data = await pagedQuery.ApplySelect(options).ToListAsync();
+
+return Ok(options.BuildQueryResult(data, total));
+```
+
+## Related Topics
+
+- [Execution Pipeline](/guide/execution-pipeline)
+- [Security Governance](/guide/security-governance)

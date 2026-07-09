@@ -1,4 +1,3 @@
-using FlexQuery.NET.Dapper.Dialects;
 using FlexQuery.NET.Dapper.Metadata;
 using FlexQuery.NET.Options;
 
@@ -6,6 +5,8 @@ namespace FlexQuery.NET.Dapper.Options;
 
 /// <summary>
 /// Represents Dapper-specific execution options for a FlexQuery request.
+/// The SQL dialect is auto-detected from the supplied <see cref="System.Data.Common.DbConnection"/>
+/// at runtime — no manual dialect configuration is required.
 /// </summary>
 /// <inheritdoc/>
 public sealed class DapperQueryOptions : BaseQueryOptions
@@ -35,12 +36,6 @@ public sealed class DapperQueryOptions : BaseQueryOptions
     {
         Model = model ?? throw new ArgumentNullException(nameof(model));
     }
-
-    /// <summary>
-    /// Gets or sets the SQL dialect used to translate FlexQuery expressions.
-    /// If not specified, the dialect is resolved automatically from the database connection.
-    /// </summary>
-    public ISqlDialect? Dialect { get; set; }
 
     /// <summary>
     /// Gets or sets the database command timeout, in seconds.

@@ -432,7 +432,6 @@ public class SecurityGovernanceDapperIntegrationTests
         var options = NoPaging(new QueryOptions { IncludeCount = true });
         var dapperOptions = new DapperQueryOptions
         {
-            Dialect = new SqliteDialect(),
             IncludeTotalCount = true,
             AllowedFields = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "Id", "Name" }
         };
@@ -486,7 +485,6 @@ public class SecurityGovernanceDapperIntegrationTests
         });
         var dapperOptions = new DapperQueryOptions
         {
-            Dialect = new SqliteDialect(),
             IncludeTotalCount = true,
             GroupableFields = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "CustomerId" },
             AggregatableFields = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "Total" }
@@ -522,7 +520,6 @@ public class SecurityGovernanceDapperIntegrationTests
 
         var dapperOptions = new DapperQueryOptions
         {
-            Dialect = new SqliteDialect(),
             IncludeTotalCount = true,
             GroupableFields = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "Id" }
         };
@@ -546,7 +543,6 @@ public class SecurityGovernanceDapperIntegrationTests
         });
         var dapperOptions = new DapperQueryOptions
         {
-            Dialect = new SqliteDialect(),
             IncludeTotalCount = true,
             AggregatableFields = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "Id" }
         };
@@ -572,7 +568,6 @@ public class SecurityGovernanceDapperIntegrationTests
         });
         var dapperOptions = new DapperQueryOptions
         {
-            Dialect = new SqliteDialect(),
             IncludeTotalCount = true,
             AggregatableFields = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "Id" }
         };
@@ -599,7 +594,6 @@ public class SecurityGovernanceDapperIntegrationTests
         });
         var dapperOptions = new DapperQueryOptions
         {
-            Dialect = new SqliteDialect(),
             IncludeTotalCount = true,
             FilterableFields = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "Id" }
         };
@@ -624,7 +618,6 @@ public class SecurityGovernanceDapperIntegrationTests
         var options = NoPaging(new QueryOptions { IncludeCount = true });
         var dapperOptions = new DapperQueryOptions
         {
-            Dialect = new SqliteDialect(),
             IncludeTotalCount = true,
             CurrentRole = "admin",
             RoleAllowedFields = new Dictionary<string, HashSet<string>>(StringComparer.OrdinalIgnoreCase)
@@ -669,7 +662,6 @@ public class SecurityGovernanceDapperIntegrationTests
 
         var dapperOptions = new DapperQueryOptions
         {
-            Dialect = new SqliteDialect(),
             IncludeTotalCount = true,
             DefaultSortField = "Name",
             AllowedFields = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "Id", "Name" }

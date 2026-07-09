@@ -174,7 +174,6 @@ public class GroupedQueryExecutionTests : IDisposable
     {
         var dapperOptions = new DapperQueryOptions
         {
-            Dialect = new SqliteDialect(),
             IncludeTotalCount = true
         };
         ConfigureMappings(dapperOptions);

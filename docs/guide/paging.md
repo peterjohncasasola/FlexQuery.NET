@@ -1,6 +1,12 @@
 # Paging
 
-FlexQuery.NET provides server-safe pagination with automatic defaults and consistent response envelopes.
+## Overview
+
+FlexQuery.NET provides server-safe pagination with automatic defaults, configurable page size limits, and consistent response envelopes.
+
+## Why this feature exists
+
+Returning an unbounded result set from a public API is both a security risk and a performance trap. FlexQuery enforces server-side pagination contracts (default page size, maximum page size) while providing the client with rich pagination metadata so it can render paging controls accurately.
 
 ---
 
@@ -104,7 +110,7 @@ GET /api/users?page=1&pageSize=20&includeCount=false
 ### Using ApplyPaging Directly
 
 ```csharp
-var options = QueryOptionsParser.Parse(parameters);
+var options = parameters.ToQueryOptions();
 var query = _context.Users.AsQueryable();
 var paged = query.ApplyPaging(options);
 var data = await paged.ToListAsync();
@@ -113,7 +119,7 @@ var data = await paged.ToListAsync();
 ### Enforcing a Maximum Page Size
 
 ```csharp
-var options = QueryOptionsParser.Parse(parameters);
+var options = parameters.ToQueryOptions();
 
 // Cap pageSize server-side before applying
 if (options.Paging.PageSize > 100)
@@ -126,7 +132,7 @@ var paged = query.ApplyPaging(options);
 ### Getting Total Count
 
 ```csharp
-var options = QueryOptionsParser.Parse(parameters);
+var options = parameters.ToQueryOptions();
 var query = _context.Users.AsQueryable();
 var filtered = query.ApplyFilter(options);
 var filtered2 = filtered.ApplySort(options);
@@ -163,6 +169,14 @@ GET /api/users?page=3&pageSize=5
 **Response:**
 ```json
 {
+  "totalCount": 48,
+  "resultCount": 48,
+  "page": 3,
+  "pageSize": 5,
+  "totalPages": 10,
+  "hasNextPage": true,
+  "hasPreviousPage": true,
+  "aggregates": null,
   "data": [
     { "id": 11, "name": "Lena Park" },
     { "id": 12, "name": "Mike Rowe" },
@@ -170,10 +184,7 @@ GET /api/users?page=3&pageSize=5
     { "id": 14, "name": "Oscar Drew" },
     { "id": 15, "name": "Petra Voss" }
   ],
-  "totalCount": 48,
-  "resultCount": 48,
-  "page": 3,
-  "pageSize": 5
+  "nextCursorToken": null
 }
 ```
 
@@ -213,4 +224,4 @@ if (options.Paging.PageSize > 200) options.Paging.PageSize = 200;
 - Disable `IncludeCount` (`?includeCount=false`) on high-frequency endpoints where total count is not needed.
 - Grouped or shaped queries may also calculate `ResultCount` from the shaped query before paging.
 - Always sort before paging. Without a deterministic `ORDER BY`, results are undefined.
-- Use cursor-based pagination for very large datasets — FlexQuery.NET handles standard offset paging.
+- Use **Keyset Pagination** (`?useKeysetPagination=true&cursor=TOKEN`) for very large datasets to avoid `OFFSET` scanning penalties. FlexQuery.NET generates `WHERE Id > cursor` style queries for keyset navigation.

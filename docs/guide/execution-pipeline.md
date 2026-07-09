@@ -1,38 +1,41 @@
 # Execution Pipeline
 
-The execution pipeline is the heart of FlexQuery.NET. Understanding which method to call — and why — is critical for correctness, security, and performance.
+## Overview
+
+The execution pipeline is the heart of FlexQuery.NET. It dictates the exact order of operations used to translate an incoming HTTP query into a database result. Understanding which pipeline method to call — and why — is critical for correctness, security, and performance.
+
+## Why this feature exists
+
+While `FlexQueryAsync` wraps the entire execution into a single, convenient call, enterprise applications often need to inject custom logic into the middle of the execution phase. For example, you might need to count the total rows in a multi-tenant system *after* applying the client's `WHERE` filter, but *before* you run secondary authorization checks on the data. The modular pipeline design exists so you can decouple the AST from execution.
+
+## When to use
+
+- Read this guide when you want to understand the difference between the `FlexQueryAsync` unified wrapper and the low-level `ApplyFilter` / `ApplySort` extension methods.
+- Consult this guide if you are writing custom Database Providers (e.g., implementing an NHibernate or CosmosDB provider).
 
 ---
 
 ## API Design & Positioning
 
-FlexQuery.NET exposes `IQueryable` extension methods as the primary public API surface.
+FlexQuery.NET exposes `IQueryable` extension methods as the primary public API surface for Entity Framework Core.
 
 These extension methods provide:
 - **Fluent composition**: Chain query steps naturally.
 - **LINQ-style syntax**: Feels familiar to any .NET developer.
 - **Cleaner code**: Reduces boilerplate in controllers.
-- **Better readability**: Intent is clear at a glance.
-
-The lower-level `QueryBuilder` APIs are considered **advanced/internal infrastructure** and are primarily intended for:
-- Custom library integrations.
-- Framework extensions (e.g., building a custom query provider).
-- Complex execution scenarios where manual expression manipulation is required.
-
 
 ---
 
 ## Overview Table
 
-| Method | Filter | Sort | Page | Project | Validate | Async | Returns |
+| Method | Filter | Sort | Page | Expand | Project | Validate | Returns |
 | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :--- |
 | `ApplyFilter` | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | `IQueryable<T>` |
 | `ApplySort` | ❌ | ✅ | ❌ | ❌ | ❌ | ❌ | `IQueryable<T>` |
 | `ApplyPaging` | ❌ | ❌ | ✅ | ❌ | ❌ | ❌ | `IQueryable<T>` |
-| `ApplySelect` | ❌ | ❌ | ❌ | ✅ | ❌ | ❌ | `IQueryable<object>` |
-| `ApplyFilteredIncludes` | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | `IQueryable<T>` |
-| `FlexQuery` | ✅ | ✅ | ✅ | ✅ | ✅ | ❌ | `QueryResult<object>` |
-| `FlexQueryAsync` | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | `Task<QueryResult<object>>` |
+| `ApplyExpand` | ❌ | ❌ | ❌ | ✅ | ❌ | ❌ | `IQueryable<T>` |
+| `ApplySelect` | ❌ | ❌ | ❌ | ❌ | ✅ | ❌ | `IQueryable<object>` |
+| `FlexQueryAsync` | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | `Task<QueryResult<T>>` |
 
 ---
 
@@ -46,9 +49,9 @@ The lower-level `QueryBuilder` APIs are considered **advanced/internal infrastru
 [HttpGet]
 public async Task<IActionResult> GetUsers([FromQuery] FlexQueryParameters parameters)
 {
-    var result = await _context.Users.FlexQueryAsync<User>(parameters, exec =>
+    var result = await _context.Users.FlexQueryAsync(parameters, exec =>
     {
-        exec.AllowedFields = new HashSet<string> { "id", "name", "email", "status" };
+        exec.AllowedFields = ["Id", "Name", "Email", "Status"];
         exec.MaxFieldDepth = 2;
     });
 
@@ -58,32 +61,17 @@ public async Task<IActionResult> GetUsers([FromQuery] FlexQueryParameters parame
 
 **What it does internally:**
 
-```
-Parse(parameters)
-  → ValidateOrThrow<T>(execOptions)
+```text
+ToQueryOptions(parameters)
+  → ValidateOrThrow(execOptions)
   → ApplyFilter
   → ApplySort
-  → CountAsync (if IncludeCount = true)
+  → CountAsync (if IncludeCount = true and not keyset)
   → ApplyPaging
-  → ApplyFilteredIncludes
+  → ApplyExpand (previously FilteredIncludes)
   → ApplySelect (if projection requested)
   → ToListAsync
-  → QueryResult<object>
-```
-
-**Configuration:**
-
-```csharp
-await query.FlexQueryAsync<User>(parameters, exec =>
-{
-    exec.AllowedFields     = new HashSet<string> { "id", "name", "email" };
-    exec.BlockedFields     = new HashSet<string> { "passwordHash" };
-    exec.FilterableFields  = new HashSet<string> { "name", "status" };
-    exec.SortableFields    = new HashSet<string> { "name", "createdAt" };
-    exec.SelectableFields  = new HashSet<string> { "id", "name", "email" };
-    exec.MaxFieldDepth     = 2;
-    exec.StrictFieldValidation = true;
-});
+  → QueryResult<T>
 ```
 
 ---
@@ -94,7 +82,7 @@ Use these when you need granular control over individual pipeline steps.
 
 ### ApplyFilter
 
-Applies the `WHERE` predicate from `QueryOptions.Filter` to the query.
+Applies the `WHERE` predicate from `QueryOptions.Filter` to the `IQueryable`.
 
 ```csharp
 var filtered = query.ApplyFilter(options);
@@ -104,16 +92,9 @@ var filtered = query.ApplyFilter(options);
 - No-op if `options.Filter` is null or empty.
 - Builds an expression tree; EF Core translates it to SQL.
 
-**Supported operators:** `eq`, `neq`, `gt`, `gte`, `lt`, `lte`, `contains`, `startswith`, `endswith`, `in`, `notin`, `between`, `isnull`, `isnotnull`, `like`, `any`, `all`, `count`
-
 **Example:**
-
-```
-GET /api/users?filter=status:eq:active
-```
-
+`GET /api/users?filter=Status:eq:active`
 ```sql
--- Generated SQL
 SELECT * FROM Users WHERE Status = 'active'
 ```
 
@@ -128,15 +109,10 @@ var sorted = query.ApplySort(options);
 ```
 
 - Supports multiple sort fields (uses `ThenBy` internally).
-- Supports aggregate sorts (e.g., sort by `Orders.count()`).
 - No-op if `options.Sort` is empty.
 
 **Example:**
-
-```
-GET /api/users?sort=name:asc,createdAt:desc
-```
-
+`GET /api/users?sort=Name:asc,CreatedAt:desc`
 ```sql
 ORDER BY Name ASC, CreatedAt DESC
 ```
@@ -145,23 +121,32 @@ ORDER BY Name ASC, CreatedAt DESC
 
 ### ApplyPaging
 
-Applies `SKIP` / `TAKE` from `QueryOptions.Paging`.
+Applies `SKIP` / `TAKE` (Offset pagination) or a `WHERE Cursor > X` (Keyset pagination) from `QueryOptions.Paging`.
 
 ```csharp
 var paged = query.ApplyPaging(options);
 ```
 
-- Automatically adds a default `ORDER BY Id` if the query is unordered and `Skip > 0` (prevents EF Core errors).
-- No-op if `options.Paging.Disabled = true`.
+- Automatically adds a default `ORDER BY Id` if the query is unordered and `Skip > 0` (prevents EF Core errors in SQL Server).
+
+---
+
+### ApplyExpand (Formerly Includes)
+
+Applies the **Include pipeline** — EF Core `Include`/`ThenInclude` with optional inline filters.
+
+```csharp
+var withIncludes = query.ApplyExpand(options);
+```
+
+- Must be called **before** `ToListAsync`.
+- No-op if `options.Expand` is null or empty.
 
 **Example:**
-
-```
-GET /api/users?page=2&pageSize=10
-```
-
-```sql
-ORDER BY Id OFFSET 10 ROWS FETCH NEXT 10 ROWS ONLY
+`GET /api/users?include=Orders(Status:eq:shipped)`
+```csharp
+// Translates internally to:
+query.Include(u => u.Orders.Where(o => o.Status == "shipped"))
 ```
 
 ---
@@ -177,172 +162,99 @@ var data = await projected.ToListAsync();
 
 - Uses expression trees — no reflection at runtime.
 - Handles Nested, Flat, and FlatMixed modes.
-- Delegates to `GroupByBuilder` when `GroupBy` or `Aggregates` are set.
 - Returns `query.Cast<object>()` if no projection is requested.
-
-**Example:**
-
-```
-GET /api/users?select=id,name,email
-```
-
-```json
-[
-  { "id": 1, "name": "Alice", "email": "alice@example.com" }
-]
-```
-
----
-
-### ApplyFilteredIncludes
-
-Applies the **Include pipeline** — EF Core `Include`/`ThenInclude` with optional inline filters.
-
-```csharp
-var withIncludes = query.ApplyFilteredIncludes(options);
-```
-
-- **Independent** from the WHERE pipeline — does not affect root result count.
-- Must be called **before** `ToListAsync`.
-- No-op if `options.FilteredIncludes` is null or empty.
-
-**Example:**
-
-```
-GET /api/users?include=Orders(status:eq:shipped)
-```
-
-```csharp
-// Translates to:
-query.Include(u => u.Orders.Where(o => o.Status == "shipped"))
-```
-
-
----
-
-## Async Execution
-
-All database trips should use the EF Core async extensions.
-
-```csharp
-// Count before paging
-var total = await filteredQuery.CountAsync(cancellationToken);
-
-// Execute after paging + projection
-var data = await projectedQuery.ToListAsync(cancellationToken);
-```
-
-`FlexQueryAsync` handles all of this for you internally.
 
 ---
 
 ## ⚠️ Critical Warning: Double Filtering
 
 > [!CAUTION]
-> The most common mistake in FlexQuery.NET is applying filters twice.
+> The most common mistake in FlexQuery.NET manual pipeline orchestration is applying filters twice.
 
 **WRONG — This filters twice:**
 
 ```csharp
 // ❌ DO NOT DO THIS
-var options = QueryOptionsParser.Parse(parameters);
+var options = parameters.ToQueryOptions();
 
-// Step 1: ApplyValidatedQueryOptions applies filter internally
 var query = _context.Users.AsQueryable();
-var query = query.ApplyValidatedQueryOptions(options);
 
-// Step 2: ToProjectedQueryResultAsync ALSO applies filter internally
+// 1st Filter: Applied here manually
+query = query.ApplyFilter(options);
+
+// 2nd Filter: FlexQueryAsync re-applies the options!
 // The WHERE clause is duplicated in SQL!
-var result = await query.ToProjectedQueryResultAsync(options);
+var result = await query.FlexQueryAsync(options); 
 ```
 
-**CORRECT — Use FlexQueryAsync:**
+**CORRECT — Use the Unified Pipeline:**
 
 ```csharp
 // ✅ CORRECT: Everything in one call, filter applied once
-var result = await _context.Users.FlexQueryAsync<User>(parameters, exec =>
+var result = await _context.Users.FlexQueryAsync(parameters, exec =>
 {
-    exec.AllowedFields = new HashSet<string> { "id", "name", "email" };
+    exec.AllowedFields = ["Id", "Name", "Email"];
 });
-```
-
-**CORRECT — Manual pipeline, filter applied once:**
-
-```csharp
-// ✅ CORRECT: Manual pipeline — each step called exactly once
-var options = QueryOptionsParser.Parse(parameters);
-options.ValidateOrThrow<User>(execOptions);
-
-var query = _context.Users.AsQueryable();
-query = query.ApplyFilter(options);
-query = query.ApplySort(options);
-
-var total = await query.CountAsync();
-
-query = query.ApplyPaging(options);
-query = query.ApplyFilteredIncludes(options);
-
-var data = await query.ApplySelect(options).ToListAsync();
-return Ok(options.BuildQueryResult(data, total));
 ```
 
 ---
 
 ## Complete Manual Pipeline Example
 
-For when you need full control — e.g., injecting custom tenant filter between steps:
+For when you need full control — e.g., injecting custom tenant filter between steps and logging the SQL:
 
 ```csharp
 [HttpGet]
-public async Task<IActionResult> GetUsers([FromQuery] FlexQueryParameters parameters, CancellationToken ct)
+public async Task<IActionResult> GetUsersManual([FromQuery] FlexQueryParameters parameters, CancellationToken ct)
 {
     // 1. Parse
-    var options = QueryOptionsParser.Parse(parameters);
+    var options = parameters.ToQueryOptions();
 
-    // 2. Validate
-    var execOptions = new QueryExecutionOptions
+    // 2. Validate against Server Policy
+    var execOptions = new EfCoreQueryOptions
     {
-        AllowedFields = new HashSet<string> { "id", "name", "email", "status", "createdAt" },
+        AllowedFields = ["Id", "Name", "Email", "Status", "CreatedAt"],
         MaxFieldDepth = 2
     };
-    options.ValidateOrThrow<User>(execOptions);
+    options.ValidateOrThrow(execOptions);
 
-    // 3. Start query
+    // 3. Start query with strict Tenancy limits
     var query = _context.Users
-        .Where(u => u.TenantId == CurrentTenantId) // custom pre-filter
+        .Where(u => u.TenantId == CurrentTenantId) 
         .AsQueryable();
 
-    // 4. Apply FlexQuery filter
+    // 4. Apply FlexQuery filter and sort
     query = query.ApplyFilter(options);
     query = query.ApplySort(options);
 
-    // 5. Count BEFORE paging
+    // 5. Manual intervention: Count BEFORE paging
     var total = await query.CountAsync(ct);
 
-    // 6. Page + includes
+    // 6. Page + Includes
     query = query.ApplyPaging(options);
-    query = query.ApplyFilteredIncludes(options);
+    query = query.ApplyExpand(options);
 
-    // 7. Project + execute
+    // 7. Project + Execute
     var data = await query.ApplySelect(options).ToListAsync(ct);
 
-    // 8. Return
+    // 8. Return standardized envelope
     return Ok(options.BuildQueryResult(data, total));
 }
 ```
 
 ---
 
-## Deprecated Methods (v1 → v2)
+## Deprecated Methods
 
-The following methods are deprecated in v2 and will be removed in v3.
+The following methods were heavily used in v1/v2 but are removed or completely deprecated in v4:
 
-| Deprecated | Replacement |
+| Deprecated Method | Replacement |
 | :--- | :--- |
 | `ToQueryResultAsync` | `FlexQueryAsync` |
 | `ToProjectedQueryResultAsync` | `FlexQueryAsync` |
-| `ApplyValidatedQueryOptions` | Manual pipeline + `ValidateOrThrow<T>` |
-| `QueryOptionsParser.Parse(QueryRequest)` | `QueryOptionsParser.Parse(FlexQueryParameters)` |
+| `ApplyValidatedQueryOptions` | `FlexQueryAsync` or Manual pipeline |
+| `QueryOptionsParser.Parse` | `parameters.ToQueryOptions()` |
+| `ApplyFilteredIncludes` | `ApplyExpand` |
 
 > [!WARNING]
-> Deprecated methods are marked with `[Obsolete]` and hidden from IntelliSense. They will be removed in v3.
+> Deprecated methods have been formally removed from the `v4.0.0` distribution to streamline the API.

@@ -61,7 +61,7 @@ internal static class DapperQueryExecutor
 
         await ConnectionHelper.EnsureOpenAsync(connection, ct);
 
-        var dialect = options.Dialect ?? SqlDialectResolver.Resolve(connection);
+        var dialect = SqlDialectResolver.Resolve(connection);
         var registry = options.Model?.Registry ?? new MappingRegistry();
 
         // Re-stamped here (in addition to RunAsync, above) because it's read again

@@ -1,18 +1,34 @@
 # End-to-End Example
 
-This example demonstrates the full lifecycle of a FlexQuery request: from the HTTP query string to the final SQL execution and JSON response.
+## Overview
+
+This example demonstrates the full lifecycle of a FlexQuery.NET request: tracing the execution path from the HTTP query string, through the AST parser and validation pipeline, into the final SQL generation, and ultimately returning the standardized JSON response.
+
+## Why this feature exists
+
+When introducing a new query engine to a team, developers often wonder "Where is the magic happening?". By tracing a single request end-to-end, you can clearly see that FlexQuery.NET does not perform in-memory evaluation. It is purely an AST-to-SQL compiler, ensuring your database does all the heavy lifting.
+
+## When to use
+
+- Share this page with your database administrators (DBAs) or backend engineers to prove that FlexQuery generates highly optimized, standard SQL queries with native pagination and parameterization.
+
+---
 
 ## 1. The HTTP Request
 
-A client wants to find all **Active** products in the **Electronics** category with a price greater than **$500**, sorted by the latest arrival.
+A client wants to find all **Active** products in the **Electronics** category with a price greater than **$500**, sorted by the latest arrival. 
+
+Notice how the `&` symbol combining filters is URL-encoded as `%26` so it doesn't collide with the standard HTTP query parameter separator.
 
 ```http
-GET /api/products?filter=Status:eq:Active & Category:eq:Electronics & Price:gt:500 & sort=CreatedAt:desc
+GET /api/products?filter=Status:eq:Active%26Category:eq:Electronics%26Price:gt:500&sort=CreatedAt:desc
 ```
+
+---
 
 ## 2. The Controller Action
 
-The request is bound to a `FlexQueryParameters` DTO and processed through the validated pipeline.
+The request is automatically bound to a `FlexQueryParameters` DTO by ASP.NET Core and passed into the unified `FlexQueryAsync` pipeline.
 
 ```csharp
 [HttpGet]
@@ -21,34 +37,50 @@ public async Task<IActionResult> Get([FromQuery] FlexQueryParameters request)
     // 1. Parsing & Validation happens here
     // 2. IQueryable is extended with Expression Trees
     // 3. Query is executed against the DB
-    var result = await _context.Products
-        .ApplyValidatedQueryOptions(request) //Deprecated in v2.0
-        .ToQueryResultAsync();
+    var result = await _context.Products.FlexQueryAsync(request, options =>
+    {
+        // Enforce strict security: the client can only filter/sort these specific fields
+        options.AllowedFields = ["Status", "Category", "Price", "CreatedAt", "Id", "Name"];
+    });
 
     return Ok(result);
 }
 ```
 
+---
+
 ## 3. Generated SQL (EF Core)
 
-FlexQuery translates the request into a single, optimized SQL query. No in-memory filtering occurs.
+FlexQuery translates the request AST into a single, optimized SQL query via Entity Framework Core. **No in-memory filtering occurs.**
 
 ```sql
 SELECT [p].[Id], [p].[Name], [p].[Price], [p].[Status], [p].[Category], [p].[CreatedAt]
 FROM [Products] AS [p]
-WHERE ([p].[Status] = N'Active') 
-  AND ([p].[Category] = N'Electronics') 
+WHERE (([p].[Status] = N'Active') 
+  AND ([p].[Category] = N'Electronics')) 
   AND ([p].[Price] > 500.0)
 ORDER BY [p].[CreatedAt] DESC
 OFFSET 0 ROWS FETCH NEXT 20 ROWS ONLY
 ```
 
+*(Note: In production, values like `N'Active'` and `500.0` are passed as DbParameters (`@p0`, `@p1`) to prevent SQL injection. They are shown as literals here for readability).*
+
+---
+
 ## 4. The JSON Response
 
-The client receives a structured response containing the requested data and pagination metadata.
+The client receives a structured response containing the requested data and the standard v4 pagination metadata envelope (`QueryResult<T>`).
 
 ```json
 {
+  "totalCount": 2,
+  "resultCount": 2,
+  "page": 1,
+  "pageSize": 20,
+  "totalPages": 1,
+  "hasNextPage": false,
+  "hasPreviousPage": false,
+  "aggregates": null,
   "data": [
     {
       "id": 101,
@@ -67,16 +99,14 @@ The client receives a structured response containing the requested data and pagi
       "createdAt": "2026-04-28T14:30:00Z"
     }
   ],
-  "totalCount": 2,
-  "page": 1,
-  "pageSize": 20
+  "nextCursorToken": null
 }
 ```
 
-## Why this is Powerful
+---
 
-- **Client Flexibility**: The client can change the price threshold or category without any backend changes.
-- **Server Security**: The server enforces that only `Active` products are visible (if you added a hardcoded filter) and only allows filtering on valid fields.
-- **Database Efficiency**: The query uses standard SQL indexes and performs pagination at the database level.
+## Best Practices
 
-
+- **Client Flexibility**: The client can change the price threshold or category without requiring any backend code changes, redeployments, or new DTOs.
+- **Server Security**: The server enforces a strict `AllowedFields` whitelist. If a malicious user tries to probe for `?filter=InternalCost:gt:100`, the server immediately returns a `400 Bad Request` validation error, and the database is never touched.
+- **Database Efficiency**: The generated query uses standard `OFFSET/FETCH` pagination (or `WHERE Id > cursor` if Keyset pagination is enabled) at the database level, meaning bandwidth and memory are preserved.

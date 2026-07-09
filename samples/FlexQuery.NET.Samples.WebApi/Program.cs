@@ -25,7 +25,6 @@ builder.Services.AddControllers()
 //Global Config
 builder.Services.AddFlexQueryDapper(cfg =>
 {
-    cfg.UseSqlite();
     cfg.Model.Entity<Customer>()
         .ToTable("Customers")
         .HasMany(c => c.Orders).WithForeignKey("CustomerId");
