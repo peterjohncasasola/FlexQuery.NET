@@ -1,3 +1,4 @@
+using FlexQuery.NET.Internal;
 using FlexQuery.NET.Models;
 using FlexQuery.NET.Models.Aggregates;
 using FlexQuery.NET.Models.Projection;
@@ -107,6 +108,35 @@ public sealed class FluentQueryBuilder
     {
         _options.Paging.Page = page;
         _options.Paging.PageSize = pageSize;
+        _options.OffsetExplicitlyRequested = true;
+        return this;
+    }
+    
+    /// <summary>
+    /// Enables keyset pagination using the specified page size and optional cursor token.
+    /// </summary>
+    /// <param name="pageSize">
+    /// The maximum number of records to return.
+    /// </param>
+    /// <param name="cursor">
+    /// The cursor token representing the starting position for the next or previous page.
+    /// Pass <see langword="null"/> to retrieve the first page.
+    /// </param>
+    /// <returns>
+    /// The current <see cref="FluentQueryBuilder"/> instance for method chaining.
+    /// </returns>
+    public FluentQueryBuilder UseKeysetPagination(int pageSize, string? cursor = null)
+    {
+        if (pageSize <= 0)
+            throw new ArgumentOutOfRangeException(
+                nameof(pageSize),
+                pageSize,
+                "Page size must be greater than zero.");
+        
+        _options.IsKeysetMode = true;
+        _options.Cursor = cursor is null ? null : new KeysetCursor(cursor);
+        _options.Paging.PageSize = pageSize;
+        _options.OffsetExplicitlyRequested = false;
         return this;
     }
 
