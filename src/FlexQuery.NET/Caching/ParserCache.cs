@@ -66,6 +66,7 @@ internal static class ParserCache
 /// <param name="Cursor">The cursor token for keyset pagination.</param>
 /// <param name="UseKeysetPagination">Whether keyset pagination is explicitly requested.</param>
 /// <param name="Version">The version identifier for cache invalidation.</param>
+/// <param name="Aggregates">Whether to apply Aggregates.</param>
 internal sealed record ParsedQueryCacheKey(
     string? Filter,
     string? Sort,

@@ -7,6 +7,7 @@ using FlexQuery.NET.Models;
 using FlexQuery.NET.Models.Aggregates;
 using FlexQuery.NET.Models.Paging;
 using FlexQuery.NET.Models.Projection;
+using FlexQuery.NET.Parsers;
 
 namespace FlexQuery.NET.Caching;
 
@@ -78,12 +79,12 @@ internal static class QueryCacheKeyBuilder
         => aggregates is null
             ? string.Empty
             : string.Join(",", aggregates.Select(a =>
-                $"{Escape(a.Function)}:{Escape(a.Field)}:{Escape(a.Alias)}"));
+                $"{Escape(a.Function.ToKeyword())}:{Escape(a.Field)}:{Escape(a.Alias)}"));
 
     private static string HavingKey(HavingCondition? having)
         => having is null
             ? string.Empty
-            : $"{Escape(having.Function)}:{Escape(having.Field)}:{Escape(having.Operator)}:{Escape(having.Value)}";
+            : $"{Escape(having.Function.ToKeyword())}:{Escape(having.Field)}:{Escape(having.Operator)}:{Escape(having.Value)}";
 
     private static string IncludeKey(IEnumerable<IncludeNode>? includes)
         => includes is null

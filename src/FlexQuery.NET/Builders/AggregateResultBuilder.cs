@@ -1,5 +1,6 @@
 using FlexQuery.NET.Caching;
 using FlexQuery.NET.Models.Aggregates;
+using FlexQuery.NET.Parsers;
 
 namespace FlexQuery.NET.Builders;
 
@@ -39,7 +40,7 @@ internal static class AggregateResultBuilder
                 grandTotals[fieldName] = fnDict;
             }
 
-            fnDict[aggregate.Function] =
+            fnDict[AggregateFunctionConverter.ToKeyword(aggregate.Function)] =
                 prop.GetValue(aggregateRow) ?? 0;
         }
 

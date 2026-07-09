@@ -66,9 +66,11 @@ internal static class GroupByBuilder
 
         if (options.Having is not null)
         {
-            var havingAlias = ParserUtilities.BuildAggregateAlias(options.Having.Function, options.Having.Field);
+            var havingFunction = AggregateFunctionConverter.ToKeyword(options.Having.Function);
+            
+            var havingAlias = ParserUtilities.BuildAggregateAlias(havingFunction, options.Having.Field);
             var matchingAggregate = options.Aggregates.FirstOrDefault(a =>
-                string.Equals(a.Function, options.Having.Function, StringComparison.OrdinalIgnoreCase) &&
+                a.Function == options.Having.Function &&
                 string.Equals(a.Field, options.Having.Field, StringComparison.OrdinalIgnoreCase));
             if (matchingAggregate?.Alias != null)
                 havingAlias = matchingAggregate.Alias;
@@ -188,9 +190,9 @@ internal static class GroupByBuilder
 
     private static Expression? BuildAggregateExpression(ParameterExpression grouping, Type sourceType, AggregateModel aggregate, QueryOptions options)
     {
-        var fn = aggregate.Function.ToLowerInvariant();
+        var fn = aggregate.Function;
 
-        if (fn == "count")
+        if (fn == AggregateFunction.Count)
         {
             var countMethod = ExpressionMethodCache.EnumerableCount(sourceType);
             return Expression.Call(countMethod, grouping);
@@ -212,17 +214,17 @@ internal static class GroupByBuilder
 
         var selector = Expression.Lambda(selectorBody, item);
 
-        if (fn is "min" or "max")
+        if (fn is AggregateFunction.Min or AggregateFunction.Max)
         {
-            var genericMethod = fn == "min"
+            var genericMethod = fn == AggregateFunction.Min
                 ? ExpressionMethodCache.EnumerableMinWithSelector(sourceType, selectorBody.Type)
                 : ExpressionMethodCache.EnumerableMaxWithSelector(sourceType, selectorBody.Type);
             return Expression.Call(genericMethod, grouping, selector);
         }
 
-        if (fn is "sum" or "avg" or "average")
+        if (fn is AggregateFunction.Sum or AggregateFunction.Avg)
         {
-            var genericMethod = fn is "avg" or "average"
+            var genericMethod = fn == AggregateFunction.Avg
                 ? ExpressionMethodCache.EnumerableAverageWithSelector(sourceType, selectorBody.Type)
                 : ExpressionMethodCache.EnumerableSumWithSelector(sourceType, selectorBody.Type);
             return Expression.Call(genericMethod, grouping, selector);

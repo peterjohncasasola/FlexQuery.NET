@@ -2,7 +2,9 @@ using System.Linq.Expressions;
 using System.Reflection;
 using FlexQuery.NET.Expressions;
 using FlexQuery.NET.Models;
+using FlexQuery.NET.Models.Aggregates;
 using FlexQuery.NET.Models.Paging;
+using FlexQuery.NET.Parsers;
 using FlexQuery.NET.Resolvers;
 using FlexQuery.NET.Security;
 
@@ -102,8 +104,9 @@ internal static class SortBuilder
         if (selectorType == typeof(string))
             return false;
 
+        var aggFunction = AggregateFunctionConverter.Parse(aggregate);
         var builtAggregate = BuildSelectorAggregateExpression(
-            aggregate,
+            aggFunction,
             collectionAccess,
             elementType,
             selectorLambda,
@@ -185,7 +188,7 @@ internal static class SortBuilder
     }
     
     private static Expression? BuildSelectorAggregateExpression(
-        string aggregate,
+        AggregateFunction aggregate,
         Expression collectionAccess,
         Type elementType,
         LambdaExpression selectorLambda,
@@ -207,11 +210,10 @@ internal static class SortBuilder
 
         var method = aggregate switch
         {
-            "max" => ExpressionMethodCache.EnumerableMaxWithSelector(elementType, effectiveSelectorType),
-            "min" => ExpressionMethodCache.EnumerableMinWithSelector(elementType, effectiveSelectorType),
-            "sum" => ExpressionMethodCache.EnumerableSumWithSelector(elementType, effectiveSelectorType),
-            "avg" => ExpressionMethodCache.EnumerableAverageWithSelector(elementType, effectiveSelectorType),
-            "average" => ExpressionMethodCache.EnumerableAverageWithSelector(elementType, effectiveSelectorType),
+            AggregateFunction.Max => ExpressionMethodCache.EnumerableMaxWithSelector(elementType, effectiveSelectorType),
+            AggregateFunction.Min => ExpressionMethodCache.EnumerableMinWithSelector(elementType, effectiveSelectorType),
+            AggregateFunction.Sum => ExpressionMethodCache.EnumerableSumWithSelector(elementType, effectiveSelectorType),
+            AggregateFunction.Avg => ExpressionMethodCache.EnumerableAverageWithSelector(elementType, effectiveSelectorType),
             _ => null!
         };
 

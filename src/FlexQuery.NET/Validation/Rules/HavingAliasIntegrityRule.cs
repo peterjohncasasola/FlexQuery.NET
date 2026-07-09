@@ -1,6 +1,7 @@
 using FlexQuery.NET.Constants;
 using FlexQuery.NET.Execution;
 using FlexQuery.NET.Models;
+using FlexQuery.NET.Models.Aggregates;
 using FlexQuery.NET.Parsers;
 
 namespace FlexQuery.NET.Validation.Rules;
@@ -21,22 +22,24 @@ internal sealed class HavingAliasIntegrityRule : IValidationRule
 
         var havingAlias = options.Aggregates
             .Where(a =>
-                string.Equals(a.Function, options.Having.Function, StringComparison.OrdinalIgnoreCase) &&
+                a.Function == options.Having.Function &&
                 string.Equals(a.Field, options.Having.Field, StringComparison.OrdinalIgnoreCase))
             .Select(a => a.Alias)
             .FirstOrDefault();
 
+        var havingFunction = options.Having.Function.ToKeyword();
+
         if (havingAlias == null)
-            havingAlias = ParserUtilities.BuildAggregateAlias(options.Having.Function, options.Having.Field);
+            havingAlias = ParserUtilities.BuildAggregateAlias(havingFunction, options.Having.Field);
 
         var hasMatchingAggregate = options.Aggregates.Any(a =>
-            string.Equals(a.Function, options.Having.Function, StringComparison.OrdinalIgnoreCase) &&
+            a.Function == options.Having.Function &&
             string.Equals(a.Field, options.Having.Field, StringComparison.OrdinalIgnoreCase));
 
         if (!hasMatchingAggregate)
         {
             result.Errors.Add(new ValidationError(
-                $"HAVING references aggregate '{options.Having.Function}({options.Having.Field})' " +
+                $"HAVING references aggregate '{havingFunction}({options.Having.Field})' " +
                 $"which is not declared in Aggregates. Add an AggregateModel with matching function and field.",
                 ValidationErrorCodes.HavingAliasMismatch));
         }
