@@ -19,14 +19,21 @@ internal sealed class HavingAliasIntegrityRule : IValidationRule
         if (options.Having == null) return;
         if (options.Aggregates.Count == 0) return;
 
-        var havingAlias = ParserUtilities.BuildAggregateAlias(options.Having.Function, options.Having.Field);
-        var match = options.Aggregates.Any(a =>
-            string.Equals(
-                ParserUtilities.BuildAggregateAlias(a.Function, a.Field),
-                havingAlias,
-                StringComparison.Ordinal));
+        var havingAlias = options.Aggregates
+            .Where(a =>
+                string.Equals(a.Function, options.Having.Function, StringComparison.OrdinalIgnoreCase) &&
+                string.Equals(a.Field, options.Having.Field, StringComparison.OrdinalIgnoreCase))
+            .Select(a => a.Alias)
+            .FirstOrDefault();
 
-        if (!match)
+        if (havingAlias == null)
+            havingAlias = ParserUtilities.BuildAggregateAlias(options.Having.Function, options.Having.Field);
+
+        var hasMatchingAggregate = options.Aggregates.Any(a =>
+            string.Equals(a.Function, options.Having.Function, StringComparison.OrdinalIgnoreCase) &&
+            string.Equals(a.Field, options.Having.Field, StringComparison.OrdinalIgnoreCase));
+
+        if (!hasMatchingAggregate)
         {
             result.Errors.Add(new ValidationError(
                 $"HAVING references aggregate '{options.Having.Function}({options.Having.Field})' " +
