@@ -16,6 +16,7 @@ internal static class QueryOptionKeys
     public const string Select = "select";
     public const string Group = "group";
     public const string Having = "having";
+    public const string Aggregates = "aggregates";
     public const string Include = "include";
     public const string Logic = "logic";
     public const string Field = "field";

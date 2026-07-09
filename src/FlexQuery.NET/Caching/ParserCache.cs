@@ -80,6 +80,7 @@ internal sealed record ParsedQueryCacheKey(
     string? Mode,
     string? Cursor = null,
     bool UseKeysetPagination = false,
-    string Version = "v3"
+    string Version = "v3",
+    string? Aggregates = null
 );
 

@@ -25,6 +25,9 @@ internal static class QueryOptionsFactory
         if (!string.IsNullOrWhiteSpace(parameters.Select))
             SelectParser.Parse(options, parameters.Select);
 
+        if (!string.IsNullOrWhiteSpace(parameters.Aggregates))
+            options.Aggregates.AddRange(AggregateParser.Parse(parameters.Aggregates));
+
         if (!string.IsNullOrWhiteSpace(parameters.GroupBy))
             options.GroupBy = ParserUtilities.SplitCsv(parameters.GroupBy);
 
