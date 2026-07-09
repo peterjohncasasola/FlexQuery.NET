@@ -5,14 +5,11 @@ using FlexQuery.NET.Models.Filters;
 namespace FlexQuery.NET.Parsers.Jql;
 
 /// <summary>
-/// Parses JQL (Jira Query Language) filter expressions into the unified FlexQuery
-/// <see cref="FilterGroup"/> and <see cref="QueryOptions"/> models.
+/// Parses JQL (Jira Query Language) expressions into the unified FlexQuery
+/// <see cref="QueryOptions"/> model.
 /// <para>
-/// JQL syntax examples:
-/// <c>status = 'Open'</c>,
-/// <c>priority IN (High, Critical)</c>,
-/// <c>assignee IS NOT NULL</c>,
-/// <c>labels CONTAINS 'bug'</c>.
+/// JQL is a SQL-inspired query language supporting filter, sort, groupBy,
+/// aggregates, and having — all with a consistent grammar.
 /// </para>
 /// </summary>
 internal sealed class JqlQueryParser : IQueryParser
@@ -22,12 +19,7 @@ internal sealed class JqlQueryParser : IQueryParser
 
     /// <summary>
     /// Parses a raw JQL filter string into a <see cref="FilterGroup"/> AST.
-    /// Internally tokenizes the input, builds a JQL AST, and converts it
-    /// into the unified filter model.
     /// </summary>
-    /// <param name="filter">The JQL filter expression string.</param>
-    /// <returns>A <see cref="FilterGroup"/> representing the parsed filter logic.</returns>
-    /// <exception cref="JqlParseException">Thrown when the input contains invalid JQL syntax.</exception>
     public FilterGroup Parse(string filter)
     {
         var ast = JqlAstParser.Parse(filter);
@@ -38,12 +30,29 @@ internal sealed class JqlQueryParser : IQueryParser
     public QueryOptions Parse(FlexQueryParameters parameters)
     {
         var options = QueryOptionsFactory.Create(parameters);
+
         if (!string.IsNullOrWhiteSpace(parameters.Filter))
         {
             var ast = JqlAstParser.Parse(parameters.Filter);
             options.Filter = JqlFilterConverter.ToFilterGroup(ast);
             options.Filter = FilterNormalizer.NormalizeOrder(options.Filter);
         }
+
+        if (!string.IsNullOrWhiteSpace(parameters.Sort))
+            options.Sort = JqlSortParser.Parse(parameters.Sort);
+
+        if (!string.IsNullOrWhiteSpace(parameters.GroupBy))
+            options.GroupBy = JqlGroupByParser.Parse(parameters.GroupBy);
+
+        if (!string.IsNullOrWhiteSpace(parameters.Aggregates))
+        {
+            options.Aggregates.Clear();
+            options.Aggregates.AddRange(JqlAggregateParser.Parse(parameters.Aggregates));
+        }
+
+        if (!string.IsNullOrWhiteSpace(parameters.Having))
+            options.Having = JqlHavingParser.Parse(parameters.Having);
+
         return options;
     }
 }
