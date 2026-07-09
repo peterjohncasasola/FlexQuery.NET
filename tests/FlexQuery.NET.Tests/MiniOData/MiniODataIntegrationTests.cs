@@ -10,7 +10,7 @@ public class MiniODataIntegrationTests
     {
         // Ensure MiniOData parser is registered for integration tests.
         // This is normally handled by services.AddMiniOData() in a real app.
-        QueryOptionsParser.RegisterParser(new MiniODataQueryParser());
+        QueryParserRegistry.Register(QuerySyntax.MiniOData, new MiniODataQueryParser());
     }
 
     [Fact]
@@ -19,11 +19,8 @@ public class MiniODataIntegrationTests
         // Arrange
         var parameters = new FlexQueryParameters
         {
-            RawParameters = new Dictionary<string, string>
-            {
-                ["$filter"] = "name eq 'john'",
-                ["$orderby"] = "age desc"
-            }
+            Filter = "name eq 'john'",
+            Sort = "age desc"
         };
 
         // Act

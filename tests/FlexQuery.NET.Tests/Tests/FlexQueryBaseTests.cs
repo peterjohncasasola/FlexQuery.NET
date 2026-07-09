@@ -52,20 +52,11 @@ public class FlexQueryBaseTests
         {
             Filter = "Name eq John",
             Page = 1,
-            PageSize = 10,
-            RawParameters = new Dictionary<string, string> { { "$filter", "Name eq John" } }
+            PageSize = 10
         };
 
         parameters.Filter.Should().Be("Name eq John");
         parameters.Page.Should().Be(1);
         parameters.PageSize.Should().Be(10);
-        parameters.RawParameters.Should().ContainKey("$filter");
-    }
-
-    [Fact]
-    public void FlexQueryParameters_RawParameters_CanBeNull()
-    {
-        var parameters = new FlexQueryParameters();
-        parameters.RawParameters.Should().BeNull();
     }
 }
