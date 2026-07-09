@@ -1,6 +1,7 @@
 using FlexQuery.NET.Configuration;
 using FlexQuery.NET.Execution;
 using FlexQuery.NET.Options;
+using FlexQuery.NET.Parsers;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace FlexQuery.NET.DependencyInjection;
@@ -27,6 +28,8 @@ public static class ServiceCollectionExtensions
         configure?.Invoke(options);
 
         services.AddSingleton(options);
+
+        QueryOptionsParser.SetGlobalSyntax(options.QuerySyntax);
 
         services.AddSingleton<IFlexQueryProcessor, FlexQueryProcessor>();
 
