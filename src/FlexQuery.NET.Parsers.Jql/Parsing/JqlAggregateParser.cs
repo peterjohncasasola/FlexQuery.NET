@@ -20,9 +20,16 @@ internal static class JqlAggregateParser
             var parenIndex = trimmed.IndexOf('(');
             if (parenIndex <= 0) continue;
 
-            var functionRaw = trimmed[..parenIndex].Trim().ToLowerInvariant();
-            if (functionRaw is not ("sum" or "count" or "avg" or "min" or "max"))
+            var functionName = trimmed[..parenIndex].Trim();
+            AggregateFunction function;
+            try
+            {
+                function = AggregateFunctionConverter.Parse(functionName);
+            }
+            catch
+            {
                 continue;
+            }
 
             var closeParen = trimmed.IndexOf(')', parenIndex);
             if (closeParen < 0) continue;
@@ -43,9 +50,9 @@ internal static class JqlAggregateParser
 
             result.Add(new AggregateModel
             {
-                Function = functionRaw,
+                Function = function,
                 Field = field,
-                Alias = alias ?? BuildAlias(functionRaw, field)
+                Alias = alias ?? BuildAlias(AggregateFunctionConverter.ToKeyword(function), field)
             });
         }
 

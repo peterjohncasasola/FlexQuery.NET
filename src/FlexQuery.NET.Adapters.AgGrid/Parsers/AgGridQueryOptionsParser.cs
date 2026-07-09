@@ -76,10 +76,8 @@ internal static class AgGridQueryOptionsParser
             {
                 if (string.IsNullOrEmpty(col.Field) || string.IsNullOrEmpty(col.AggFunc)) continue;
 
-                var fn = col.AggFunc.ToLowerInvariant();
-                if (fn == "average") fn = "avg"; // Normalize to canonical
-
-                var alias = ParserUtilities.BuildAggregateAlias(fn, col.Field);
+                var fn = AggregateFunctionConverter.Parse(col.AggFunc);
+                var alias = ParserUtilities.BuildAggregateAlias(fn.ToString().ToLowerInvariant(), col.Field);
                 result.Aggregates.Add(new AggregateModel
                 {
                     Field = col.Field,
@@ -172,9 +170,8 @@ internal static class AgGridQueryOptionsParser
             var key = col.Id ?? col.Field;
             if (string.IsNullOrEmpty(key) || string.IsNullOrEmpty(col.Field) || string.IsNullOrEmpty(col.AggFunc)) continue;
 
-            var fn = col.AggFunc.ToLowerInvariant();
-            if (fn == "average") fn = "avg";
-            lookup[key] = ParserUtilities.BuildAggregateAlias(fn, col.Field);
+            var fn = AggregateFunctionConverter.Parse(col.AggFunc);
+            lookup[key] = ParserUtilities.BuildAggregateAlias(fn.ToString().ToLowerInvariant(), col.Field);
         }
 
         return lookup;

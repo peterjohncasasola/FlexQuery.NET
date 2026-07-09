@@ -5,11 +5,6 @@ namespace FlexQuery.NET.Parsers.Jql;
 
 internal static class JqlHavingParser
 {
-    private static readonly HashSet<string> AllowedFunctions = new(StringComparer.OrdinalIgnoreCase)
-    {
-        "sum", "count", "avg", "min", "max"
-    };
-
     public static HavingCondition? Parse(string? rawHaving)
     {
         if (string.IsNullOrWhiteSpace(rawHaving))
@@ -21,9 +16,15 @@ internal static class JqlHavingParser
         if (parenIndex <= 0)
             return null;
 
-        var function = trimmed[..parenIndex].Trim().ToLowerInvariant();
-        if (!AllowedFunctions.Contains(function))
+        AggregateFunction function;
+        try
+        {
+            function = AggregateFunctionConverter.Parse(trimmed[..parenIndex].Trim());
+        }
+        catch
+        {
             return null;
+        }
 
         var closeParen = trimmed.IndexOf(')', parenIndex);
         if (closeParen < 0)

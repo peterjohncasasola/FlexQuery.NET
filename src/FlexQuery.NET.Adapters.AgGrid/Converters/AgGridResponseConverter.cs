@@ -3,6 +3,7 @@ using System.Collections.Concurrent;
 using System.Reflection;
 using FlexQuery.NET.Adapters.AgGrid.Models;
 using FlexQuery.NET.Models;
+using FlexQuery.NET.Models.Aggregates;
 using FlexQuery.NET.Parsers;
 
 namespace FlexQuery.NET.Adapters.AgGrid.Converters;
@@ -215,7 +216,7 @@ internal static class AgGridResponseConverter
 
             var col = group.Single();
             var fn = NormalizeAggFunc(col.AggFunc!);
-            var alias = ParserUtilities.BuildAggregateAlias(fn, col.Field);
+            var alias = ParserUtilities.BuildAggregateAlias(fn.ToString().ToLowerInvariant(), col.Field);
 
             if (row.ContainsKey(alias) && !row.ContainsKey(col.Field!))
             {
@@ -242,10 +243,9 @@ internal static class AgGridResponseConverter
         return mapped;
     }
 
-    private static string NormalizeAggFunc(string aggFunc)
+    private static AggregateFunction NormalizeAggFunc(string aggFunc)
     {
-        var fn = aggFunc.ToLowerInvariant();
-        return fn == "average" ? "avg" : fn;
+        return AggregateFunctionConverter.Parse(aggFunc);
     }
 
     private static int? ResolveChildCount(

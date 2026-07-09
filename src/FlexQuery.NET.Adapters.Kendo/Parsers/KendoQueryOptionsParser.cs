@@ -360,20 +360,11 @@ internal static class KendoQueryOptionsParser
     /// </summary>
     /// <param name="function">The aggregate function name to normalize.</param>
     /// <returns>The normalized function name.</returns>
-    private static string NormalizeAggregateFunction(string function)
+    private static AggregateFunction NormalizeAggregateFunction(string function)
     {
-        var normalized = function.Trim().ToLowerInvariant();
-        return normalized switch
-        {
-            "average" or "avg" => "avg",
-            "count" => "count",
-            "sum" => "sum",
-            "min" => "min",
-            "max" => "max",
-            _ => normalized
-        };
+        return AggregateFunctionConverter.Parse(function.Trim());
     }
 
-    private static string BuildAggregateAlias(string function, string? field)
-        => ParserUtilities.BuildAggregateAlias(function, field);
+    private static string BuildAggregateAlias(AggregateFunction function, string? field)
+        => ParserUtilities.BuildAggregateAlias(function.ToString().ToLowerInvariant(), field);
 }
