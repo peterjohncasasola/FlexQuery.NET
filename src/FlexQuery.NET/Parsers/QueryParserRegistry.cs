@@ -12,7 +12,7 @@ namespace FlexQuery.NET.Parsers;
 /// model → <see cref="QueryOptions"/>) lives in <see cref="QueryOptionsParser"/>, which
 /// delegates resolution here. This keeps the two responsibilities separate.
 /// </remarks>
-public static class QueryParserRegistry
+internal static class QueryParserRegistry
 {
     private static readonly Dictionary<QuerySyntax, IQueryParser> _available = new()
     {

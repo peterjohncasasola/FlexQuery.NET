@@ -9,7 +9,7 @@ namespace FlexQuery.NET.Parsers;
 /// Entry point for parsing query-string parameters into unified <see cref="QueryOptions"/>.
 /// Supports multiple formats: DSL, JQL, and MiniOData.
 /// </summary>
-public static class QueryOptionsParser
+internal static class QueryOptionsParser
 {
     /// <summary>
     /// The default query syntax used when no per-execution override is supplied.
