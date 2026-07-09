@@ -31,5 +31,15 @@ internal enum JqlTokenType
     EndsWith,
     Any,
     All,
-    Count
+    Count,
+
+    // Sort/Aggregate/Filter extensions
+    Asc,
+    Desc,
+    Sum,
+    Avg,
+    Min,
+    Max,
+    As,
+    Star
 }

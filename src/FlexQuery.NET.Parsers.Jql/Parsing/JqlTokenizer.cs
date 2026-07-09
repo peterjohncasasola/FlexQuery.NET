@@ -90,6 +90,10 @@ internal sealed class JqlTokenizer
                     tokens.Add(new JqlToken(JqlTokenType.Eq, "=", start));
                     _position++;
                     break;
+                case '*':
+                    tokens.Add(new JqlToken(JqlTokenType.Star, "*", start));
+                    _position++;
+                    break;
                 default:
                     if (IsNumberStart(ch))
                     {
@@ -192,6 +196,20 @@ internal sealed class JqlTokenizer
             return new JqlToken(JqlTokenType.All, raw, start);
         if (raw.Equals("COUNT", StringComparison.OrdinalIgnoreCase))
             return new JqlToken(JqlTokenType.Count, raw, start);
+        if (raw.Equals("ASC", StringComparison.OrdinalIgnoreCase))
+            return new JqlToken(JqlTokenType.Asc, raw, start);
+        if (raw.Equals("DESC", StringComparison.OrdinalIgnoreCase))
+            return new JqlToken(JqlTokenType.Desc, raw, start);
+        if (raw.Equals("SUM", StringComparison.OrdinalIgnoreCase))
+            return new JqlToken(JqlTokenType.Sum, raw, start);
+        if (raw.Equals("AVG", StringComparison.OrdinalIgnoreCase))
+            return new JqlToken(JqlTokenType.Avg, raw, start);
+        if (raw.Equals("MIN", StringComparison.OrdinalIgnoreCase))
+            return new JqlToken(JqlTokenType.Min, raw, start);
+        if (raw.Equals("MAX", StringComparison.OrdinalIgnoreCase))
+            return new JqlToken(JqlTokenType.Max, raw, start);
+        if (raw.Equals("AS", StringComparison.OrdinalIgnoreCase))
+            return new JqlToken(JqlTokenType.As, raw, start);
 
         return new JqlToken(JqlTokenType.Identifier, raw, start);
     }
