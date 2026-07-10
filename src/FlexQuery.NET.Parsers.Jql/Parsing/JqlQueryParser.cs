@@ -1,3 +1,4 @@
+using FlexQuery.NET.Exceptions;
 using FlexQuery.NET.Filters;
 using FlexQuery.NET.Models;
 using FlexQuery.NET.Models.Filters;
@@ -33,25 +34,69 @@ internal sealed class JqlQueryParser : IQueryParser
 
         if (!string.IsNullOrWhiteSpace(parameters.Filter))
         {
-            var ast = JqlAstParser.Parse(parameters.Filter);
-            options.Filter = JqlFilterConverter.ToFilterGroup(ast);
-            options.Filter = FilterNormalizer.NormalizeOrder(options.Filter);
+            try
+            {
+                var ast = JqlAstParser.Parse(parameters.Filter);
+                options.Filter = JqlFilterConverter.ToFilterGroup(ast);
+                options.Filter = FilterNormalizer.NormalizeOrder(options.Filter);
+            }
+            catch (JqlParseException ex)
+            {
+                throw new QueryParseException("filter", QuerySyntax.Jql, parameters.Filter, ex);
+            }
         }
 
         if (!string.IsNullOrWhiteSpace(parameters.Sort))
-            options.Sort = JqlSortParser.Parse(parameters.Sort);
+        {
+            try
+            {
+                options.Sort = JqlSortParser.Parse(parameters.Sort);
+            }
+            catch (JqlParseException ex)
+            {
+                throw new QueryParseException("sort", QuerySyntax.Jql, parameters.Sort, ex);
+            }
+        }
 
         if (!string.IsNullOrWhiteSpace(parameters.GroupBy))
             options.GroupBy = JqlGroupByParser.Parse(parameters.GroupBy);
 
         if (!string.IsNullOrWhiteSpace(parameters.Aggregates))
         {
-            options.Aggregates.Clear();
-            options.Aggregates.AddRange(JqlAggregateParser.Parse(parameters.Aggregates));
+            try
+            {
+                options.Aggregates.Clear();
+                options.Aggregates.AddRange(JqlAggregateParser.Parse(parameters.Aggregates));
+            }
+            catch (JqlParseException ex)
+            {
+                throw new QueryParseException("aggregates", QuerySyntax.Jql, parameters.Aggregates, ex);
+            }
         }
 
         if (!string.IsNullOrWhiteSpace(parameters.Having))
-            options.Having = JqlHavingParser.Parse(parameters.Having);
+        {
+            try
+            {
+                options.Having = JqlHavingParser.Parse(parameters.Having);
+            }
+            catch (JqlParseException ex)
+            {
+                throw new QueryParseException("having", QuerySyntax.Jql, parameters.Having, ex);
+            }
+        }
+
+        if (!string.IsNullOrWhiteSpace(parameters.Include))
+        {
+            try
+            {
+                options.Expand = JqlIncludeParser.Parse(parameters.Include);
+            }
+            catch (JqlParseException ex)
+            {
+                throw new QueryParseException("include", QuerySyntax.Jql, parameters.Include, ex);
+            }
+        }
 
         return options;
     }

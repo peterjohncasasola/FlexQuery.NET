@@ -14,7 +14,10 @@ internal static class JqlHavingParser
 
         var parenIndex = trimmed.IndexOf('(');
         if (parenIndex <= 0)
-            return null;
+            throw new JqlParseException(
+                $"Unable to parse HAVING expression '{rawHaving}'. " +
+                $"Expected format: FUNCTION(Field) OPERATOR value. " +
+                $"Missing function call.");
 
         AggregateFunction function;
         try
@@ -23,62 +26,49 @@ internal static class JqlHavingParser
         }
         catch
         {
-            return null;
+            throw new JqlParseException(
+                $"Unable to parse HAVING expression '{rawHaving}'. " +
+                $"Expected format: FUNCTION(Field) OPERATOR value. " +
+                $"Unrecognized aggregate function.");
         }
 
         var closeParen = trimmed.IndexOf(')', parenIndex);
         if (closeParen < 0)
-            return null;
+            throw new JqlParseException(
+                $"Unable to parse HAVING expression '{rawHaving}'. " +
+                $"Missing closing parenthesis.");
 
         var fieldRaw = trimmed[(parenIndex + 1)..closeParen].Trim();
         var rest = trimmed[(closeParen + 1)..].Trim();
 
         if (rest.Length == 0)
-            return null;
+            throw new JqlParseException(
+                $"Unable to parse HAVING expression '{rawHaving}'. " +
+                $"Expected format: FUNCTION(Field) OPERATOR value. " +
+                $"Missing operator and value after function call.");
 
         var opStart = 0;
         string op;
         string value;
 
-        if (rest.StartsWith(">="))
-        {
-            op = ">=";
-            opStart = 2;
-        }
-        else if (rest.StartsWith("<="))
-        {
-            op = "<=";
-            opStart = 2;
-        }
-        else if (rest.StartsWith("!="))
-        {
-            op = "!=";
-            opStart = 2;
-        }
-        else if (rest.StartsWith(">"))
-        {
-            op = ">";
-            opStart = 1;
-        }
-        else if (rest.StartsWith("<"))
-        {
-            op = "<";
-            opStart = 1;
-        }
-        else if (rest.StartsWith("="))
-        {
-            op = "=";
-            opStart = 1;
-        }
+        if (rest.StartsWith(">=")) { op = ">="; opStart = 2; }
+        else if (rest.StartsWith("<=")) { op = "<="; opStart = 2; }
+        else if (rest.StartsWith("!=")) { op = "!="; opStart = 2; }
+        else if (rest.StartsWith(">")) { op = ">"; opStart = 1; }
+        else if (rest.StartsWith("<")) { op = "<"; opStart = 1; }
+        else if (rest.StartsWith("=")) { op = "="; opStart = 1; }
         else
-        {
-            return null;
-        }
+            throw new JqlParseException(
+                $"Unable to parse HAVING expression '{rawHaving}'. " +
+                $"Expected format: FUNCTION(Field) OPERATOR value. " +
+                $"Unrecognized operator in '{rest}'.");
 
         value = rest[opStart..].Trim().Trim('\'', '"');
 
         if (value.Length == 0)
-            return null;
+            throw new JqlParseException(
+                $"Unable to parse HAVING expression '{rawHaving}'. " +
+                $"Missing value after operator.");
 
         string? field = fieldRaw.Length == 0 || fieldRaw == "*"
             ? null

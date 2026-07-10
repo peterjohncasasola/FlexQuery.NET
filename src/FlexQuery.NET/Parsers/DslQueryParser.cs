@@ -1,6 +1,7 @@
+using FlexQuery.NET.Exceptions;
+using FlexQuery.NET.Filters;
 using FlexQuery.NET.Models;
 using FlexQuery.NET.Parsers.Dsl;
-using FlexQuery.NET.Filters;
 
 namespace FlexQuery.NET.Parsers;
 
@@ -16,28 +17,34 @@ internal sealed class DslQueryParser : IQueryParser
     public QueryOptions Parse(FlexQueryParameters parameters)
     {
         var options = QueryOptionsFactory.Create(parameters);
-        ApplyFilter(parameters, options);
 
-        return options;
-    }
-
-    private static void ApplyFilter(FlexQueryParameters parameters, QueryOptions options)
-    {
-        if (string.IsNullOrWhiteSpace(parameters.Filter)) return;
-
-        try
+        if (!string.IsNullOrWhiteSpace(parameters.Filter))
         {
-            var ast = DslAstParser.Parse(parameters.Filter.TrimStart());
-            options.Filter = DslFilterConverter.ToFilterGroup(ast);
-
-            if (!parameters.PreserveRawOrder)
+            try
             {
-                options.Filter = FilterNormalizer.NormalizeOrder(options.Filter);
+                var ast = DslAstParser.Parse(parameters.Filter.TrimStart());
+                options.Filter = DslFilterConverter.ToFilterGroup(ast);
+                if (!parameters.PreserveRawOrder)
+                    options.Filter = FilterNormalizer.NormalizeOrder(options.Filter);
+            }
+            catch (DslParseException ex)
+            {
+                throw new QueryParseException("filter", QuerySyntax.NativeDsl, parameters.Filter, ex);
             }
         }
-        catch (DslParseException)
+
+        if (!string.IsNullOrWhiteSpace(parameters.Include))
         {
-            options.Filter = null;
+            try
+            {
+                options.Expand = DslIncludeParser.Parse(parameters.Include);
+            }
+            catch (DslParseException ex)
+            {
+                throw new QueryParseException("include", QuerySyntax.NativeDsl, parameters.Include, ex);
+            }
         }
+
+        return options;
     }
 }

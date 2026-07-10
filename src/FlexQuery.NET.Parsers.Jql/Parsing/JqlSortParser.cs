@@ -38,9 +38,33 @@ internal static class JqlSortParser
                 }
             }
 
-            result.Add(new SortNode { Field = trimmed, Descending = false });
+            // No direction keyword found — treat entire segment as the field name with default ASC
+            // but only if it looks like a valid field identifier
+            if (IsValidFieldPath(trimmed))
+            {
+                result.Add(new SortNode { Field = trimmed, Descending = false });
+            }
+            else
+            {
+                throw new JqlParseException(
+                    $"Unable to parse sort expression '{sortRaw}'. Invalid field path at '{trimmed}'. " +
+                    $"Expected format: Field [ASC|DESC]");
+            }
         }
 
         return result;
+    }
+
+    private static bool IsValidFieldPath(string segment)
+    {
+        if (string.IsNullOrWhiteSpace(segment)) return false;
+        // Allow identifiers, dots for nested paths, underscores
+        for (int i = 0; i < segment.Length; i++)
+        {
+            var c = segment[i];
+            if (!char.IsLetterOrDigit(c) && c != '.' && c != '_')
+                return false;
+        }
+        return true;
     }
 }

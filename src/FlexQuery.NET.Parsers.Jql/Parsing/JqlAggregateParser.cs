@@ -28,11 +28,20 @@ internal static class JqlAggregateParser
             }
             catch
             {
-                continue;
+                throw new JqlParseException(
+                    $"Unable to parse aggregate expression '{rawSelect}'. " +
+                    $"Expected format: FUNCTION(Field) [AS Alias]. " +
+                    $"Unrecognized function '{functionName}' at '{trimmed}'.");
             }
 
             var closeParen = trimmed.IndexOf(')', parenIndex);
-            if (closeParen < 0) continue;
+            if (closeParen < 0)
+            {
+                throw new JqlParseException(
+                    $"Unable to parse aggregate expression '{rawSelect}'. " +
+                    $"Missing closing parenthesis in '{trimmed}'. " +
+                    $"Expected format: FUNCTION(Field) [AS Alias].");
+            }
 
             var fieldRaw = trimmed[(parenIndex + 1)..closeParen].Trim();
             var remaining = trimmed[(closeParen + 1)..].Trim();
@@ -54,6 +63,13 @@ internal static class JqlAggregateParser
                 Field = field,
                 Alias = alias ?? BuildAlias(AggregateFunctionConverter.ToKeyword(function), field)
             });
+        }
+
+        if (result.Count == 0)
+        {
+            throw new JqlParseException(
+                $"Unable to parse aggregate expression '{rawSelect}'. " +
+                $"Expected format: FUNCTION(Field) [AS Alias]. No valid aggregate expressions found.");
         }
 
         return result;
