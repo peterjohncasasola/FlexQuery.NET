@@ -1,5 +1,5 @@
 using FlexQuery.NET.Models;
-using FlexQuery.NET.Models.Paging;
+using FlexQuery.NET.Parsers.MiniOData.Models;
 
 namespace FlexQuery.NET.Parsers.MiniOData;
 
@@ -22,7 +22,7 @@ namespace FlexQuery.NET.Parsers.MiniOData;
 /// EDM metadata, batch requests, or delta tracking.
 /// </para>
 /// </summary>
-public static class ODataQueryParameterParser
+internal static class ODataQueryParameterParser
 {
     /// <summary>
     /// Parses OData-style query string parameters into a <see cref="QueryOptions"/>.
@@ -40,13 +40,18 @@ public static class ODataQueryParameterParser
             options.Filter = ODataFilterParser.Parse(request.Filter);
 
         if (!string.IsNullOrWhiteSpace(request.OrderBy))
-            options.Sort = ParseOrderBy(request.OrderBy);
+            options.Sort = ODataOrderByParser.Parse(request.OrderBy);
 
         if (!string.IsNullOrWhiteSpace(request.Select))
-            options.Select = ParseSelect(request.Select);
+            options.Select = ODataSelectParser.Parse(request.Select);
 
         if (!string.IsNullOrWhiteSpace(request.Expand))
-            options.Includes = ParseExpand(request.Expand);
+            options.Includes = MiniODataExpandParser.Parse(request.Expand);
+
+        // $apply is deferred in v4: reject explicitly rather than silently ignoring it.
+        if (!string.IsNullOrWhiteSpace(request.Apply))
+            throw new MiniODataParseException(
+                "$apply is not supported in this version of MiniOData and is deferred to a future release.");
 
         if (request.Top.HasValue)
             options.Paging.PageSize = request.Top.Value;
@@ -58,45 +63,5 @@ public static class ODataQueryParameterParser
             options.IncludeCount = request.Count.Value;
 
         return options;
-    }
-
-    private static List<SortNode> ParseOrderBy(string orderBy)
-    {
-        var sorts = new List<SortNode>();
-
-        foreach (var segment in orderBy.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
-        {
-            var parts = segment.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-            if (parts.Length == 0) continue;
-
-            var field = parts[0].Replace('/', '.');
-
-            var descending = parts.Length > 1
-                             && parts[1].Equals("desc", StringComparison.OrdinalIgnoreCase);
-
-            sorts.Add(new SortNode
-            {
-                Field = field,
-                Descending = descending
-            });
-        }
-
-        return sorts;
-    }
-
-    private static List<string> ParseSelect(string select)
-    {
-        return select
-            .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
-            .Select(f => f.Replace('/', '.'))
-            .ToList();
-    }
-
-    private static List<string> ParseExpand(string expand)
-    {
-        return expand
-            .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
-            .Select(e => e.Replace('/', '.'))
-            .ToList();
     }
 }

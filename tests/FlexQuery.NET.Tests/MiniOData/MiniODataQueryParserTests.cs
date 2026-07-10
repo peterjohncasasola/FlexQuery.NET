@@ -1,4 +1,5 @@
 using FlexQuery.NET.Parsers.MiniOData;
+using FlexQuery.NET.Parsers.MiniOData.Models;
 
 namespace FlexQuery.NET.Tests.MiniOData;
 
