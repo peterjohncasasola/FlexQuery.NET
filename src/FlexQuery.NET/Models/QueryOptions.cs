@@ -15,7 +15,7 @@ public sealed class QueryOptions
 {
     // --- Data Selection & Projection ---
     
-    /// <summary>The filter expression (JQL or DSL).</summary>
+    /// <summary>The filter expression (FQL or DSL).</summary>
     public FilterGroup? Filter { get; set; }
 
     /// <summary>The sorting expressions.</summary>

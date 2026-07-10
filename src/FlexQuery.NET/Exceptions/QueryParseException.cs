@@ -4,12 +4,12 @@ namespace FlexQuery.NET.Exceptions;
 
 /// <summary>
 /// Thrown when a supported FlexQuery query parameter is supplied with a value that
-/// cannot be parsed using the configured query syntax (NativeDsl, Jql, or MiniOData).
+/// cannot be parsed using the configured query syntax (NativeDsl, Fql, or MiniOData).
 /// </summary>
 /// <remarks>
 /// This is a top-level exception. The <see cref="InnerException"/> contains
 /// parser-specific details from the underlying grammar parser (e.g.,
-/// <c>DslParseException</c> or <c>JqlParseException</c>).
+/// <c>DslParseException</c> or <c>FqlParseException</c>).
 ///
 /// Unknown query parameters (those not in the official FlexQuery set) should never
 /// produce this exception — they are ignored by the parser infrastructure.
@@ -41,7 +41,7 @@ public sealed class QueryParseException : FlexQueryException
     /// <summary>The query parameter name that could not be parsed (e.g. "filter", "sort", "select").</summary>
     public string ParameterName { get; }
 
-    /// <summary>The configured query syntax that was active during parsing (NativeDsl, Jql, MiniOData).</summary>
+    /// <summary>The configured query syntax that was active during parsing (NativeDsl, Fql, MiniOData).</summary>
     public QuerySyntax Syntax { get; }
 
     /// <summary>The raw value that was supplied for the parameter. <c>null</c> when no value was provided.</summary>
