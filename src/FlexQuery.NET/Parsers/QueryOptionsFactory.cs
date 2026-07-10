@@ -1,5 +1,6 @@
 using FlexQuery.NET.Models;
 using FlexQuery.NET.Models.Paging;
+using FlexQuery.NET.Parsers.Dsl;
 using FlexQuery.NET.Serialization;
 
 namespace FlexQuery.NET.Parsers;
@@ -25,22 +26,31 @@ internal static class QueryOptionsFactory
         if (!string.IsNullOrWhiteSpace(parameters.Select))
             SelectParser.Parse(options, parameters.Select);
 
-        if (!string.IsNullOrWhiteSpace(parameters.Aggregates))
-            options.Aggregates.AddRange(AggregateParser.Parse(parameters.Aggregates));
-
         if (!string.IsNullOrWhiteSpace(parameters.GroupBy))
-            options.GroupBy = ParserUtilities.SplitCsv(parameters.GroupBy);
-
-        if (!string.IsNullOrWhiteSpace(parameters.Having))
-            options.Having = HavingParser.Parse(parameters.Having);
+        {
+            var groups = ParserUtilities.SplitCsv(parameters.GroupBy);
+            foreach (var g in groups)
+            {
+                if (!ParserUtilities.IsValidPropertyPath(g.AsSpan()))
+                    throw new DslParseException(
+                        $"Invalid property path '{g}' in 'group' parameter. " +
+                        "Property paths must be dot-separated identifiers (e.g. 'Category' or 'Customer.Region').");
+            }
+            options.GroupBy = groups;
+        }
 
         if (!string.IsNullOrWhiteSpace(parameters.Include))
         {
-            options.Includes = ParserUtilities.SplitCsv(parameters.Include.Split('(')[0]);
+            var includePaths = ParserUtilities.SplitCsv(parameters.Include.Split('(')[0]);
+            foreach (var inc in includePaths)
+            {
+                if (!ParserUtilities.IsValidPropertyPath(inc.AsSpan()))
+                    throw new DslParseException(
+                        $"Invalid navigation property path '{inc}' in include expression. " +
+                        "Property paths must be dot-separated identifiers (e.g. 'Orders' or 'Orders.Items').");
+            }
+            options.Includes = includePaths;
         }
-
-        if (!string.IsNullOrWhiteSpace(parameters.Sort))
-            options.Sort.AddRange(SortParser.Parse(parameters.Sort));
 
         options.IsKeysetMode = isKeyset;
         options.OffsetExplicitlyRequested = parameters.Page != null;
