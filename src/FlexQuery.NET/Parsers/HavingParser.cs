@@ -1,5 +1,6 @@
 using FlexQuery.NET.Models.Aggregates;
 using FlexQuery.NET.Constants;
+using FlexQuery.NET.Parsers.Dsl;
 using System.Text.RegularExpressions;
 
 namespace FlexQuery.NET.Parsers;
@@ -16,20 +17,30 @@ internal static class HavingParser
 
     /// <summary>
     /// Parses a HAVING clause string into a <see cref="HavingCondition"/>.
-    /// Returns null if the input is null, empty, or malformed.
+    /// Throws <see cref="DslParseException"/> if the input is malformed.
     /// </summary>
     public static HavingCondition? Parse(string? rawHaving)
     {
         if (string.IsNullOrWhiteSpace(rawHaving)) return null;
         
-        var match = HavingPattern.Match(rawHaving.Trim());
-        if (!match.Success) return null;
+        var trimmed = rawHaving.Trim();
+        var match = HavingPattern.Match(trimmed);
+        if (!match.Success)
+            throw new DslParseException(
+                $"Unable to parse HAVING expression '{rawHaving}'. " +
+                "Expected format: FUNCTION(Field):OPERATOR:value or FUNCTION:Field:OPERATOR:value. " +
+                "For example: sum(Amount):gt:1000 or sum:total:gt:100");
 
         var fnRaw = match.Groups[QueryOptionKeys.Fn].Value.ToLowerInvariant();
         if (fnRaw == "average") fnRaw = "avg";
         var field = match.Groups[QueryOptionKeys.Field].Success 
             ? match.Groups[QueryOptionKeys.Field].Value 
             : (match.Groups[QueryOptionKeys.Field2].Success ? match.Groups[QueryOptionKeys.Field2].Value : null);
+
+        if (field is not null && !ParserUtilities.IsValidPropertyPath(field.AsSpan()))
+            throw new DslParseException(
+                $"Invalid field '{field}' in HAVING expression '{rawHaving}'. " +
+                "Field must be a valid property path.");
 
         return new HavingCondition
         {
