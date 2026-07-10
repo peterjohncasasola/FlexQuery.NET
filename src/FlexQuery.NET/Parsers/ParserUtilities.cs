@@ -54,6 +54,35 @@ internal static class ParserUtilities
         => d.TryGetValue(key, out var raw) && int.TryParse(raw, out var val) ? val : defaultValue;
     
     /// <summary>
+    /// Validates the grammar of a property path (e.g. "Customer.Name").
+    /// Returns true if the path is a valid sequence of dot-separated identifiers.
+    /// Does NOT perform semantic validation (property existence).
+    /// Supports only simple dot-separated paths; indexers, wildcards, and bracket access are out of scope.
+    /// </summary>
+    internal static bool IsValidPropertyPath(ReadOnlySpan<char> path)
+    {
+        if (path.IsEmpty) return false;
+        if (path[0] == '.') return false;
+        if (path[^1] == '.') return false;
+
+        int segmentStart = 0;
+        for (int i = 0; i <= path.Length; i++)
+        {
+            if (i == path.Length || path[i] == '.')
+            {
+                if (i == segmentStart) return false;
+                for (int j = segmentStart; j < i; j++)
+                    if (!IsValidPropertyPathChar(path[j])) return false;
+                segmentStart = i + 1;
+            }
+        }
+        return true;
+    }
+
+    private static bool IsValidPropertyPathChar(char c)
+        => char.IsLetterOrDigit(c) || c == '_';
+
+    /// <summary>
     /// Builds a PascalCase alias for aggregate functions (e.g., "TotalSum" or "Count").
     /// For field-less aggregates (e.g. count()) the alias is just the function name (e.g. "Count").
     /// </summary>
