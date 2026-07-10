@@ -3,10 +3,5 @@ namespace FlexQuery.NET.Exceptions;
 /// <summary>
 /// Abstract base class for all FlexQuery.NET exceptions.
 /// </summary>
-public abstract class FlexQueryException : Exception
-{
-    protected FlexQueryException(string message, Exception? innerException = null)
-        : base(message, innerException)
-    {
-    }
-}
+public abstract class FlexQueryException(string message, Exception? innerException = null)
+    : Exception(message, innerException);
