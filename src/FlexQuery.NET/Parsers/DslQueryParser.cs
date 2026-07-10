@@ -1,4 +1,6 @@
+using FlexQuery.NET.Constants;
 using FlexQuery.NET.Exceptions;
+using FlexQuery.NET.Execution;
 using FlexQuery.NET.Filters;
 using FlexQuery.NET.Models;
 using FlexQuery.NET.Parsers.Dsl;
@@ -16,7 +18,19 @@ internal sealed class DslQueryParser : IQueryParser
     /// <inheritdoc />
     public QueryOptions Parse(FlexQueryParameters parameters)
     {
-        var options = QueryOptionsFactory.Create(parameters);
+        QueryOptions options;
+        try
+        {
+            options = QueryOptionsFactory.Create(parameters);
+        }
+        catch (DslParseException ex)
+        {
+            throw new QueryParseException(
+                InferParameterName(parameters, ex),
+                QuerySyntax.NativeDsl,
+                InferParameterValue(parameters, ex),
+                ex);
+        }
 
         if (!string.IsNullOrWhiteSpace(parameters.Filter))
         {
@@ -29,7 +43,7 @@ internal sealed class DslQueryParser : IQueryParser
             }
             catch (DslParseException ex)
             {
-                throw new QueryParseException("filter", QuerySyntax.NativeDsl, parameters.Filter, ex);
+                throw new QueryParseException(QueryOptionKeys.Filter, QuerySyntax.NativeDsl, parameters.Filter, ex);
             }
         }
 
@@ -41,10 +55,72 @@ internal sealed class DslQueryParser : IQueryParser
             }
             catch (DslParseException ex)
             {
-                throw new QueryParseException("include", QuerySyntax.NativeDsl, parameters.Include, ex);
+                throw new QueryParseException(QueryOptionKeys.Include, QuerySyntax.NativeDsl, parameters.Include, ex);
+            }
+        }
+
+        if (!string.IsNullOrWhiteSpace(parameters.Sort))
+        {
+            try
+            {
+                options.Sort.Clear();
+                options.Sort.AddRange(SortParser.Parse(parameters.Sort));
+            }
+            catch (DslParseException ex)
+            {
+                throw new QueryParseException(QueryOptionKeys.Sort, QuerySyntax.NativeDsl, parameters.Sort, ex);
+            }
+        }
+
+        if (!string.IsNullOrWhiteSpace(parameters.Aggregates))
+        {
+            try
+            {
+                options.Aggregates.Clear();
+                options.Aggregates.AddRange(DslAggregateParser.Parse(parameters.Aggregates));
+            }
+            catch (DslParseException ex)
+            {
+                throw new QueryParseException(QueryOptionKeys.Aggregates, QuerySyntax.NativeDsl, parameters.Aggregates, ex);
+            }
+        }
+
+        if (!string.IsNullOrWhiteSpace(parameters.Having))
+        {
+            try
+            {
+                options.Having = HavingParser.Parse(parameters.Having);
+            }
+            catch (DslParseException ex)
+            {
+                throw new QueryParseException(QueryOptionKeys.Having, QuerySyntax.NativeDsl, parameters.Having, ex);
             }
         }
 
         return options;
+    }
+
+    private static string InferParameterName(FlexQueryParameters parameters, DslParseException ex)
+    {
+        var msg = ex.Message.ToLowerInvariant();
+        if (msg.Contains("'select'")) return QueryOptionKeys.Select;
+        if (msg.Contains("'group'")) return QueryOptionKeys.Group;
+        if (msg.Contains("'include'") || msg.Contains("include expression")) return QueryOptionKeys.Include;
+        if (msg.Contains("aggregate")) return QueryOptionKeys.Aggregates;
+        if (msg.Contains("having")) return QueryOptionKeys.Having;
+        if (msg.Contains("sort")) return QueryOptionKeys.Sort;
+        return "parameter";
+    }
+
+    private static string? InferParameterValue(FlexQueryParameters parameters, DslParseException ex)
+    {
+        var msg = ex.Message.ToLowerInvariant();
+        if (msg.Contains("'select'") || msg.Contains("select")) return parameters.Select;
+        if (msg.Contains("'group'") || msg.Contains("group")) return parameters.GroupBy;
+        if (msg.Contains("aggregate")) return parameters.Aggregates;
+        if (msg.Contains("having")) return parameters.Having;
+        if (msg.Contains("sort")) return parameters.Sort;
+        if (msg.Contains("include")) return parameters.Include;
+        return null;
     }
 }
