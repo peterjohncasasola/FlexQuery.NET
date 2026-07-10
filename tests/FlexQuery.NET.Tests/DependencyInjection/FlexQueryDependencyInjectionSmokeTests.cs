@@ -6,7 +6,7 @@ using FlexQuery.NET.Dapper.DependencyInjection;
 using FlexQuery.NET.Dapper.Metadata;
 using FlexQuery.NET.EntityFrameworkCore.DependencyInjection;
 using FlexQuery.NET.EntityFrameworkCore.Configuration;
-using FlexQuery.NET.Parsers.Fql;
+using FlexQuery.NET.Parsers.Fql.DependencyInjection;
 using FlexQuery.NET.Parsers.MiniOData.DependencyInjection;
 
 namespace FlexQuery.NET.Tests.DependencyInjection;

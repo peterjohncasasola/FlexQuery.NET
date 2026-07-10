@@ -1,10 +1,10 @@
 using Microsoft.Extensions.DependencyInjection;
-using FlexQuery.NET.Parsers.Fql;
+using FlexQuery.NET.Parsers.Fql.DependencyInjection;
 
 namespace FlexQuery.NET.Tests.DependencyInjection;
 
 /// <summary>
-/// Tests for <see cref="FlexQuery.NET.Parsers.Fql.ServiceCollectionExtensions.AddFqlParser"/>.
+/// Tests for <see cref="FlexQuery.NET.Parsers.Fql.DependencyInjection.ServiceCollectionExtensions.AddFqlParser"/>.
 ///
 /// Design note: AddFqlParser registers the parser in the internal static
 /// <c>QueryParserRegistry</c> rather than in the DI container. There is no public
