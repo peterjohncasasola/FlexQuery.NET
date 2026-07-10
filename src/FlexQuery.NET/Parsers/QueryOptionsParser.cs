@@ -64,7 +64,7 @@ internal static class QueryOptionsParser
     /// </summary>
     /// <param name="queryString">The raw query string key-value pairs.</param>
     /// <returns>The parsed <see cref="QueryOptions"/>.</returns>
-    public static QueryOptions Parse(IEnumerable<KeyValuePair<string, StringValues>> queryString)
+    public static QueryOptions Parse(IReadOnlyDictionary<string, StringValues> queryString)
     {
         var grouped = queryString.GroupBy(kv => kv.Key, StringComparer.OrdinalIgnoreCase)
             .ToDictionary(g => g.Key, g => g.Last().Value.ToString(), StringComparer.OrdinalIgnoreCase);
