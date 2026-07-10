@@ -1,5 +1,6 @@
 using FlexQuery.NET.Constants;
 using FlexQuery.NET.Models.Filters;
+using FlexQuery.NET.Parsers.MiniOData.Models;
 
 namespace FlexQuery.NET.Parsers.MiniOData;
 

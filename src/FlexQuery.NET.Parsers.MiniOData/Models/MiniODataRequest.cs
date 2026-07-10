@@ -1,6 +1,7 @@
 using System.Text.Json.Serialization;
+using FlexQuery.NET.Options;
 
-namespace FlexQuery.NET.Parsers.MiniOData;
+namespace FlexQuery.NET.Parsers.MiniOData.Models;
 
 /// <summary>
 /// Represents a lightweight OData-compatible query request for the MiniOData adapter.
@@ -69,5 +70,5 @@ public sealed class MiniODataRequest
     /// Gets or sets the OData aggregation or transformation expression.
     /// </summary>
     [JsonPropertyName("$apply")]
-    public string? Apply { get; set; }
+    internal string? Apply { get; set; }
 }

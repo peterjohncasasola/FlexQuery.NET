@@ -1,4 +1,5 @@
 using System.Text;
+using FlexQuery.NET.Parsers.MiniOData.Models;
 
 namespace FlexQuery.NET.Parsers.MiniOData;
 
