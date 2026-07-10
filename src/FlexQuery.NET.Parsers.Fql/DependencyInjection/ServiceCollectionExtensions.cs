@@ -1,7 +1,6 @@
-using FlexQuery.NET.Models;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace FlexQuery.NET.Parsers.Fql;
+namespace FlexQuery.NET.Parsers.Fql.DependencyInjection;
 
 /// <summary>
 /// Extension methods for registering FlexQuery.NET Fql parser services
