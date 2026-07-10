@@ -5,7 +5,9 @@ namespace FlexQuery.NET.Parsers;
 
 internal static class IncludeParserHelper
 {
-    public static List<IncludeNode> Parse(string? raw, Func<string, FilterGroup?> parseFilter)
+    public static List<IncludeNode> Parse(string? raw,
+        Func<string, FilterGroup?> parseFilter,
+        Func<string, Exception> createException)
     {
         if (string.IsNullOrWhiteSpace(raw)) return [];
 
@@ -13,13 +15,19 @@ internal static class IncludeParserHelper
         var result = new List<IncludeNode>(chains.Count);
         foreach (var chain in chains)
         {
-            var node = ParseChain(chain.Trim(), parseFilter);
+            var trimmed = chain.Trim();
+            if (trimmed.Length == 0)
+                throw createException($"Include expression contains an empty segment. Expected format: NavigationPath[(filter)].");
+
+            var node = ParseChain(trimmed, parseFilter, createException);
             if (node is not null) result.Add(node);
         }
         return result;
     }
 
-    private static IncludeNode? ParseChain(string chain, Func<string, FilterGroup?> parseFilter)
+    private static IncludeNode? ParseChain(string chain,
+        Func<string, FilterGroup?> parseFilter,
+        Func<string, Exception> createException)
     {
         if (string.IsNullOrWhiteSpace(chain)) return null;
 
@@ -29,8 +37,12 @@ internal static class IncludeParserHelper
 
         foreach (var segment in segments)
         {
-            var node = ParseSegment(segment.Trim(), parseFilter);
-            if (node is null) break;
+            var trimmed = segment.Trim();
+            var node = ParseSegment(trimmed, parseFilter, createException);
+            if (node is null)
+                throw createException(
+                    $"Invalid include segment '{trimmed}' in chain '{chain}'. " +
+                    "Expected format: NavigationPath[(filter)].");
 
             if (root is null)
                 root = current = node;
@@ -44,7 +56,9 @@ internal static class IncludeParserHelper
         return root;
     }
 
-    private static IncludeNode? ParseSegment(string segment, Func<string, FilterGroup?> parseFilter)
+    private static IncludeNode? ParseSegment(string segment,
+        Func<string, FilterGroup?> parseFilter,
+        Func<string, Exception> createException)
     {
         if (string.IsNullOrWhiteSpace(segment)) return null;
 
@@ -61,15 +75,24 @@ internal static class IncludeParserHelper
         else
         {
             var closeParen = span.LastIndexOf(')');
-            if (closeParen < openParen) return null;
+            if (closeParen < openParen)
+                throw createException(
+                    $"Include segment '{segment}' has an opening parenthesis without a matching closing parenthesis.");
 
             nameSpan = span[..openParen].Trim();
             filterSpan = span[(openParen + 1)..closeParen].Trim();
         }
 
-        if (nameSpan.IsEmpty) return null;
+        if (nameSpan.IsEmpty)
+            throw createException(
+                $"Include segment has an empty navigation property name.");
 
         var name = nameSpan.ToString();
+        if (!ParserUtilities.IsValidPropertyPath(name.AsSpan()))
+            throw createException(
+                $"Invalid navigation property path '{name}' in include expression. " +
+                "Property paths must be dot-separated identifiers (e.g. 'Orders' or 'Orders.Items').");
+
         var filter = filterSpan.IsEmpty ? null : parseFilter(filterSpan.ToString());
 
         return new IncludeNode { Path = name, Filter = filter };

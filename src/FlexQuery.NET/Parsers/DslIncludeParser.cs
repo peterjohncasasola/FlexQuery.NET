@@ -8,7 +8,7 @@ internal static class DslIncludeParser
 {
     public static List<IncludeNode> Parse(string? raw)
     {
-        return IncludeParserHelper.Parse(raw, ParseDslFilter);
+        return IncludeParserHelper.Parse(raw, ParseDslFilter, msg => new DslParseException(msg));
     }
 
     private static FilterGroup? ParseDslFilter(string raw)
