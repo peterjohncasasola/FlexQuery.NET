@@ -75,6 +75,10 @@ public class UsersController : ControllerBase
         {
             return BadRequest(ex.Message);
         }
+        catch (QueryParseException ex)
+        {
+            return BadRequest(ex.Message);
+        }
     }
 
     private static FlexQueryModel BuildModel()
@@ -117,6 +121,10 @@ public class OrdersController : ControllerBase
             return Ok(result);
         }
         catch (QueryValidationException ex)
+        {
+            return BadRequest(ex.Message);
+        }
+        catch (QueryParseException ex)
         {
             return BadRequest(ex.Message);
         }

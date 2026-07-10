@@ -362,16 +362,15 @@ public class DslQueryParserTests
     }
 
     [Fact]
-    public void Sort_InvalidDirection_DefaultsToAscending()
+    public void Sort_InvalidDirection_IsRejected()
     {
-        var opts = Parse(new()
+        var act = () => Parse(new()
         {
             ["sort"] = "name:sideways"
         });
 
-        opts.Sort.Should().ContainSingle();
-        opts.Sort[0].Field.Should().Be("name");
-        opts.Sort[0].Descending.Should().BeFalse();
+        act.Should().Throw<QueryParseException>()
+            .Which.ParameterName.Should().Be("sort");
     }
 
     [Fact]
@@ -676,16 +675,15 @@ public class DslQueryParserTests
     }
 
     [Fact]
-    public void DslAggregate_InvalidFunction_IsIgnored()
+    public void DslAggregate_InvalidFunction_IsRejected()
     {
-        var opts = Parse(new()
+        var act = () => Parse(new()
         {
             ["aggregates"] = "Amount:invalid,Price:sum"
         });
 
-        opts.Aggregates.Should().ContainSingle();
-        opts.Aggregates[0].Function.Should().Be(AggregateFunction.Sum);
-        opts.Aggregates[0].Field.Should().Be("Price");
+        act.Should().Throw<QueryParseException>()
+            .Which.ParameterName.Should().Be("aggregates");
     }
 
     [Fact]

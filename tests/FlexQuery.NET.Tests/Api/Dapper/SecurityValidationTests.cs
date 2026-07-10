@@ -13,13 +13,11 @@ public class SecurityTests : DapperApiTestBase
     public async Task Should_Block_SQL_Injection_In_Filter()
     {
         // Act
-        var act = () => Client.GetAsync("/api/users?filter=name:contains:'; DROP TABLE Customers;--");
+        var response = await Client.GetAsync("/api/users?filter=name:contains:'; DROP TABLE Customers;--");
 
         // Assert
-        // The DSL parser rejects filter expressions containing unparseable characters.
-        // This enforces a strict syntax contract — invalid input is not silently accepted.
-        var ex = await act.Should().ThrowAsync<QueryParseException>();
-        ex.Which.ParameterName.Should().Be("filter");
+        // The DSL parser rejects filter expressions containing unparseable character sequences.
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
     }
 
     [Fact]
