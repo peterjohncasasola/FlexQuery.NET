@@ -1,6 +1,6 @@
 using FlexQuery.NET.Models;
 using FlexQuery.NET.Parsers;
-using FlexQuery.NET.Parsers.Jql;
+using FlexQuery.NET.Parsers.Fql;
 using FlexQuery.NET.Exceptions;
 using FlexQuery.NET.Models.Aggregates;
 using FlexQuery.NET.Models.Filters;
@@ -83,7 +83,7 @@ public class ValidationTests
     [Fact]
     public void Should_Fail_When_Nested_Field_Does_Not_Exist()
     {
-        var filter = new JqlQueryParser().Parse("orders.any(Unknown = 1)");
+        var filter = new FqlQueryParser().Parse("orders.any(Unknown = 1)");
         var options = new QueryOptions { Filter = filter };
         var query = new List<Customer>().AsQueryable();
 
@@ -96,7 +96,7 @@ public class ValidationTests
     [Fact]
     public void Should_Fail_When_Scoped_Filter_On_Non_Collection()
     {
-        var filter = new JqlQueryParser().Parse("name.any(id = 1)");
+        var filter = new FqlQueryParser().Parse("name.any(id = 1)");
         var options = new QueryOptions { Filter = filter };
         var query = new List<Customer>().AsQueryable();
 

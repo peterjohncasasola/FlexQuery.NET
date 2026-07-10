@@ -4,7 +4,7 @@ namespace FlexQuery.NET.Tests.Tests;
 
     /// <summary>
     /// Tests for ParserUtilities.BuildAggregateAlias.
-    /// Parser-specific tests are in Parsers/DslQueryParserTests.cs and Parsers/JqlQueryParserTests.cs.
+    /// Parser-specific tests are in Parsers/DslQueryParserTests.cs and Parsers/FqlQueryParserTests.cs.
     /// </summary>
     public class ParserTests
     {

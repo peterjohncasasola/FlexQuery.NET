@@ -2,24 +2,24 @@ using FlexQuery.NET.Exceptions;
 using FlexQuery.NET.Models;
 using FlexQuery.NET.Models.Aggregates;
 using FlexQuery.NET.Models.Filters;
-using FlexQuery.NET.Parsers.Jql;
+using FlexQuery.NET.Parsers.Fql;
 
 namespace FlexQuery.NET.Tests.Parsers;
 
-public class JqlQueryParserTests
+public class FqlQueryParserTests
 {
-    private static FilterGroup JqlParseFilter(string jql) =>
-        new JqlQueryParser().Parse(jql);
+    private static FilterGroup FqlParseFilter(string Fql) =>
+        new FqlQueryParser().Parse(Fql);
 
-    private static QueryOptions JqlParse(FlexQueryParameters parameters) =>
-        new JqlQueryParser().Parse(parameters);
+    private static QueryOptions FqlParse(FlexQueryParameters parameters) =>
+        new FqlQueryParser().Parse(parameters);
 
-    private static QueryOptions JqlParse(string? filter = null, string? sort = null,
+    private static QueryOptions FqlParse(string? filter = null, string? sort = null,
         string? groupBy = null, string? select = null, string? having = null,
         string? aggregates = null, string? include = null, bool? distinct = null,
         int? page = null, int? pageSize = null)
     {
-        return JqlParse(new FlexQueryParameters
+        return FqlParse(new FlexQueryParameters
         {
             Filter = filter,
             Sort = sort,
@@ -35,9 +35,9 @@ public class JqlQueryParserTests
     }
 
     [Fact]
-    public void Jql_SimpleCondition_ParsedCorrectly()
+    public void Fql_SimpleCondition_ParsedCorrectly()
     {
-        var filter = JqlParseFilter("name = \"john\"");
+        var filter = FqlParseFilter("name = \"john\"");
 
         filter.Logic.Should().Be(LogicOperator.And);
         filter.Filters.Should().ContainSingle();
@@ -47,9 +47,9 @@ public class JqlQueryParserTests
     }
 
     [Fact]
-    public void Jql_AndCondition_ParsedCorrectly()
+    public void Fql_AndCondition_ParsedCorrectly()
     {
-        var filter = JqlParseFilter("name = \"john\" AND age >= 20");
+        var filter = FqlParseFilter("name = \"john\" AND age >= 20");
 
         filter.Logic.Should().Be(LogicOperator.And);
         filter.Filters.Should().HaveCount(2);
@@ -58,9 +58,9 @@ public class JqlQueryParserTests
     }
 
     [Fact]
-    public void Jql_OrCondition_ParsedCorrectly()
+    public void Fql_OrCondition_ParsedCorrectly()
     {
-        var filter = JqlParseFilter("name = \"john\" OR name = \"doe\"");
+        var filter = FqlParseFilter("name = \"john\" OR name = \"doe\"");
 
         filter.Logic.Should().Be(LogicOperator.Or);
         filter.Filters.Should().HaveCount(2);
@@ -69,9 +69,9 @@ public class JqlQueryParserTests
     }
 
     [Fact]
-    public void Jql_NestedParentheses_ParsedCorrectly()
+    public void Fql_NestedParentheses_ParsedCorrectly()
     {
-        var filter = JqlParseFilter("(name = \"john\" OR name = \"doe\") AND age > 18");
+        var filter = FqlParseFilter("(name = \"john\" OR name = \"doe\") AND age > 18");
 
         filter.Logic.Should().Be(LogicOperator.And);
         filter.Filters.Should().ContainSingle(f => f.Field == "age" && f.Operator == FilterOperators.GreaterThan && f.Value == "18");
@@ -81,9 +81,9 @@ public class JqlQueryParserTests
     }
 
     [Fact]
-    public void Jql_InOperator_ParsedCorrectly()
+    public void Fql_InOperator_ParsedCorrectly()
     {
-        var filter = JqlParseFilter("status IN (\"active\",\"pending\")");
+        var filter = FqlParseFilter("status IN (\"active\",\"pending\")");
 
         filter.Filters.Should().ContainSingle();
         filter.Filters[0].Field.Should().Be("status");
@@ -92,9 +92,9 @@ public class JqlQueryParserTests
     }
 
     [Fact]
-    public void Jql_NestedPropertyPath_ParsedCorrectly()
+    public void Fql_NestedPropertyPath_ParsedCorrectly()
     {
-        var filter = JqlParseFilter("orders.customer.name CONTAINS \"john\"");
+        var filter = FqlParseFilter("orders.customer.name CONTAINS \"john\"");
 
         filter.Filters.Should().ContainSingle();
         filter.Filters[0].Field.Should().Be("orders.customer.name");
@@ -103,9 +103,9 @@ public class JqlQueryParserTests
     }
 
     [Fact]
-    public void Jql_EmailAndNestedNumericCondition_ParsedCorrectly()
+    public void Fql_EmailAndNestedNumericCondition_ParsedCorrectly()
     {
-        var filter = JqlParseFilter("email = \"ops@acmeretail.com\" AND orders.number = \"ORD-2026-0002\" AND orders.items.quantity > 2");
+        var filter = FqlParseFilter("email = \"ops@acmeretail.com\" AND orders.number = \"ORD-2026-0002\" AND orders.items.quantity > 2");
 
         filter.Logic.Should().Be(LogicOperator.And);
         filter.Filters.Should().HaveCount(3);
@@ -115,9 +115,9 @@ public class JqlQueryParserTests
     }
 
     [Fact]
-    public void Jql_BetweenOperator_ParsedCorrectly()
+    public void Fql_BetweenOperator_ParsedCorrectly()
     {
-        var filter = JqlParseFilter("age BETWEEN 18 AND 60");
+        var filter = FqlParseFilter("age BETWEEN 18 AND 60");
 
         filter.Filters.Should().ContainSingle();
         filter.Filters[0].Field.Should().Be("age");
@@ -126,9 +126,9 @@ public class JqlQueryParserTests
     }
 
     [Fact]
-    public void Jql_IsNullOperator_ParsedCorrectly()
+    public void Fql_IsNullOperator_ParsedCorrectly()
     {
-        var filter = JqlParseFilter("deletedAt IS NULL");
+        var filter = FqlParseFilter("deletedAt IS NULL");
 
         filter.Filters.Should().ContainSingle();
         filter.Filters[0].Field.Should().Be("deletedAt");
@@ -137,9 +137,9 @@ public class JqlQueryParserTests
     }
 
     [Fact]
-    public void Jql_IsNotNullOperator_ParsedCorrectly()
+    public void Fql_IsNotNullOperator_ParsedCorrectly()
     {
-        var filter = JqlParseFilter("deletedAt IS NOT NULL");
+        var filter = FqlParseFilter("deletedAt IS NOT NULL");
 
         filter.Filters.Should().ContainSingle();
         filter.Filters[0].Field.Should().Be("deletedAt");
@@ -148,9 +148,9 @@ public class JqlQueryParserTests
     }
 
     [Fact]
-    public void Jql_StartsWithOperator_ParsedCorrectly()
+    public void Fql_StartsWithOperator_ParsedCorrectly()
     {
-        var filter = JqlParseFilter("name STARTSWITH \"admin\"");
+        var filter = FqlParseFilter("name STARTSWITH \"admin\"");
 
         filter.Filters.Should().ContainSingle();
         filter.Filters[0].Field.Should().Be("name");
@@ -159,9 +159,9 @@ public class JqlQueryParserTests
     }
 
     [Fact]
-    public void Jql_EndsWithOperator_ParsedCorrectly()
+    public void Fql_EndsWithOperator_ParsedCorrectly()
     {
-        var filter = JqlParseFilter("email ENDSWITH \".com\"");
+        var filter = FqlParseFilter("email ENDSWITH \".com\"");
 
         filter.Filters.Should().ContainSingle();
         filter.Filters[0].Field.Should().Be("email");
@@ -170,9 +170,9 @@ public class JqlQueryParserTests
     }
 
     [Fact]
-    public void Jql_LikeOperator_ParsedCorrectly()
+    public void Fql_LikeOperator_ParsedCorrectly()
     {
-        var filter = JqlParseFilter("name LIKE \"%john%\"");
+        var filter = FqlParseFilter("name LIKE \"%john%\"");
 
         filter.Filters.Should().ContainSingle();
         filter.Filters[0].Field.Should().Be("name");
@@ -181,9 +181,9 @@ public class JqlQueryParserTests
     }
 
     [Fact]
-    public void Jql_AnyOperator_ParsedCorrectly()
+    public void Fql_AnyOperator_ParsedCorrectly()
     {
-        var filter = JqlParseFilter("orders ANY total > 1000");
+        var filter = FqlParseFilter("orders ANY total > 1000");
 
         filter.Filters.Should().ContainSingle();
         filter.Filters[0].Field.Should().Be("orders");
@@ -192,9 +192,9 @@ public class JqlQueryParserTests
     }
 
     [Fact]
-    public void Jql_AllOperator_ParsedCorrectly()
+    public void Fql_AllOperator_ParsedCorrectly()
     {
-        var filter = JqlParseFilter("orders ALL status = \"completed\"");
+        var filter = FqlParseFilter("orders ALL status = \"completed\"");
 
         filter.Filters.Should().ContainSingle();
         filter.Filters[0].Field.Should().Be("orders");
@@ -203,9 +203,9 @@ public class JqlQueryParserTests
     }
 
     [Fact]
-    public void Jql_CountOperator_ParsedCorrectly()
+    public void Fql_CountOperator_ParsedCorrectly()
     {
-        var filter = JqlParseFilter("orders COUNT > 5");
+        var filter = FqlParseFilter("orders COUNT > 5");
 
         filter.Filters.Should().ContainSingle();
         filter.Filters[0].Field.Should().Be("orders");
@@ -214,9 +214,9 @@ public class JqlQueryParserTests
     }
 
     [Fact]
-    public void Jql_ScopedAny_DotSyntax_ParsedToScopedFilter()
+    public void Fql_ScopedAny_DotSyntax_ParsedToScopedFilter()
     {
-        var filter = JqlParseFilter("orders.any(status = \"Cancelled\")");
+        var filter = FqlParseFilter("orders.any(status = \"Cancelled\")");
 
         filter.Filters.Should().ContainSingle();
         var cond = filter.Filters[0];
@@ -227,9 +227,9 @@ public class JqlQueryParserTests
     }
 
     [Fact]
-    public void Jql_ScopedAll_DotSyntax_ParsedToScopedFilter()
+    public void Fql_ScopedAll_DotSyntax_ParsedToScopedFilter()
     {
-        var filter = JqlParseFilter("orders.all(status = \"Active\")");
+        var filter = FqlParseFilter("orders.all(status = \"Active\")");
 
         filter.Filters.Should().ContainSingle();
         var cond = filter.Filters[0];
@@ -240,9 +240,9 @@ public class JqlQueryParserTests
     }
 
     [Fact]
-    public void Jql_ScopedBracket_ParsedAsAnyCollectionNode()
+    public void Fql_ScopedBracket_ParsedAsAnyCollectionNode()
     {
-        var filter = JqlParseFilter("orders[status = \"Cancelled\"]");
+        var filter = FqlParseFilter("orders[status = \"Cancelled\"]");
 
         filter.Filters.Should().ContainSingle();
         var cond = filter.Filters[0];
@@ -253,9 +253,9 @@ public class JqlQueryParserTests
     }
 
     [Fact]
-    public void Jql_ScopedAny_MultipleConditions_ParsedAsAndLogicalInsideCollection()
+    public void Fql_ScopedAny_MultipleConditions_ParsedAsAndLogicalInsideCollection()
     {
-        var filter = JqlParseFilter("orders.any(status = \"Cancelled\" AND total > 500)");
+        var filter = FqlParseFilter("orders.any(status = \"Cancelled\" AND total > 500)");
 
         filter.Filters.Should().ContainSingle();
         var cond = filter.Filters[0];
@@ -271,9 +271,9 @@ public class JqlQueryParserTests
     }
 
     [Fact]
-    public void Jql_ScopedAny_WithOrInsideGroup_ParsedCorrectly()
+    public void Fql_ScopedAny_WithOrInsideGroup_ParsedCorrectly()
     {
-        var filter = JqlParseFilter("orders.any(status = \"Cancelled\" OR status = \"Refunded\")");
+        var filter = FqlParseFilter("orders.any(status = \"Cancelled\" OR status = \"Refunded\")");
 
         filter.Filters.Should().ContainSingle();
         var cond = filter.Filters[0];
@@ -283,9 +283,9 @@ public class JqlQueryParserTests
     }
 
     [Fact]
-    public void Jql_NestedScopedCollections_ParsedRecursively()
+    public void Fql_NestedScopedCollections_ParsedRecursively()
     {
-        var filter = JqlParseFilter("orders.any(status = \"Cancelled\" AND orderItems.any(id = 101))");
+        var filter = FqlParseFilter("orders.any(status = \"Cancelled\" AND orderItems.any(id = 101))");
 
         filter.Filters.Should().ContainSingle();
         var outer = filter.Filters[0];
@@ -306,9 +306,9 @@ public class JqlQueryParserTests
     }
 
     [Fact]
-    public void Jql_ScopedAny_CombinedWithFlatCondition_ParsedToAndLogical()
+    public void Fql_ScopedAny_CombinedWithFlatCondition_ParsedToAndLogical()
     {
-        var filter = JqlParseFilter("name = \"Alice\" AND orders.any(total > 1000)");
+        var filter = FqlParseFilter("name = \"Alice\" AND orders.any(total > 1000)");
 
         filter.Logic.Should().Be(LogicOperator.And);
         filter.Filters.Should().HaveCount(2);
@@ -320,9 +320,9 @@ public class JqlQueryParserTests
     }
 
     [Fact]
-    public void Jql_ScopedAny_ConvertsToFilterConditionWithScopedFilter()
+    public void Fql_ScopedAny_ConvertsToFilterConditionWithScopedFilter()
     {
-        var filter = JqlParseFilter("orders.any(status = \"Cancelled\" AND total > 500)");
+        var filter = FqlParseFilter("orders.any(status = \"Cancelled\" AND total > 500)");
 
         filter.Logic.Should().Be(LogicOperator.And);
         filter.Filters.Should().ContainSingle();
@@ -341,9 +341,9 @@ public class JqlQueryParserTests
     }
 
     [Fact]
-    public void Jql_BracketSyntax_ConvertsToFilterConditionWithScopedFilter()
+    public void Fql_BracketSyntax_ConvertsToFilterConditionWithScopedFilter()
     {
-        var filter = JqlParseFilter("orders[status = \"Cancelled\"]");
+        var filter = FqlParseFilter("orders[status = \"Cancelled\"]");
 
         filter.Filters.Should().ContainSingle();
         var cond = filter.Filters[0];
@@ -354,9 +354,9 @@ public class JqlQueryParserTests
     }
 
     [Fact]
-    public void Jql_NestedScopedCollections_ConvertsToNestedScopedFilters()
+    public void Fql_NestedScopedCollections_ConvertsToNestedScopedFilters()
     {
-        var filter = JqlParseFilter("orders.any(status = \"Cancelled\" AND orderItems.any(id = 101))");
+        var filter = FqlParseFilter("orders.any(status = \"Cancelled\" AND orderItems.any(id = 101))");
 
         filter.Filters.Should().ContainSingle();
         var outer = filter.Filters[0];
@@ -379,9 +379,9 @@ public class JqlQueryParserTests
     }
 
     [Fact]
-    public void Jql_FlatConditions_StillWorkAfterScopedSupport()
+    public void Fql_FlatConditions_StillWorkAfterScopedSupport()
     {
-        var filter = JqlParseFilter("orders.customer.name CONTAINS \"john\"");
+        var filter = FqlParseFilter("orders.customer.name CONTAINS \"john\"");
 
         filter.Filters.Should().ContainSingle();
         filter.Filters[0].Field.Should().Be("orders.customer.name");
@@ -393,9 +393,9 @@ public class JqlQueryParserTests
     // ─── Sort Parser Tests ────────────────────────────────────────────
 
     [Fact]
-    public void JqlSort_SingleAsc_ParsedCorrectly()
+    public void FqlSort_SingleAsc_ParsedCorrectly()
     {
-        var result = JqlParse(sort: "Name ASC");
+        var result = FqlParse(sort: "Name ASC");
 
         result.Sort.Should().ContainSingle();
         result.Sort[0].Field.Should().Be("Name");
@@ -403,9 +403,9 @@ public class JqlQueryParserTests
     }
 
     [Fact]
-    public void JqlSort_SingleDesc_ParsedCorrectly()
+    public void FqlSort_SingleDesc_ParsedCorrectly()
     {
-        var result = JqlParse(sort: "CreatedDate DESC");
+        var result = FqlParse(sort: "CreatedDate DESC");
 
         result.Sort.Should().ContainSingle();
         result.Sort[0].Field.Should().Be("CreatedDate");
@@ -413,9 +413,9 @@ public class JqlQueryParserTests
     }
 
     [Fact]
-    public void JqlSort_MultipleFields_ParsedCorrectly()
+    public void FqlSort_MultipleFields_ParsedCorrectly()
     {
-        var result = JqlParse(sort: "Customer.Name DESC, CreatedDate ASC");
+        var result = FqlParse(sort: "Customer.Name DESC, CreatedDate ASC");
 
         result.Sort.Should().HaveCount(2);
         result.Sort[0].Field.Should().Be("Customer.Name");
@@ -425,9 +425,9 @@ public class JqlQueryParserTests
     }
 
     [Fact]
-    public void JqlSort_DefaultAsc_WhenNoDirectionSpecified()
+    public void FqlSort_DefaultAsc_WhenNoDirectionSpecified()
     {
-        var result = JqlParse(sort: "Name");
+        var result = FqlParse(sort: "Name");
 
         result.Sort.Should().ContainSingle();
         result.Sort[0].Field.Should().Be("Name");
@@ -435,9 +435,9 @@ public class JqlQueryParserTests
     }
 
     [Fact]
-    public void JqlSort_NestedPropertyPath_ParsedCorrectly()
+    public void FqlSort_NestedPropertyPath_ParsedCorrectly()
     {
-        var result = JqlParse(sort: "Orders.Customer.Name ASC");
+        var result = FqlParse(sort: "Orders.Customer.Name ASC");
 
         result.Sort.Should().ContainSingle();
         result.Sort[0].Field.Should().Be("Orders.Customer.Name");
@@ -445,26 +445,26 @@ public class JqlQueryParserTests
     }
 
     [Fact]
-    public void JqlSort_CaseInsensitiveDirection_ParsedCorrectly()
+    public void FqlSort_CaseInsensitiveDirection_ParsedCorrectly()
     {
-        var result = JqlParse(sort: "Name desc, Age ASC");
+        var result = FqlParse(sort: "Name desc, Age ASC");
 
         result.Sort[0].Descending.Should().BeTrue();
         result.Sort[1].Descending.Should().BeFalse();
     }
 
     [Fact]
-    public void JqlSort_EmptyString_ReturnsEmptyList()
+    public void FqlSort_EmptyString_ReturnsEmptyList()
     {
-        var result = JqlParse(sort: "");
+        var result = FqlParse(sort: "");
 
         result.Sort.Should().BeEmpty();
     }
 
     [Fact]
-    public void JqlSort_NullString_ReturnsEmptyList()
+    public void FqlSort_NullString_ReturnsEmptyList()
     {
-        var result = JqlParse();
+        var result = FqlParse();
 
         result.Sort.Should().BeEmpty();
     }
@@ -472,9 +472,9 @@ public class JqlQueryParserTests
     // ─── Aggregate Parser Tests ───────────────────────────────────────
 
     [Fact]
-    public void JqlAggregate_SumWithAlias_ParsedCorrectly()
+    public void FqlAggregate_SumWithAlias_ParsedCorrectly()
     {
-        var result = JqlParse(aggregates: "SUM(Amount) AS TotalSales");
+        var result = FqlParse(aggregates: "SUM(Amount) AS TotalSales");
 
         result.Aggregates.Should().ContainSingle();
         result.Aggregates[0].Function.Should().Be(AggregateFunction.Sum);
@@ -483,9 +483,9 @@ public class JqlQueryParserTests
     }
 
     [Fact]
-    public void JqlAggregate_CountStar_ParsedCorrectly()
+    public void FqlAggregate_CountStar_ParsedCorrectly()
     {
-        var result = JqlParse(aggregates: "COUNT(*)");
+        var result = FqlParse(aggregates: "COUNT(*)");
 
         result.Aggregates.Should().ContainSingle();
         result.Aggregates[0].Function.Should().Be(AggregateFunction.Count);
@@ -494,9 +494,9 @@ public class JqlQueryParserTests
     }
 
     [Fact]
-    public void JqlAggregate_MultipleAggregates_ParsedCorrectly()
+    public void FqlAggregate_MultipleAggregates_ParsedCorrectly()
     {
-        var result = JqlParse(aggregates: "SUM(Amount), AVG(Price), COUNT(*) AS Orders");
+        var result = FqlParse(aggregates: "SUM(Amount), AVG(Price), COUNT(*) AS Orders");
 
         result.Aggregates.Should().HaveCount(3);
         result.Aggregates[0].Function.Should().Be(AggregateFunction.Sum);
@@ -509,9 +509,9 @@ public class JqlQueryParserTests
     }
 
     [Fact]
-    public void JqlAggregate_NoAlias_GeneratesDefaultAlias()
+    public void FqlAggregate_NoAlias_GeneratesDefaultAlias()
     {
-        var result = JqlParse(aggregates: "AVG(Price)");
+        var result = FqlParse(aggregates: "AVG(Price)");
 
         result.Aggregates.Should().ContainSingle();
         result.Aggregates[0].Function.Should().Be(AggregateFunction.Avg);
@@ -520,9 +520,9 @@ public class JqlQueryParserTests
     }
 
     [Fact]
-    public void JqlAggregate_NestedField_GeneratesCorrectAlias()
+    public void FqlAggregate_NestedField_GeneratesCorrectAlias()
     {
-        var result = JqlParse(aggregates: "SUM(Orders.Total)");
+        var result = FqlParse(aggregates: "SUM(Orders.Total)");
 
         result.Aggregates.Should().ContainSingle();
         result.Aggregates[0].Function.Should().Be(AggregateFunction.Sum);
@@ -531,9 +531,9 @@ public class JqlQueryParserTests
     }
 
     [Fact]
-    public void JqlAggregate_CaseInsensitiveFunctions_ParsedCorrectly()
+    public void FqlAggregate_CaseInsensitiveFunctions_ParsedCorrectly()
     {
-        var result = JqlParse(aggregates: "sum(Amount), COUNT(*), Avg(Price)");
+        var result = FqlParse(aggregates: "sum(Amount), COUNT(*), Avg(Price)");
 
         result.Aggregates.Should().HaveCount(3);
         result.Aggregates[0].Function.Should().Be(AggregateFunction.Sum);
@@ -542,9 +542,9 @@ public class JqlQueryParserTests
     }
 
     [Fact]
-    public void JqlAggregate_MinMax_ParsedCorrectly()
+    public void FqlAggregate_MinMax_ParsedCorrectly()
     {
-        var result = JqlParse(aggregates: "MIN(Date), MAX(Date)");
+        var result = FqlParse(aggregates: "MIN(Date), MAX(Date)");
 
         result.Aggregates.Should().HaveCount(2);
         result.Aggregates[0].Function.Should().Be(AggregateFunction.Min);
@@ -554,9 +554,9 @@ public class JqlQueryParserTests
     }
 
     [Fact]
-    public void JqlAggregate_InvalidFunction_IsRejected()
+    public void FqlAggregate_InvalidFunction_IsRejected()
     {
-        var act = () => JqlParse(aggregates: "INVALID(Amount), SUM(Price)");
+        var act = () => FqlParse(aggregates: "INVALID(Amount), SUM(Price)");
 
         act.Should().Throw<QueryParseException>()
             .Which.ParameterName.Should().Be("aggregates");
@@ -565,27 +565,27 @@ public class JqlQueryParserTests
     // ─── GroupBy Parser Tests ─────────────────────────────────────────
 
     [Fact]
-    public void JqlGroupBy_SingleField_ParsedCorrectly()
+    public void FqlGroupBy_SingleField_ParsedCorrectly()
     {
-        var result = JqlParse(groupBy: "Department");
+        var result = FqlParse(groupBy: "Department");
 
         result.GroupBy.Should().ContainSingle();
         result.GroupBy[0].Should().Be("Department");
     }
 
     [Fact]
-    public void JqlGroupBy_MultipleFields_ParsedCorrectly()
+    public void FqlGroupBy_MultipleFields_ParsedCorrectly()
     {
-        var result = JqlParse(groupBy: "Department,Category");
+        var result = FqlParse(groupBy: "Department,Category");
 
         result.GroupBy.Should().HaveCount(2);
         result.GroupBy.Should().ContainInOrder("Department", "Category");
     }
 
     [Fact]
-    public void JqlGroupBy_NestedProperty_ParsedCorrectly()
+    public void FqlGroupBy_NestedProperty_ParsedCorrectly()
     {
-        var result = JqlParse(groupBy: "Customer.Region");
+        var result = FqlParse(groupBy: "Customer.Region");
 
         result.GroupBy.Should().ContainSingle();
         result.GroupBy[0].Should().Be("Customer.Region");
@@ -594,9 +594,9 @@ public class JqlQueryParserTests
     // ─── Having Parser Tests ──────────────────────────────────────────
 
     [Fact]
-    public void JqlHaving_CountGreaterThan_ParsedCorrectly()
+    public void FqlHaving_CountGreaterThan_ParsedCorrectly()
     {
-        var result = JqlParse(having: "COUNT(*) > 5");
+        var result = FqlParse(having: "COUNT(*) > 5");
 
         result.Having.Should().NotBeNull();
         result.Having!.Function.Should().Be(AggregateFunction.Count);
@@ -606,9 +606,9 @@ public class JqlQueryParserTests
     }
 
     [Fact]
-    public void JqlHaving_SumGreaterThanValue_ParsedCorrectly()
+    public void FqlHaving_SumGreaterThanValue_ParsedCorrectly()
     {
-        var result = JqlParse(having: "SUM(Amount) > 1000");
+        var result = FqlParse(having: "SUM(Amount) > 1000");
 
         result.Having.Should().NotBeNull();
         result.Having!.Function.Should().Be(AggregateFunction.Sum);
@@ -618,7 +618,7 @@ public class JqlQueryParserTests
     }
 
     [Fact]
-    public void JqlHaving_AllOperators_ParsedCorrectly()
+    public void FqlHaving_AllOperators_ParsedCorrectly()
     {
         AssertHaving("COUNT(*) > 5", "gt", "5");
         AssertHaving("SUM(Amount) >= 1000", "gte", "1000");
@@ -630,16 +630,16 @@ public class JqlQueryParserTests
 
     private void AssertHaving(string havingExpr, string expectedOp, string expectedValue)
     {
-        var result = JqlParse(having: havingExpr);
+        var result = FqlParse(having: havingExpr);
         result.Having.Should().NotBeNull();
         result.Having!.Operator.Should().Be(expectedOp);
         result.Having.Value.Should().Be(expectedValue);
     }
 
     [Fact]
-    public void JqlHaving_FieldSpecific_ParsedCorrectly()
+    public void FqlHaving_FieldSpecific_ParsedCorrectly()
     {
-        var result = JqlParse(having: "SUM(Orders.Total) > 500");
+        var result = FqlParse(having: "SUM(Orders.Total) > 500");
 
         result.Having.Should().NotBeNull();
         result.Having!.Function.Should().Be(AggregateFunction.Sum);
@@ -649,9 +649,9 @@ public class JqlQueryParserTests
     }
 
     [Fact]
-    public void JqlHaving_EmptyString_ReturnsNull()
+    public void FqlHaving_EmptyString_ReturnsNull()
     {
-        var result = JqlParse(having: "");
+        var result = FqlParse(having: "");
 
         result.Having.Should().BeNull();
     }
@@ -659,9 +659,9 @@ public class JqlQueryParserTests
     // ─── Integration Tests ────────────────────────────────────────────
 
     [Fact]
-    public void JqlIntegration_AllParameters_ParsedCorrectly()
+    public void FqlIntegration_AllParameters_ParsedCorrectly()
     {
-        var result = JqlParse(
+        var result = FqlParse(
             filter: "((status = 'Open' OR status = 'Pending') AND amount > 100) OR customer.name CONTAINS 'john'",
             sort: "createdAt DESC, name ASC",
             select: "Id,Name,CustomerName",

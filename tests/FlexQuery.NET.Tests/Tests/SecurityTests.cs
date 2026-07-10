@@ -1,7 +1,7 @@
 using FlexQuery.NET.Builders;
 using FlexQuery.NET.Models;
 using FlexQuery.NET.Parsers;
-using FlexQuery.NET.Parsers.Jql;
+using FlexQuery.NET.Parsers.Fql;
 
 namespace FlexQuery.NET.Tests.Tests;
 
@@ -19,7 +19,7 @@ public class SecurityTests : IDisposable
     {
         var act = () =>
         {
-            var filter = new JqlQueryParser().Parse($"name = \"{injectedValue}\"");
+            var filter = new FqlQueryParser().Parse($"name = \"{injectedValue}\"");
             var options = new QueryOptions { Filter = filter };
             return _db.Entities.ApplyFilter(options).ToList();
         };
@@ -29,7 +29,7 @@ public class SecurityTests : IDisposable
             var result = act();
             result.Should().BeEmpty();
         }
-        catch (JqlParseException)
+        catch (FqlParseException)
         {
             // Valid: it rejected the dangerous token
         }
@@ -41,7 +41,7 @@ public class SecurityTests : IDisposable
     {
         var act = () =>
         {
-            var filter = new JqlQueryParser().Parse($"orders.any(status = \"{injectedValue}\")");
+            var filter = new FqlQueryParser().Parse($"orders.any(status = \"{injectedValue}\")");
             var options = new QueryOptions { Filter = filter };
             return _db.Entities.ApplyFilter(options).ToList();
         };
@@ -51,7 +51,7 @@ public class SecurityTests : IDisposable
             var result = act();
             result.Should().BeEmpty();
         }
-        catch (JqlParseException)
+        catch (FqlParseException)
         {
             // Valid
         }

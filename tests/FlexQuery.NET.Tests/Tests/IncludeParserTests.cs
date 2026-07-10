@@ -1,6 +1,6 @@
 using FlexQuery.NET.Models.Filters;
 using FlexQuery.NET.Parsers;
-using FlexQuery.NET.Parsers.Jql;
+using FlexQuery.NET.Parsers.Fql;
 
 namespace FlexQuery.NET.Tests.Tests;
 
@@ -110,22 +110,22 @@ public class IncludeParserTests
         act.Should().NotThrow();
     }
 
-    // ─── JQL Include Tests ───────────────────────────────────────────
+    // ─── FQL Include Tests ───────────────────────────────────────────
 
     [Theory]
     [InlineData(null)]
     [InlineData("")]
     [InlineData(" ")]
-    public void JqlParse_Empty_ReturnsEmptyList(string? input)
+    public void FqlParse_Empty_ReturnsEmptyList(string? input)
     {
-        var result = JqlIncludeParser.Parse(input);
+        var result = FqlIncludeParser.Parse(input);
         result.Should().BeEmpty();
     }
 
     [Fact]
-    public void JqlParse_PlainIncludes_ReturnsUnfilteredNodes()
+    public void FqlParse_PlainIncludes_ReturnsUnfilteredNodes()
     {
-        var result = JqlIncludeParser.Parse("Orders, Profile");
+        var result = FqlIncludeParser.Parse("Orders, Profile");
 
         result.Should().HaveCount(2);
         result[0].Path.Should().Be("Orders");
@@ -135,9 +135,9 @@ public class IncludeParserTests
     }
 
     [Fact]
-    public void JqlParse_NestedIncludes_BuildsHierarchy()
+    public void FqlParse_NestedIncludes_BuildsHierarchy()
     {
-        var result = JqlIncludeParser.Parse("Orders.OrderItems.Product");
+        var result = FqlIncludeParser.Parse("Orders.OrderItems.Product");
 
         result.Should().HaveCount(1);
         result[0].Path.Should().Be("Orders");
@@ -148,9 +148,9 @@ public class IncludeParserTests
     }
 
     [Fact]
-    public void JqlParse_FilteredIncludes_ParsesFiltersAtEachLevel()
+    public void FqlParse_FilteredIncludes_ParsesFiltersAtEachLevel()
     {
-        var result = JqlIncludeParser.Parse("Orders(Status = 'Cancelled').OrderItems(Id = 101)");
+        var result = FqlIncludeParser.Parse("Orders(Status = 'Cancelled').OrderItems(Id = 101)");
 
         result.Should().HaveCount(1);
         
@@ -171,9 +171,9 @@ public class IncludeParserTests
     }
 
     [Fact]
-    public void JqlParse_ComplexFilter_UsesJqlGrammar()
+    public void FqlParse_ComplexFilter_UsesFqlGrammar()
     {
-        var result = JqlIncludeParser.Parse("Orders(Status = 'Active' AND Amount > 100)");
+        var result = FqlIncludeParser.Parse("Orders(Status = 'Active' AND Amount > 100)");
 
         result.Should().HaveCount(1);
         var orders = result[0];
@@ -192,9 +192,9 @@ public class IncludeParserTests
     [InlineData("Orders(Amount <= 200)")]
     [InlineData("Orders(Status = 'Active' AND Amount > 100)")]
     [InlineData("Orders(Status = 'Active' OR Status = 'Pending')")]
-    public void JqlParse_ValidSyntax_DoesNotThrow(string input)
+    public void FqlParse_ValidSyntax_DoesNotThrow(string input)
     {
-        var act = () => JqlIncludeParser.Parse(input);
+        var act = () => FqlIncludeParser.Parse(input);
         act.Should().NotThrow();
     }
 }

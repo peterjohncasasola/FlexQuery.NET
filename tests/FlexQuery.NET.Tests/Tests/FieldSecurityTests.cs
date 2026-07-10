@@ -1,6 +1,6 @@
 using FlexQuery.NET.Models;
 using FlexQuery.NET.Parsers;
-using FlexQuery.NET.Parsers.Jql;
+using FlexQuery.NET.Parsers.Fql;
 using FlexQuery.NET.Validation;
 using FlexQuery.NET.Exceptions;
 using FlexQuery.NET;
@@ -67,7 +67,7 @@ public class FieldSecurityTests
     [Fact]
     public void Should_Fail_When_Nested_Field_Is_Blacklisted()
     {
-        var filter = new JqlQueryParser().Parse("orders.any(Status = 'Cancelled')");
+        var filter = new FqlQueryParser().Parse("orders.any(Status = 'Cancelled')");
         var options = new QueryOptions { Filter = filter };
         var execOptions = new QueryExecutionOptions
         {
@@ -135,7 +135,7 @@ public class FieldSecurityTests
     [Fact]
     public void Should_Allow_Wildcards_In_Whitelist()
     {
-        var filter = new JqlQueryParser().Parse("Orders.any(Status = 'Cancelled' AND Total > 0)");
+        var filter = new FqlQueryParser().Parse("Orders.any(Status = 'Cancelled' AND Total > 0)");
         var options = new QueryOptions { Filter = filter };
         var execOptions = new QueryExecutionOptions
         {
