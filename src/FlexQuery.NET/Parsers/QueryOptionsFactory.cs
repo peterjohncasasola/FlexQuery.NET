@@ -37,7 +37,6 @@ internal static class QueryOptionsFactory
         if (!string.IsNullOrWhiteSpace(parameters.Include))
         {
             options.Includes = ParserUtilities.SplitCsv(parameters.Include.Split('(')[0]);
-            options.Expand = FilteredIncludeParser.Parse(parameters.Include);
         }
 
         if (!string.IsNullOrWhiteSpace(parameters.Sort))
