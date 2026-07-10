@@ -1,6 +1,7 @@
 using System.Text.RegularExpressions;
 using FlexQuery.NET.Constants;
 using FlexQuery.NET.Models.Paging;
+using FlexQuery.NET.Parsers.Dsl;
 
 namespace FlexQuery.NET.Parsers;
 
@@ -31,10 +32,11 @@ internal static class SortParser
             var item = comma < 0 ? span : span[..comma];
             item = item.Trim();
 
-            if (!item.IsEmpty)
-            {
-                ParseSortItem(item, result);
-            }
+            if (item.IsEmpty)
+                throw new DslParseException(
+                    $"Unable to parse sort expression '{sortRaw}'. Empty sort item found.");
+
+            ParseSortItem(item, result, sortRaw);
 
             if (comma < 0) break;
             span = span[(comma + 1)..];
@@ -46,16 +48,25 @@ internal static class SortParser
     // Alias for backward compatibility
     public static List<SortNode> Parse(string? sortRaw) => ParseFromString(sortRaw);
 
-    private static void ParseSortItem(ReadOnlySpan<char> item, List<SortNode> result)
+    private static void ParseSortItem(ReadOnlySpan<char> item, List<SortNode> result, string rawInput)
     {
         var colon = item.IndexOf(':');
         var fieldSpan = colon < 0 ? item : item[..colon];
         fieldSpan = fieldSpan.Trim();
 
-        if (fieldSpan.IsEmpty) return;
+        if (fieldSpan.IsEmpty)
+            throw new DslParseException(
+                $"Unable to parse sort expression '{rawInput}'. Empty or invalid field name.");
 
         var field = fieldSpan.ToString();
         var direction = colon < 0 ? QueryOptionKeys.Asc : item[(colon + 1)..].Trim().ToString();
+
+        if (!direction.Equals(QueryOptionKeys.Asc, StringComparison.OrdinalIgnoreCase) &&
+            !direction.Equals(QueryOptionKeys.Desc, StringComparison.OrdinalIgnoreCase))
+            throw new DslParseException(
+                $"Unable to parse sort expression '{rawInput}'. Invalid sort direction '{direction}' at '{field}'. " +
+                $"Expected 'asc' or 'desc'.");
+
         var isDesc = direction.Equals(QueryOptionKeys.Desc, StringComparison.OrdinalIgnoreCase);
 
         var aggregateMatch = AggregateSortPattern.Match(field);
@@ -67,6 +78,10 @@ internal static class SortParser
                 ? aggregateMatch.Groups[QueryOptionKeys.Field].Value 
                 : null;
 
+            if (!ParserUtilities.IsValidPropertyPath(collection.AsSpan()))
+                throw new DslParseException(
+                    $"Unable to parse sort expression '{rawInput}'. Invalid collection path '{collection}'.");
+
             result.Add(new SortNode
             {
                 Field = collection,
@@ -77,6 +92,10 @@ internal static class SortParser
         }
         else
         {
+            if (!ParserUtilities.IsValidPropertyPath(field.AsSpan()))
+                throw new DslParseException(
+                    $"Unable to parse sort expression '{rawInput}'. Invalid field path '{field}'.");
+
             result.Add(new SortNode
             {
                 Field = field,
