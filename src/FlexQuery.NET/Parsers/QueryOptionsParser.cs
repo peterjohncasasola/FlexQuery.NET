@@ -1,5 +1,6 @@
 using FlexQuery.NET.Caching;
 using FlexQuery.NET.Constants;
+using FlexQuery.NET.Exceptions;
 using FlexQuery.NET.Models;
 using Microsoft.Extensions.Primitives;
 
@@ -59,7 +60,7 @@ internal static class QueryOptionsParser
 
     /// <summary>
     /// Parses raw query-string key-value pairs into <see cref="QueryOptions"/> using the globally configured syntax.
-    /// Resilient: invalid or unrecognized keys are silently ignored.
+    /// Only recognized FlexQuery parameters are parsed; unknown keys are silently ignored.
     /// </summary>
     /// <param name="queryString">The raw query string key-value pairs.</param>
     /// <returns>The parsed <see cref="QueryOptions"/>.</returns>
@@ -69,6 +70,35 @@ internal static class QueryOptionsParser
             .ToDictionary(g => g.Key, g => g.Last().Value.ToString(), StringComparer.OrdinalIgnoreCase);
 
         string? TryGet(string key) => grouped.GetValueOrDefault(key);
+        var effectiveSyntax = _defaultSyntax;
+
+        int? ParsePage()
+        {
+            if (!grouped.TryGetValue(QueryOptionKeys.Page, out var p)) return null;
+            if (string.IsNullOrWhiteSpace(p) || !int.TryParse(p, out var page) || page <= 0)
+                throw new QueryParseException(QueryOptionKeys.Page, effectiveSyntax, p,
+                    new FormatException($"'{p}' is not a valid page number. Page must be a positive integer."));
+            return page;
+        }
+
+        int? ParsePageSize()
+        {
+            if (!grouped.TryGetValue(QueryOptionKeys.PageSize, out var ps)) return null;
+            if (string.IsNullOrWhiteSpace(ps) || !int.TryParse(ps, out var pageSize) || pageSize <= 0)
+                throw new QueryParseException(QueryOptionKeys.PageSize, effectiveSyntax, ps,
+                    new FormatException($"'{ps}' is not a valid page size. PageSize must be a positive integer."));
+            return pageSize;
+        }
+
+        bool? ParseDistinct()
+        {
+            if (!grouped.TryGetValue(QueryOptionKeys.Distinct, out var dVal)) return null;
+            if (dVal.Equals("true", StringComparison.OrdinalIgnoreCase)) return true;
+            if (dVal.Equals("false", StringComparison.OrdinalIgnoreCase)) return false;
+            throw new QueryParseException(QueryOptionKeys.Distinct, effectiveSyntax, dVal,
+                new FormatException($"'{dVal}' is not a valid distinct value. Distinct must be 'true' or 'false'."));
+        }
+
         var parameters = new FlexQueryParameters
         {
             Filter = TryGet(QueryOptionKeys.Filter) ?? TryGet($"${QueryOptionKeys.Filter}"),
@@ -78,13 +108,9 @@ internal static class QueryOptionsParser
             GroupBy = TryGet(QueryOptionKeys.Group),
             Having = TryGet(QueryOptionKeys.Having),
             Aggregates = TryGet(QueryOptionKeys.Aggregates),
-            Page = grouped.TryGetValue(QueryOptionKeys.Page, out var p) && int.TryParse(p, out var page) ? page : null,
-            PageSize = grouped.TryGetValue(QueryOptionKeys.PageSize, out var ps) && int.TryParse(ps, out var pageSize) ? pageSize : null,
-            IncludeCount = grouped.TryGetValue(QueryOptionKeys.IncludeCount, out var ic) ? ic.Equals("true", StringComparison.OrdinalIgnoreCase) : null,
-            Distinct = grouped.TryGetValue(QueryOptionKeys.Distinct, out var dVal) ? dVal.Equals("true", StringComparison.OrdinalIgnoreCase) : null,
-            Mode = TryGet(QueryOptionKeys.Mode),
-            Cursor = TryGet(QueryOptionKeys.Cursor),
-            UseKeysetPagination = grouped.TryGetValue(QueryOptionKeys.UseKeysetPagination, out var ukp) && ukp.Equals("true", StringComparison.OrdinalIgnoreCase),
+            Page = ParsePage(),
+            PageSize = ParsePageSize(),
+            Distinct = ParseDistinct(),
             PreserveRawOrder = true
         };
 
