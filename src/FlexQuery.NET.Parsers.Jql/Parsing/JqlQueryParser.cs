@@ -59,7 +59,16 @@ internal sealed class JqlQueryParser : IQueryParser
         }
 
         if (!string.IsNullOrWhiteSpace(parameters.GroupBy))
-            options.GroupBy = JqlGroupByParser.Parse(parameters.GroupBy);
+        {
+            try
+            {
+                options.GroupBy = JqlGroupByParser.Parse(parameters.GroupBy);
+            }
+            catch (JqlParseException ex)
+            {
+                throw new QueryParseException("groupBy", QuerySyntax.Jql, parameters.GroupBy, ex);
+            }
+        }
 
         if (!string.IsNullOrWhiteSpace(parameters.Aggregates))
         {
