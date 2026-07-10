@@ -1,5 +1,6 @@
+using FlexQuery.NET.Exceptions;
 using FlexQuery.NET.Models;
-
+ 
 namespace FlexQuery.NET.Parsers;
 
 /// <summary>
@@ -34,7 +35,7 @@ internal static class QueryParserRegistry
     {
         _available.TryGetValue(syntax, out var parser);
         
-        return parser ?? throw new InvalidOperationException($"The configured query syntax is {syntax}, but no {syntax} parser has been registered.");
+        return parser ?? throw new ParserNotRegisteredException(syntax);
     }
 
     /// <summary>Returns true if a parser has been registered for the given syntax.</summary>
