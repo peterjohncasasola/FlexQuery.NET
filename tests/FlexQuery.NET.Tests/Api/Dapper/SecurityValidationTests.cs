@@ -1,3 +1,4 @@
+using FlexQuery.NET.Exceptions;
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
@@ -12,14 +13,13 @@ public class SecurityTests : DapperApiTestBase
     public async Task Should_Block_SQL_Injection_In_Filter()
     {
         // Act
-        var response = await Client.GetAsync("/api/users?filter=name:contains:'; DROP TABLE Customers;--");
+        var act = () => Client.GetAsync("/api/users?filter=name:contains:'; DROP TABLE Customers;--");
 
         // Assert
-        // It should either return 400 (if caught by validator) or 200 with no results (if safely parameterized)
-        // In our case, the parser should handle it as a string value and parameterize it.
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
-        var json = await response.Content.ReadAsStringAsync();
-        json.Should().NotContain("DROP TABLE");
+        // The DSL parser rejects filter expressions containing unparseable characters.
+        // This enforces a strict syntax contract — invalid input is not silently accepted.
+        var ex = await act.Should().ThrowAsync<QueryParseException>();
+        ex.Which.ParameterName.Should().Be("filter");
     }
 
     [Fact]

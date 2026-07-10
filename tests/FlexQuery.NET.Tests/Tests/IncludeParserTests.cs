@@ -1,23 +1,27 @@
+using FlexQuery.NET.Models.Filters;
 using FlexQuery.NET.Parsers;
+using FlexQuery.NET.Parsers.Jql;
 
 namespace FlexQuery.NET.Tests.Tests;
 
 public class IncludeParserTests
 {
+    // ─── DSL Include Tests ───────────────────────────────────────────
+
     [Theory]
     [InlineData(null)]
     [InlineData("")]
     [InlineData(" ")]
-    public void Parse_Empty_ReturnsEmptyList(string? input)
+    public void DslParse_Empty_ReturnsEmptyList(string? input)
     {
-        var result = FilteredIncludeParser.Parse(input);
+        var result = DslIncludeParser.Parse(input);
         result.Should().BeEmpty();
     }
 
     [Fact]
-    public void Parse_PlainIncludes_ReturnsUnfilteredNodes()
+    public void DslParse_PlainIncludes_ReturnsUnfilteredNodes()
     {
-        var result = FilteredIncludeParser.Parse("orders, profile");
+        var result = DslIncludeParser.Parse("orders, profile");
 
         result.Should().HaveCount(2);
         
@@ -31,9 +35,9 @@ public class IncludeParserTests
     }
 
     [Fact]
-    public void Parse_NestedIncludes_BuildsHierarchy()
+    public void DslParse_NestedIncludes_BuildsHierarchy()
     {
-        var result = FilteredIncludeParser.Parse("orders.orderItems.product");
+        var result = DslIncludeParser.Parse("orders.orderItems.product");
 
         result.Should().HaveCount(1);
         
@@ -51,9 +55,9 @@ public class IncludeParserTests
     }
 
     [Fact]
-    public void Parse_FilteredIncludes_ParsesFiltersAtEachLevel()
+    public void DslParse_FilteredIncludes_ParsesFiltersAtEachLevel()
     {
-        var result = FilteredIncludeParser.Parse("orders(status:eq:Cancelled).orderItems(id:eq:101)");
+        var result = DslIncludeParser.Parse("orders(status:eq:Cancelled).orderItems(id:eq:101)");
 
         result.Should().HaveCount(1);
         
@@ -75,39 +79,20 @@ public class IncludeParserTests
     }
 
     [Fact]
-    public void Parse_ComplexFilterWithParentheses_IgnoresInnerParenthesesForSplit()
+    public void DslParse_ComplexFilterWithParentheses_IgnoresInnerParenthesesForSplit()
     {
-        var result = FilteredIncludeParser.Parse("orders(status:eq:Cancelled&(total:gt:100|type:eq:VIP)),profile");
+        var result = DslIncludeParser.Parse("orders(status:eq:Cancelled&(total:gt:100|type:eq:VIP)),profile");
 
         result.Should().HaveCount(2);
         
         var orders = result[0];
         orders.Path.Should().Be("orders");
         orders.Filter.Should().NotBeNull();
-        orders.Filter!.Groups.Should().HaveCount(1); // The nested OR group
+        orders.Filter!.Groups.Should().HaveCount(1);
         
         var profile = result[1];
         profile.Path.Should().Be("profile");
         profile.Filter.Should().BeNull();
-    }
-
-    [Theory]
-    [InlineData("orders(Status = 'Cancelled')")]
-    [InlineData("orders(Amount > 1000)")]
-    [InlineData("orders(Status != 'Cancelled')")]
-    [InlineData("orders(Amount >= 100)")]
-    [InlineData("orders(Amount < 50)")]
-    [InlineData("orders(Amount <= 200)")]
-    [InlineData("orders(Status = 'Active' AND Amount > 100)")]
-    [InlineData("orders(Status = 'Active' OR Status = 'Pending')")]
-    [InlineData("orders(NOT Status = 'Cancelled')")]
-    [InlineData("orders(Status IN ('Active', 'Pending'))")]
-    [InlineData("orders(Status NOT IN ('Cancelled', 'Deleted'))")]
-    public void Parse_JqlSyntax_ThrowsInvalidOperationException(string input)
-    {
-        var act = () => FilteredIncludeParser.Parse(input);
-        act.Should().Throw<InvalidOperationException>()
-            .WithMessage("JQL syntax is no longer supported in filtered includes. *");
     }
 
     [Theory]
@@ -119,9 +104,97 @@ public class IncludeParserTests
     [InlineData("orders(Amount:lte:200)")]
     [InlineData("orders(Status:eq:Active&Amount:gt:100)")]
     [InlineData("orders(Status:eq:Active|Status:eq:Pending)")]
-    public void Parse_DslSyntax_DoesNotThrow(string input)
+    public void DslParse_ValidSyntax_DoesNotThrow(string input)
     {
-        var act = () => FilteredIncludeParser.Parse(input);
+        var act = () => DslIncludeParser.Parse(input);
+        act.Should().NotThrow();
+    }
+
+    // ─── JQL Include Tests ───────────────────────────────────────────
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData(" ")]
+    public void JqlParse_Empty_ReturnsEmptyList(string? input)
+    {
+        var result = JqlIncludeParser.Parse(input);
+        result.Should().BeEmpty();
+    }
+
+    [Fact]
+    public void JqlParse_PlainIncludes_ReturnsUnfilteredNodes()
+    {
+        var result = JqlIncludeParser.Parse("Orders, Profile");
+
+        result.Should().HaveCount(2);
+        result[0].Path.Should().Be("Orders");
+        result[0].Filter.Should().BeNull();
+        result[1].Path.Should().Be("Profile");
+        result[1].Filter.Should().BeNull();
+    }
+
+    [Fact]
+    public void JqlParse_NestedIncludes_BuildsHierarchy()
+    {
+        var result = JqlIncludeParser.Parse("Orders.OrderItems.Product");
+
+        result.Should().HaveCount(1);
+        result[0].Path.Should().Be("Orders");
+        result[0].Children.Should().HaveCount(1);
+        result[0].Children[0].Path.Should().Be("OrderItems");
+        result[0].Children[0].Children.Should().HaveCount(1);
+        result[0].Children[0].Children[0].Path.Should().Be("Product");
+    }
+
+    [Fact]
+    public void JqlParse_FilteredIncludes_ParsesFiltersAtEachLevel()
+    {
+        var result = JqlIncludeParser.Parse("Orders(Status = 'Cancelled').OrderItems(Id = 101)");
+
+        result.Should().HaveCount(1);
+        
+        var orders = result[0];
+        orders.Path.Should().Be("Orders");
+        orders.Filter.Should().NotBeNull();
+        orders.Filter!.Filters.Should().HaveCount(1);
+        orders.Filter.Filters[0].Field.Should().Be("Status");
+        orders.Filter.Filters[0].Value.Should().Be("Cancelled");
+        
+        orders.Children.Should().HaveCount(1);
+        var items = orders.Children[0];
+        items.Path.Should().Be("OrderItems");
+        items.Filter.Should().NotBeNull();
+        items.Filter!.Filters.Should().HaveCount(1);
+        items.Filter.Filters[0].Field.Should().Be("Id");
+        items.Filter.Filters[0].Value.Should().Be("101");
+    }
+
+    [Fact]
+    public void JqlParse_ComplexFilter_UsesJqlGrammar()
+    {
+        var result = JqlIncludeParser.Parse("Orders(Status = 'Active' AND Amount > 100)");
+
+        result.Should().HaveCount(1);
+        var orders = result[0];
+        orders.Path.Should().Be("Orders");
+        orders.Filter.Should().NotBeNull();
+        orders.Filter!.Logic.Should().Be(LogicOperator.And);
+        orders.Filter.Filters.Should().HaveCount(2);
+    }
+
+    [Theory]
+    [InlineData("Orders(Status = 'Cancelled')")]
+    [InlineData("Orders(Amount > 1000)")]
+    [InlineData("Orders(Status != 'Cancelled')")]
+    [InlineData("Orders(Amount >= 100)")]
+    [InlineData("Orders(Amount < 50)")]
+    [InlineData("Orders(Amount <= 200)")]
+    [InlineData("Orders(Status = 'Active' AND Amount > 100)")]
+    [InlineData("Orders(Status = 'Active' OR Status = 'Pending')")]
+    public void JqlParse_ValidSyntax_DoesNotThrow(string input)
+    {
+        var act = () => JqlIncludeParser.Parse(input);
         act.Should().NotThrow();
     }
 }

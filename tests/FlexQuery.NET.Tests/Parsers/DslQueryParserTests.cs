@@ -1,3 +1,4 @@
+using FlexQuery.NET.Exceptions;
 using FlexQuery.NET.Models;
 using FlexQuery.NET.Models.Aggregates;
 using FlexQuery.NET.Models.Filters;
@@ -69,14 +70,15 @@ public class DslQueryParserTests
     }
 
     [Fact]
-    public void DslFilter_MalformedDsl_IsIgnoredGracefully()
+    public void DslFilter_MalformedDsl_IsRejected()
     {
-        var opts = Parse(new()
+        var act = () => Parse(new()
         {
             ["filter"] = "name:eq:"
         });
 
-        opts.Filter.Should().BeNull();
+        act.Should().Throw<QueryParseException>()
+            .Which.ParameterName.Should().Be("filter");
     }
 
     [Fact]
@@ -143,23 +145,25 @@ public class DslQueryParserTests
     [Fact]
     public void Dsl_InvalidOperator_IsRejected()
     {
-        var opts = Parse(new()
+        var act = () => Parse(new()
         {
             ["filter"] = "age:unknown:20"
         });
 
-        opts.Filter.Should().BeNull();
+        act.Should().Throw<QueryParseException>()
+            .Which.ParameterName.Should().Be("filter");
     }
 
     [Fact]
     public void Dsl_MalformedExpression_IsRejected()
     {
-        var opts = Parse(new()
+        var act = () => Parse(new()
         {
             ["filter"] = "(name:eq:john|age:gt:20"
         });
 
-        opts.Filter.Should().BeNull();
+        act.Should().Throw<QueryParseException>()
+            .Which.ParameterName.Should().Be("filter");
     }
 
     [Fact]

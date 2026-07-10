@@ -1,3 +1,4 @@
+using FlexQuery.NET.Exceptions;
 using FlexQuery.NET.Models;
 using FlexQuery.NET.Parsers;
 using FlexQuery.NET.Parsers.MiniOData;
@@ -71,11 +72,11 @@ public class MiniODataIntegrationTests
         };
 
         // Act & Assert
-        // This should fail or produce weird AST if parsed as DSL
-        var optionsDsl = QueryOptionsParser.Parse(parameters, QuerySyntax.NativeDsl);
-        // (In reality, DslParser might throw or ignore the 'eq')
-        
-        // This should work if forced to OData
+        // DSL should reject OData syntax
+        var dslAct = () => QueryOptionsParser.Parse(parameters, QuerySyntax.NativeDsl);
+        dslAct.Should().Throw<FlexQueryException>();
+
+        // MiniOData should parse OData syntax
         var optionsOData = QueryOptionsParser.Parse(parameters, QuerySyntax.MiniOData);
         optionsOData.Filter.Should().NotBeNull();
         optionsOData.Filter!.Filters[0].Value.Should().Be("john");

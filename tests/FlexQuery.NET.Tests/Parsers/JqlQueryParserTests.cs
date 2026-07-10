@@ -1,3 +1,4 @@
+using FlexQuery.NET.Exceptions;
 using FlexQuery.NET.Models;
 using FlexQuery.NET.Models.Aggregates;
 using FlexQuery.NET.Models.Filters;
@@ -553,13 +554,12 @@ public class JqlQueryParserTests
     }
 
     [Fact]
-    public void JqlAggregate_InvalidFunction_IsIgnored()
+    public void JqlAggregate_InvalidFunction_IsRejected()
     {
-        var result = JqlParse(aggregates: "INVALID(Amount), SUM(Price)");
+        var act = () => JqlParse(aggregates: "INVALID(Amount), SUM(Price)");
 
-        result.Aggregates.Should().ContainSingle();
-        result.Aggregates[0].Function.Should().Be(AggregateFunction.Sum);
-        result.Aggregates[0].Field.Should().Be("Price");
+        act.Should().Throw<QueryParseException>()
+            .Which.ParameterName.Should().Be("aggregates");
     }
 
     // ─── GroupBy Parser Tests ─────────────────────────────────────────
