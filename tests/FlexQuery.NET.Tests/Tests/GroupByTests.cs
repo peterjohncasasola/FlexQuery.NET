@@ -17,8 +17,10 @@ public class GroupByTests : IDisposable
 
     private static QueryOptions Parse(Dictionary<string, string> raw)
     {
-        var kvps = raw.Select(kv =>
-            new KeyValuePair<string, StringValues>(kv.Key, new StringValues(kv.Value)));
+        var kvps = raw.ToDictionary(
+            kv => kv.Key,
+            kv => new StringValues(kv.Value),
+            StringComparer.OrdinalIgnoreCase);
         return QueryOptionsParser.Parse(kvps);
     }
 
