@@ -1,18 +1,18 @@
-namespace FlexQuery.NET.Parsers.Jql;
+namespace FlexQuery.NET.Parsers.Fql;
 
-internal sealed class JqlTokenizer
+internal sealed class FqlTokenizer
 {
     private readonly string _source;
     private int _position;
 
-    public JqlTokenizer(string source)
+    public FqlTokenizer(string source)
     {
         _source = source ?? string.Empty;
     }
 
-    public IReadOnlyList<JqlToken> Tokenize()
+    public IReadOnlyList<FqlToken> Tokenize()
     {
-        var tokens = new List<JqlToken>();
+        var tokens = new List<FqlToken>();
 
         while (_position < _source.Length)
         {
@@ -27,27 +27,27 @@ internal sealed class JqlTokenizer
             switch (ch)
             {
                 case '(':
-                    tokens.Add(new JqlToken(JqlTokenType.OpenParen, "(", start));
+                    tokens.Add(new FqlToken(FqlTokenType.OpenParen, "(", start));
                     _position++;
                     break;
                 case ')':
-                    tokens.Add(new JqlToken(JqlTokenType.CloseParen, ")", start));
+                    tokens.Add(new FqlToken(FqlTokenType.CloseParen, ")", start));
                     _position++;
                     break;
                 case '[':
-                    tokens.Add(new JqlToken(JqlTokenType.OpenBracket, "[", start));
+                    tokens.Add(new FqlToken(FqlTokenType.OpenBracket, "[", start));
                     _position++;
                     break;
                 case ']':
-                    tokens.Add(new JqlToken(JqlTokenType.CloseBracket, "]", start));
+                    tokens.Add(new FqlToken(FqlTokenType.CloseBracket, "]", start));
                     _position++;
                     break;
                 case ',':
-                    tokens.Add(new JqlToken(JqlTokenType.Comma, ",", start));
+                    tokens.Add(new FqlToken(FqlTokenType.Comma, ",", start));
                     _position++;
                     break;
                 case '.':
-                    tokens.Add(new JqlToken(JqlTokenType.Dot, ".", start));
+                    tokens.Add(new FqlToken(FqlTokenType.Dot, ".", start));
                     _position++;
                     break;
                 case '"':
@@ -57,41 +57,41 @@ internal sealed class JqlTokenizer
                 case '!':
                     if (Peek('='))
                     {
-                        tokens.Add(new JqlToken(JqlTokenType.Neq, "!=", start));
+                        tokens.Add(new FqlToken(FqlTokenType.Neq, "!=", start));
                         _position += 2;
                         break;
                     }
-                    throw new JqlParseException($"Unexpected character '!' at position {start}.");
+                    throw new FqlParseException($"Unexpected character '!' at position {start}.");
                 case '>':
                     if (Peek('='))
                     {
-                        tokens.Add(new JqlToken(JqlTokenType.Gte, ">=", start));
+                        tokens.Add(new FqlToken(FqlTokenType.Gte, ">=", start));
                         _position += 2;
                     }
                     else
                     {
-                        tokens.Add(new JqlToken(JqlTokenType.Gt, ">", start));
+                        tokens.Add(new FqlToken(FqlTokenType.Gt, ">", start));
                         _position++;
                     }
                     break;
                 case '<':
                     if (Peek('='))
                     {
-                        tokens.Add(new JqlToken(JqlTokenType.Lte, "<=", start));
+                        tokens.Add(new FqlToken(FqlTokenType.Lte, "<=", start));
                         _position += 2;
                     }
                     else
                     {
-                        tokens.Add(new JqlToken(JqlTokenType.Lt, "<", start));
+                        tokens.Add(new FqlToken(FqlTokenType.Lt, "<", start));
                         _position++;
                     }
                     break;
                 case '=':
-                    tokens.Add(new JqlToken(JqlTokenType.Eq, "=", start));
+                    tokens.Add(new FqlToken(FqlTokenType.Eq, "=", start));
                     _position++;
                     break;
                 case '*':
-                    tokens.Add(new JqlToken(JqlTokenType.Star, "*", start));
+                    tokens.Add(new FqlToken(FqlTokenType.Star, "*", start));
                     _position++;
                     break;
                 default:
@@ -106,7 +106,7 @@ internal sealed class JqlTokenizer
             }
         }
 
-        tokens.Add(new JqlToken(JqlTokenType.End, string.Empty, _position));
+        tokens.Add(new FqlToken(FqlTokenType.End, string.Empty, _position));
         return tokens;
     }
 
@@ -116,7 +116,7 @@ internal sealed class JqlTokenizer
     private static bool IsNumberStart(char ch)
         => char.IsDigit(ch) || ch == '-';
 
-    private JqlToken ReadNumber()
+    private FqlToken ReadNumber()
     {
         var start = _position;
         var hasDot = false;
@@ -125,7 +125,7 @@ internal sealed class JqlTokenizer
         {
             _position++;
             if (_position >= _source.Length || !char.IsDigit(_source[_position]))
-                throw new JqlParseException($"Invalid number at position {start}.");
+                throw new FqlParseException($"Invalid number at position {start}.");
         }
 
         while (_position < _source.Length)
@@ -148,10 +148,10 @@ internal sealed class JqlTokenizer
         }
 
         var raw = _source[start.._position];
-        return new JqlToken(JqlTokenType.Number, raw, start);
+        return new FqlToken(FqlTokenType.Number, raw, start);
     }
 
-    private JqlToken ReadWordOrIdentifier()
+    private FqlToken ReadWordOrIdentifier()
     {
         var start = _position;
 
@@ -164,57 +164,57 @@ internal sealed class JqlTokenizer
         }
 
         if (_position == start)
-            throw new JqlParseException($"Unexpected character '{_source[_position]}' at position {_position}.");
+            throw new FqlParseException($"Unexpected character '{_source[_position]}' at position {_position}.");
 
         var raw = _source[start.._position];
 
         if (raw.Equals("AND", StringComparison.OrdinalIgnoreCase))
-            return new JqlToken(JqlTokenType.And, raw, start);
+            return new FqlToken(FqlTokenType.And, raw, start);
         if (raw.Equals("OR", StringComparison.OrdinalIgnoreCase))
-            return new JqlToken(JqlTokenType.Or, raw, start);
+            return new FqlToken(FqlTokenType.Or, raw, start);
         if (raw.Equals("IN", StringComparison.OrdinalIgnoreCase))
-            return new JqlToken(JqlTokenType.In, raw, start);
+            return new FqlToken(FqlTokenType.In, raw, start);
         if (raw.Equals("NOT", StringComparison.OrdinalIgnoreCase))
-            return new JqlToken(JqlTokenType.Not, raw, start);
+            return new FqlToken(FqlTokenType.Not, raw, start);
         if (raw.Equals("CONTAINS", StringComparison.OrdinalIgnoreCase))
-            return new JqlToken(JqlTokenType.Contains, raw, start);
+            return new FqlToken(FqlTokenType.Contains, raw, start);
         if (raw.Equals("IS", StringComparison.OrdinalIgnoreCase))
-            return new JqlToken(JqlTokenType.Is, raw, start);
+            return new FqlToken(FqlTokenType.Is, raw, start);
         if (raw.Equals("NULL", StringComparison.OrdinalIgnoreCase))
-            return new JqlToken(JqlTokenType.Null, raw, start);
+            return new FqlToken(FqlTokenType.Null, raw, start);
         if (raw.Equals("BETWEEN", StringComparison.OrdinalIgnoreCase))
-            return new JqlToken(JqlTokenType.Between, raw, start);
+            return new FqlToken(FqlTokenType.Between, raw, start);
         if (raw.Equals("LIKE", StringComparison.OrdinalIgnoreCase))
-            return new JqlToken(JqlTokenType.Like, raw, start);
+            return new FqlToken(FqlTokenType.Like, raw, start);
         if (raw.Equals("STARTSWITH", StringComparison.OrdinalIgnoreCase))
-            return new JqlToken(JqlTokenType.StartsWith, raw, start);
+            return new FqlToken(FqlTokenType.StartsWith, raw, start);
         if (raw.Equals("ENDSWITH", StringComparison.OrdinalIgnoreCase))
-            return new JqlToken(JqlTokenType.EndsWith, raw, start);
+            return new FqlToken(FqlTokenType.EndsWith, raw, start);
         if (raw.Equals("ANY", StringComparison.OrdinalIgnoreCase))
-            return new JqlToken(JqlTokenType.Any, raw, start);
+            return new FqlToken(FqlTokenType.Any, raw, start);
         if (raw.Equals("ALL", StringComparison.OrdinalIgnoreCase))
-            return new JqlToken(JqlTokenType.All, raw, start);
+            return new FqlToken(FqlTokenType.All, raw, start);
         if (raw.Equals("COUNT", StringComparison.OrdinalIgnoreCase))
-            return new JqlToken(JqlTokenType.Count, raw, start);
+            return new FqlToken(FqlTokenType.Count, raw, start);
         if (raw.Equals("ASC", StringComparison.OrdinalIgnoreCase))
-            return new JqlToken(JqlTokenType.Asc, raw, start);
+            return new FqlToken(FqlTokenType.Asc, raw, start);
         if (raw.Equals("DESC", StringComparison.OrdinalIgnoreCase))
-            return new JqlToken(JqlTokenType.Desc, raw, start);
+            return new FqlToken(FqlTokenType.Desc, raw, start);
         if (raw.Equals("SUM", StringComparison.OrdinalIgnoreCase))
-            return new JqlToken(JqlTokenType.Sum, raw, start);
+            return new FqlToken(FqlTokenType.Sum, raw, start);
         if (raw.Equals("AVG", StringComparison.OrdinalIgnoreCase))
-            return new JqlToken(JqlTokenType.Avg, raw, start);
+            return new FqlToken(FqlTokenType.Avg, raw, start);
         if (raw.Equals("MIN", StringComparison.OrdinalIgnoreCase))
-            return new JqlToken(JqlTokenType.Min, raw, start);
+            return new FqlToken(FqlTokenType.Min, raw, start);
         if (raw.Equals("MAX", StringComparison.OrdinalIgnoreCase))
-            return new JqlToken(JqlTokenType.Max, raw, start);
+            return new FqlToken(FqlTokenType.Max, raw, start);
         if (raw.Equals("AS", StringComparison.OrdinalIgnoreCase))
-            return new JqlToken(JqlTokenType.As, raw, start);
+            return new FqlToken(FqlTokenType.As, raw, start);
 
-        return new JqlToken(JqlTokenType.Identifier, raw, start);
+        return new FqlToken(FqlTokenType.Identifier, raw, start);
     }
 
-    private JqlToken ReadQuoted(char quote)
+    private FqlToken ReadQuoted(char quote)
     {
         var tokenStart = _position;
         _position++;
@@ -228,7 +228,7 @@ internal sealed class JqlTokenizer
             {
                 var value = _source[valueStart.._position];
                 _position++;
-                return new JqlToken(JqlTokenType.String, value, tokenStart);
+                return new FqlToken(FqlTokenType.String, value, tokenStart);
             }
 
             if (ch == '\\')
@@ -239,10 +239,10 @@ internal sealed class JqlTokenizer
             _position++;
         }
 
-        throw new JqlParseException($"Unterminated quoted value at position {tokenStart}.");
+        throw new FqlParseException($"Unterminated quoted value at position {tokenStart}.");
     }
 
-    private JqlToken ReadEscapedQuoted(char quote, int tokenStart, int valueStart)
+    private FqlToken ReadEscapedQuoted(char quote, int tokenStart, int valueStart)
     {
         var sb = new System.Text.StringBuilder();
         sb.Append(_source[valueStart.._position]);
@@ -261,13 +261,13 @@ internal sealed class JqlTokenizer
             if (ch == quote)
             {
                 _position++;
-                return new JqlToken(JqlTokenType.String, sb.ToString(), tokenStart);
+                return new FqlToken(FqlTokenType.String, sb.ToString(), tokenStart);
             }
 
             sb.Append(ch);
             _position++;
         }
 
-        throw new JqlParseException($"Unterminated quoted value at position {tokenStart}.");
+        throw new FqlParseException($"Unterminated quoted value at position {tokenStart}.");
     }
 }

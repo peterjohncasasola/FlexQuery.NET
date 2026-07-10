@@ -1,30 +1,30 @@
 using FlexQuery.NET.Models;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace FlexQuery.NET.Parsers.Jql;
+namespace FlexQuery.NET.Parsers.Fql;
 
 /// <summary>
-/// Extension methods for registering FlexQuery.NET JQL parser services
+/// Extension methods for registering FlexQuery.NET Fql parser services
 /// with the Microsoft dependency injection container.
 /// </summary>
 public static class ServiceCollectionExtensions
 {
     /// <summary>
-    /// Registers the JQL parser with FlexQuery.
+    /// Registers the Fql parser with FlexQuery.
     /// <para>
     /// Registering the parser makes it available for use but does not automatically
     /// activate it.
     /// </para>
     /// <para>
-    /// Configure <see cref="QuerySyntax.Jql"/> globally or per execution
-    /// to use the JQL parser.
+    /// Configure <see cref="QuerySyntax.Fql"/> globally or per execution
+    /// to use the Fql parser.
     /// </para>
     /// </summary>
-    public static IServiceCollection AddJqlParser(this IServiceCollection services)
+    public static IServiceCollection AddFqlParser(this IServiceCollection services)
     {
         ArgumentNullException.ThrowIfNull(services);
         
-        QueryParserRegistry.Register(QuerySyntax.Jql, new JqlQueryParser());
+        QueryParserRegistry.Register(QuerySyntax.Fql, new FqlQueryParser());
         return services;
     }
 }

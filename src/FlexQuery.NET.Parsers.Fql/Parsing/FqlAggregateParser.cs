@@ -1,8 +1,8 @@
 using FlexQuery.NET.Models.Aggregates;
 
-namespace FlexQuery.NET.Parsers.Jql;
+namespace FlexQuery.NET.Parsers.Fql;
 
-internal static class JqlAggregateParser
+internal static class FqlAggregateParser
 {
     public static List<AggregateModel> Parse(string? rawSelect)
     {
@@ -28,7 +28,7 @@ internal static class JqlAggregateParser
             }
             catch
             {
-                throw new JqlParseException(
+                throw new FqlParseException(
                     $"Unable to parse aggregate expression '{rawSelect}'. " +
                     $"Expected format: FUNCTION(Field) [AS Alias]. " +
                     $"Unrecognized function '{functionName}' at '{trimmed}'.");
@@ -37,7 +37,7 @@ internal static class JqlAggregateParser
             var closeParen = trimmed.IndexOf(')', parenIndex);
             if (closeParen < 0)
             {
-                throw new JqlParseException(
+                throw new FqlParseException(
                     $"Unable to parse aggregate expression '{rawSelect}'. " +
                     $"Missing closing parenthesis in '{trimmed}'. " +
                     $"Expected format: FUNCTION(Field) [AS Alias].");
@@ -47,7 +47,7 @@ internal static class JqlAggregateParser
             var remaining = trimmed[(closeParen + 1)..].Trim();
 
             if (fieldRaw.Length > 0 && fieldRaw != "*" && !ParserUtilities.IsValidPropertyPath(fieldRaw.AsSpan()))
-                throw new JqlParseException(
+                throw new FqlParseException(
                     $"Invalid field '{fieldRaw}' in aggregate expression '{rawSelect}'. " +
                     "Field must be a valid property path.");
 
@@ -72,7 +72,7 @@ internal static class JqlAggregateParser
 
         if (result.Count == 0)
         {
-            throw new JqlParseException(
+            throw new FqlParseException(
                 $"Unable to parse aggregate expression '{rawSelect}'. " +
                 $"Expected format: FUNCTION(Field) [AS Alias]. No valid aggregate expressions found.");
         }

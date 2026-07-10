@@ -7,7 +7,7 @@
     <Project Path="src/FlexQuery.NET.Dapper/FlexQuery.NET.Dapper.csproj" />
     <Project Path="src/FlexQuery.NET.Parsers.MiniOData/FlexQuery.NET.Parsers.MiniOData.csproj" />
     <Project Path="src/FlexQuery.NET.Adapters.AgGrid/FlexQuery.NET.Adapters.AgGrid.csproj" />
-    <Project Path="src/FlexQuery.NET.Parsers.Jql/FlexQuery.NET.Parsers.Jql.csproj" />
+    <Project Path="src/FlexQuery.NET.Parsers.Fql/FlexQuery.NET.Parsers.Fql.csproj" />
     <Project Path="src/FlexQuery.NET.Adapters.Kendo/FlexQuery.NET.Adapters.Kendo.csproj" />
   </Folder>
   <Folder Name="/tests/">

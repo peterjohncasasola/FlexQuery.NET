@@ -1,8 +1,8 @@
 using FlexQuery.NET.Models.Paging;
 
-namespace FlexQuery.NET.Parsers.Jql;
+namespace FlexQuery.NET.Parsers.Fql;
 
-internal static class JqlSortParser
+internal static class FqlSortParser
 {
     public static List<SortNode> Parse(string? sortRaw)
     {
@@ -16,7 +16,7 @@ internal static class JqlSortParser
         {
             var trimmed = item.Trim();
             if (trimmed.Length == 0)
-                throw new JqlParseException(
+                throw new FqlParseException(
                     $"Unable to parse sort expression '{sortRaw}'. Empty sort item found. " +
                     $"Expected format: Field [ASC|DESC]");
 
@@ -30,7 +30,7 @@ internal static class JqlSortParser
                     direction.Equals("DESCENDING", StringComparison.OrdinalIgnoreCase))
                 {
                     if (!ParserUtilities.IsValidPropertyPath(field.AsSpan()))
-                        throw new JqlParseException(
+                        throw new FqlParseException(
                             $"Unable to parse sort expression '{sortRaw}'. Invalid field path at '{field}'. " +
                             $"Expected format: Field [ASC|DESC]");
                     result.Add(new SortNode { Field = field, Descending = true });
@@ -41,7 +41,7 @@ internal static class JqlSortParser
                     direction.Equals("ASCENDING", StringComparison.OrdinalIgnoreCase))
                 {
                     if (!ParserUtilities.IsValidPropertyPath(field.AsSpan()))
-                        throw new JqlParseException(
+                        throw new FqlParseException(
                             $"Unable to parse sort expression '{sortRaw}'. Invalid field path at '{field}'. " +
                             $"Expected format: Field [ASC|DESC]");
                     result.Add(new SortNode { Field = field, Descending = false });
@@ -56,7 +56,7 @@ internal static class JqlSortParser
             }
             else
             {
-                throw new JqlParseException(
+                throw new FqlParseException(
                     $"Unable to parse sort expression '{sortRaw}'. Invalid field path at '{trimmed}'. " +
                     $"Expected format: Field [ASC|DESC]");
             }

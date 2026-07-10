@@ -1,6 +1,6 @@
-namespace FlexQuery.NET.Parsers.Jql;
+namespace FlexQuery.NET.Parsers.Fql;
 
-internal enum JqlTokenType
+internal enum FqlTokenType
 {
     Identifier,
     String,

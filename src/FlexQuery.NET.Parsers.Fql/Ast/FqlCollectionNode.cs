@@ -1,8 +1,8 @@
-namespace FlexQuery.NET.Parsers.Jql;
+namespace FlexQuery.NET.Parsers.Fql;
 
-internal sealed class JqlCollectionNode : JqlAstNode
+internal sealed class FqlCollectionNode : FqlAstNode
 {
-    public JqlCollectionNode(string collectionPath, string quantifier, JqlAstNode filter)
+    public FqlCollectionNode(string collectionPath, string quantifier, FqlAstNode filter)
     {
         CollectionPath = collectionPath;
         Quantifier = quantifier;
@@ -11,7 +11,7 @@ internal sealed class JqlCollectionNode : JqlAstNode
 
     public string CollectionPath { get; }
     public string Quantifier { get; }
-    public JqlAstNode Filter { get; }
+    public FqlAstNode Filter { get; }
 
     public override string ToString() => $"{CollectionPath}.{Quantifier}({Filter})";
 }

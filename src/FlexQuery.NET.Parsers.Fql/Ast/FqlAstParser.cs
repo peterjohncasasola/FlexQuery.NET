@@ -1,86 +1,86 @@
-namespace FlexQuery.NET.Parsers.Jql;
+namespace FlexQuery.NET.Parsers.Fql;
 
-internal sealed class JqlAstParser
+internal sealed class FqlAstParser
 {
-    private readonly IReadOnlyList<JqlToken> _tokens;
+    private readonly IReadOnlyList<FqlToken> _tokens;
     private int _position;
 
-    public JqlAstParser(IReadOnlyList<JqlToken> tokens)
+    public FqlAstParser(IReadOnlyList<FqlToken> tokens)
     {
         _tokens = tokens;
     }
 
-    private JqlAstNode Parse()
+    private FqlAstNode Parse()
     {
         var node = ParseOr();
-        Expect(JqlTokenType.End);
+        Expect(FqlTokenType.End);
         return node;
     }
 
-    public static JqlAstNode Parse(string source)
+    public static FqlAstNode Parse(string source)
     {
-        JqlSafetyValidator.ValidateSyntax(source);
-        return new JqlAstParser(new JqlTokenizer(source).Tokenize()).Parse();
+        FqlSafetyValidator.ValidateSyntax(source);
+        return new FqlAstParser(new FqlTokenizer(source).Tokenize()).Parse();
     }
 
-    private JqlAstNode ParseOr()
+    private FqlAstNode ParseOr()
     {
-        var children = new List<JqlAstNode> { ParseAnd() };
-        while (Match(JqlTokenType.Or))
+        var children = new List<FqlAstNode> { ParseAnd() };
+        while (Match(FqlTokenType.Or))
         {
             children.Add(ParseAnd());
         }
 
         return children.Count == 1
             ? children[0]
-            : new JqlLogicalNode("or", Flatten("or", children));
+            : new FqlLogicalNode("or", Flatten("or", children));
     }
 
-    private JqlAstNode ParseAnd()
+    private FqlAstNode ParseAnd()
     {
-        var children = new List<JqlAstNode> { ParseFactor() };
-        while (Match(JqlTokenType.And))
+        var children = new List<FqlAstNode> { ParseFactor() };
+        while (Match(FqlTokenType.And))
         {
             children.Add(ParseFactor());
         }
 
         return children.Count == 1
             ? children[0]
-            : new JqlLogicalNode("and", Flatten("and", children));
+            : new FqlLogicalNode("and", Flatten("and", children));
     }
 
-    private JqlAstNode ParseFactor()
+    private FqlAstNode ParseFactor()
     {
-        if (Match(JqlTokenType.OpenParen))
+        if (Match(FqlTokenType.OpenParen))
         {
             var node = ParseOr();
-            Expect(JqlTokenType.CloseParen);
+            Expect(FqlTokenType.CloseParen);
             return node;
         }
 
         return ParseIdentifierLed();
     }
 
-    private JqlAstNode ParseIdentifierLed()
+    private FqlAstNode ParseIdentifierLed()
     {
         var segments = new List<string>();
-        segments.Add(Expect(JqlTokenType.Identifier).Value);
+        segments.Add(Expect(FqlTokenType.Identifier).Value);
 
-        while (Current.Kind == JqlTokenType.Dot)
+        while (Current.Kind == FqlTokenType.Dot)
         {
             var nextKind = PeekAhead(1)?.Kind;
 
-            if (nextKind == JqlTokenType.Any || nextKind == JqlTokenType.All)
+            if (nextKind == FqlTokenType.Any || nextKind == FqlTokenType.All)
             {
                 _position++;
-                var quantifier = Current.Kind == JqlTokenType.Any ? "any" : "all";
+                var quantifier = Current.Kind == FqlTokenType.Any ? "any" : "all";
                 _position++;
 
-                Expect(JqlTokenType.OpenParen);
+                Expect(FqlTokenType.OpenParen);
                 var innerFilter = ParseOr();
-                Expect(JqlTokenType.CloseParen);
+                Expect(FqlTokenType.CloseParen);
 
-                return new JqlCollectionNode(
+                return new FqlCollectionNode(
                     string.Join(".", segments),
                     quantifier,
                     innerFilter);
@@ -88,7 +88,7 @@ internal sealed class JqlAstParser
 
             _position++;
 
-            if (Current.Kind == JqlTokenType.Identifier)
+            if (Current.Kind == FqlTokenType.Identifier)
             {
                 segments.Add(_tokens[_position++].Value);
             }
@@ -99,30 +99,30 @@ internal sealed class JqlAstParser
             }
         }
 
-        if (Current.Kind == JqlTokenType.OpenBracket)
+        if (Current.Kind == FqlTokenType.OpenBracket)
         {
             _position++;
             var innerFilter = ParseOr();
-            Expect(JqlTokenType.CloseBracket);
+            Expect(FqlTokenType.CloseBracket);
 
-            return new JqlCollectionNode(
+            return new FqlCollectionNode(
                 string.Join(".", segments),
                 "any",
                 innerFilter);
         }
 
         var field = string.Join(".", segments);
-        JqlSafetyValidator.ValidateField(field, Current.Position);
+        FqlSafetyValidator.ValidateField(field, Current.Position);
         return ParseConditionWithField(field);
     }
 
-    private JqlConditionNode ParseConditionWithField(string field)
+    private FqlConditionNode ParseConditionWithField(string field)
     {
         var op = ParseOperator();
 
         if (op is "isnull" or "isnotnull")
         {
-            return new JqlConditionNode(field, op, Array.Empty<string>());
+            return new FqlConditionNode(field, op, Array.Empty<string>());
         }
 
         if (op is "any" or "all")
@@ -132,7 +132,7 @@ internal sealed class JqlAstParser
             var nestedValues = ParseValue(nestedOp);
 
             var valueStr = $"{nestedField}:{nestedOp}:{string.Join(",", nestedValues)}";
-            return new JqlConditionNode(field, op, new[] { valueStr });
+            return new FqlConditionNode(field, op, new[] { valueStr });
         }
 
         if (op == "count")
@@ -141,59 +141,59 @@ internal sealed class JqlAstParser
             var nestedVal = ParseSingleValue();
 
             var valueStr = $"{nestedOp}:{nestedVal}";
-            return new JqlConditionNode(field, op, new[] { valueStr });
+            return new FqlConditionNode(field, op, new[] { valueStr });
         }
 
         if (op == "between")
         {
             var val1 = ParseSingleValue();
-            Expect(JqlTokenType.And);
+            Expect(FqlTokenType.And);
             var val2 = ParseSingleValue();
 
-            return new JqlConditionNode(field, op, new[] { val1, val2 });
+            return new FqlConditionNode(field, op, new[] { val1, val2 });
         }
 
         var values = ParseValue(op);
-        return new JqlConditionNode(field, op, values);
+        return new FqlConditionNode(field, op, values);
     }
 
     private string ParseOperator()
     {
-        if (Match(JqlTokenType.Eq)) return "eq";
-        if (Match(JqlTokenType.Neq)) return "neq";
-        if (Match(JqlTokenType.Gte)) return "gte";
-        if (Match(JqlTokenType.Gt)) return "gt";
-        if (Match(JqlTokenType.Lte)) return "lte";
-        if (Match(JqlTokenType.Lt)) return "lt";
-        if (Match(JqlTokenType.Contains)) return "contains";
-        if (Match(JqlTokenType.Like)) return "like";
-        if (Match(JqlTokenType.StartsWith)) return "startswith";
-        if (Match(JqlTokenType.EndsWith)) return "endswith";
+        if (Match(FqlTokenType.Eq)) return "eq";
+        if (Match(FqlTokenType.Neq)) return "neq";
+        if (Match(FqlTokenType.Gte)) return "gte";
+        if (Match(FqlTokenType.Gt)) return "gt";
+        if (Match(FqlTokenType.Lte)) return "lte";
+        if (Match(FqlTokenType.Lt)) return "lt";
+        if (Match(FqlTokenType.Contains)) return "contains";
+        if (Match(FqlTokenType.Like)) return "like";
+        if (Match(FqlTokenType.StartsWith)) return "startswith";
+        if (Match(FqlTokenType.EndsWith)) return "endswith";
 
-        if (Match(JqlTokenType.Is))
+        if (Match(FqlTokenType.Is))
         {
-            if (Match(JqlTokenType.Not))
+            if (Match(FqlTokenType.Not))
             {
-                Expect(JqlTokenType.Null);
+                Expect(FqlTokenType.Null);
                 return "isnotnull";
             }
-            Expect(JqlTokenType.Null);
+            Expect(FqlTokenType.Null);
             return "isnull";
         }
 
-        if (Match(JqlTokenType.Between)) return "between";
-        if (Match(JqlTokenType.Any)) return "any";
-        if (Match(JqlTokenType.All)) return "all";
-        if (Match(JqlTokenType.Count)) return "count";
-        if (Match(JqlTokenType.In)) return "in";
+        if (Match(FqlTokenType.Between)) return "between";
+        if (Match(FqlTokenType.Any)) return "any";
+        if (Match(FqlTokenType.All)) return "all";
+        if (Match(FqlTokenType.Count)) return "count";
+        if (Match(FqlTokenType.In)) return "in";
 
-        if (Match(JqlTokenType.Not))
+        if (Match(FqlTokenType.Not))
         {
-            Expect(JqlTokenType.In);
+            Expect(FqlTokenType.In);
             return "notin";
         }
 
-        throw new JqlParseException(
+        throw new FqlParseException(
             $"Expected operator at position {Current.Position}, but found {Current.Kind}.");
     }
 
@@ -201,18 +201,18 @@ internal sealed class JqlAstParser
     {
         if (op is "in" or "notin")
         {
-            Expect(JqlTokenType.OpenParen);
+            Expect(FqlTokenType.OpenParen);
 
             var values = new List<string> { ParseSingleValue() };
-            while (Match(JqlTokenType.Comma))
+            while (Match(FqlTokenType.Comma))
             {
                 values.Add(ParseSingleValue());
             }
 
-            Expect(JqlTokenType.CloseParen);
+            Expect(FqlTokenType.CloseParen);
 
             if (values.Count == 0)
-                throw new JqlParseException(
+                throw new FqlParseException(
                     $"IN list cannot be empty at position {Current.Position}.");
 
             return values;
@@ -223,26 +223,26 @@ internal sealed class JqlAstParser
 
     private string ParseSingleValue()
     {
-        if (Current.Kind is JqlTokenType.String or JqlTokenType.Number)
+        if (Current.Kind is FqlTokenType.String or FqlTokenType.Number)
         {
             return _tokens[_position++].Value;
         }
 
-        if (Current.Kind == JqlTokenType.Identifier)
+        if (Current.Kind == FqlTokenType.Identifier)
         {
             return ParseDottedIdentifier();
         }
 
-        throw new JqlParseException(
+        throw new FqlParseException(
             $"Expected value at position {Current.Position}, but found {Current.Kind}.");
     }
 
     private string ParseDottedIdentifier()
     {
-        var first = Expect(JqlTokenType.Identifier).Value;
+        var first = Expect(FqlTokenType.Identifier).Value;
         var sb = new System.Text.StringBuilder(first);
 
-        while (Current.Kind == JqlTokenType.Dot && PeekAhead(1)?.Kind == JqlTokenType.Identifier)
+        while (Current.Kind == FqlTokenType.Dot && PeekAhead(1)?.Kind == FqlTokenType.Identifier)
         {
             _position++;
             sb.Append('.');
@@ -252,12 +252,12 @@ internal sealed class JqlAstParser
         return sb.ToString();
     }
 
-    private static IReadOnlyList<JqlAstNode> Flatten(string logic, IEnumerable<JqlAstNode> children)
+    private static IReadOnlyList<FqlAstNode> Flatten(string logic, IEnumerable<FqlAstNode> children)
     {
-        var result = new List<JqlAstNode>();
+        var result = new List<FqlAstNode>();
         foreach (var child in children)
         {
-            if (child is JqlLogicalNode logical
+            if (child is FqlLogicalNode logical
                 && logical.Logic.Equals(logic, StringComparison.OrdinalIgnoreCase))
             {
                 result.AddRange(logical.Children);
@@ -270,27 +270,27 @@ internal sealed class JqlAstParser
         return result;
     }
 
-    private bool Match(JqlTokenType kind)
+    private bool Match(FqlTokenType kind)
     {
         if (Current.Kind != kind) return false;
         _position++;
         return true;
     }
 
-    private JqlToken Expect(JqlTokenType kind)
+    private FqlToken Expect(FqlTokenType kind)
     {
         if (Current.Kind == kind)
             return _tokens[_position++];
 
-        throw new JqlParseException(
+        throw new FqlParseException(
             $"Expected {kind} at position {Current.Position}, but found {Current.Kind}.");
     }
 
-    private JqlToken? PeekAhead(int offset)
+    private FqlToken? PeekAhead(int offset)
     {
         var idx = _position + offset;
         return idx < _tokens.Count ? _tokens[idx] : null;
     }
 
-    private JqlToken Current => _tokens[Math.Min(_position, _tokens.Count - 1)];
+    private FqlToken Current => _tokens[Math.Min(_position, _tokens.Count - 1)];
 }

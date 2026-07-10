@@ -1,8 +1,8 @@
 using FlexQuery.NET.Models.Filters;
 
-namespace FlexQuery.NET.Parsers.Jql;
+namespace FlexQuery.NET.Parsers.Fql;
 
-internal static class JqlFilterConverter
+internal static class FqlFilterConverter
 {
     private static readonly HashSet<string> AllowedOperators = new(StringComparer.OrdinalIgnoreCase)
     {
@@ -34,9 +34,9 @@ internal static class JqlFilterConverter
         ["count"] = "count"
     };
 
-    public static FilterGroup ToFilterGroup(JqlAstNode node)
+    public static FilterGroup ToFilterGroup(FqlAstNode node)
     {
-        if (node is JqlLogicalNode logical)
+        if (node is FqlLogicalNode logical)
             return ConvertLogical(logical);
 
         var group = new FilterGroup
@@ -44,20 +44,20 @@ internal static class JqlFilterConverter
             Logic = LogicOperator.And
         };
 
-        if (node is JqlCollectionNode collection)
+        if (node is FqlCollectionNode collection)
         {
             group.Filters.Add(ConvertCollection(collection));
         }
         else
         {
-            var c = (JqlConditionNode)node;
+            var c = (FqlConditionNode)node;
             group.Filters.Add(ConvertCondition(c));
         }
 
         return group;
     }
 
-    private static FilterGroup ConvertLogical(JqlLogicalNode node)
+    private static FilterGroup ConvertLogical(FqlLogicalNode node)
     {
         var group = new FilterGroup
         {
@@ -70,11 +70,11 @@ internal static class JqlFilterConverter
         {
             switch (child)
             {
-                case JqlConditionNode condition:
+                case FqlConditionNode condition:
                     group.Filters.Add(ConvertCondition(condition));
                     break;
 
-                case JqlCollectionNode collection:
+                case FqlCollectionNode collection:
                     group.Filters.Add(ConvertCollection(collection));
                     break;
 
@@ -87,7 +87,7 @@ internal static class JqlFilterConverter
         return group;
     }
 
-    private static FilterCondition ConvertCollection(JqlCollectionNode node)
+    private static FilterCondition ConvertCollection(FqlCollectionNode node)
     {
         var innerGroup = ToFilterGroup(node.Filter);
 
@@ -100,11 +100,11 @@ internal static class JqlFilterConverter
         };
     }
 
-    private static FilterCondition ConvertCondition(JqlConditionNode node)
+    private static FilterCondition ConvertCondition(FqlConditionNode node)
     {
         var op = NormalizeOperator(node.Operator);
         if (!AllowedOperators.Contains(op))
-            throw new JqlParseException($"Unsupported JQL operator '{node.Operator}'.");
+            throw new FqlParseException($"Unsupported FQL operator '{node.Operator}'.");
 
         var value = op is "in" or "notin" or "between"
             ? string.Join(",", node.Values)

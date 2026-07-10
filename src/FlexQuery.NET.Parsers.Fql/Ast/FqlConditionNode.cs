@@ -1,8 +1,8 @@
-namespace FlexQuery.NET.Parsers.Jql;
+namespace FlexQuery.NET.Parsers.Fql;
 
-internal sealed class JqlConditionNode : JqlAstNode
+internal sealed class FqlConditionNode : FqlAstNode
 {
-    public JqlConditionNode(string field, string @operator, IReadOnlyList<string> values)
+    public FqlConditionNode(string field, string @operator, IReadOnlyList<string> values)
     {
         Field = field;
         Operator = @operator;

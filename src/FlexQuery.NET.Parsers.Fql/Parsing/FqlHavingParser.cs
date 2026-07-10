@@ -1,9 +1,9 @@
 using FlexQuery.NET.Constants;
 using FlexQuery.NET.Models.Aggregates;
 
-namespace FlexQuery.NET.Parsers.Jql;
+namespace FlexQuery.NET.Parsers.Fql;
 
-internal static class JqlHavingParser
+internal static class FqlHavingParser
 {
     public static HavingCondition? Parse(string? rawHaving)
     {
@@ -14,7 +14,7 @@ internal static class JqlHavingParser
 
         var parenIndex = trimmed.IndexOf('(');
         if (parenIndex <= 0)
-            throw new JqlParseException(
+            throw new FqlParseException(
                 $"Unable to parse HAVING expression '{rawHaving}'. " +
                 $"Expected format: FUNCTION(Field) OPERATOR value. " +
                 $"Missing function call.");
@@ -26,7 +26,7 @@ internal static class JqlHavingParser
         }
         catch
         {
-            throw new JqlParseException(
+            throw new FqlParseException(
                 $"Unable to parse HAVING expression '{rawHaving}'. " +
                 $"Expected format: FUNCTION(Field) OPERATOR value. " +
                 $"Unrecognized aggregate function.");
@@ -34,7 +34,7 @@ internal static class JqlHavingParser
 
         var closeParen = trimmed.IndexOf(')', parenIndex);
         if (closeParen < 0)
-            throw new JqlParseException(
+            throw new FqlParseException(
                 $"Unable to parse HAVING expression '{rawHaving}'. " +
                 $"Missing closing parenthesis.");
 
@@ -42,7 +42,7 @@ internal static class JqlHavingParser
         var rest = trimmed[(closeParen + 1)..].Trim();
 
         if (rest.Length == 0)
-            throw new JqlParseException(
+            throw new FqlParseException(
                 $"Unable to parse HAVING expression '{rawHaving}'. " +
                 $"Expected format: FUNCTION(Field) OPERATOR value. " +
                 $"Missing operator and value after function call.");
@@ -58,7 +58,7 @@ internal static class JqlHavingParser
         else if (rest.StartsWith("<")) { op = "<"; opStart = 1; }
         else if (rest.StartsWith("=")) { op = "="; opStart = 1; }
         else
-            throw new JqlParseException(
+            throw new FqlParseException(
                 $"Unable to parse HAVING expression '{rawHaving}'. " +
                 $"Expected format: FUNCTION(Field) OPERATOR value. " +
                 $"Unrecognized operator in '{rest}'.");
@@ -66,7 +66,7 @@ internal static class JqlHavingParser
         value = rest[opStart..].Trim().Trim('\'', '"');
 
         if (value.Length == 0)
-            throw new JqlParseException(
+            throw new FqlParseException(
                 $"Unable to parse HAVING expression '{rawHaving}'. " +
                 $"Missing value after operator.");
 
@@ -75,7 +75,7 @@ internal static class JqlHavingParser
             : fieldRaw;
 
         if (field is not null && !ParserUtilities.IsValidPropertyPath(field.AsSpan()))
-            throw new JqlParseException(
+            throw new FqlParseException(
                 $"Invalid field '{field}' in HAVING expression '{rawHaving}'. " +
                 "Field must be a valid property path.");
 

@@ -1,13 +1,13 @@
-namespace FlexQuery.NET.Parsers.Jql;
+namespace FlexQuery.NET.Parsers.Fql;
 
 /// <summary>
-/// Provides a centrally defined catalog of all recognized JQL operators
+/// Provides a centrally defined catalog of all recognized Fql operators
 /// and a utility method to test whether a given operator name is supported.
 /// </summary>
 public static class SupportedOperators
 {
     /// <summary>
-    /// The complete set of canonical operator names recognized by the JQL parser.
+    /// The complete set of canonical operator names recognized by the Fql parser.
     /// Includes comparison operators (eq, neq, gt, gte, lt, lte),
     /// string matching operators (contains, startswith, endswith, like),
     /// null-check operators (isnull, isnotnull),
@@ -23,7 +23,7 @@ public static class SupportedOperators
     };
 
     /// <summary>
-    /// Determines whether the specified operator string is a recognized JQL operator.
+    /// Determines whether the specified operator string is a recognized Fql operator.
     /// Comparison is case-insensitive.
     /// </summary>
     /// <param name="op">The operator name to check (e.g., "eq", "contains").</param>

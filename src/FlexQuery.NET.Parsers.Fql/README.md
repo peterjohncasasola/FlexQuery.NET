@@ -1,33 +1,33 @@
-# FlexQuery.NET.Parsers.Jql
+# FlexQuery.NET.Parsers.Fql
 
-[![NuGet Version](https://img.shields.io/nuget/v/FlexQuery.NET.Parsers.Jql.svg)](https://www.nuget.org/packages/FlexQuery.NET.Parsers.Jql)
+[![NuGet Version](https://img.shields.io/nuget/v/FlexQuery.NET.Parsers.Fql.svg)](https://www.nuget.org/packages/FlexQuery.NET.Parsers.Fql)
 
-JQL (Jira Query Language) parser for FlexQuery.NET.
+FQL (FlexQuery Language) parser for FlexQuery.NET.
 
 ## When to Use This Package
 
-Install this package when you want to support JQL-style filter syntax in your API. The JQL parser integrates with the `QueryOptionsParser` pipeline so JQL queries are automatically detected and parsed alongside the native DSL format.
+Install this package when you want to support Fql-style filter syntax in your API. The Fql parser integrates with the `QueryOptionsParser` pipeline so Fql queries are automatically detected and parsed alongside the native DSL format.
 
 ## Installation
 
 ```bash
-dotnet add package FlexQuery.NET.Parsers.Jql
+dotnet add package FlexQuery.NET.Parsers.Fql
 ```
 
 ## Quick Start
 
 ```csharp
-using FlexQuery.NET.Parsers.Jql;
+using FlexQuery.NET.Parsers.Fql;
 
-var parser = new JqlQueryParser();
+var parser = new FqlQueryParser();
 var filterGroup = parser.Parse("Status = 'Active' AND Age >= 18");
 
 // GET /api/users?filter=Status = 'Active' AND Age >= 18
 ```
 
-## JQL Syntax Examples
+## Fql Syntax Examples
 
-```jql
+```Fql
 Status = 'Active'
 Age >= 18 AND
 Name CONTAINS 'john'
@@ -39,15 +39,15 @@ Status IN ('Active', 'Pending')
 
 ## Features
 
-- **`JqlQueryParser`** — Parses JQL filter expressions into `FilterGroup` AST
-- **Auto-Detection** — Registers as `IQueryParser` so JQL queries are handled seamlessly
+- **`FqlQueryParser`** — Parses Fql filter expressions into `FilterGroup` AST
+- **Auto-Detection** — Registers as `IQueryParser` so Fql queries are handled seamlessly
 - **Supported Operators** — eq, neq, gt, gte, lt, lte, contains, startswith, endswith, like, isnull, isnotnull, in, notin, between, any, all, count
 - **Standalone Usage** — Can be used without the full FlexQuery execution pipeline
 
 ## Known Limitations
 
-- The parser implements a subset of the full JQL specification — complex Jira functions and custom fields are not supported
-- Date/time parsing uses .NET conventions rather than Jira-specific formats
+- The parser implements a subset of the full FQL specification — complex functions and custom fields are not supported
+- Date/time parsing uses .NET conventions
 
 ## Related Packages
 

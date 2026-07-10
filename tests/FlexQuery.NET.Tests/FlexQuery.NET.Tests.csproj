@@ -31,7 +31,7 @@
       <ProjectReference Include="..\..\src\FlexQuery.NET.Dapper\FlexQuery.NET.Dapper.csproj" />
       <ProjectReference Include="..\..\src\FlexQuery.NET.EntityFrameworkCore\FlexQuery.NET.EntityFrameworkCore.csproj" />
       <ProjectReference Include="..\..\src\FlexQuery.NET.AspNetCore\FlexQuery.NET.AspNetCore.csproj" />
-       <ProjectReference Include="..\..\src\FlexQuery.NET.Parsers.Jql\FlexQuery.NET.Parsers.Jql.csproj" />
+       <ProjectReference Include="..\..\src\FlexQuery.NET.Parsers.Fql\FlexQuery.NET.Parsers.Fql.csproj" />
        <ProjectReference Include="..\..\src\FlexQuery.NET.Parsers.MiniOData\FlexQuery.NET.Parsers.MiniOData.csproj" />
       <ProjectReference Include="..\..\src\FlexQuery.NET.Adapters.AgGrid\FlexQuery.NET.Adapters.AgGrid.csproj" />
       <ProjectReference Include="..\..\src\FlexQuery.NET.Adapters.Kendo\FlexQuery.NET.Adapters.Kendo.csproj" />

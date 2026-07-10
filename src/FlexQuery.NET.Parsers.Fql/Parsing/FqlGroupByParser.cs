@@ -1,6 +1,6 @@
-namespace FlexQuery.NET.Parsers.Jql;
+namespace FlexQuery.NET.Parsers.Fql;
 
-internal static class JqlGroupByParser
+internal static class FqlGroupByParser
 {
     public static List<string> Parse(string? groupByRaw)
     {
@@ -14,11 +14,11 @@ internal static class JqlGroupByParser
         {
             var trimmed = item.Trim();
             if (trimmed.Length == 0)
-                throw new JqlParseException(
+                throw new FqlParseException(
                     $"Unable to parse groupBy expression '{groupByRaw}'. Empty group item found.");
 
             if (!ParserUtilities.IsValidPropertyPath(trimmed.AsSpan()))
-                throw new JqlParseException(
+                throw new FqlParseException(
                     $"Invalid property path '{trimmed}' in groupBy expression '{groupByRaw}'. " +
                     "Property paths must be dot-separated identifiers (e.g. 'Category' or 'Customer.Region').");
 
@@ -27,7 +27,7 @@ internal static class JqlGroupByParser
 
         if (result.Count == 0)
         {
-            throw new JqlParseException(
+            throw new FqlParseException(
                 $"Unable to parse groupBy expression '{groupByRaw}'. " +
                 "Expected comma-separated field paths.");
         }

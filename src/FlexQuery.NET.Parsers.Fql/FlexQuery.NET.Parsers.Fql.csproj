@@ -9,13 +9,13 @@
     <SuppressTfmSupportBuildWarnings>true</SuppressTfmSupportBuildWarnings>
 
     <!-- NuGet Metadata -->
-    <PackageId>FlexQuery.NET.Parsers.Jql</PackageId>
+    <PackageId>FlexQuery.NET.Parsers.Fql</PackageId>
     <Authors>Peter John Casasola</Authors>
     <Company>Peter John Casasola</Company>
-    <Product>FlexQuery.NET.Parsers.Jql</Product>
+    <Product>FlexQuery.NET.Parsers.Fql</Product>
 
-    <Description>Standalone JQL-lite query parser for FlexQuery.NET — parses JQL filter strings into FlexQuery filter models. Can be used independently or with FlexQuery.NET.</Description>
-    <PackageTags>flexquery;jql;parser;query;filter</PackageTags>
+    <Description>Standalone FQL query parser for FlexQuery.NET — parses FQL filter strings into FlexQuery filter models. Can be used independently or with FlexQuery.NET.</Description>
+    <PackageTags>flexquery;Fql;parser;query;filter</PackageTags>
 
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <RepositoryUrl>https://github.com/peterjohncasasola/FlexQuery.NET</RepositoryUrl>
