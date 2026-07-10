@@ -7,9 +7,31 @@ internal static class JqlGroupByParser
         if (string.IsNullOrWhiteSpace(groupByRaw))
             return [];
 
-        return groupByRaw
-            .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
-            .Where(s => s.Length > 0)
-            .ToList();
+        var result = new List<string>();
+        var items = groupByRaw.Split(',', StringSplitOptions.TrimEntries);
+
+        foreach (var item in items)
+        {
+            var trimmed = item.Trim();
+            if (trimmed.Length == 0)
+                throw new JqlParseException(
+                    $"Unable to parse groupBy expression '{groupByRaw}'. Empty group item found.");
+
+            if (!ParserUtilities.IsValidPropertyPath(trimmed.AsSpan()))
+                throw new JqlParseException(
+                    $"Invalid property path '{trimmed}' in groupBy expression '{groupByRaw}'. " +
+                    "Property paths must be dot-separated identifiers (e.g. 'Category' or 'Customer.Region').");
+
+            result.Add(trimmed);
+        }
+
+        if (result.Count == 0)
+        {
+            throw new JqlParseException(
+                $"Unable to parse groupBy expression '{groupByRaw}'. " +
+                "Expected comma-separated field paths.");
+        }
+
+        return result;
     }
 }

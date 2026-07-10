@@ -10,12 +10,15 @@ internal static class JqlSortParser
             return [];
 
         var result = new List<SortNode>();
-        var items = sortRaw.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        var items = sortRaw.Split(',', StringSplitOptions.TrimEntries);
 
         foreach (var item in items)
         {
             var trimmed = item.Trim();
-            if (trimmed.Length == 0) continue;
+            if (trimmed.Length == 0)
+                throw new JqlParseException(
+                    $"Unable to parse sort expression '{sortRaw}'. Empty sort item found. " +
+                    $"Expected format: Field [ASC|DESC]");
 
             var lastSpace = trimmed.LastIndexOf(' ');
             if (lastSpace > 0)
@@ -26,6 +29,10 @@ internal static class JqlSortParser
                 if (direction.Equals("DESC", StringComparison.OrdinalIgnoreCase) ||
                     direction.Equals("DESCENDING", StringComparison.OrdinalIgnoreCase))
                 {
+                    if (!ParserUtilities.IsValidPropertyPath(field.AsSpan()))
+                        throw new JqlParseException(
+                            $"Unable to parse sort expression '{sortRaw}'. Invalid field path at '{field}'. " +
+                            $"Expected format: Field [ASC|DESC]");
                     result.Add(new SortNode { Field = field, Descending = true });
                     continue;
                 }
@@ -33,14 +40,17 @@ internal static class JqlSortParser
                 if (direction.Equals("ASC", StringComparison.OrdinalIgnoreCase) ||
                     direction.Equals("ASCENDING", StringComparison.OrdinalIgnoreCase))
                 {
+                    if (!ParserUtilities.IsValidPropertyPath(field.AsSpan()))
+                        throw new JqlParseException(
+                            $"Unable to parse sort expression '{sortRaw}'. Invalid field path at '{field}'. " +
+                            $"Expected format: Field [ASC|DESC]");
                     result.Add(new SortNode { Field = field, Descending = false });
                     continue;
                 }
             }
 
             // No direction keyword found — treat entire segment as the field name with default ASC
-            // but only if it looks like a valid field identifier
-            if (IsValidFieldPath(trimmed))
+            if (ParserUtilities.IsValidPropertyPath(trimmed.AsSpan()))
             {
                 result.Add(new SortNode { Field = trimmed, Descending = false });
             }
@@ -53,18 +63,5 @@ internal static class JqlSortParser
         }
 
         return result;
-    }
-
-    private static bool IsValidFieldPath(string segment)
-    {
-        if (string.IsNullOrWhiteSpace(segment)) return false;
-        // Allow identifiers, dots for nested paths, underscores
-        for (int i = 0; i < segment.Length; i++)
-        {
-            var c = segment[i];
-            if (!char.IsLetterOrDigit(c) && c != '.' && c != '_')
-                return false;
-        }
-        return true;
     }
 }

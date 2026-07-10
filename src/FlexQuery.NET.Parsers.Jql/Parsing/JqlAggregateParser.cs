@@ -46,6 +46,11 @@ internal static class JqlAggregateParser
             var fieldRaw = trimmed[(parenIndex + 1)..closeParen].Trim();
             var remaining = trimmed[(closeParen + 1)..].Trim();
 
+            if (fieldRaw.Length > 0 && fieldRaw != "*" && !ParserUtilities.IsValidPropertyPath(fieldRaw.AsSpan()))
+                throw new JqlParseException(
+                    $"Invalid field '{fieldRaw}' in aggregate expression '{rawSelect}'. " +
+                    "Field must be a valid property path.");
+
             string? field = fieldRaw.Length == 0 || fieldRaw == "*"
                 ? null
                 : fieldRaw;

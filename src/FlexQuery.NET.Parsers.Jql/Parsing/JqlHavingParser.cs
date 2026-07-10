@@ -74,6 +74,11 @@ internal static class JqlHavingParser
             ? null
             : fieldRaw;
 
+        if (field is not null && !ParserUtilities.IsValidPropertyPath(field.AsSpan()))
+            throw new JqlParseException(
+                $"Invalid field '{field}' in HAVING expression '{rawHaving}'. " +
+                "Field must be a valid property path.");
+
         return new HavingCondition
         {
             Function = function,

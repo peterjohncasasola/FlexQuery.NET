@@ -7,7 +7,7 @@ internal static class JqlIncludeParser
 {
     public static List<IncludeNode> Parse(string? raw)
     {
-        return IncludeParserHelper.Parse(raw, ParseJqlFilter);
+        return IncludeParserHelper.Parse(raw, ParseJqlFilter, msg => new JqlParseException(msg));
     }
 
     private static FilterGroup? ParseJqlFilter(string raw)
