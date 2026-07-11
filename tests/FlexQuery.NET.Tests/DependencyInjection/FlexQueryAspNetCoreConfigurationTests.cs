@@ -7,8 +7,8 @@ public class FlexQueryAspNetCoreConfigurationTests
     [Fact]
     public void Configure_returns_FlexQueryOptions()
     {
-        FlexQueryConfiguration.Configure();
-        var options = FlexQueryConfiguration.DefaultOptions;
+        FlexQueryCore.Configure();
+        var options = FlexQueryCore.DefaultOptions;
         options.Should().NotBeNull();
     }
 
@@ -16,9 +16,9 @@ public class FlexQueryAspNetCoreConfigurationTests
     public void Configure_applies_configuration()
     {
         const int expectedMaxPageSize = 500;
-        FlexQueryConfiguration.Configure(o => o.MaxPageSize = expectedMaxPageSize);
+        FlexQueryCore.Configure(o => o.MaxPageSize = expectedMaxPageSize);
         
-        var options = FlexQueryConfiguration.DefaultOptions;
+        var options = FlexQueryCore.DefaultOptions;
         
         options.MaxPageSize.Should().Be(expectedMaxPageSize);
     }
@@ -26,8 +26,8 @@ public class FlexQueryAspNetCoreConfigurationTests
     [Fact]
     public void Configure_uses_default_options()
     {
-        FlexQueryConfiguration.Configure();
-        var options = FlexQueryConfiguration.DefaultOptions;
+        FlexQueryCore.Configure();
+        var options =  FlexQueryCore.DefaultOptions;
 
         options.MaxPageSize.Should().Be(1000);
         options.DefaultPageSize.Should().Be(20);

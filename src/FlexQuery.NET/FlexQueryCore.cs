@@ -1,15 +1,13 @@
+using FlexQuery.NET.Configuration;
 using FlexQuery.NET.Parsers;
 
-namespace FlexQuery.NET.Configuration;
+namespace FlexQuery.NET;
 
 /// <summary>
 /// 
 /// </summary>
-public static class FlexQueryConfiguration
+public static class FlexQueryCore
 {
-    /// <summary>
-    /// 
-    /// </summary>
     internal static FlexQueryOptions DefaultOptions { get; set; } = new();
 
     /// <summary>

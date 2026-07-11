@@ -12,7 +12,7 @@ namespace FlexQuery.NET;
 /// </summary>
 public static class QueryableExtensions
 {
-    private static IFlexQueryProcessor Processor => new FlexQueryProcessor(FlexQueryConfiguration.DefaultOptions);
+    private static IFlexQueryProcessor Processor => new FlexQueryProcessor(FlexQueryCore.DefaultOptions);
     /// <summary>
     /// Applies filter, sort, and paging in sequence.
     /// </summary>
