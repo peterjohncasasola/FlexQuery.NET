@@ -1,7 +1,7 @@
-using Microsoft.Extensions.DependencyInjection;
-using FlexQuery.NET.AspNetCore.DependencyInjection;
 using FlexQuery.NET.Configuration;
 using FlexQuery.NET.Execution;
+using FlexQuery.NET.Parsers;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace FlexQuery.NET.Tests.DependencyInjection;
 
@@ -19,13 +19,15 @@ public class AspNetCoreServiceCollectionExtensionsTests
     }
 
     [Fact]
-    public void AspNetCore_AddFlexQuery_does_not_register_IFlexQueryProcessor()
+    public void AspNetCore_AddFlexQuery_registers_IFlexQueryProcessor()
     {
         var services = new ServiceCollection();
 
         services.AddFlexQuery();
 
-        services.Should().NotContain(d => d.ServiceType == typeof(IFlexQueryProcessor));
+        var descriptor = services.Should().ContainSingle(d => d.ServiceType == typeof(IFlexQueryProcessor)).Subject;
+        descriptor.Lifetime.Should().Be(ServiceLifetime.Singleton);
+        descriptor.ImplementationType.Should().Be(typeof(FlexQueryProcessor));
     }
 
     [Fact]

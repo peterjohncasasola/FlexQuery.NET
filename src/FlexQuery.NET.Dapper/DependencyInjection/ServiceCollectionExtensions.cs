@@ -1,7 +1,6 @@
 using FlexQuery.NET.Dapper.Configuration;
-using Microsoft.Extensions.DependencyInjection;
 
-namespace FlexQuery.NET.Dapper.DependencyInjection;
+namespace Microsoft.Extensions.DependencyInjection;
 
 /// <summary>
 /// Provides dependency injection registration methods for FlexQuery Dapper.

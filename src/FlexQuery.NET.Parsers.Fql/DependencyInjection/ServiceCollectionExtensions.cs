@@ -1,6 +1,7 @@
-using Microsoft.Extensions.DependencyInjection;
+using FlexQuery.NET.Parsers;
+using FlexQuery.NET.Parsers.Fql;
 
-namespace FlexQuery.NET.Parsers.Fql.DependencyInjection;
+namespace Microsoft.Extensions.DependencyInjection;
 
 /// <summary>
 /// Extension methods for registering FlexQuery.NET Fql parser services
@@ -22,8 +23,10 @@ public static class ServiceCollectionExtensions
     public static IServiceCollection AddFqlParser(this IServiceCollection services)
     {
         ArgumentNullException.ThrowIfNull(services);
-        
-        QueryParserRegistry.Register(QuerySyntax.Fql, new FqlQueryParser());
+
+        var parser = new FqlQueryParser();
+        services.AddSingleton<IQueryParser>(parser);
+        QueryParserRegistry.Register(QuerySyntax.Fql, parser);
         return services;
     }
 }

@@ -1,7 +1,7 @@
-using FlexQuery.NET.Models;
-using Microsoft.Extensions.DependencyInjection;
+using FlexQuery.NET.Parsers;
+using FlexQuery.NET.Parsers.MiniOData;
 
-namespace FlexQuery.NET.Parsers.MiniOData.DependencyInjection;
+namespace Microsoft.Extensions.DependencyInjection;
 
 /// <summary>
 /// Extension methods for registering FlexQuery.NET Mini OData services.
@@ -22,9 +22,11 @@ public static class ServiceCollectionExtensions
     public static IServiceCollection AddMiniOData(this IServiceCollection services)
     {
         ArgumentNullException.ThrowIfNull(services);
-        
-        QueryParserRegistry.Register(QuerySyntax.MiniOData, new MiniODataQueryParser());
-        
+
+        var parser = new MiniODataQueryParser();
+        services.AddSingleton<IQueryParser>(parser);
+        QueryParserRegistry.Register(QuerySyntax.MiniOData, parser);
+
         return services;
     }
 }

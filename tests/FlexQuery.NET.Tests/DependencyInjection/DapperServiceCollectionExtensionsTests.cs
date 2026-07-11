@@ -1,7 +1,6 @@
-using Microsoft.Extensions.DependencyInjection;
-using FlexQuery.NET.Dapper.DependencyInjection;
 using FlexQuery.NET.Dapper.Metadata;
 using FlexQuery.NET.Tests.Models;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace FlexQuery.NET.Tests.DependencyInjection;
 

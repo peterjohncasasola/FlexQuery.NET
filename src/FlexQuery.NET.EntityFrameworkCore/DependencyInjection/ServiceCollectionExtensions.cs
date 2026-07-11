@@ -1,7 +1,7 @@
 using FlexQuery.NET.EntityFrameworkCore.Configuration;
-using Microsoft.Extensions.DependencyInjection;
+using FlexQuery.NET.EntityFrameworkCore;
 
-namespace FlexQuery.NET.EntityFrameworkCore.DependencyInjection;
+namespace Microsoft.Extensions.DependencyInjection;
 
 /// <summary>
 /// Extension methods for registering FlexQuery Entity Framework Core services.

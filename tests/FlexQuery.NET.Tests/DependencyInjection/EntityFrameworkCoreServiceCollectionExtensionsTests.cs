@@ -1,6 +1,5 @@
-using Microsoft.Extensions.DependencyInjection;
 using FlexQuery.NET.EntityFrameworkCore.Configuration;
-using FlexQuery.NET.EntityFrameworkCore.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace FlexQuery.NET.Tests.DependencyInjection;
 
