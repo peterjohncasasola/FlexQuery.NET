@@ -15,34 +15,5 @@ public sealed class FlexQueryEfCoreOptions
     /// is used.
     /// </remarks>
     public bool? UseNoTracking { get; set; }
-
-    /// <summary>
-    /// Gets or sets a value indicating whether collection navigations should
-    /// be loaded using split queries.
-    /// </summary>
-    /// <remarks>
-    /// When <see langword="null"/>, the default Entity Framework Core behaviour
-    /// is used.
-    /// </remarks>
-    public bool? UseSplitQuery { get; set; }
-
-    /// <summary>
-    /// Gets or sets a value indicating whether configured auto-includes should
-    /// be ignored.
-    /// </summary>
-    /// <remarks>
-    /// When <see langword="null"/>, the default Entity Framework Core behaviour
-    /// is used.
-    /// </remarks>
-    public bool? IgnoreAutoIncludes { get; set; }
-
-    /// <summary>
-    /// Gets or sets a value indicating whether global query filters should
-    /// be ignored.
-    /// </summary>
-    /// <remarks>
-    /// When <see langword="null"/>, the default Entity Framework Core behaviour
-    /// is used.
-    /// </remarks>
-    public bool? IgnoreQueryFilters { get; set; }
+    
 }

@@ -51,7 +51,6 @@ internal static class FlexQueryEfCoreExecutor
         where T : class
     {
         var ct = ctx?.CancellationToken ?? CancellationToken.None;
-
         if (options?.UseNoTracking == true)
             query = query.AsNoTracking();
 

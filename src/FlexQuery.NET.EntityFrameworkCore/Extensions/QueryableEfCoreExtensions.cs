@@ -1,3 +1,4 @@
+using FlexQuery.NET.EntityFrameworkCore.Configuration;
 using FlexQuery.NET.EntityFrameworkCore.Options;
 using FlexQuery.NET.Models;
 using FlexQuery.NET.EntityFrameworkCore.Execution;
@@ -60,9 +61,7 @@ public static class QueryableEfCoreExtensions
         CancellationToken cancellationToken = default)
         where T : class
     {
-        var options = new EfCoreQueryOptions();
-        configure?.Invoke(options);
-        
+        var options = ResolveOptions(configure);
         var queryOptions = parameters.ToQueryOptions();
         ThrowIfNull(query, queryOptions, options);
 
@@ -123,9 +122,7 @@ public static class QueryableEfCoreExtensions
         CancellationToken cancellationToken = default)
         where T : class
     {
-        var options = new EfCoreQueryOptions();
-        configure?.Invoke(options);
-        
+        var options = ResolveOptions(configure);
         ThrowIfNull(query, queryOptions, options);
 
         return await query.FlexQueryAsync(queryOptions, options, cancellationToken);
@@ -159,5 +156,22 @@ public static class QueryableEfCoreExtensions
         ArgumentNullException.ThrowIfNull(queryable);
         ArgumentNullException.ThrowIfNull(queryOptions);
         ArgumentNullException.ThrowIfNull(options);
+    }
+
+    /// <summary>
+    /// Resolves the EF Core execution options for a request using the precedence
+    /// per-execution configuration &gt; global configuration &gt; package defaults.
+    /// </summary>
+    private static EfCoreQueryOptions ResolveOptions(Action<EfCoreQueryOptions>? configure)
+    {
+        var options = FlexQueryEFCore.DefaultOptions is { } global
+            ? new EfCoreQueryOptions
+            {
+                UseNoTracking = global.UseNoTracking,
+            }
+            : new EfCoreQueryOptions();
+
+        configure?.Invoke(options);
+        return options;
     }
 }
