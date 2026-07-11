@@ -1,7 +1,4 @@
 using FlexQuery.NET.AspNetCore.Filters;
-using FlexQuery.NET.Configuration;
-using FlexQuery.NET.Execution;
-using FlexQuery.NET.Parsers;
 
 namespace Microsoft.Extensions.DependencyInjection;
 
@@ -20,30 +17,5 @@ public static class ServiceCollectionExtensions
         {
             options.Filters.Add<FieldAccessFilter>();
         });
-    }
-
-    /// <summary>
-    /// Registers the core FlexQuery services and optional global configuration.
-    /// </summary>
-    /// <param name="services">The service collection.</param>
-    /// <param name="configure">
-    /// An optional delegate used to configure the global
-    /// <see cref="FlexQueryOptions"/> instance.
-    /// </param>
-    /// <returns>The updated service collection.</returns>
-    public static IServiceCollection AddFlexQuery(
-        this IServiceCollection services,
-        Action<FlexQueryOptions>? configure = null)
-    {
-        var options = new FlexQueryOptions();
-        configure?.Invoke(options);
-
-        services.AddSingleton(options);
-
-        QueryOptionsParser.SetGlobalSyntax(options.QuerySyntax);
-
-        services.AddSingleton<IFlexQueryProcessor, FlexQueryProcessor>();
-
-        return services;
     }
 }
