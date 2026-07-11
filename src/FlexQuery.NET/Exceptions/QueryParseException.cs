@@ -7,7 +7,7 @@ namespace FlexQuery.NET.Exceptions;
 /// cannot be parsed using the configured query syntax (NativeDsl, Fql, or MiniOData).
 /// </summary>
 /// <remarks>
-/// This is a top-level exception. The <see cref="InnerException"/> contains
+/// This is a top-level exception. The <see cref="FlexQueryException"/> contains
 /// parser-specific details from the underlying grammar parser (e.g.,
 /// <c>DslParseException</c> or <c>FqlParseException</c>).
 ///

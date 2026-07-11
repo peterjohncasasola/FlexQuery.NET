@@ -25,7 +25,7 @@ public abstract class FlexQueryBase
     public string? Having { get; set; }
 
     /// <summary>The aggregate expressions (e.g., "SUM(Amount) AS Total, COUNT(*)").</summary>
-    public string? Aggregates { get; set; }
+    public string? Aggregate { get; set; }
 
     /// <summary>The page number (1-indexed).</summary>
     public int? Page { get; set; }

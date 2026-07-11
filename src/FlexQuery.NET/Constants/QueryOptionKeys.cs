@@ -9,14 +9,13 @@ internal static class QueryOptionKeys
     public const string PageSize = "pageSize";
     public const string IncludeCount = "includeCount";
     public const string Distinct = "distinct";
-    public const string Query = "query";
     public const string Filter = "filter";
     public const string Filters = "filters";
     public const string Mode = "mode";
     public const string Select = "select";
-    public const string Group = "group";
+    public const string GroupBy = "groupBy";
     public const string Having = "having";
-    public const string Aggregates = "aggregates";
+    public const string Aggregate = "aggregate";
     public const string Include = "include";
     public const string Logic = "logic";
     public const string Field = "field";

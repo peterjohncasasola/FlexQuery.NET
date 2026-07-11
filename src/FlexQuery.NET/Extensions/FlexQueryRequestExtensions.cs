@@ -48,18 +48,18 @@ public static class FlexQueryRequestExtensions
         ArgumentNullException.ThrowIfNull(request);
         var queryOptions = new QueryOptions
         {
-            Aggregates = request.Aggregates,
+            Aggregates = request.Aggregate,
             Filter = request.Filter,
             Distinct = request.Distinct,
             Expand = request.Expand,
             Paging = request.Paging,
             Select = request.Select,
             IncludeCount = request.IncludeCount,
-            Includes = request.Includes,
+            Includes = request.Include,
             GroupBy = request.GroupBy,
             Sort = request.Sort,
             Having = request.Having,
-            ProjectionMode = request.ProjectionMode
+            ProjectionMode = request.Mode
         };
 
         return queryOptions;

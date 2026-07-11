@@ -12,7 +12,7 @@ namespace FlexQuery.NET.Execution;
 /// apply filtering, sorting, paging, and other supported query operations,
 /// then return the results as a <see cref="QueryResult{T}"/>.
 /// </remarks>
-public interface IFlexQueryProcessor
+internal interface IFlexQueryProcessor
 {
     /// <summary>
     /// Executes the specified query using the configured default execution options.

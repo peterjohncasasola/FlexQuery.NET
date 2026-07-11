@@ -72,16 +72,16 @@ internal sealed class DslQueryParser : IQueryParser
             }
         }
 
-        if (!string.IsNullOrWhiteSpace(parameters.Aggregates))
+        if (!string.IsNullOrWhiteSpace(parameters.Aggregate))
         {
             try
             {
                 options.Aggregates.Clear();
-                options.Aggregates.AddRange(DslAggregateParser.Parse(parameters.Aggregates));
+                options.Aggregates.AddRange(DslAggregateParser.Parse(parameters.Aggregate));
             }
             catch (DslParseException ex)
             {
-                throw new QueryParseException(QueryOptionKeys.Aggregates, QuerySyntax.NativeDsl, parameters.Aggregates, ex);
+                throw new QueryParseException(QueryOptionKeys.Aggregate, QuerySyntax.NativeDsl, parameters.Aggregate, ex);
             }
         }
 
@@ -104,9 +104,9 @@ internal sealed class DslQueryParser : IQueryParser
     {
         var msg = ex.Message.ToLowerInvariant();
         if (msg.Contains("'select'")) return QueryOptionKeys.Select;
-        if (msg.Contains("'group'")) return QueryOptionKeys.Group;
+        if (msg.Contains("'group'")) return QueryOptionKeys.GroupBy;
         if (msg.Contains("'include'") || msg.Contains("include expression")) return QueryOptionKeys.Include;
-        if (msg.Contains("aggregate")) return QueryOptionKeys.Aggregates;
+        if (msg.Contains("aggregate")) return QueryOptionKeys.Aggregate;
         if (msg.Contains("having")) return QueryOptionKeys.Having;
         if (msg.Contains("sort")) return QueryOptionKeys.Sort;
         return "parameter";
@@ -117,7 +117,7 @@ internal sealed class DslQueryParser : IQueryParser
         var msg = ex.Message.ToLowerInvariant();
         if (msg.Contains("'select'") || msg.Contains("select")) return parameters.Select;
         if (msg.Contains("'group'") || msg.Contains("group")) return parameters.GroupBy;
-        if (msg.Contains("aggregate")) return parameters.Aggregates;
+        if (msg.Contains("aggregate")) return parameters.Aggregate;
         if (msg.Contains("having")) return parameters.Having;
         if (msg.Contains("sort")) return parameters.Sort;
         if (msg.Contains("include")) return parameters.Include;

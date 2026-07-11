@@ -8,5 +8,6 @@ namespace FlexQuery.NET.Exceptions;
 public sealed class ParserNotRegisteredException(QuerySyntax syntax)
     : FlexQueryException($"The configured query syntax is {syntax}, but no {syntax} parser has been registered.")
 {
+    /// <summary>The configured query syntax that was active during parsing (NativeDsl, Fql, MiniOData).</summary>
     public QuerySyntax Syntax { get; } = syntax;
 }

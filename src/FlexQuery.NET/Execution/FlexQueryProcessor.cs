@@ -9,7 +9,7 @@ using FlexQuery.NET.Validation;
 
 namespace FlexQuery.NET.Execution;
 /// <inheritdoc/>
-public sealed class FlexQueryProcessor(FlexQueryOptions globalOptions) : IFlexQueryProcessor
+internal sealed class FlexQueryProcessor(FlexQueryOptions globalOptions) : IFlexQueryProcessor
 {
     private static readonly IQueryValidator Validator = new QueryValidator();
     

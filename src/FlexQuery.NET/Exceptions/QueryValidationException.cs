@@ -5,7 +5,7 @@ namespace FlexQuery.NET.Exceptions;
 /// <summary>
 /// Thrown when a query fails validation.
 /// </summary>
-public sealed class QueryValidationException : Exception
+public sealed class QueryValidationException : FlexQueryException
 {
     /// <summary>
     /// The validation result containing errors.

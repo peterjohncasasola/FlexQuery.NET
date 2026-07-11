@@ -45,7 +45,7 @@ internal static class QueryOptionsParser
             parameters.Include, parameters.GroupBy, parameters.Having,
             parameters.Page, parameters.PageSize, parameters.IncludeCount,
             parameters.Distinct, parameters.Mode, parameters.Cursor, parameters.UseKeysetPagination, Version: effectiveSyntax.ToString(),
-            Aggregates: parameters.Aggregates);
+            Aggregates: parameters.Aggregate);
 
         if (ParserCache.TryGet(cacheKey, out var cached))
         {
@@ -105,9 +105,9 @@ internal static class QueryOptionsParser
             Sort = TryGet(QueryOptionKeys.Sort) ?? TryGet(QueryOptionKeys.OrderBy) ?? TryGet($"${QueryOptionKeys.OrderBy}"),
             Select = TryGet(QueryOptionKeys.Select) ?? TryGet($"${QueryOptionKeys.Select}"),
             Include = TryGet(QueryOptionKeys.Include) ?? TryGet(QueryOptionKeys.Expand) ?? TryGet($"${QueryOptionKeys.Expand}"),
-            GroupBy = TryGet(QueryOptionKeys.Group),
+            GroupBy = TryGet(QueryOptionKeys.GroupBy),
             Having = TryGet(QueryOptionKeys.Having),
-            Aggregates = TryGet(QueryOptionKeys.Aggregates),
+            Aggregate = TryGet(QueryOptionKeys.Aggregate),
             Page = ParsePage(),
             PageSize = ParsePageSize(),
             Distinct = ParseDistinct(),

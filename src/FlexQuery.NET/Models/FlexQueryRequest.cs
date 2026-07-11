@@ -22,19 +22,19 @@ public sealed class FlexQueryRequest
     public List<string>? Select { get; set; }
 
     /// <summary>Navigation properties to include with all scalars.</summary>
-    public List<string>? Includes { get; set; }
+    public List<string>? Include { get; set; }
 
     /// <summary>Deep, filtered navigation expansion trees.</summary>
     public List<IncludeNode>? Expand { get; set; }
 
     /// <summary>Defines how projected data should be shaped (Nested, Flat, FlatMixed).</summary>
-    public ProjectionMode ProjectionMode { get; set; } = ProjectionMode.Nested;
+    public ProjectionMode Mode { get; set; } = ProjectionMode.Nested;
 
     /// <summary>Fields to group by for aggregation.</summary>
     public List<string>? GroupBy { get; set; }
 
     /// <summary>Aggregate projection expressions (sum, count, avg).</summary>
-    public List<AggregateModel> Aggregates { get; set; } = [];
+    public List<AggregateModel> Aggregate { get; set; } = [];
 
     /// <summary>HAVING condition against aggregate projections.</summary>
     public HavingCondition? Having { get; set; }
