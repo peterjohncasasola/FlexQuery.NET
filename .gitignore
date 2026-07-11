@@ -457,6 +457,7 @@ coverage.xml
 *.temp
 *.log
 *.cache
+*.csproj.DotSettings
 
 # Database files
 *.db
