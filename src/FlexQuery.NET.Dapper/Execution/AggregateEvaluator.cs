@@ -27,7 +27,7 @@ internal static class AggregateEvaluator
 
         var aggResult = await connection.QueryFirstOrDefaultAsync(
             aggCommand.Sql, aggParameters,
-            commandTimeout: options.CommandTimeoutSeconds, commandType: CommandType.Text);
+            commandTimeout: options.CommandTimeout, commandType: CommandType.Text);
 
         if (aggResult is null) return null;
 

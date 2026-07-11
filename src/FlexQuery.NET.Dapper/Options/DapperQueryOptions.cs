@@ -26,13 +26,14 @@ public sealed class DapperQueryOptions : BaseQueryOptions
     internal FlexQueryModel? Model { get; private set; }
 
     /// <summary>
-    /// Sets the metadata model used during SQL translation.
+    /// Sets the metadata model used during SQL translation, overriding the
+    /// global model configured via <c>FlexQueryDapper.Configure</c>.
     /// </summary>
     /// <param name="model">The metadata model.</param>
     /// <exception cref="ArgumentNullException">
     /// Thrown when <paramref name="model"/> is <see langword="null"/>.
     /// </exception>
-    public void UseModel(FlexQueryModel model)
+    internal void UseModel(FlexQueryModel model)
     {
         Model = model ?? throw new ArgumentNullException(nameof(model));
     }
@@ -43,5 +44,5 @@ public sealed class DapperQueryOptions : BaseQueryOptions
     /// <value>
     /// The command timeout in seconds. The default value is <c>30</c>.
     /// </value>
-    public int CommandTimeoutSeconds { get; set; } = 30;
+    public int CommandTimeout { get; set; } = 30;
 }

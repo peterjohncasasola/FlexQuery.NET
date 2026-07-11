@@ -34,4 +34,10 @@ public sealed class FlexQueryDapperOptions
     /// mapping configurations before the model is built for runtime use.
     /// </remarks>
     public ModelBuilder Model { get; }
+    
+    /// <summary>
+    /// Gets or sets the database command timeout, in seconds. Use this to
+    /// configure the default command time out in seconds
+    /// </summary>
+    public int CommandTimeout { get; set; } = 30;
 }

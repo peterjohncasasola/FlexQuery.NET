@@ -1,4 +1,4 @@
-using FlexQuery.NET.Dapper;
+using FlexQuery.NET.Dapper.Configuration;
 using FlexQuery.NET.Dapper.Metadata;
 using FlexQuery.NET.Tests.Models;
 
@@ -7,30 +7,30 @@ namespace FlexQuery.NET.Tests.DependencyInjection;
 public class FlexQueryDapperConfigurationTests
 {
     [Fact]
-    public void BuildModel_returns_model()
+    public void Configure_stores_global_model()
     {
-        var model = FlexQueryDapper.BuildModel(o => o.Model.Entity<TestEntity>());
+        FlexQueryDapper.Configure(o => o.Model.Entity<TestEntity>());
 
-        model.Should().NotBeNull();
-        model.Should().BeOfType<FlexQueryModel>();
+        FlexQueryDapper.DefaultModel.Should().NotBeNull();
+        FlexQueryDapper.DefaultModel.Should().BeOfType<FlexQueryModel>();
     }
 
     [Fact]
-    public void BuildModel_applies_entity_mappings()
+    public void Configure_applies_entity_mappings()
     {
-        var model = FlexQueryDapper.BuildModel(o =>
+        FlexQueryDapper.Configure(o =>
         {
             o.Model.Entity<TestEntity>().ToTable("TestEntities");
         });
 
-        model.Should().NotBeNull();
+        FlexQueryDapper.DefaultModel.Should().NotBeNull();
     }
 
     [Fact]
-    public void BuildModel_throws_when_configure_is_null()
+    public void Configure_NotThrows_When_Configure_Is_Null()
     {
-        Action act = () => FlexQueryDapper.BuildModel(null!);
+        Action act = () => FlexQueryDapper.Configure(null);
 
-        act.Should().ThrowExactly<ArgumentNullException>();
+        act.Should().NotThrow();
     }
 }

@@ -112,10 +112,12 @@ public sealed class ModelBuilder
     /// </returns>
     /// <remarks>
     /// This method represents the transition from the mutable configuration phase
-    /// to the immutable runtime model used during query execution.
+    /// to the immutable runtime model used during query execution. It is invoked
+    /// internally by <c>FlexQueryDapper.Configure</c>; callers should configure
+    /// mappings through that method rather than building the model directly.
     /// Future versions may perform validation and metadata optimization during this step.
     /// </remarks>
-    public FlexQueryModel Build()
+    internal FlexQueryModel Build()
     {
         return new FlexQueryModel(Registry);
     }

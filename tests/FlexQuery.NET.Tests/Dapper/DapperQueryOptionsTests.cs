@@ -66,7 +66,7 @@ public class DapperQueryOptionsTests
     {
         var options = new DapperQueryOptions();
         options.IncludeTotalCount.Should().BeTrue();
-        options.CommandTimeoutSeconds.Should().Be(30);
+        options.CommandTimeout.Should().Be(30);
     }
 
     [Fact]

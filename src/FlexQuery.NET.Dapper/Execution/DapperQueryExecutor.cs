@@ -2,6 +2,7 @@ using System.Data;
 using System.Data.Common;
 using Dapper;
 using FlexQuery.NET.Constants;
+using FlexQuery.NET.Dapper.Configuration;
 using FlexQuery.NET.Dapper.Dialects;
 using FlexQuery.NET.Dapper.Mapping;
 using FlexQuery.NET.Dapper.Materialization;
@@ -62,7 +63,9 @@ internal static class DapperQueryExecutor
         await ConnectionHelper.EnsureOpenAsync(connection, ct);
 
         var dialect = SqlDialectResolver.Resolve(connection);
-        var registry = options.Model?.Registry ?? new MappingRegistry();
+        var registry = options.Model?.Registry
+            ?? FlexQueryDapper.DefaultModel?.Registry
+            ?? new MappingRegistry();
 
         // Re-stamped here (in addition to RunAsync, above) because it's read again
         // right below via GetMapping(typeof(T)) — kept exactly as in the original
@@ -92,7 +95,7 @@ internal static class DapperQueryExecutor
         var rows = await connection.QueryAsync(
             command.Sql,
             parameters,
-            commandTimeout: options.CommandTimeoutSeconds,
+            commandTimeout: options.CommandTimeout,
             commandType: CommandType.Text);
 
         var items = DapperResultMaterializer.Materialize(

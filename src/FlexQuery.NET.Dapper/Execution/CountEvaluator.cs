@@ -29,12 +29,12 @@ internal static class CountEvaluator
 
         var totalCount = (int)await connection.QuerySingleAsync<long>(
             sourceCountCommand.Sql, sourceCountParameters,
-            commandTimeout: options.CommandTimeoutSeconds, commandType: CommandType.Text);
+            commandTimeout: options.CommandTimeout, commandType: CommandType.Text);
 
         var resultCount = queryOptions.GroupBy is { Count: > 0 } || queryOptions.Distinct == true
             ? (int)await connection.QuerySingleAsync<long>(
                 SqlCountBuilder.ExtractCountSql(mainCommand.Sql), mainParams,
-                commandTimeout: options.CommandTimeoutSeconds, commandType: CommandType.Text)
+                commandTimeout: options.CommandTimeout, commandType: CommandType.Text)
             : totalCount;
 
         return (totalCount, resultCount);
