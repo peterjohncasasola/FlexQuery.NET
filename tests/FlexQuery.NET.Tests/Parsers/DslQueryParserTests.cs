@@ -480,9 +480,9 @@ public class DslQueryParserTests
     {
         var opts = Parse(new()
         {
-            ["group"] = "category,status",
+            ["groupBy"] = "category,status",
             ["select"] = "category",
-            ["aggregates"] = "total:sum,id:count",
+            ["aggregate"] = "total:sum,id:count",
             ["having"] = "sum(total):gt:10000"
         });
 
@@ -502,7 +502,7 @@ public class DslQueryParserTests
     {
         var opts = Parse(new()
         {
-            ["group"] = "category"
+            ["groupBy"] = "category"
         });
 
         opts.GroupBy.Should().BeEquivalentTo(["category"]);
@@ -513,7 +513,7 @@ public class DslQueryParserTests
     {
         var opts = Parse(new()
         {
-            ["group"] = "category,status,region"
+            ["groupBy"] = "category,status,region"
         });
 
         opts.GroupBy.Should().BeEquivalentTo(["category", "status", "region"]);
@@ -524,7 +524,7 @@ public class DslQueryParserTests
     {
         var opts = Parse(new()
         {
-            ["group"] = "status",
+            ["groupBy"] = "status",
             ["select"] = "status,count()",
             ["having"] = "count:gt:20"
         });
@@ -541,7 +541,7 @@ public class DslQueryParserTests
     {
         var opts = Parse(new()
         {
-            ["group"] = "status",
+            ["groupBy"] = "status",
             ["select"] = "status,sum(total)",
             ["having"] = "sum:total:gt:100"
         });
@@ -608,7 +608,7 @@ public class DslQueryParserTests
     {
         var opts = Parse(new()
         {
-            ["aggregates"] = "Amount:sum"
+            ["aggregate"] = "Amount:sum"
         });
 
         opts.Aggregates.Should().ContainSingle();
@@ -622,7 +622,7 @@ public class DslQueryParserTests
     {
         var opts = Parse(new()
         {
-            ["aggregates"] = "Amount:sum:TotalSales"
+            ["aggregate"] = "Amount:sum:TotalSales"
         });
 
         opts.Aggregates.Should().ContainSingle();
@@ -636,7 +636,7 @@ public class DslQueryParserTests
     {
         var opts = Parse(new()
         {
-            ["aggregates"] = "Amount:sum,Price:avg,Id:count"
+            ["aggregate"] = "Amount:sum,Price:avg,Id:count"
         });
 
         opts.Aggregates.Should().HaveCount(3);
@@ -653,7 +653,7 @@ public class DslQueryParserTests
     {
         var opts = Parse(new()
         {
-            ["aggregates"] = "Price:avg"
+            ["aggregate"] = "Price:avg"
         });
 
         opts.Aggregates.Should().ContainSingle();
@@ -667,7 +667,7 @@ public class DslQueryParserTests
     {
         var opts = Parse(new()
         {
-            ["aggregates"] = "Orders.Total:sum"
+            ["aggregate"] = "Orders.Total:sum"
         });
 
         opts.Aggregates.Should().ContainSingle();
@@ -681,11 +681,11 @@ public class DslQueryParserTests
     {
         var act = () => Parse(new()
         {
-            ["aggregates"] = "Amount:invalid,Price:sum"
+            ["aggregate"] = "Amount:invalid,Price:sum"
         });
 
         act.Should().Throw<QueryParseException>()
-            .Which.ParameterName.Should().Be("aggregates");
+            .Which.ParameterName.Should().Be("aggregate");
     }
 
     [Fact]
@@ -712,7 +712,7 @@ public class DslQueryParserTests
     {
         var opts = Parse(new()
         {
-            ["aggregates"] = "*:count"
+            ["aggregate"] = "*:count"
         });
 
         opts.Aggregates.Should().ContainSingle();
@@ -726,7 +726,7 @@ public class DslQueryParserTests
     {
         var opts = Parse(new()
         {
-            ["aggregates"] = "Amount:SUM,Price:Avg,Id:count"
+            ["aggregate"] = "Amount:SUM,Price:Avg,Id:count"
         });
 
         opts.Aggregates.Should().HaveCount(3);
@@ -740,7 +740,7 @@ public class DslQueryParserTests
     {
         var opts = Parse(new()
         {
-            ["aggregates"] = "Date:min,Date:max"
+            ["aggregate"] = "Date:min,Date:max"
         });
 
         opts.Aggregates.Should().HaveCount(2);
@@ -806,8 +806,8 @@ public class DslQueryParserTests
             ["sort"] = "createdAt:desc,name:asc",
             ["select"] = "Id,Name,CustomerName",
             ["include"] = "Orders,Profile",
-            ["group"] = "customerId,category",
-            ["aggregates"] = "Amount:sum:TotalSales,Id:count,Price:avg",
+            ["groupBy"] = "customerId,category",
+            ["aggregate"] = "Amount:sum:TotalSales,Id:count,Price:avg",
             ["having"] = "sum(Amount):gt:1000",
             ["distinct"] = "true",
             ["page"] = "2",

@@ -24,7 +24,7 @@ public class OrderAggregationTests : DapperApiTestBase
     public async Task Should_Apply_Aggregates()
     {
         // Act
-        var response = await Client.GetAsync("/api/orders?aggregates=total:sum,id:count");
+        var response = await Client.GetAsync("/api/orders?aggregate=total:sum,id:count");
 
         // Assert
         response.EnsureSuccessStatusCode();

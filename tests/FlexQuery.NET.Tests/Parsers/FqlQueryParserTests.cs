@@ -26,7 +26,7 @@ public class FqlQueryParserTests
             GroupBy = groupBy,
             Select = select,
             Having = having,
-            Aggregates = aggregates,
+            Aggregate = aggregates,
             Include = include,
             Distinct = distinct,
             Page = page,
@@ -559,7 +559,7 @@ public class FqlQueryParserTests
         var act = () => FqlParse(aggregates: "INVALID(Amount), SUM(Price)");
 
         act.Should().Throw<QueryParseException>()
-            .Which.ParameterName.Should().Be("aggregates");
+            .Which.ParameterName.Should().Be("aggregate");
     }
 
     // ─── GroupBy Parser Tests ─────────────────────────────────────────

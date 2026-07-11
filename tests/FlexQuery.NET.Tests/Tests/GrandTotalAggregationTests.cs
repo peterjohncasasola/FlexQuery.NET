@@ -24,7 +24,7 @@ public class GrandTotalAggregationTests : IDisposable
     {
         var options = Parse(new()
         {
-            ["aggregates"] = "Total:sum,Id:count,Total:min,Total:max,Total:avg"
+            ["aggregate"] = "Total:sum,Id:count,Total:min,Total:max,Total:avg"
         });
 
         // Act
@@ -58,7 +58,7 @@ public class GrandTotalAggregationTests : IDisposable
     {
         var options = Parse(new()
         {
-            ["aggregates"] = "Total:sum,Id:count,Total:min,Total:max,Total:avg"
+            ["aggregate"] = "Total:sum,Id:count,Total:min,Total:max,Total:avg"
         });
 
         // Act

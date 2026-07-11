@@ -29,9 +29,9 @@ public class GroupByTests : IDisposable
     {
         var options = Parse(new()
         {
-            ["group"] = "CustomerId",
+            ["groupBy"] = "CustomerId",
             ["select"] = "CustomerId",
-            ["aggregates"] = "Total:sum,Id:count",
+            ["aggregate"] = "Total:sum,Id:count",
             ["having"] = "sum(Total):gt:100"
         });
 
@@ -49,12 +49,12 @@ public class GroupByTests : IDisposable
     {
         var options = Parse(new()
         {
-            ["group"] = "CustomerId",
+            ["groupBy"] = "CustomerId",
             ["select"] = "CustomerId",
-            ["aggregates"] = "Total:sum,Id:count",
+            ["aggregate"] = "Total:sum,Id:count",
         });
 
-        options.Aggregates.Should().HaveCount(2, "it should have parsed two aggregates from the aggregates parameter");
+        options.Aggregates.Should().HaveCount(2, "it should have parsed two aggregates from the aggregate parameter");
         options.Aggregates[0].Function.Should().Be(AggregateFunction.Sum);
         options.Aggregates[0].Field.Should().Be("Total");
         options.Aggregates[0].Alias.Should().Be("TotalSum");
