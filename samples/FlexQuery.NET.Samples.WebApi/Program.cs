@@ -1,9 +1,9 @@
 using System.Reflection;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-
+using FlexQuery.NET;
+using FlexQuery.NET.Configuration;
 using FlexQuery.NET.Samples.WebApi.Data;
-using FlexQuery.NET.Samples.WebApi.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.OpenApi.Models;
 
@@ -21,17 +21,17 @@ builder.Services.AddControllers()
         options.JsonSerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.CamelCase;
     });
 
-//Global Config
-builder.Services.AddFlexQueryDapper(cfg =>
-{
-    cfg.Model.Entity<Customer>()
-        .ToTable("Customers")
-        .HasMany(c => c.Orders).WithForeignKey("CustomerId");
-    cfg.Model.Entity<Order>()
-        .ToTable("Orders");
-});
+// //Global Config
+// builder.Services.AddFlexQueryDapper(cfg =>
+// {
+//     cfg.Model.Entity<Customer>()
+//         .ToTable("Customers")
+//         .HasMany(c => c.Orders).WithForeignKey("CustomerId");
+//     cfg.Model.Entity<Order>()
+//         .ToTable("Orders");
+// });
 
-builder.Services.AddFlexQueryEntityFrameworkCore();
+FlexQueryConfiguration.Configure();
 
 // 4. Configure Swagger
 builder.Services.AddEndpointsApiExplorer();
