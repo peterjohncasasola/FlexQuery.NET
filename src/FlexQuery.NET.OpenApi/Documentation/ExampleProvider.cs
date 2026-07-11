@@ -37,7 +37,7 @@ internal static class ExampleProvider
             new SortNode { Field = "FirstName", Descending = false }
         ],
         Select = ["Id", "FirstName", "LastName", "Email", "Profile.AvatarUrl"],
-        Includes = ["Orders", "Profile"],
+        Include = ["Orders", "Profile"],
         Expand =
         [
             new IncludeNode
@@ -53,7 +53,7 @@ internal static class ExampleProvider
                 ]
             }
         ],
-        Aggregates =
+        Aggregate =
         [
             new AggregateModel { Function = AggregateFunction.Sum, Field = "TotalAmount", Alias = "TotalRevenue" },
             new AggregateModel { Function = AggregateFunction.Count, Alias = "OrderCount" },
@@ -67,7 +67,7 @@ internal static class ExampleProvider
             Operator = "gt",
             Value = "1000"
         },
-        ProjectionMode = ProjectionMode.FlatMixed,
+        Mode = ProjectionMode.FlatMixed,
         Distinct = true,
         Paging = new PagingOptions { Page = 1, PageSize = 20 },
         IncludeCount = true
@@ -84,7 +84,7 @@ internal static class ExampleProvider
         IncludeCount = true,
         Distinct = true,
         GroupBy = "Region,Category",
-        Aggregates = "SUM(TotalAmount):TotalRevenue,COUNT:OrderCount,AVG(Rating):AvgRating",
+        Aggregate = "SUM(TotalAmount):TotalRevenue,COUNT:OrderCount,AVG(Rating):AvgRating",
         Having = "SUM(TotalAmount):gt:1000",
         Mode = "FlatMixed"
     };
