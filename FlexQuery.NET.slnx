@@ -9,6 +9,7 @@
     <Project Path="src/FlexQuery.NET.Adapters.AgGrid/FlexQuery.NET.Adapters.AgGrid.csproj" />
     <Project Path="src/FlexQuery.NET.Parsers.Fql/FlexQuery.NET.Parsers.Fql.csproj" />
     <Project Path="src/FlexQuery.NET.Adapters.Kendo/FlexQuery.NET.Adapters.Kendo.csproj" />
+    <Project Path="src/FlexQuery.NET.OpenApi/FlexQuery.NET.OpenApi.csproj" />
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/FlexQuery.NET.Tests/FlexQuery.NET.Tests.csproj" />
