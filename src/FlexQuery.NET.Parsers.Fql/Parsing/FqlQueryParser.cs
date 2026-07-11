@@ -1,3 +1,4 @@
+using FlexQuery.NET.Constants;
 using FlexQuery.NET.Exceptions;
 using FlexQuery.NET.Filters;
 using FlexQuery.NET.Models;
@@ -54,7 +55,7 @@ internal sealed class FqlQueryParser : IQueryParser
             }
             catch (FqlParseException ex)
             {
-                throw new QueryParseException("sort", QuerySyntax.Fql, parameters.Sort, ex);
+                throw new QueryParseException(QueryOptionKeys.Sort, QuerySyntax.Fql, parameters.Sort, ex);
             }
         }
 
@@ -66,20 +67,20 @@ internal sealed class FqlQueryParser : IQueryParser
             }
             catch (FqlParseException ex)
             {
-                throw new QueryParseException("groupBy", QuerySyntax.Fql, parameters.GroupBy, ex);
+                throw new QueryParseException(QueryOptionKeys.GroupBy, QuerySyntax.Fql, parameters.GroupBy, ex);
             }
         }
 
-        if (!string.IsNullOrWhiteSpace(parameters.Aggregates))
+        if (!string.IsNullOrWhiteSpace(parameters.Aggregate))
         {
             try
             {
                 options.Aggregates.Clear();
-                options.Aggregates.AddRange(FqlAggregateParser.Parse(parameters.Aggregates));
+                options.Aggregates.AddRange(FqlAggregateParser.Parse(parameters.Aggregate));
             }
             catch (FqlParseException ex)
             {
-                throw new QueryParseException("aggregates", QuerySyntax.Fql, parameters.Aggregates, ex);
+                throw new QueryParseException(QueryOptionKeys.Aggregate, QuerySyntax.Fql, parameters.Aggregate, ex);
             }
         }
 
@@ -91,7 +92,7 @@ internal sealed class FqlQueryParser : IQueryParser
             }
             catch (FqlParseException ex)
             {
-                throw new QueryParseException("having", QuerySyntax.Fql, parameters.Having, ex);
+                throw new QueryParseException(QueryOptionKeys.Having, QuerySyntax.Fql, parameters.Having, ex);
             }
         }
 
@@ -103,7 +104,7 @@ internal sealed class FqlQueryParser : IQueryParser
             }
             catch (FqlParseException ex)
             {
-                throw new QueryParseException("include", QuerySyntax.Fql, parameters.Include, ex);
+                throw new QueryParseException(QueryOptionKeys.Include, QuerySyntax.Fql, parameters.Include, ex);
             }
         }
 
