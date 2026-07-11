@@ -1,13 +1,10 @@
-using FlexQuery.NET.Parsers;
-using FlexQuery.NET.Parsers.MiniOData;
-
 namespace FlexQuery.NET.Parsers.MiniOData;
 
 /// <summary>
 /// Registers the Mini OData query parser with FlexQuery.
 /// Must be called during application startup before executing MiniOData queries.
 /// </summary>
-public static class MiniODataParser
+public static class MiniOData
 {
     /// <summary>
     /// Registers the Mini OData parser in the global parser registry.

@@ -8,7 +8,7 @@ public class MiniODataParserRegistrationTests
     [Fact]
     public void Register_adds_parser_to_registry()
     {
-        MiniODataParser.Register();
+        NET.Parsers.MiniOData.MiniOData.Register();
 
         QueryParserRegistry.IsRegistered(QuerySyntax.MiniOData).Should().BeTrue();
     }
