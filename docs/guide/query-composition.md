@@ -35,7 +35,7 @@ Real-world applications often require more than just passing a user's filter to 
 String-based queries are the standard for external API interaction. They are lightweight, URL-friendly, and easy to consume from frontend frameworks.
 
 ```http
-GET /api/products?filter=status:eq:active&sort=createdAt:desc&page=1&pageSize=20
+GET /api/customers?filter=status:eq:active&sort=createdDate:desc&page=1&pageSize=20
 ```
 
 FlexQuery.NET parses this into a structured `QueryOptions` object, which is then validated against your server-side security policies before execution.
@@ -66,9 +66,9 @@ var options = new QueryOptions
             },
             new FilterCondition
             {
-                Field = "Price",
+                Field = "Salary",
                 Operator = FilterOperators.GreaterThan,
-                Value = "100"
+                Value = "50000"
             }
         }
     },
@@ -112,23 +112,23 @@ var options = new QueryOptions
         Logic = LogicOperator.And,
         Groups = new List<FilterGroup>
         {
-            // Group 1: (Category == 'Electronics' AND Status == 'Active')
+            // Group 1: (City == 'New York' AND Status == 'Active')
             new FilterGroup
             {
                 Logic = LogicOperator.And,
                 Filters = new List<FilterCondition>
                 {
-                    new FilterCondition { Field = "Category", Operator = "eq", Value = "Electronics" },
+                    new FilterCondition { Field = "City", Operator = "eq", Value = "New York" },
                     new FilterCondition { Field = "Status", Operator = "eq", Value = "Active" }
                 }
             },
-            // Group 2: (Price > 1000)
+            // Group 2: (Salary > 50000)
             new FilterGroup
             {
                 Logic = LogicOperator.And,
                 Filters = new List<FilterCondition>
                 {
-                    new FilterCondition { Field = "Price", Operator = "gt", Value = "1000" }
+                    new FilterCondition { Field = "Salary", Operator = "gt", Value = "50000" }
                 }
             }
         }
@@ -228,7 +228,7 @@ FlexQuery.NET includes a strongly-typed fluent builder for developers who prefer
 ```csharp
 using FlexQuery.NET;
 
-var results = await _context.Users
+var results = await _context.Customers
     .Filter<User>(f => f
         .And(x => x.IsActive).Eq(true)
         .AndGroup(g => g

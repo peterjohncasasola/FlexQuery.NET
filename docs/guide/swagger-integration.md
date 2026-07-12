@@ -10,7 +10,7 @@ When you use `FlexQueryParameters` in your controller actions, ASP.NET Core and 
 [HttpGet]
 public async Task<IActionResult> Get([FromQuery] FlexQueryParameters parameters)
 {
-    var result = await _context.Users.FlexQueryAsync(parameters, options => 
+    var result = await _context.Customers.FlexQueryAsync(parameters, options => 
     {
         options.AllowedFields = ["Id", "Name", "Email"];
     });

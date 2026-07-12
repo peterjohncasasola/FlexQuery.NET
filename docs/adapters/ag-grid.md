@@ -39,7 +39,7 @@ AG Grid Enterprise (Browser)
      │
 ASP.NET Controller
      │
-     ▼ AgGridQueryOptionsParser.Parse()
+     ▼ ToQueryOptions()
      │
 QueryOptions (canonical AST)
      │
@@ -53,18 +53,21 @@ QueryResult<T>
 ## Basic Example
 
 ```csharp
+using FlexQuery.NET.Adapters.AgGrid;
+using FlexQuery.NET.Adapters.AgGrid.Models;
+
 [HttpPost("grid-data")]
 public async Task<IActionResult> GetGridData([FromBody] JsonElement agGridPayload)
 {
-    var options = AgGridQueryOptionsParser.Parse(agGridPayload);
+    var options = agGridPayload.ToQueryOptions();
 
-    var result = await _context.Products.FlexQueryAsync<Product>(options, opts =>
+    var result = await _context.Products.FlexQueryAsync(options, opts =>
     {
         opts.AllowedFields = new HashSet<string> { "Id", "Name", "Price", "Category" };
         opts.MaxPageSize = 200;
     });
 
-    return Ok(result);
+    return Ok(options);
 }
 ```
 

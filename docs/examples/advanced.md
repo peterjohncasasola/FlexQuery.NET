@@ -2,27 +2,29 @@
 
 Advanced patterns including nested filters, aggregates, projection modes, filtered includes, and aliasing.
 
+> **Note:** Examples using `FlexQueryAsync` require the `FlexQuery.NET.EntityFrameworkCore` or `FlexQuery.NET.Dapper` package. The core `FlexQuery.NET` package provides synchronous `FlexQuery` for advanced scenarios.
+
 ---
 
 ## Example 1: Nested ANY Filter
 
-**Scenario:** Get all users who have at least one shipped order with amount > 100.
+**Scenario:** Get all customers who have at least one shipped order with total > 100.
 
 **Request:**
 ```
-GET /api/users?query=Orders.any(Status = "shipped" AND Amount > 100)&select=id,name&page=1&pageSize=20
+GET /api/customers?filter=Orders.any(Status = "shipped" AND Total > 100)&select=id,name&page=1&pageSize=20
 ```
 
 **Controller:**
 ```csharp
 [HttpGet]
-public async Task<IActionResult> GetUsers([FromQuery] FlexQueryParameters parameters)
+public async Task<IActionResult> GetCustomers([FromQuery] FlexQueryParameters parameters)
 {
-    var result = await _context.Users.FlexQueryAsync<User>(parameters, exec =>
+    var result = await _context.Customers.FlexQueryAsync(parameters, exec =>
     {
         exec.AllowedFields = new HashSet<string>
         {
-            "id", "name", "email", "orders.status", "orders.amount"
+            "id", "name", "email", "orders.status", "orders.total"
         };
         exec.MaxFieldDepth = 2;
     });
@@ -33,13 +35,13 @@ public async Task<IActionResult> GetUsers([FromQuery] FlexQueryParameters parame
 
 **SQL Generated:**
 ```sql
-SELECT u.Id, u.Name
-FROM Users u
+SELECT c.Id, c.Name
+FROM Customers c
 WHERE EXISTS (
   SELECT 1 FROM Orders o
-  WHERE o.UserId = u.Id
+  WHERE o.CustomerId = c.Id
     AND o.Status = 'shipped'
-    AND o.Amount > 100
+    AND o.Total > 100
 )
 OFFSET 0 ROWS FETCH NEXT 20 ROWS ONLY
 ```
@@ -68,16 +70,16 @@ OFFSET 0 ROWS FETCH NEXT 20 ROWS ONLY
 
 **Request:**
 ```
-GET /api/orders?select=status,count(),sum(amount)&groupBy=status&sort=count():desc
+GET /api/orders?select=status,count(),sum(total)&groupBy=status&sort=count():desc
 ```
 
 **Response:**
 ```json
 {
   "data": [
-    { "status": "pending",   "allCount": 45, "amountSum": 12400.00 },
-    { "status": "shipped",   "allCount": 38, "amountSum": 9800.50  },
-    { "status": "cancelled", "allCount": 12, "amountSum": 3200.00  }
+    { "status": "pending",   "allCount": 45, "totalSum": 12400.00 },
+    { "status": "shipped",   "allCount": 38, "totalSum": 9800.50  },
+    { "status": "cancelled", "allCount": 12, "totalSum": 3200.00  }
   ],
   "totalCount": 3
 }
@@ -91,14 +93,14 @@ GET /api/orders?select=status,count(),sum(amount)&groupBy=status&sort=count():de
 
 **Request:**
 ```
-GET /api/orders?select=status,sum(amount)&groupBy=status&having=sum(amount):gt:10000
+GET /api/orders?select=status,sum(total)&groupBy=status&having=sum(total):gt:10000
 ```
 
 **Response:**
 ```json
 {
   "data": [
-    { "status": "pending", "amountSum": 12400.00 }
+    { "status": "pending", "totalSum": 12400.00 }
   ],
   "totalCount": 1
 }
@@ -108,11 +110,11 @@ GET /api/orders?select=status,sum(amount)&groupBy=status&having=sum(amount):gt:1
 
 ## Example 4: Filtered Includes
 
-**Scenario:** Get all users, but only include their orders that are in "shipped" status.
+**Scenario:** Get all customers, but only include their orders that are in "shipped" status.
 
 **Request:**
 ```
-GET /api/users?include=Orders(status:eq:shipped)&select=id,name&page=1&pageSize=3
+GET /api/customers?include=Orders(status:eq:shipped)&select=id,name&page=1&pageSize=3
 ```
 
 **Response:**
@@ -123,8 +125,8 @@ GET /api/users?include=Orders(status:eq:shipped)&select=id,name&page=1&pageSize=
       "id": 1,
       "name": "Alice Chen",
       "orders": [
-        { "id": 101, "status": "shipped", "amount": 250.00 },
-        { "id": 108, "status": "shipped", "amount": 89.00  }
+        { "id": 101, "status": "shipped", "total": 250.00 },
+        { "id": 108, "status": "shipped", "total": 89.00  }
       ]
     },
     {
@@ -136,7 +138,7 @@ GET /api/users?include=Orders(status:eq:shipped)&select=id,name&page=1&pageSize=
       "id": 3,
       "name": "Carol White",
       "orders": [
-        { "id": 202, "status": "shipped", "amount": 450.00 }
+        { "id": 202, "status": "shipped", "total": 450.00 }
       ]
     }
   ],
@@ -156,15 +158,15 @@ Note: Bob has no shipped orders, but he is still included in results — the inc
 
 **Request:**
 ```
-GET /api/users?select=id,name,profile.bio,address.city&mode=flat&page=1&pageSize=5
+GET /api/customers?select=id,name,address.city&mode=flat&page=1&pageSize=5
 ```
 
 **Response:**
 ```json
 {
   "data": [
-    { "id": 1, "name": "Alice", "profile.bio": "Software Engineer", "address.city": "Singapore" },
-    { "id": 2, "name": "Bob",   "profile.bio": "Product Manager",   "address.city": "London"    }
+    { "id": 1, "name": "Alice", "address.city": "Singapore" },
+    { "id": 2, "name": "Bob",   "address.city": "London"    }
   ],
   "totalCount": 48,
   "page": 1,
@@ -176,11 +178,11 @@ GET /api/users?select=id,name,profile.bio,address.city&mode=flat&page=1&pageSize
 
 ## Example 6: Sort by Collection Aggregate
 
-**Scenario:** Sort users by their total order count (most active users first).
+**Scenario:** Sort customers by their total order count (most active customers first).
 
 **Request:**
 ```
-GET /api/users?sort=orders.count():desc&select=id,name&page=1&pageSize=10
+GET /api/customers?sort=orders.count():desc&select=id,name&page=1&pageSize=10
 ```
 
 **Response:**
@@ -205,16 +207,16 @@ GET /api/users?sort=orders.count():desc&select=id,name&page=1&pageSize=10
 
 **Request:**
 ```
-GET /api/users?filter={"logic":"and","filters":[
+GET /api/customers?filter={"logic":"and","filters":[
   {"field":"status","operator":"eq","value":"active"},
   {"logic":"or","filters":[
-    {"field":"age","operator":"gte","value":"30"},
+    {"field":"salary","operator":"gte","value":"50000"},
     {"field":"name","operator":"contains","value":"senior"}
   ]}
 ]}
 ```
 
-Equivalent to: `status = "active" AND (age >= 30 OR name contains "senior")`
+Equivalent to: `status = "active" AND (salary >= 50000 OR name contains "senior")`
 
 ---
 
@@ -225,14 +227,14 @@ Equivalent to: `status = "active" AND (age >= 30 OR name contains "senior")`
 **Controller:**
 ```csharp
 [HttpGet]
-public async Task<IActionResult> GetUsers([FromQuery] FlexQueryParameters parameters)
+public async Task<IActionResult> GetCustomers([FromQuery] FlexQueryParameters parameters)
 {
-    var result = await _context.Users.FlexQueryAsync<User>(parameters, exec =>
+    var result = await _context.Customers.FlexQueryAsync<Customer>(parameters, exec =>
     {
         exec.RoleAllowedFields = new Dictionary<string, HashSet<string>>
         {
-            ["admin"]  = new HashSet<string> { "id", "name", "email", "salary", "status" },
-            ["viewer"] = new HashSet<string> { "id", "name", "email", "status" }
+            ["admin"]  = new HashSet<string> { "id", "name", "email", "salary", "status", "city" },
+            ["viewer"] = new HashSet<string> { "id", "name", "email", "status", "city" }
         };
 
         exec.CurrentRole = User.IsInRole("admin") ? "admin" : "viewer";
@@ -245,12 +247,12 @@ public async Task<IActionResult> GetUsers([FromQuery] FlexQueryParameters parame
 
 **Admin request:**
 ```
-GET /api/users?select=id,name,salary&filter=salary:gt:50000
+GET /api/customers?select=id,name,salary&filter=salary:gt:50000
 ```
 
 **Viewer request (same endpoint, different role):**
 ```
-GET /api/users?select=id,name,salary
+GET /api/customers?select=id,name,salary
 ```
 
 **Viewer response (400):**
@@ -282,14 +284,14 @@ public async Task<IActionResult> GetOrders([FromQuery] FlexQueryParameters param
     // Validate
     var execOptions = new QueryExecutionOptions
     {
-        AllowedFields = new HashSet<string> { "id", "amount", "status", "createdAt" },
+        AllowedFields = new HashSet<string> { "id", "orderNumber", "total", "status", "orderDate" },
         MaxFieldDepth = 1
     };
     options.ValidateOrThrow<Order>(execOptions);
 
     // Start with tenant pre-filter (BEFORE FlexQuery filter)
     var query = _context.Orders
-        .Where(o => o.TenantId == CurrentTenantId)
+        .Where(o => o.CustomerId == CurrentTenantId)
         .AsQueryable();
 
     // Apply FlexQuery pipeline
@@ -315,7 +317,7 @@ public async Task<IActionResult> GetOrders([FromQuery] FlexQueryParameters param
 
 **Request:**
 ```
-GET /api/users?select=status&distinct=true
+GET /api/customers?select=status&distinct=true
 ```
 
 **Response:**

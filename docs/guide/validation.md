@@ -26,14 +26,14 @@ Client-provided query strings are inherently untrusted input. The validation lay
 ### ValidateOrThrow (Throw on Failure)
 
 ```csharp
-options.ValidateOrThrow<User>(execOptions);
+options.ValidateOrThrow<Customer>(execOptions);
 // Throws QueryValidationException if invalid
 ```
 
 ### ValidateSafe (Return Result)
 
 ```csharp
-var result = options.ValidateSafe<User>(execOptions);
+var result = options.ValidateSafe<Customer>(execOptions);
 
 if (!result.IsValid)
 {
@@ -88,7 +88,7 @@ public class ValidationError
 
 **Request:**
 ```
-GET /api/users?filter=passwordHash:isnotnull
+GET /api/customers?filter=email:isnotnull
 ```
 
 **Response (400):**
@@ -108,7 +108,7 @@ GET /api/users?filter=passwordHash:isnotnull
 
 **Request:**
 ```
-GET /api/users?filter=salary:gt:50000
+GET /api/customers?filter=salary:gt:50000
 ```
 
 **Response (400):**
@@ -128,7 +128,7 @@ GET /api/users?filter=salary:gt:50000
 
 **Request:**
 ```
-GET /api/users?filter=profile.address.city.postcode:eq:12345
+GET /api/customers?filter=address.city:eq:New York
 ```
 
 **Response (400):**
@@ -148,7 +148,7 @@ GET /api/users?filter=profile.address.city.postcode:eq:12345
 
 **Request:**
 ```
-GET /api/users?filter=createdAt:gt:2024-01-01
+GET /api/customers?filter=createdDate:gt:2024-01-01
 ```
 
 With `exec.FilterableFields = { "name", "status" }` (createdAt not included):
@@ -186,7 +186,7 @@ If a client attempts to use a restricted operator:
 
 **Request:**
 ```
-GET /api/users?filter=Email:contains:gmail.com
+GET /api/customers?filter=email:contains:gmail.com
 ```
 
 **Response (400):**
@@ -232,7 +232,7 @@ var result = options.ValidateSafe<User>(exec);
 
 ```csharp
 [HttpGet]
-public async Task<IActionResult> GetUsers([FromQuery] FlexQueryParameters parameters)
+public async Task<IActionResult> GetCustomers([FromQuery] FlexQueryParameters parameters)
 {
     var execOptions = new QueryExecutionOptions
     {
@@ -241,7 +241,7 @@ public async Task<IActionResult> GetUsers([FromQuery] FlexQueryParameters parame
         MaxFieldDepth = 2
     };
 
-    var result = await _context.Users.FlexQueryAsync(parameters, execOptions);
+    var result = await _context.Customers.FlexQueryAsync(parameters, execOptions);
     return Ok(result);
 }
 ```
@@ -250,12 +250,12 @@ Or with inline configuration:
 
 ```csharp
 [HttpGet]
-public async Task<IActionResult> GetUsers([FromQuery] FlexQueryParameters parameters)
+public async Task<IActionResult> GetCustomers([FromQuery] FlexQueryParameters parameters)
 {
-    var result = await _context.Users.FlexQueryAsync(parameters, exec =>
+    var result = await _context.Customers.FlexQueryAsync(parameters, exec =>
     {
-        exec.AllowedFields = new HashSet<string> { "id", "name", "email", "status" };
-        exec.BlockedFields = new HashSet<string> { "passwordHash" };
+        exec.AllowedFields = new HashSet<string> { "id", "name", "email", "status", "city" };
+        exec.BlockedFields = new HashSet<string> { "email" };
         exec.MaxFieldDepth = 2;
     });
 

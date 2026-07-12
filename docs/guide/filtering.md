@@ -39,15 +39,15 @@ FlexQuery.NET supports multiple filter syntaxes. The active syntax is configured
 Simple colon-delimited expressions.
 
 ```
-GET /api/users?filter=status:eq:active
-GET /api/users?filter=age:gte:18
-GET /api/users?filter=name:contains:alice
+GET /api/customers?filter=status:eq:active
+GET /api/customers?filter=salary:gte:50000
+GET /api/customers?filter=name:contains:alice
 ```
 
 **Compound (AND — URL-encode `&` as `%26`):**
 
 ```http
-GET /api/users?filter=status:eq:active%26age:gte:18
+GET /api/customers?filter=status:eq:active%26city:eq:'New York'
 ```
 
 ### FQL Format (SQL-like)
@@ -60,8 +60,8 @@ Fql.Register();
 ```
 
 ```
-GET /api/users?filter=status = "active" AND age >= 18
-GET /api/users?filter=(name = "alice" OR name = "bob") AND status = "active"
+GET /api/customers?filter=status = "active" AND salary >= 50000
+GET /api/customers?filter=(name = "alice" OR name = "bob") AND status = "active"
 ```
 
 
@@ -73,10 +73,10 @@ GET /api/users?filter=(name = "alice" OR name = "bob") AND status = "active"
 | :--- | :--- | :--- |
 | `eq` | Equals | `status:eq:active` |
 | `neq` | Not equals | `status:neq:deleted` |
-| `gt` | Greater than | `age:gt:18` |
-| `gte` | Greater than or equal | `age:gte:18` |
-| `lt` | Less than | `price:lt:100` |
-| `lte` | Less than or equal | `price:lte:100` |
+| `gt` | Greater than | `salary:gt:50000` |
+| `gte` | Greater than or equal | `salary:gte:50000` |
+| `lt` | Less than | `salary:lt:100000` |
+| `lte` | Less than or equal | `salary:lte:100000` |
 | `contains` | String contains | `name:contains:alice` |
 | `startswith` | String starts with | `email:startswith:admin` |
 | `endswith` | String ends with | `email:endswith:.com` |
@@ -101,7 +101,7 @@ GET /api/users?filter=(name = "alice" OR name = "bob") AND status = "active"
 
 ```csharp
 var options = parameters.ToQueryOptions();
-var query = _context.Users.AsQueryable();
+var query = _context.Customers.AsQueryable();
 var filtered = query.ApplyFilter(options);
 var users = await filtered.ToListAsync();
 ```
@@ -110,12 +110,12 @@ var users = await filtered.ToListAsync();
 
 Request:
 ```
-GET /api/users?filter=orders:any:status:eq:shipped
+GET /api/customers?filter=orders:any:status:eq:shipped
 ```
 
 This translates to:
 ```csharp
-_context.Users.Where(u => u.Orders.Any(o => o.Status == "shipped"))
+_context.Customers.Where(u => u.Orders.Any(o => o.Status == "shipped"))
 ```
 
 SQL:
@@ -129,14 +129,14 @@ SELECT * FROM Users u WHERE EXISTS (
 
 Request (FQL syntax):
 ```
-GET /api/users?filter=Orders.any(Status = "shipped" AND Amount > 100)
+GET /api/customers?filter=Orders.any(Status = "shipped" AND Total > 100)
 ```
 
 ### Range Filter
 
 Request:
 ```
-GET /api/users?filter=age:between:18,65
+GET /api/customers?filter=salary:between:50000,150000
 ```
 
 SQL:
@@ -148,7 +148,7 @@ SELECT * FROM Users WHERE Age BETWEEN 18 AND 65
 
 Request:
 ```
-GET /api/users?filter=status:in:active,pending,trial
+GET /api/customers?filter=status:in:active,pending,trial
 ```
 
 SQL:
@@ -162,7 +162,7 @@ SELECT * FROM Users WHERE Status IN ('active', 'pending', 'trial')
 
 **Request:**
 ```
-GET /api/users?filter=status:eq:active&page=1&pageSize=3
+GET /api/customers?filter=status:eq:active&page=1&pageSize=3
 ```
 
 **Response:**
@@ -193,12 +193,12 @@ GET /api/users?filter=status:eq:active&page=1&pageSize=3
 
 ```csharp
 // WRONG — client can filter on any field, including sensitive ones
-var result = await _context.Users.FlexQueryAsync(parameters);
+var result = await _context.Customers.FlexQueryAsync(parameters);
 ```
 
 ```csharp
 // CORRECT
-var result = await _context.Users.FlexQueryAsync(parameters, exec =>
+var result = await _context.Customers.FlexQueryAsync(parameters, exec =>
 {
     exec.AllowedFields = new HashSet<string> { "name", "email", "status" };
 });
@@ -208,14 +208,14 @@ var result = await _context.Users.FlexQueryAsync(parameters, exec =>
 
 ```csharp
 // WRONG — tenant filter applied after FlexQuery, may expose cross-tenant data
-var query = _context.Users.AsQueryable();
+var query = _context.Customers.AsQueryable();
 query = query.ApplyFilter(options);
 query = query.Where(u => u.TenantId == tenantId); // too late
 ```
 
 ```csharp
 // CORRECT — always apply server-side constraints FIRST
-var query = _context.Users.Where(u => u.TenantId == tenantId);
+var query = _context.Customers.Where(u => u.TenantId == tenantId);
 query = query.ApplyFilter(options);
 ```
 

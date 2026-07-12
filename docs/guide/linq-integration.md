@@ -43,7 +43,7 @@ If you need more control over when specific parts of the query options are appli
 You can use `ApplyFilter` and `ApplySort` to control exactly where in your pipeline the dynamic logic is injected.
 
 ```csharp
-var query = _context.Users
+var query = _context.Customers
     .ApplyFilter(options)  // Only apply dynamic WHERE
     .Where(u => u.Email.EndsWith("@company.com")) // Hard-coded filter after
     .ApplySort(options);   // Only apply dynamic ORDER BY
@@ -113,12 +113,12 @@ WHERE ...
 When you use a query string like `?filter=age:gt:25&sort=createdDate:desc`, FlexQuery translates these into additional LINQ expressions.
 
 ### Example Request
-`GET /api/users?filter=age:gt:25&sort=createdDate:desc`
+`GET /api/customers?filter=salary:gt:50000&sort=createdDate:desc`
 
 If your code looks like this:
 
 ```csharp
-var query = _context.Users
+var query = _context.Customers
     .Where(u => u.IsActive); // Base condition
 
 var results = await query

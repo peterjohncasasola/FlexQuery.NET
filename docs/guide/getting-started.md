@@ -80,20 +80,21 @@ This optional integration automatically registers the `FieldAccessFilter` into t
 ```csharp
 [FieldAccess(Allowed = new[] { "Id", "Name", "Email" })]
 [HttpGet]
-public async Task<IActionResult> GetUsers() { ... }
+public async Task<IActionResult> GetCustomers() { ... }
 ```
 
 ### Step 2: Define Your Entity
 
 ```csharp
-public class User
+public class Customer
 {
     public int Id { get; set; }
     public string Name { get; set; } = "";
     public string Email { get; set; } = "";
+    public string City { get; set; } = "";
     public string Status { get; set; } = "active";
-    public int Age { get; set; }
-    public DateTime CreatedAt { get; set; }
+    public decimal Salary { get; set; }
+    public DateTime CreatedDate { get; set; }
     public List<Order> Orders { get; set; } = new();
 }
 ```
@@ -103,6 +104,8 @@ public class User
 ## Your First Endpoint (Complete Runnable Example)
 
 This is the recommended production pattern using `FlexQueryAsync`, which automatically handles parsing, validation, and execution in a single line.
+
+> **Note:** `FlexQueryAsync` requires the `FlexQuery.NET.EntityFrameworkCore` or `FlexQuery.NET.Dapper` package. The core `FlexQuery.NET` package provides synchronous `FlexQuery` for advanced scenarios.
 
 ```csharp
 using FlexQuery.NET.EntityFrameworkCore;
@@ -114,27 +117,27 @@ using System.Collections.Generic;
 
 [ApiController]
 [Route("api/[controller]")]
-public class UsersController : ControllerBase
+public class CustomersController : ControllerBase
 {
     private readonly AppDbContext _context;
 
-    public UsersController(AppDbContext context) => _context = context;
+    public CustomersController(AppDbContext context) => _context = context;
 
     [HttpGet]
-    public async Task<IActionResult> GetUsers([FromQuery] FlexQueryParameters parameters)
+    public async Task<IActionResult> GetCustomers([FromQuery] FlexQueryParameters parameters)
     {
         try
         {
-            var result = await _context.Users.FlexQueryAsync(parameters, exec =>
+            var result = await _context.Customers.FlexQueryAsync(parameters, exec =>
             {
                 // Security: Declare which fields clients are allowed to view/filter/sort
                 exec.AllowedFields = new HashSet<string>
                 {
-                    "Id", "Name", "Email", "Status", "Age", "CreatedAt"
+                    "Id", "Name", "Email", "Status", "City", "Salary", "CreatedDate"
                 };
 
                 // Block highly sensitive fields absolutely
-                exec.BlockedFields = new HashSet<string> { "PasswordHash" };
+                exec.BlockedFields = new HashSet<string> { "Email" };
 
                 // Limit nesting depth (prevents infinite traversal via includes)
                 exec.MaxFieldDepth = 2;
@@ -154,7 +157,7 @@ public class UsersController : ControllerBase
 ### Sample Request
 
 ```http
-GET /api/users?filter=Status:eq:active&sort=Name:asc&page=1&pageSize=10&select=Id,Name,Email
+GET /api/customers?filter=Status:eq:active&sort=Name:asc&page=1&pageSize=10&select=Id,Name,Email
 ```
 
 ### Sample Response
@@ -216,7 +219,7 @@ public class FlexQueryParameters : FlexQueryBase
 
 ## How FlexQueryAsync Works Under the Hood
 
-`FlexQueryAsync` is the unified high-level method. It internally manages the entire query lifecycle:
+`FlexQueryAsync` (available in `FlexQuery.NET.EntityFrameworkCore` and `FlexQuery.NET.Dapper`) is the unified high-level method. It internally manages the entire query lifecycle:
 
 ```text
 FlexQueryParameters
@@ -243,7 +246,7 @@ using FlexQuery.NET;
 using FlexQuery.NET.EntityFrameworkCore;
 
 [HttpGet("manual")]
-public async Task<IActionResult> GetUsersManual([FromQuery] FlexQueryParameters parameters)
+public async Task<IActionResult> GetCustomersManual([FromQuery] FlexQueryParameters parameters)
 {
     // 1. Parse
     var options = parameters.ToQueryOptions();
@@ -253,10 +256,10 @@ public async Task<IActionResult> GetUsersManual([FromQuery] FlexQueryParameters 
     {
         AllowedFields = new HashSet<string> { "Id", "Name", "Email", "Status" }
     };
-    options.ValidateOrThrow<User>(execOptions);
+    options.ValidateOrThrow<Customer>(execOptions);
 
     // 3. Start composing the IQueryable
-    var query = _context.Users.AsQueryable();
+    var query = _context.Customers.AsQueryable();
     query = query.ApplyFilter(options);
     query = query.ApplySort(options);
 
@@ -284,20 +287,20 @@ public async Task<IActionResult> GetUsersManual([FromQuery] FlexQueryParameters 
 var execOptions = new QueryExecutionOptions
 {
     AllowedFields     = new HashSet<string> { "Name", "Email", "Status" },
-    BlockedFields     = new HashSet<string> { "PasswordHash", "InternalNotes" },
+    BlockedFields     = new HashSet<string> { "Email", "InternalNotes" },
     FilterableFields  = new HashSet<string> { "Name", "Status" },
-    SortableFields    = new HashSet<string> { "Name", "CreatedAt" },
+    SortableFields    = new HashSet<string> { "Name", "CreatedDate" },
     SelectableFields  = new HashSet<string> { "Id", "Name", "Email" },
     MaxFieldDepth     = 2
 };
 
-options.ValidateOrThrow<User>(execOptions);
+options.ValidateOrThrow<Customer>(execOptions);
 ```
 
 If you prefer to avoid exceptions for control flow, you can use `ValidateSafe<T>` to return structured errors:
 
 ```csharp
-var result = options.ValidateSafe<User>(execOptions);
+var result = options.ValidateSafe<Customer>(execOptions);
 
 if (!result.IsValid)
 {

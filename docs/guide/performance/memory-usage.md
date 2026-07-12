@@ -189,7 +189,7 @@ For endpoints exporting all matching records:
 [HttpGet("export")]
 public async IAsyncEnumerable<object> Export([FromQuery] FlexQueryParameters parameters)
 {
-    await foreach (var item in _context.Users
+    await foreach (var item in _context.Customers
         .FlexQueryStreaming(parameters))
     {
         yield return item;

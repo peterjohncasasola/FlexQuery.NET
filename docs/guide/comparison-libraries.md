@@ -82,7 +82,7 @@ It supports:
 All in a **single method call**.
 
 ```http
-GET /api/users?filter=Name:contains:John&select=Name,Orders.Status&include=Orders
+GET /api/customers?filter=Name:contains:John&select=Name,Orders.Status&include=Orders
 ```
 
 ---
@@ -152,11 +152,11 @@ Parse → Validate → Execute (single pipeline)
 ### 🟦 FlexQuery.NET
 
 ```http
-GET /api/users?filter=Name:contains:John&include=Orders&select=Name,Orders.Status&sort=CreatedAt:desc
+GET /api/customers?filter=Name:contains:John&include=Orders&select=Name,Orders.Status&sort=CreatedDate:desc
 ```
 
 ```csharp
-var result = await _context.Users.FlexQueryAsync(parameters, options => 
+var result = await _context.Customers.FlexQueryAsync(parameters, options => 
 {
     // Security policy enforced inline
     options.AllowedFields = ["Name", "Orders.Status", "CreatedAt"];
@@ -170,7 +170,7 @@ var result = await _context.Users.FlexQueryAsync(parameters, options =>
 ```csharp
 var mapper = new GridifyMapper<User>().GenerateDefaultMap();
 
-var query = _context.Users
+var query = _context.Customers
     .Include(u => u.Orders)
     .Gridify(queryObj, mapper);
 
@@ -186,15 +186,15 @@ var result = query.Data.Select(u => new
 ### 🟥 Sieve
 
 ```csharp
-var query = _context.Users.Include(u => u.Orders);
+var query = _context.Customers.Include(c => c.Orders);
 
 // Sieve applies the filters/sorts based on attributes
 query = _sieveProcessor.Apply(sieveModel, query);
 
-var result = await query.Select(u => new
+var result = await query.Select(c => new
 {
-    u.Name,
-    Orders = u.Orders.Select(o => new { o.Status })
+    c.Name,
+    Orders = c.Orders.Select(o => new { o.Status })
 }).ToListAsync();
 ```
 

@@ -4,6 +4,8 @@
 
 FlexQuery.NET uses a consistent, human-readable DSL (Domain Specific Language) for dynamic querying. This guide provides a rapid introduction to the standard formats for filtering, sorting, paging, and projection.
 
+> **Note:** Examples using `FlexQueryAsync` require the `FlexQuery.NET.EntityFrameworkCore` or `FlexQuery.NET.Dapper` package. The core `FlexQuery.NET` package provides synchronous `FlexQuery` for advanced scenarios.
+
 ## Why this feature exists
 
 When building APIs, there is a constant tension between backend rigidity and frontend flexibility. The FlexQuery DSL exists to provide a standardized, secure, and easily-parsable syntax that frontends can use to request exact data shapes without forcing backend developers to write custom SQL or LINQ for every view.
@@ -98,10 +100,10 @@ In FlexQuery v4, all these features are applied in a single unified pipeline. Yo
 
 ```csharp
 [HttpGet]
-public async Task<IActionResult> GetUsers([FromQuery] FlexQueryParameters parameters)
+public async Task<IActionResult> GetCustomers([FromQuery] FlexQueryParameters parameters)
 {
     // Execute everything in one pass
-    var result = await _context.Users.FlexQueryAsync(parameters, options => 
+    var result = await _context.Customers.FlexQueryAsync(parameters, options => 
     {
         // Enforce your security rules
         options.AllowedFields = ["Id", "Name", "Price", "Category.Name", "Status"];
@@ -112,15 +114,17 @@ public async Task<IActionResult> GetUsers([FromQuery] FlexQueryParameters parame
 ```
 
 ### HTTP POST Requests
+
 If your query is too large for a URL query string, you can use the `FlexQueryRequest` model to accept the query via a JSON POST body. The properties are exactly the same as `FlexQueryParameters`.
 
 ```csharp
 [HttpPost("query")]
 public async Task<IActionResult> QueryUsers([FromBody] FlexQueryRequest request)
 {
-    var result = await _context.Users.FlexQueryAsync(request, options => 
+    var options = request.ToQueryOptions();
+    var result = await _context.Customers.FlexQueryAsync(options, exec => 
     {
-        options.AllowedFields = ["Id", "Name", "Price", "Status"];
+        exec.AllowedFields = new HashSet<string> { "Id", "Name", "Price", "Status" };
     });
 
     return Ok(result);

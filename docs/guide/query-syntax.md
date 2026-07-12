@@ -76,15 +76,9 @@ FlexQueryCore.Configure(options =>
 The most compact format. Fields, operators, and values are separated by colons:
 
 ```
-GET /api/products?filter=ListPrice:gte:1000&sort=Name:asc
-GET /api/products?filter=ProductCategory.Name:eq:Bikes
+GET /api/customers?filter=City:eq:New York&sort=Name:asc
+GET /api/customers?filter=City:eq:New York%26Status:eq:Active
 GET /api/customers?filter=LastName:startswith:Smi&select=Id,LastName,Email
-```
-
-**Compound (AND — URL-encode `&` as `%26`):**
-
-```
-GET /api/products?filter=ListPrice:gte:1000%26ProductCategory.Name:eq:Bikes
 ```
 
 **Best for:** Internal tools, compact query strings, URL-friendly APIs.
@@ -94,8 +88,8 @@ GET /api/products?filter=ListPrice:gte:1000%26ProductCategory.Name:eq:Bikes
 Requires the `FlexQuery.NET.Parsers.Fql` package and `Fql.Register()` at startup. Human-readable expressions using standard operators:
 
 ```
-GET /api/products?filter=ListPrice >= 1000 AND Category.Name = 'Bikes'
-GET /api/customers?filter=LastName CONTAINS 'Smi' OR Email ENDSWITH '@adventure-works.com'
+GET /api/customers?filter=Salary >= 50000 AND City = 'New York'
+GET /api/customers?filter=LastName CONTAINS 'Smi' OR Email ENDSWITH '@example.com'
 ```
 
 **Best for:** Developer tools, debugging, admin panels, human-written queries.
@@ -105,8 +99,8 @@ GET /api/customers?filter=LastName CONTAINS 'Smi' OR Email ENDSWITH '@adventure-
 Requires the `FlexQuery.NET.Parsers.MiniOData` package and `MiniOData.Register()` at startup. Standard OData `$filter` and `$orderby` syntax:
 
 ```
-GET /api/products?$filter=ListPrice ge 1000 and Category/Name eq 'Bikes'
-GET /api/products?$orderby=Name desc&$select=Id,Name,ListPrice&$expand=ProductCategory
+GET /api/customers?$filter=Salary ge 50000 and City eq 'New York'
+GET /api/customers?$orderby=Name desc&$select=Id,Name,Salary&$expand=Orders
 ```
 
 **Best for:** Migrating from OData, enterprise clients that already speak OData.
@@ -129,15 +123,15 @@ GET /api/products?$orderby=Name desc&$select=Id,Name,ListPrice&$expand=ProductCa
 ## Example: Single Endpoint with Explicit Syntax
 
 ```csharp
-[HttpGet("products")]
-public async Task<IActionResult> GetProducts(
+[HttpGet("customers")]
+public async Task<IActionResult> GetCustomers(
     [FromQuery] FlexQueryParameters parameters)
 {
-    var result = await _context.Products.FlexQueryAsync(parameters, opts =>
+    var result = await _context.Customers.FlexQueryAsync(parameters, opts =>
     {
         opts.AllowedFields = new HashSet<string>
         {
-            "Id", "Name", "ListPrice", "ProductCategory"
+            "Id", "Name", "Email", "City", "Salary"
         };
         opts.MaxPageSize = 100;
     });
@@ -150,13 +144,13 @@ This endpoint handles the syntax configured at startup:
 
 ```
 # NativeDsl (default)
-GET /products?filter=ListPrice:gte:1000&sort=Name:asc
+GET /customers?filter=Salary:gte:50000&sort=Name:asc
 
 # FQL (if registered)
-GET /products?filter=ListPrice >= 1000 AND ProductCategory.Name = 'Bikes'
+GET /customers?filter=Salary >= 50000 AND City = 'New York'
 
 # MiniOData (if registered)
-GET /products?$filter=ListPrice ge 1000 and ProductCategory/Name eq 'Bikes'
+GET /customers?$filter=Salary ge 50000 and City eq 'New York'
 ```
 
 ---
@@ -166,15 +160,15 @@ GET /products?$filter=ListPrice ge 1000 and ProductCategory/Name eq 'Bikes'
 To override the global syntax for a single request, pass `QueryOptions` directly instead of `FlexQueryParameters`:
 
 ```csharp
-[HttpPost("products/query")]
-public async Task<IActionResult> QueryProducts(
+[HttpPost("customers/query")]
+public async Task<IActionResult> QueryCustomers(
     [FromBody] MiniODataRequest request)
 {
     var options = request.ToQueryOptions();
     // options is now parsed using MiniOData syntax
-    var result = await _context.Products.FlexQueryAsync(options, opts =>
+    var result = await _context.Customers.FlexQueryAsync(options, opts =>
     {
-        opts.AllowedFields = new HashSet<string> { "Id", "Name", "ListPrice" };
+        opts.AllowedFields = new HashSet<string> { "Id", "Name", "Salary" };
     });
 
     return Ok(result);
@@ -204,5 +198,5 @@ public async Task<IActionResult> QueryProducts(
 ## Related Features
 
 - [Filtering](/guide/filtering) — How parsed filters become LINQ expressions
-- [MiniOData Adapter](/adapters/miniodata) — OData compatibility details
+- [MiniOData Parser](/parsers/miniodata) — OData compatibility details
 - [AG Grid Adapter](/adapters/ag-grid) — Parsing AG Grid JSON payloads

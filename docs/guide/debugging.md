@@ -155,7 +155,7 @@ Or you can use `ToQueryString()` in the manual pipeline to inspect the SQL witho
 
 ```csharp
 var options = parameters.ToQueryOptions();
-var query = _context.Users.AsQueryable();
+var query = _context.Customers.AsQueryable();
 
 query = query.ApplyFilter(options);
 query = query.ApplySort(options);
@@ -186,7 +186,7 @@ ORDER BY [u].[Name]
 ### "Results are empty but shouldn't be"
 
 1. Verify case sensitivity: `options.CaseInsensitive` is `true` by default, but if you turned it off, "Alice" and "alice" will not match.
-2. Check if a server-side pre-filter is excluding results before FlexQuery runs (e.g., `_context.Users.Where(u => u.TenantId == 1).FlexQueryAsync(...)`).
+2. Check if a server-side pre-filter is excluding results before FlexQuery runs (e.g., `_context.Customers.Where(c => c.CustomerId == 1).FlexQueryAsync(...)`).
 3. Use `query.ToQueryString()` or SQL Profiler to see the exact SQL generated.
 
 ### "Validation is rejecting a valid field"

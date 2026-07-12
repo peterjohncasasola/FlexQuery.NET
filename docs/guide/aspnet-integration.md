@@ -28,7 +28,7 @@ Unlike v3, FlexQuery.NET v4 uses a static configuration model. To enable the dec
 
 ```csharp
 using FlexQuery.NET;
-using FlexQuery.NET.AspNetCore.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -44,6 +44,9 @@ builder.Services.AddControllers()
     .AddFlexQuerySecurity();
 
 var app = builder.Build();
+
+app.MapControllers();
+app.Run();
 ```
 
 > [!NOTE]
@@ -58,21 +61,23 @@ The `[FieldAccess]` attribute allows you to define field security rules directly
 ```csharp
 [HttpGet]
 [FieldAccess(
-    AllowedFields    = new[] { "Id", "Name", "Email", "Status" },
-    FilterableFields = new[] { "Name", "Status" },
-    SortableFields   = new[] { "Name", "CreatedAt" },
-    MaxFieldDepth    = 2
+    Allowed    = new[] { "Id", "Name", "Email", "Status" },
+    Filterable = new[] { "Name", "Status" },
+    Sortable   = new[] { "Name", "CreatedAt" },
+    Selectable = new[] { "Id", "Name", "Email" },
+    MaxDepth   = 2
 )]
-public async Task<IActionResult> GetUsers([FromQuery] FlexQueryParameters parameters)
+public async Task<IActionResult> GetCustomers([FromQuery] FlexQueryParameters parameters)
 {
     // Retrieve the security rules populated by the [FieldAccess] filter
     var execOptions = HttpContext.GetFlexQueryExecutionOptions();
 
-    var result = await _context.Users.FlexQueryAsync(parameters, exec =>
+    var result = await _context.Customers.FlexQueryAsync(parameters, exec =>
     {
         exec.AllowedFields = execOptions.AllowedFields;
         exec.FilterableFields = execOptions.FilterableFields;
         exec.SortableFields = execOptions.SortableFields;
+        exec.SelectableFields = execOptions.SelectableFields;
         exec.MaxFieldDepth = execOptions.MaxFieldDepth;
     });
     
@@ -128,10 +133,13 @@ builder.Services.AddControllers(o =>
 
 ```csharp
 [HttpGet]
-public async Task<ActionResult<QueryResult<User>>> GetUsers(
+public async Task<ActionResult<QueryResult<Customer>>> GetCustomers(
     [FromQuery] FlexQueryParameters parameters)
 {
-    return await _context.Users.FlexQueryAsync(parameters, HttpContext);
+    return await _context.Customers.FlexQueryAsync(parameters, exec =>
+    {
+        exec.AllowedFields = new HashSet<string> { "Id", "Name", "Email" };
+    });
 }
 ```
 
@@ -151,11 +159,11 @@ Swagger UI will automatically display the query string parameters bound to the o
 The `[FieldAccess]` attribute and `AddFlexQuerySecurity()` pipeline are designed specifically for the MVC/Web API Controller pipeline. For Minimal APIs, we strongly recommend manual configuration using the inline lambda, which is highly performant and explicit:
 
 ```csharp
-app.MapGet("/api/users", async (
+app.MapGet("/api/customers", async (
     [AsParameters] FlexQueryParameters parameters,
     AppDbContext db) =>
 {
-    var result = await db.Users.FlexQueryAsync(parameters, exec =>
+    var result = await db.Customers.FlexQueryAsync(parameters, exec =>
     {
         exec.AllowedFields = ["Id", "Name", "Email"];
         exec.MaxFieldDepth = 2;

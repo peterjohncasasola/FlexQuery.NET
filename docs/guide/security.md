@@ -72,13 +72,21 @@ These are SERVER policies and should **never** be bound directly from HTTP reque
 | `FilterableFields` | `HashSet<string>?` | BaseQueryOptions | Fields allowed in filter expressions only. |
 | `SortableFields` | `HashSet<string>?` | BaseQueryOptions | Fields allowed in sort expressions only. |
 | `SelectableFields` | `HashSet<string>?` | BaseQueryOptions | Fields allowed in select/projection only. |
+| `GroupableFields` | `HashSet<string>?` | BaseQueryOptions | Fields allowed in group-by expressions only. |
+| `AggregatableFields` | `HashSet<string>?` | BaseQueryOptions | Fields allowed in aggregate expressions only. |
+| `ExpressionMappings` | `Dictionary<string, LambdaExpression>?` | BaseQueryOptions | Maps DTO field aliases to entity expressions. |
+| `FieldMappings` | `Dictionary<string, string>?` | BaseQueryOptions | Maps external field aliases to internal property names. |
+| `DefaultSortField` | `string?` | BaseQueryOptions | Default sort field when client doesn't specify. |
+| `DefaultSortDescending` | `bool` | BaseQueryOptions | Default sort direction when `DefaultSortField` is used. |
 | `MaxFieldDepth` | `int?` | FlexQueryOptions (global) or BaseQueryOptions (override) | Maximum dot-notation path depth. |
-| `StrictFieldValidation` | `bool?` | FlexQueryOptions (global) or BaseQueryOptions (override) | Fail-fast on first violation. |
+| `StrictFieldValidation` | `bool` | FlexQueryOptions (global) or BaseQueryOptions (override) | Fail-fast on first violation. |
 | `MaxPageSize` | `int?` | FlexQueryOptions (global) or BaseQueryOptions (override) | Maximum allowed page size. |
-| `IncludeTotalCount` | `bool?` | FlexQueryOptions (global) or BaseQueryOptions (override) | Include total count by default. |
+| `IncludeTotalCount` | `bool` | FlexQueryOptions (global) or BaseQueryOptions (override) | Include total count by default. |
+| `CaseInsensitive` | `bool` | FlexQueryOptions (global) or BaseQueryOptions (override) | Whether field name matching is case-insensitive. |
 | `RoleAllowedFields` | `Dictionary<string, HashSet<string>>?` | BaseQueryOptions | Per-role field allow-lists. |
 | `CurrentRole` | `string?` | BaseQueryOptions | The current user's role name. |
-| `FieldMappings` | `Dictionary<string, string>?` | BaseQueryOptions | Alias → real field name mappings. |
+| `AllowedFieldsResolver` | `Func<Type, IEnumerable<string>>?` | BaseQueryOptions | Dynamic resolver for allowed fields based on entity type. |
+| `Listener` | `IFlexQueryExecutionListener?` | BaseQueryOptions | Optional execution event listener. |
 
 ## AllowedFields
 
@@ -241,9 +249,9 @@ Best for simple, single-endpoint rules.
 
 ```csharp
 [HttpGet]
-public async Task<IActionResult> GetUsers([FromQuery] FlexQueryParameters parameters)
+public async Task<IActionResult> GetCustomers([FromQuery] FlexQueryParameters parameters)
 {
-    var result = await _context.Users.FlexQueryAsync(parameters, exec =>
+    var result = await _context.Customers.FlexQueryAsync(parameters, exec =>
     {
         exec.AllowedFields = new HashSet<string> { "id", "name", "email" };
     });
@@ -270,13 +278,13 @@ Best for standardizing rules across a controller.
     MaxDepth   = 2
 )]
 [HttpGet]
-public async Task<IActionResult> GetUsers(
+public async Task<IActionResult> GetCustomers(
     [FromQuery] FlexQueryParameters parameters)
 {
     // Retrieve execution options populated by the [FieldAccess] filter
     var execOptions = HttpContext.GetFlexQueryExecutionOptions();
 
-    var result = await _context.Users.FlexQueryAsync(parameters, exec =>
+    var result = await _context.Customers.FlexQueryAsync(parameters, exec =>
     {
         exec.AllowedFields = execOptions.AllowedFields;
         exec.BlockedFields = execOptions.BlockedFields;
@@ -351,7 +359,7 @@ Handle it in your controller:
 ```csharp
 try
 {
-    var result = await _context.Users.FlexQueryAsync(parameters, exec => { ... });
+    var result = await _context.Customers.FlexQueryAsync(parameters, exec => { ... });
     return Ok(result);
 }
 catch (QueryValidationException ex)

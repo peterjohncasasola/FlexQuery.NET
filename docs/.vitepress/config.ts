@@ -79,13 +79,29 @@ export default defineConfig({
           ]
         },
         {
+          text: 'Comparisons',
+          items: [
+            { text: 'vs GraphQL & OData', link: '/guide/comparison' },
+            { text: 'vs .NET Libraries', link: '/guide/comparison-libraries' }
+          ]
+        },
+        {
+          text: 'Architecture',
+          items: [
+            { text: 'Provider Model', link: '/architecture/provider-model' },
+            { text: 'Grouped Query Contract', link: '/architecture/grouped-query-contract' }
+          ]
+        },
+        {
           text: 'Execution & Security',
           items: [
             { text: 'Execution Pipeline', link: '/guide/execution-pipeline' },
             { text: 'Validation', link: '/guide/validation' },
             { text: 'Security & Field Access', link: '/guide/security' },
             { text: 'Security Governance', link: '/guide/security-governance' },
-            { text: 'Field Mapping', link: '/guide/field-mapping' }
+            { text: 'Field Mapping', link: '/guide/field-mapping' },
+            { text: 'Performance Tuning', link: '/guide/performance-tuning' },
+            { text: 'Debugging', link: '/guide/debugging' }
           ]
         },
         {
@@ -106,11 +122,17 @@ export default defineConfig({
           ]
         },
         {
+          text: 'Parsers',
+          items: [
+            { text: 'MiniOData Parser', link: '/parsers/miniodata' },
+            { text: 'FQL Parser', link: '/parsers/fql' }
+          ]
+        },
+        {
           text: 'Adapters',
           items: [
             { text: 'AG Grid Integration', link: '/adapters/ag-grid' },
-            { text: 'MiniOData Parser', link: '/adapters/miniodata' },
-            { text: 'Kendo UI Integration', link: '/adapters/kendo' },
+            { text: 'Kendo UI Integration', link: '/adapters/kendo' }
           ]
         },
         {
@@ -118,9 +140,7 @@ export default defineConfig({
           collapsed: false,
           items: [
             { text: 'ASP.NET Core', link: '/guide/aspnet-integration' },
-            { text: 'Swagger Integration', link: '/guide/swagger-integration' },
-            { text: 'Performance Tuning', link: '/guide/performance-tuning' },
-            { text: 'Debugging', link: '/guide/debugging' }
+            { text: 'Swagger Integration', link: '/guide/swagger-integration' }
           ]
         },
         {
@@ -141,16 +161,14 @@ export default defineConfig({
           ]
         },
         {
-          text: 'Comparisons',
+          text: 'Examples',
           items: [
-            { text: 'vs GraphQL & OData', link: '/guide/comparison' },
-            { text: 'vs .NET Libraries', link: '/guide/dotnet-comparison' }
-          ]
-        },
-        {
-          text: 'Architecture',
-          items: [
-            { text: 'Provider Model', link: '/architecture/provider-model' }
+            { text: 'Basic Examples', link: '/examples/basic' },
+            { text: 'Advanced Examples', link: '/examples/advanced' },
+            { text: 'Real-World Scenarios', link: '/examples/real-world' },
+            { text: 'Format Examples', link: '/examples/formats' },
+            { text: 'Filtering Examples', link: '/examples/filtering' },
+            { text: 'Include Examples', link: '/examples/include' }
           ]
         },
         {
@@ -171,7 +189,10 @@ export default defineConfig({
           items: [
             { text: 'Basic Examples', link: '/examples/basic' },
             { text: 'Advanced Examples', link: '/examples/advanced' },
-            { text: 'Real-World Scenarios', link: '/examples/real-world' }
+            { text: 'Real-World Scenarios', link: '/examples/real-world' },
+            { text: 'Format Examples', link: '/examples/formats' },
+            { text: 'Filtering Examples', link: '/examples/filtering' },
+            { text: 'Include Examples', link: '/examples/include' }
           ]
         }
       ],

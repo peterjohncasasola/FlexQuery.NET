@@ -44,12 +44,12 @@ Use grouping for:
 
 **DSL:**
 ```
-GET /api/users?select=status&aggregates=*:count&groupBy=status
+GET /api/customers?select=status&aggregates=*:count&groupBy=status
 ```
 
 **FQL:**
 ```
-GET /api/users?select=status&aggregates=COUNT(*)&groupBy=status
+GET /api/customers?select=status&aggregates=COUNT(*)&groupBy=status
 ```
 
 **Response:**
@@ -68,12 +68,12 @@ GET /api/users?select=status&aggregates=COUNT(*)&groupBy=status
 
 **DSL:**
 ```
-GET /api/orders?select=userId&aggregates=Amount:sum&groupBy=userId
+GET /api/orders?select=customerId&aggregates=Total:sum&groupBy=customerId
 ```
 
 **FQL:**
 ```
-GET /api/orders?select=UserId&aggregates=SUM(Amount)&groupBy=UserId
+GET /api/orders?select=CustomerId&aggregates=SUM(Total)&groupBy=CustomerId
 ```
 
 **Response:**
@@ -90,12 +90,12 @@ GET /api/orders?select=UserId&aggregates=SUM(Amount)&groupBy=UserId
 
 **DSL:**
 ```
-GET /api/orders?select=customerId&aggregates=Amount:avg&groupBy=customerId&having=avg(Amount):gt:500
+GET /api/orders?select=customerId&aggregates=Total:avg&groupBy=customerId&having=avg(Total):gt:500
 ```
 
 **FQL:**
 ```
-GET /api/orders?select=CustomerId&aggregates=AVG(Amount)&groupBy=CustomerId&having=AVG(Amount) > 500
+GET /api/orders?select=CustomerId&aggregates=AVG(Total)&groupBy=CustomerId&having=AVG(Total) > 500
 ```
 
 Only returns groups where the average order amount exceeds 500.
@@ -114,12 +114,12 @@ Only returns groups where the average order amount exceeds 500.
 
 **DSL:**
 ```
-GET /api/users?select=status&aggregates=*:count&groupBy=status&sort=Count:desc
+GET /api/customers?select=status&aggregates=*:count&groupBy=status&sort=Count:desc
 ```
 
 **FQL:**
 ```
-GET /api/users?select=status&aggregates=COUNT(*)&groupBy=status&sort=Count DESC
+GET /api/customers?select=status&aggregates=COUNT(*)&groupBy=status&sort=Count DESC
 ```
 
 ---
@@ -206,7 +206,7 @@ var options = new QueryOptions
     }
 };
 
-var result = await _context.Users.ApplySelect(options).ToListAsync();
+var result = await _context.Customers.ApplySelect(options).ToListAsync();
 ```
 
 ### With HAVING
@@ -241,12 +241,12 @@ Aggregates must use the dedicated `aggregates` parameter, not `select`.
 
 ```
 # WRONG (v3 style)
-GET /api/users?select=status,count()&groupBy=status
+GET /api/customers?select=status,count()&groupBy=status
 ```
 
 ```
 # CORRECT (v4)
-GET /api/users?select=status&aggregates=*:count&groupBy=status
+GET /api/customers?select=status&aggregates=*:count&groupBy=status
 ```
 
 ### ❌ Selecting non-grouped fields
@@ -255,12 +255,12 @@ When using GROUP BY, you can only select grouped fields and aggregates. Selectin
 
 ```
 # WRONG
-GET /api/users?select=status,name&aggregates=*:count&groupBy=status
+GET /api/customers?select=status,name&aggregates=*:count&groupBy=status
 ```
 
 ```
 # CORRECT — only grouped fields + aggregates
-GET /api/users?select=status&aggregates=*:count&groupBy=status
+GET /api/customers?select=status&aggregates=*:count&groupBy=status
 ```
 
 ### ❌ Using HAVING without GROUP BY

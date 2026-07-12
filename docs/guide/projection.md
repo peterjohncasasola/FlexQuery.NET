@@ -45,31 +45,31 @@ Use projection when:
 ### Basic Field Selection
 
 ```
-GET /api/users?select=id,name,email
+GET /api/customers?select=id,name,email
 ```
 
 ### Nested Path Selection
 
 ```
-GET /api/users?select=id,name,profile.bio,address.city
+GET /api/customers?select=id,name,address.city
 ```
 
 ### Wildcard (All Fields)
 
 ```
-GET /api/users?select=*
+GET /api/customers?select=*
 ```
 
 ### Projection Mode: Flat
 
 ```
-GET /api/users?select=id,name,profile.bio&mode=flat
+GET /api/customers?select=id,name,address.city&mode=flat
 ```
 
 ### Projection Mode: FlatMixed
 
 ```
-GET /api/users?select=id,name,profile.bio&mode=flat-mixed
+GET /api/customers?select=id,name,address.city&mode=flat-mixed
 ```
 
 ---
@@ -126,7 +126,7 @@ Scalar navigation is flattened; collections remain nested:
 ```csharp
 var options = parameters.ToQueryOptions();
 
-var query = _context.Users.AsQueryable();
+var query = _context.Customers.AsQueryable();
 query = query.ApplyFilter(options);
 query = query.ApplySort(options);
 query = query.ApplyPaging(options);
@@ -139,19 +139,19 @@ var data = await projected.ToListAsync();
 ### Restricting Selectable Fields
 
 ```csharp
-var result = await _context.Users.FlexQueryAsync(parameters, exec =>
-{
-    exec.SelectableFields = new HashSet<string>
+var result = await _context.Customers.FlexQueryAsync(parameters, exec =>
     {
-        "id", "name", "email", "profile.bio"
-    };
+        exec.SelectableFields = new HashSet<string>
+        {
+            "id", "name", "email", "address.city"
+        };
 });
 ```
 
 ### Projection with Aggregates
 
 ```
-GET /api/users?select=status.count()&groupBy=status
+GET /api/customers?select=status.count()&groupBy=status
 ```
 
 ```json
@@ -169,7 +169,7 @@ GET /api/users?select=status.count()&groupBy=status
 
 **Request:**
 ```
-GET /api/users?select=id,name,email&page=1&pageSize=3
+GET /api/customers?select=id,name,email&page=1&pageSize=3
 ```
 
 **Response:**
@@ -194,7 +194,7 @@ GET /api/users?select=id,name,email&page=1&pageSize=3
 
 **Nested path request:**
 ```
-GET /api/users?select=id,name,address.city&mode=nested
+GET /api/customers?select=id,name,address.city&mode=nested
 ```
 
 ```json
@@ -214,13 +214,13 @@ GET /api/users?select=id,name,address.city&mode=nested
 
 ```csharp
 // WRONG — client could select passwordHash, internalNotes, etc.
-var result = await _context.Users.FlexQueryAsync(parameters);
+var result = await _context.Customers.FlexQueryAsync(parameters);
 ```
 
 ### ❌ Requesting non-existent fields
 
 ```
-GET /api/users?select=id,nonExistentField
+GET /api/customers?select=id,nonExistentField
 ```
 
 Non-existent fields are silently skipped during projection. Validate fields first with `ValidateOrThrow<T>`.

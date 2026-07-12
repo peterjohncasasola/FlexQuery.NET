@@ -27,7 +27,7 @@ var options = Query.Create()
     .Build();
 
 // options is now a fully formed QueryOptions object
-var result = await _context.Users.FlexQueryAsync(options);
+var result = await _context.Customers.FlexQueryAsync(options);
 ```
 
 ## Filtering

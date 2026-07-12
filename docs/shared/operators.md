@@ -18,10 +18,10 @@ All filter operators supported by FlexQuery.NET, with examples, SQL translations
 ### Examples
 
 ```
-GET /api/users?filter=age:eq:30
-GET /api/users?filter=age:gte:18
-GET /api/users?filter=createdAt:gt:2024-01-01
-GET /api/users?filter=price:lte:99.99
+GET /api/customers?filter=salary:eq:50000
+GET /api/customers?filter=salary:gte:50000
+GET /api/customers?filter=createdDate:gt:2024-01-01
+GET /api/customers?filter=total:lte:99.99
 ```
 
 **SQL:**
@@ -46,10 +46,10 @@ WHERE Price <= 99.99
 ### Examples
 
 ```
-GET /api/users?filter=name:contains:alice
-GET /api/users?filter=email:startswith:admin
-GET /api/users?filter=email:endswith:.com
-GET /api/users?filter=name:like:%ali%
+GET /api/customers?filter=name:contains:alice
+GET /api/customers?filter=email:startswith:admin
+GET /api/customers?filter=email:endswith:.com
+GET /api/customers?filter=name:like:%ali%
 ```
 
 **SQL:**
@@ -75,8 +75,8 @@ WHERE Name LIKE '%ali%'
 ### Examples
 
 ```
-GET /api/users?filter=deletedAt:isnull
-GET /api/users?filter=profilePicture:isnotnull
+GET /api/customers?filter=address:isnull
+GET /api/customers?filter=address:isnotnull
 ```
 
 **SQL:**
@@ -97,8 +97,8 @@ WHERE ProfilePicture IS NOT NULL
 ### Examples
 
 ```
-GET /api/users?filter=status:in:active,pending,trial
-GET /api/users?filter=status:notin:deleted,banned
+GET /api/customers?filter=status:in:active,pending,trial
+GET /api/customers?filter=status:notin:deleted,banned
 ```
 
 **SQL:**
@@ -118,7 +118,7 @@ WHERE Status NOT IN ('deleted', 'banned')
 ### Example
 
 ```
-GET /api/users?filter=age:between:18,65
+GET /api/customers?filter=salary:between:50000,150000
 GET /api/orders?filter=amount:between:100,500
 ```
 
@@ -143,7 +143,7 @@ These operators work on navigation collection properties.
 ### any
 
 ```
-GET /api/users?filter=orders:any:status:eq:shipped
+GET /api/customers?filter=orders:any:status:eq:shipped
 ```
 
 **SQL:**
@@ -156,7 +156,7 @@ WHERE EXISTS (
 ### all
 
 ```
-GET /api/users?filter=orders:all:status:eq:confirmed
+GET /api/customers?filter=orders:all:status:eq:confirmed
 ```
 
 **SQL:**
@@ -169,7 +169,7 @@ WHERE NOT EXISTS (
 ### count
 
 ```
-GET /api/users?filter=orders:count:gt:5
+GET /api/customers?filter=orders:count:gt:5
 ```
 
 **SQL:**
@@ -180,7 +180,7 @@ WHERE (SELECT COUNT(*) FROM Orders o WHERE o.UserId = u.Id) > 5
 ### Nested any (FQL)
 
 ```
-GET /api/users?filter=Orders.any(Status = "shipped" AND Amount > 100)
+GET /api/customers?filter=Orders.any(Status = "shipped" AND Total > 100)
 ```
 
 ---
@@ -204,9 +204,9 @@ FQL uses natural language symbols:
 **FQL examples:**
 
 ```
-GET /api/users?filter=status = "active" AND age >= 18
-GET /api/users?filter=(name = "alice" OR name = "bob") AND status = "active"
-GET /api/users?filter=Orders.any(Status = "shipped")
+GET /api/customers?filter=status = "active" AND salary >= 50000
+GET /api/customers?filter=(name = "alice" OR name = "bob") AND status = "active"
+GET /api/customers?filter=Orders.any(Status = "shipped")
 ```
 
 ---

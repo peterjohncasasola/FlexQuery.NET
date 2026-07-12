@@ -58,16 +58,16 @@ The SQL dialect is **auto-detected** from the supplied `DbConnection` at runtime
 The simplest approach — pass raw parameters and let FlexQuery parse, validate, and execute:
 
 ```csharp
-[HttpGet("users")]
-public async Task<IActionResult> GetUsers(
+[HttpGet("customers")]
+public async Task<IActionResult> GetCustomers(
     [FromQuery] FlexQueryParameters parameters)
 {
     await using var connection = new SqlConnection(_connectionString);
     await connection.OpenAsync();
 
-    var result = await connection.FlexQueryAsync<User>(parameters, opts =>
+    var result = await connection.FlexQueryAsync<Customer>(parameters, opts =>
     {
-        opts.AllowedFields = new HashSet<string> { "Id", "Name", "Email", "CreatedAt" };
+        opts.AllowedFields = new HashSet<string> { "Id", "Name", "Email", "City", "CreatedDate" };
         opts.MaxPageSize = 100;
     });
 
@@ -97,7 +97,7 @@ For full control over all execution options:
 ```csharp
 var dapperOptions = new DapperQueryOptions
 {
-    CommandTimeoutSeconds = 60,
+    CommandTimeout = 60,
     AllowedFields = new HashSet<string> { "Id", "Name" },
     StrictFieldValidation = true,
     MaxPageSize = 50
@@ -157,9 +157,9 @@ Data.Count  = groups returned in the current page
 
 1. **The SQL dialect is auto-detected from the `DbConnection`** — no manual dialect configuration is needed
 2. **Use `AllowedFields`** — Dapper generates raw SQL; restricting fields is critical for security
-3. **Set `CommandTimeoutSeconds` for complex queries** — The default is 30 seconds
+3. **Set `CommandTimeout` for complex queries** — The default is 30 seconds
 4. **Prefer `FlexQueryParameters` overloads** for API endpoints — They handle parsing and validation automatically
-5. **Use `ScanEntitiesFromAssembly`** during startup — Avoid lazy mapping discovery in hot paths
+5. **Configure entity mappings during startup** — Use `FlexQueryDapper.Configure` to set up mappings once
 6. **Reuse connections** — FlexQuery does not manage connection lifecycle; follow Dapper's connection pooling best practices
 
 ## Common Pitfalls

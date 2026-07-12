@@ -89,7 +89,7 @@ Combined with aggregates (always expressed as query parameters, not inside the f
 ### Filtered includes (FQL inside parentheses)
 ```
 ?include=Orders(Status = 'Active')
-?include=Orders(Status = 'Active').OrderItems(Quantity > 5)
+?include=Orders(Status = 'Active').Items(Quantity > 5)
 ```
 
 ### MiniOData
@@ -129,4 +129,4 @@ MiniOData does not support filtered includes — use the standard `include` para
 
 - [Query Syntax](/guide/query-syntax) — Auto-detection and parser architecture
 - [Filtering](/guide/filtering) — Full operator reference
-- [MiniOData Adapter](/adapters/miniodata) — OData compatibility details
+- [MiniOData Parser](/parsers/miniodata) — OData compatibility details

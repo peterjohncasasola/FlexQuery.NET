@@ -8,7 +8,7 @@ Customers from Berlin or Paris, sorted by name.
 
 ### Request
 ```http
-GET /api/customers?query=(city = "Berlin" OR city = "Paris") AND status = "Active"&sort=name:asc
+GET /api/customers?filter=(city = "Berlin" OR city = "Paris") AND status = "Active"&sort=name asc
 ```
 
 ### Response
@@ -59,11 +59,11 @@ query.Where(c => c.Orders.Any(o => o.Status == "Cancelled" && o.Total > 500))
 
 ## Multi-Level Nested `ANY`
 
-Customers with a cancelled order that contains a specific product.
+Customers with a cancelled order that contains a specific order item.
 
 ### Request
 ```http
-GET /api/customers?filter=orders.any(status = "Cancelled" AND orderItems.any(productName CONTAINS "Laptop"))
+GET /api/customers?filter=orders.any(status = "Cancelled" AND items.any(sku CONTAINS "Laptop"))
 ```
 
 ---
@@ -88,12 +88,12 @@ query.Where(c => c.Orders == null || c.Orders.All(o => o.Status == "Shipped" || 
 
 ## IS NULL / IS NOT NULL
 
-Customers without an assigned profile, or with a specific nested null check.
+Customers without an assigned address, or with a specific nested null check.
 
 ### Request
 ```http
-GET /api/customers?filter=profile isnull
-GET /api/customers?filter=profile.bio notnull
+GET /api/customers?filter=address isnull
+GET /api/customers?filter=address.city notnull
 ```
 
 ---

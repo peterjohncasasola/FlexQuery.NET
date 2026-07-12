@@ -20,7 +20,7 @@ The all-in-one unified pipeline method. Handles parsing, validation, filtering, 
 [HttpGet]
 public async Task<IActionResult> Get([FromQuery] FlexQueryParameters parameters)
 {
-    var result = await _context.Users.FlexQueryAsync(parameters, exec =>
+    var result = await _context.Customers.FlexQueryAsync(parameters, exec =>
     {
         exec.AllowedFields = ["Id", "Name", "Email"];
         exec.MaxFieldDepth = 2;
@@ -125,7 +125,7 @@ If you need to project or map the results inside a `QueryResult<T>` *after* exec
 Casts the underlying `Data` collection from one type to another.
 
 ```csharp
-var entityResult = await _context.Users.FlexQueryAsync(options);
+var entityResult = await _context.Customers.FlexQueryAsync(options);
 var dtoResult = entityResult.ToProjectedQueryResult<User, UserDto>();
 ```
 

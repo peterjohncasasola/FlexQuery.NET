@@ -168,7 +168,7 @@ Projection reduces the number of selected columns returned by the database.
 Example:
 
 ```http
-GET /api/users?select=id,name,email
+GET /api/customers?select=id,name,email
 ```
 
 Typical SQL behavior:
@@ -201,7 +201,7 @@ By default, FlexQuery.NET may execute a separate count query when `IncludeCount`
 Example:
 
 ```http
-GET /api/users?includeCount=false
+GET /api/customers?includeCount=false
 ```
 
 Disabling count queries may reduce overhead for:

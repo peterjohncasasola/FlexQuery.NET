@@ -93,14 +93,14 @@ Use paging on **any list endpoint** to prevent full-table scans and large networ
 ### Basic Paging
 
 ```
-GET /api/users?page=1&pageSize=20
-GET /api/users?page=2&pageSize=10
+GET /api/customers?page=1&pageSize=20
+GET /api/customers?page=2&pageSize=10
 ```
 
 ### Disable Total Count (faster)
 
 ```
-GET /api/users?page=1&pageSize=20&includeCount=false
+GET /api/customers?page=1&pageSize=20&includeCount=false
 ```
 
 ---
@@ -111,7 +111,7 @@ GET /api/users?page=1&pageSize=20&includeCount=false
 
 ```csharp
 var options = parameters.ToQueryOptions();
-var query = _context.Users.AsQueryable();
+var query = _context.Customers.AsQueryable();
 var paged = query.ApplyPaging(options);
 var data = await paged.ToListAsync();
 ```
@@ -125,7 +125,7 @@ var options = parameters.ToQueryOptions();
 if (options.Paging.PageSize > 100)
     options.Paging.PageSize = 100;
 
-var query = _context.Users.AsQueryable();
+var query = _context.Customers.AsQueryable();
 var paged = query.ApplyPaging(options);
 ```
 
@@ -133,7 +133,7 @@ var paged = query.ApplyPaging(options);
 
 ```csharp
 var options = parameters.ToQueryOptions();
-var query = _context.Users.AsQueryable();
+var query = _context.Customers.AsQueryable();
 var filtered = query.ApplyFilter(options);
 var filtered2 = filtered.ApplySort(options);
 
@@ -163,7 +163,7 @@ return Ok(options.BuildQueryResult(data, total));
 
 **Request:**
 ```
-GET /api/users?page=3&pageSize=5
+GET /api/customers?page=3&pageSize=5
 ```
 
 **Response:**
@@ -239,7 +239,7 @@ FlexQuery.NET natively supports keyset pagination.
 1. **Initial Request:** Set `useKeysetPagination=true` (or `options.UseKeysetPagination = true`) along with your `sort` criteria.
 
 ```http
-GET /api/users?sort=createdAt:desc,id:desc&pageSize=50&useKeysetPagination=true
+GET /api/customers?sort=createdDate:desc,id:desc&pageSize=50&useKeysetPagination=true
 ```
 
 2. **Retrieve the Token:** The response `QueryResult<T>` will include a `nextCursorToken` if there are more records.
@@ -254,7 +254,7 @@ GET /api/users?sort=createdAt:desc,id:desc&pageSize=50&useKeysetPagination=true
 3. **Subsequent Requests:** Pass that token back in the `cursor` parameter to fetch the next page.
 
 ```http
-GET /api/users?sort=createdAt:desc,id:desc&pageSize=50&useKeysetPagination=true&cursor=eyJ0eXAiOiJKV1QiLCJ...
+GET /api/customers?sort=createdDate:desc,id:desc&pageSize=50&useKeysetPagination=true&cursor=eyJ0eXAiOiJKV1QiLCJ...
 ```
 
 ### Requirements for Keyset Pagination

@@ -164,7 +164,6 @@ public async Task<IActionResult> GetProducts([FromQuery] FlexQueryParameters p)
 public async Task<IActionResult> GetSalesReport([FromQuery] FlexQueryParameters p)
 {
     await using var conn = new SqlConnection(_connectionString);
-    await conn.OpenAsync();
     return Ok(await conn.FlexQueryAsync<SalesRow>(p, ConfigureOptions));
 }
 
