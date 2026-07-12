@@ -49,6 +49,7 @@ For internal logic, you can construct a `QueryOptions` object manually. This pro
 ```csharp
 using FlexQuery.NET.Models;
 using FlexQuery.NET.Constants;
+using FlexQuery.NET.Builders;
 
 var options = new QueryOptions
 {
@@ -92,13 +93,10 @@ var options = new QueryOptions
 };
 
 // Apply directly to any IQueryable
-var results = await query
-    .Apply(options)
+var results = await QueryBuilder
+    .Apply(query, options)
     .ToListAsync();
 ```
-
-> [!IMPORTANT]
-> In FlexQuery.NET v2, the sorting model was renamed to **`SortNode`** to align with the AST-based architecture.
 
 ---
 
@@ -149,7 +147,7 @@ One of the most powerful features of FlexQuery.NET is the ability to **augment**
 public async Task<IActionResult> Get([FromQuery] FlexQueryParameters parameters)
 {
     // 1. Parse the user's query from the URL
-    var options = QueryOptionsParser.Parse(parameters);
+    var options = parameters.ToQueryOptions();
 
     // 2. Inject a mandatory tenant restriction
     options.Filter ??= new FilterGroup { Logic = LogicOperator.And };

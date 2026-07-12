@@ -67,7 +67,7 @@ FlexQuery.NET replaces all of that with a **query abstraction layer**:
 [HttpGet("users")]
 public async Task<IActionResult> GetUsers([FromQuery] FlexQueryParameters parameters)
 {
-    var result = await _context.Users.FlexQueryAsync<User>(parameters, exec =>
+    var result = await _context.Users.FlexQueryAsync(parameters, exec =>
     {
         exec.AllowedFields = new HashSet<string>
         {

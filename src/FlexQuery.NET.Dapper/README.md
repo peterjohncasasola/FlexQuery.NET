@@ -18,26 +18,25 @@ dotnet add package FlexQuery.NET.Dapper
 
 ```csharp
 using FlexQuery.NET.Dapper;
-using FlexQuery.NET.Dapper.Dialects;
 
-builder.Services.AddFlexQueryDapper(options =>
+FlexQueryDapper.Configure(options =>
 {
-    options.UseSqlServer();
+    options.CommandTimeout = 60;
 });
 ```
 
 Or configure options per-query:
 
 ```csharp
-options.Dialect = new PostgreSqlDialect();
-options.CommandTimeoutSeconds = 60;
+options.CommandTimeout = 60;
 ```
+
+## Quick Start
 
 ## Quick Start
 
 ```csharp
 using FlexQuery.NET.Dapper;
-using FlexQuery.NET.Dapper.Dialects;
 
 [HttpGet("users")]
 public async Task<IActionResult> GetUsers([FromQuery] FlexQueryParameters parameters)
@@ -46,9 +45,6 @@ public async Task<IActionResult> GetUsers([FromQuery] FlexQueryParameters parame
 
     var result = await connection.FlexQueryAsync<User>(parameters, options =>
     {
-        // Or register the dialect globally using AddFlexQueryDapper()
-        options.Dialect = new SqlServerDialect(); 
-        
         options.AllowedFields = new HashSet<string> { "Id", "Name", "Email" };
     });
 
@@ -59,11 +55,10 @@ public async Task<IActionResult> GetUsers([FromQuery] FlexQueryParameters parame
 ## Features
 
 - **SQL Generation** — `SqlTranslator` produces parameterized, injection-safe SQL
-- **Dialect Support** — SQL Server, PostgreSQL, MySQL, SQLite via `ISqlDialect`
+- **Dialect Support** — SQL Server, PostgreSQL, MySQL, SQLite, MariaDB, Oracle via `ISqlDialect`
+- **Auto-Dialect Detection** — Dialect is resolved automatically from the `DbConnection` type at runtime
 - **Flat Projection** — Deep select paths (e.g., `Orders.Total`) become `LEFT JOIN` with flattened aliases
-- **Optional Auto-Dialect Detection** — `ISqlDialectResolver` can detect dialect from the `DbConnection`
 - **Entity Mapping** — Fluent entity-to-table mapping via `DapperQueryOptions.Entity<T>()`
-- **Diagnostics** — Pass `Action<FlexQueryExecutionConfig>` to observe pipeline stages
 
 ## Known Limitations
 

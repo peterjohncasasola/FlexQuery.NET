@@ -6,35 +6,32 @@ FlexQuery.NET has a multi-layered field security system. It validates every fiel
 
 ## Overview
 
-The security model works at the `QueryExecutionOptions` level for endpoint-specific rules. Global defaults are configured via `FlexQueryOptions` in DI.
+The security model works at the `BaseQueryOptions` level for endpoint-specific rules. Global defaults are configured via `FlexQueryCore.Configure()`.
 
 ### Two-Tier Configuration
 
-**Global Configuration** (`FlexQueryOptions` - DI):
+**Global Configuration** (`FlexQueryCore.Configure()`):
 - MaxPageSize
 - DefaultPageSize  
 - CaseInsensitive
 - IncludeTotalCount
 - StrictFieldValidation
 - MaxFieldDepth
-- UseNoTracking
 
-**Per-Request Configuration** (`QueryExecutionOptions`):
+**Per-Request Configuration** (`BaseQueryOptions`):
 - AllowedFields, BlockedFields
 - FilterableFields, SortableFields, SelectableFields
 - AllowedOperators
-- FieldAccessResolver
 - RoleAllowedFields, CurrentRole
 - MaxFieldDepth (override), StrictFieldValidation (override)
 - MaxPageSize (override), IncludeTotalCount (override)
 
-### QueryExecutionOptions (v2) - Server-Owned
-`QueryExecutionOptions` represents:
+### BaseQueryOptions - Server-Owned
+`BaseQueryOptions` represents:
 * field-level security lists (per-request only)
 * operator restrictions
 * MaxFieldDepth override (nullable)
 * Role-based access
-* Custom resolver
 
 These are SERVER policies and should **never** be bound directly from HTTP requests. 
 
@@ -51,12 +48,11 @@ These are SERVER policies and should **never** be bound directly from HTTP reque
 * allowed operators
 * max depth
 * execution strategy
-* split query behavior
 
 **Validation order:**
 
 1. Depth check (`MaxFieldDepth`)
-2. Custom resolver (`FieldAccessResolver`)
+2. Blocked fields (`BlockedFields`)
 3. Blocked fields (`BlockedFields`)
 4. Role-based access (`RoleAllowedFields`)
 5. Operation-level rules (`FilterableFields`, `SortableFields`, `SelectableFields`)
@@ -69,24 +65,20 @@ These are SERVER policies and should **never** be bound directly from HTTP reque
 
 | Property | Type | Location | Description |
 | :--- | :--- | :--- | :--- |
-| `AllowedFields` | `HashSet<string>?` | QueryExecutionOptions | Per-endpoint allow-list. If set, every field must be in this list. |
-| `AllowedIncludes` | `HashSet<string>?` | QueryExecutionOptions | Per-endpoint allow-list for navigation properties and includes. |
-| `AllowedOperators` | `Dictionary<string, HashSet<string>>?` | QueryExecutionOptions | Per-field operator restrictions. |
-| `BlockedFields` | `HashSet<string>?` | QueryExecutionOptions | Fields explicitly denied — always checked. |
-| `FilterableFields` | `HashSet<string>?` | QueryExecutionOptions | Fields allowed in filter expressions only. |
-| `SortableFields` | `HashSet<string>?` | QueryExecutionOptions | Fields allowed in sort expressions only. |
-| `SelectableFields` | `HashSet<string>?` | QueryExecutionOptions | Fields allowed in select/projection only. |
-| `MaxFieldDepth` | `int?` | FlexQueryOptions (global) or QueryExecutionOptions (override) | Maximum dot-notation path depth. |
-| `StrictFieldValidation` | `bool?` | FlexQueryOptions (global) or QueryExecutionOptions (override) | Fail-fast on first violation. |
-| `UseNoTracking` | `bool?` | FlexQueryOptions (global) or QueryExecutionOptions (override) | EF Core no-tracking behavior. |
-| `MaxPageSize` | `int?` | FlexQueryOptions (global) or QueryExecutionOptions (override) | Maximum allowed page size. |
-| `IncludeTotalCount` | `bool?` | FlexQueryOptions (global) or QueryExecutionOptions (override) | Include total count by default. |
-| `RoleAllowedFields` | `Dictionary<string, HashSet<string>>?` | QueryExecutionOptions | Per-role field allow-lists. |
-| `CurrentRole` | `string?` | QueryExecutionOptions | The current user's role name. |
-| `FieldMappings` | `Dictionary<string, string>?` | QueryExecutionOptions | Alias → real field name mappings. |
-| `FieldAccessResolver` | `IFieldAccessResolver?` | QueryExecutionOptions | Custom programmatic resolver. |
-
----
+| `AllowedFields` | `HashSet<string>?` | BaseQueryOptions | Per-endpoint allow-list. If set, every field must be in this list. |
+| `AllowedIncludes` | `HashSet<string>?` | BaseQueryOptions | Per-endpoint allow-list for navigation properties and includes. |
+| `AllowedOperators` | `Dictionary<string, HashSet<string>>?` | BaseQueryOptions | Per-field operator restrictions. |
+| `BlockedFields` | `HashSet<string>?` | BaseQueryOptions | Fields explicitly denied — always checked. |
+| `FilterableFields` | `HashSet<string>?` | BaseQueryOptions | Fields allowed in filter expressions only. |
+| `SortableFields` | `HashSet<string>?` | BaseQueryOptions | Fields allowed in sort expressions only. |
+| `SelectableFields` | `HashSet<string>?` | BaseQueryOptions | Fields allowed in select/projection only. |
+| `MaxFieldDepth` | `int?` | FlexQueryOptions (global) or BaseQueryOptions (override) | Maximum dot-notation path depth. |
+| `StrictFieldValidation` | `bool?` | FlexQueryOptions (global) or BaseQueryOptions (override) | Fail-fast on first violation. |
+| `MaxPageSize` | `int?` | FlexQueryOptions (global) or BaseQueryOptions (override) | Maximum allowed page size. |
+| `IncludeTotalCount` | `bool?` | FlexQueryOptions (global) or BaseQueryOptions (override) | Include total count by default. |
+| `RoleAllowedFields` | `Dictionary<string, HashSet<string>>?` | BaseQueryOptions | Per-role field allow-lists. |
+| `CurrentRole` | `string?` | BaseQueryOptions | The current user's role name. |
+| `FieldMappings` | `Dictionary<string, string>?` | BaseQueryOptions | Alias → real field name mappings. |
 
 ## AllowedFields
 
@@ -251,7 +243,7 @@ Best for simple, single-endpoint rules.
 [HttpGet]
 public async Task<IActionResult> GetUsers([FromQuery] FlexQueryParameters parameters)
 {
-    var result = await _context.Users.FlexQueryAsync<User>(parameters, exec =>
+    var result = await _context.Users.FlexQueryAsync(parameters, exec =>
     {
         exec.AllowedFields = new HashSet<string> { "id", "name", "email" };
     });
@@ -281,9 +273,16 @@ Best for standardizing rules across a controller.
 public async Task<IActionResult> GetUsers(
     [FromQuery] FlexQueryParameters parameters)
 {
-    // Execution options are resolved automatically from HttpContext
-    // via the FieldAccess filter.
-    var result = await _context.Users.FlexQueryAsync<User>(parameters, HttpContext);
+    // Retrieve execution options populated by the [FieldAccess] filter
+    var execOptions = HttpContext.GetFlexQueryExecutionOptions();
+
+    var result = await _context.Users.FlexQueryAsync(parameters, exec =>
+    {
+        exec.AllowedFields = execOptions.AllowedFields;
+        exec.BlockedFields = execOptions.BlockedFields;
+        exec.FilterableFields = execOptions.FilterableFields;
+        exec.MaxFieldDepth = execOptions.MaxFieldDepth;
+    });
     
     return Ok(result);
 }
@@ -305,29 +304,15 @@ builder.Services.AddControllers(options =>
 
 ### Option 3: Centralized Resolver
 
-Best for dynamic, runtime-computed rules (e.g., based on tenant, claims, database config).
-
-```csharp
-public class TenantFieldAccessResolver : IFieldAccessResolver
-{
-    private readonly ITenantService _tenants;
-
-    public TenantFieldAccessResolver(ITenantService tenants) => _tenants = tenants;
-
-    public bool IsAllowed(string field, QueryOperation operation, QueryContext context)
-    {
-        var tenantConfig = _tenants.GetConfig(context.TenantId);
-        return tenantConfig.AllowedFields.Contains(field);
-    }
-}
-
-// Register
-builder.Services.AddScoped<IFieldAccessResolver, TenantFieldAccessResolver>();
-```
+Best for dynamic, runtime-computed rules (e.g., based on tenant, claims, database config). Use the `AllowedFieldsResolver` delegate to dynamically determine allowed fields at runtime:
 
 ```csharp
 // In controller
-exec.FieldAccessResolver = _resolver;
+exec.AllowedFieldsResolver = entityType =>
+{
+    // Dynamically compute allowed fields based on the current context
+    return new HashSet<string> { "Id", "Name", "Email" };
+};
 ```
 
 **Pros:** Fully dynamic, database-driven, multi-tenant capable.
@@ -341,7 +326,7 @@ exec.FieldAccessResolver = _resolver;
 | :--- | :--- | :--- | :--- | :--- |
 | Inline in controller | Low | Fixed | ❌ | Simple, single endpoints |
 | `[FieldAccess]` attribute | Low | Fixed | ✅ | Standard controller-level rules |
-| Centralized resolver | High | Dynamic | ✅ | Multi-tenant, role-driven, DB-driven |
+| Centralized resolver | Medium | Dynamic | ✅ | Multi-tenant, role-driven, DB-driven |
 
 ---
 
@@ -366,7 +351,7 @@ Handle it in your controller:
 ```csharp
 try
 {
-    var result = await _context.Users.FlexQueryAsync<User>(parameters, exec => { ... });
+    var result = await _context.Users.FlexQueryAsync(parameters, exec => { ... });
     return Ok(result);
 }
 catch (QueryValidationException ex)
@@ -378,7 +363,7 @@ catch (QueryValidationException ex)
 Or use the soft-validation approach:
 
 ```csharp
-var options = QueryOptionsParser.Parse(parameters);
+var options = parameters.ToQueryOptions();
 var result = options.ValidateSafe<User>(execOptions);
 
 if (!result.IsValid)

@@ -36,16 +36,14 @@ dotnet add package FlexQuery.NET.AspNetCore
 
 ### Step 1: Configure Services
 
-In `Program.cs`, you must register the core engine and your execution provider.
+In `Program.cs`, configure the global FlexQuery defaults and register the ASP.NET Core integration.
 
 ```csharp
-using FlexQuery.NET.DependencyInjection;
-using FlexQuery.NET.EntityFrameworkCore.DependencyInjection;
-using FlexQuery.NET.AspNetCore.DependencyInjection;
+using FlexQuery.NET;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.DependencyInjection;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -53,8 +51,8 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddDbContext<AppDbContext>(opt =>
     opt.UseSqlServer(builder.Configuration.GetConnectionString("Default")));
 
-// 1. Register FlexQuery Core globally
-builder.Services.AddFlexQuery(options =>
+// 1. Configure global FlexQuery defaults (optional — called once at startup)
+FlexQueryCore.Configure(options =>
 {
     options.MaxPageSize = 1000;
     options.DefaultPageSize = 50;
@@ -64,10 +62,7 @@ builder.Services.AddFlexQuery(options =>
     options.MaxFieldDepth = 5;
 });
 
-// 2. Register the EF Core Provider
-builder.Services.AddFlexQueryEntityFrameworkCore();
-
-// 3. Register MVC and optional declarative Security ([FieldAccess])
+// 2. Register MVC and optional declarative Security ([FieldAccess])
 builder.Services
     .AddControllers()
     .AddFlexQuerySecurity();
@@ -83,7 +78,7 @@ app.Run();
 This optional integration automatically registers the `FieldAccessFilter` into the ASP.NET Core MVC pipeline. This enables you to use declarative security attributes directly on your controllers:
 
 ```csharp
-[FieldAccess(AllowedFields = new[] { "Id", "Name", "Email" })]
+[FieldAccess(Allowed = new[] { "Id", "Name", "Email" })]
 [HttpGet]
 public async Task<IActionResult> GetUsers() { ... }
 ```
@@ -188,23 +183,26 @@ GET /api/users?filter=Status:eq:active&sort=Name:asc&page=1&pageSize=10&select=I
 
 `FlexQueryParameters` is the public-facing DTO. Bind it directly from the query string in GET requests.
 
+`FlexQueryParameters` inherits from `FlexQueryBase` and exposes all common query options:
+
 ```csharp
-public class FlexQueryParameters
+public class FlexQueryParameters : FlexQueryBase
 {
-    public string? Query    { get; set; }  // JQL: query=status="active"
-    public string? Filter   { get; set; }  // DSL: filter=status:eq:active
-    public string? Sort     { get; set; }  // sort=name:asc,createdAt:desc
-    public string? Select   { get; set; }  // select=id,name,email
-    public string? Include  { get; set; }  // include=Orders,Profile
-    public string? GroupBy  { get; set; }  // groupBy=status
-    public string? Having   { get; set; }  // having=count:gt:5
-    public int?    Page     { get; set; }  // page=1
-    public int?    PageSize { get; set; }  // pageSize=20
+    // All properties inherited from FlexQueryBase:
+    public string? Filter    { get; set; }  // DSL: filter=status:eq:active
+    public string? Sort      { get; set; }  // sort=name:asc,createdAt:desc
+    public string? Select    { get; set; }  // select=id,name,email
+    public string? Include   { get; set; }  // include=Orders,Profile
+    public string? GroupBy   { get; set; }  // groupBy=status
+    public string? Having    { get; set; }  // having=count:gt:5
+    public string? Aggregate { get; set; }  // aggregate=SUM(Amount) AS Total
+    public int?    Page      { get; set; }  // page=1
+    public int?    PageSize  { get; set; }  // pageSize=20
     public bool?   IncludeCount { get; set; }  // includeCount=true
     public bool?   Distinct     { get; set; }  // distinct=true
-    public string? Mode     { get; set; }  // mode=Flat
-    public bool?   UseKeysetPagination { get; set; }
-    public string? Cursor   { get; set; }
+    public string? Mode      { get; set; }  // mode=Flat
+    public bool    UseKeysetPagination { get; set; }
+    public string? Cursor    { get; set; }
 }
 ```
 
@@ -222,13 +220,13 @@ public class FlexQueryParameters
 
 ```text
 FlexQueryParameters
-    → Parse (QueryOptionsParser)
+    → Parse (ToQueryOptions())
     → Validate (field access, operators, depth against Server Policy)
     → ApplyFilter
     → ApplySort
     → CountAsync (for totalCount)
     → ApplyPaging
-    → ApplyFilteredIncludes
+    → ApplyExpand
     → ApplySelect (if projection requested)
     → ToListAsync
     → QueryResult<object>
@@ -313,14 +311,13 @@ if (!result.IsValid)
 
 For extremely high-traffic APIs using the EF Core provider, you can enable **Expression Caching**. This instructs FlexQuery to cache the compiled LINQ Expression Trees for repeated query shapes, bypassing the CPU overhead of reflection and tree generation on subsequent identical requests.
 
-In `Program.cs` (Global configuration):
+Expression caching is **enabled by default**. You can tune it globally at startup:
 
 ```csharp
 using FlexQuery.NET.Caching;
 
-// Enable global expression caching
-FlexQueryCacheSettings.EnableCache = true;
-FlexQueryCacheSettings.MaxCacheSize = 5000;
+// Expression caching is enabled by default (MaxCacheSize = 2000)
+FlexQueryCacheSettings.MaxCacheSize = 5000; // Increase for high-traffic APIs
 ```
 
 ## Best Practices

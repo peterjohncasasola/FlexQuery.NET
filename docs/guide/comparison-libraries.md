@@ -22,7 +22,7 @@ When evaluating .NET packages for dynamic querying, developers frequently encoun
 
 | Feature | FlexQuery.NET | Gridify | Sieve |
 | :--- | :--- | :--- | :--- |
-| Filtering | Yes (DSL, JQL, JSON) | Yes | Yes |
+| Filtering | Yes (DSL, FQL, JSON) | Yes | Yes |
 | Sorting | Yes | Yes | Yes |
 | Paging | Yes | Yes | Yes |
 | Projection (Select) | ✅ Yes (Dynamic) | ❌ No | ❌ No |
@@ -72,7 +72,7 @@ Sieve is an attribute-driven filtering, sorting, and paging library.
 FlexQuery.NET is a **unified query pipeline** built on top of `IQueryable` (and ADO.NET via Dapper).
 
 It supports:
-- Filtering (DSL, JQL, JSON)
+- Filtering (DSL, FQL, JSON)
 - Sorting
 - Projection (dynamic `SELECT` at runtime)
 - Includes / joins with nested filtering

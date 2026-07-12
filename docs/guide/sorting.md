@@ -170,12 +170,12 @@ GET /api/users?sort=orders.count():desc
 
 ```csharp
 // WRONG — client could sort by passwordHash or internal fields
-var result = await _context.Users.FlexQueryAsync<User>(parameters);
+var result = await _context.Users.FlexQueryAsync(parameters);
 ```
 
 ```csharp
 // CORRECT
-var result = await _context.Users.FlexQueryAsync<User>(parameters, exec =>
+var result = await _context.Users.FlexQueryAsync(parameters, exec =>
 {
     exec.SortableFields = new HashSet<string> { "name", "email", "createdAt" };
 });

@@ -224,4 +224,40 @@ if (options.Paging.PageSize > 200) options.Paging.PageSize = 200;
 - Disable `IncludeCount` (`?includeCount=false`) on high-frequency endpoints where total count is not needed.
 - Grouped or shaped queries may also calculate `ResultCount` from the shaped query before paging.
 - Always sort before paging. Without a deterministic `ORDER BY`, results are undefined.
-- Use **Keyset Pagination** (`?useKeysetPagination=true&cursor=TOKEN`) for very large datasets to avoid `OFFSET` scanning penalties. FlexQuery.NET generates `WHERE Id > cursor` style queries for keyset navigation.
+- Use **Keyset Pagination** (`?useKeysetPagination=true&cursor=TOKEN`) for very large datasets to avoid `OFFSET` scanning penalties.
+
+---
+
+## Keyset (Cursor) Pagination
+
+For deep paging on large datasets, SQL `OFFSET` becomes exponentially slower because the database must scan and discard all preceding rows. Keyset Pagination (also known as cursor-based or seek pagination) solves this by using `WHERE` clauses (e.g., `WHERE Id > @cursor`) to resume exactly where the last page left off.
+
+FlexQuery.NET natively supports keyset pagination.
+
+### How to use Keyset Pagination
+
+1. **Initial Request:** Set `useKeysetPagination=true` (or `options.UseKeysetPagination = true`) along with your `sort` criteria.
+
+```http
+GET /api/users?sort=createdAt:desc,id:desc&pageSize=50&useKeysetPagination=true
+```
+
+2. **Retrieve the Token:** The response `QueryResult<T>` will include a `nextCursorToken` if there are more records.
+
+```json
+{
+  "data": [ ... ],
+  "nextCursorToken": "eyJ0eXAiOiJKV1QiLCJ..."
+}
+```
+
+3. **Subsequent Requests:** Pass that token back in the `cursor` parameter to fetch the next page.
+
+```http
+GET /api/users?sort=createdAt:desc,id:desc&pageSize=50&useKeysetPagination=true&cursor=eyJ0eXAiOiJKV1QiLCJ...
+```
+
+### Requirements for Keyset Pagination
+
+- **Deterministic Sorting:** The query *must* have a unique sort order. If you sort by `createdAt`, you must include a unique tie-breaker like `id` (e.g. `sort=createdAt:desc,id:desc`), otherwise records sharing the same timestamp may be skipped or duplicated.
+- **Unsupported Features:** Keyset pagination cannot be used simultaneously with `GROUP BY` or `DISTINCT` queries.

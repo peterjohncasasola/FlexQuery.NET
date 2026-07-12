@@ -4,9 +4,26 @@
 
 FlexQuery's Dapper provider supports six SQL dialects out of the box. Each dialect encapsulates all database-specific SQL generation concerns — identifier quoting, parameter syntax, pagination, boolean literals, and string concatenation — behind the `ISqlDialect` interface.
 
+The SQL dialect is **auto-detected at runtime** from the supplied `DbConnection` via `SqlDialectResolver`. There is no manual dialect configuration — the connection type is the single source of truth.
+
 ### Why Dialects Matter
 
 SQL is not truly standard. `SELECT TOP 10` works in SQL Server but fails in PostgreSQL. `[Column]` is valid quoting in SQL Server but a syntax error in MySQL. `LIMIT/OFFSET` is PostgreSQL syntax but SQL Server uses `OFFSET/FETCH`. The dialect system ensures that FlexQuery generates correct SQL for your specific database without any manual intervention.
+
+### How Dialect Resolution Works
+
+When a query is executed, `SqlDialectResolver.Resolve(connection)` inspects the connection's type name and returns the matching dialect:
+
+| Connection Type | Resolved Dialect |
+|---|---|
+| `SqlConnection` | `SqlServerDialect` |
+| `NpgsqlConnection` | `PostgreSqlDialect` |
+| `SqliteConnection` | `SqliteDialect` |
+| `MySqlConnection` | `MySqlDialect` |
+| `MariaDbConnection` | `MariaDbDialect` |
+| `OracleConnection` | `OracleDialect` |
+
+An unrecognized connection type throws `NotSupportedException`.
 
 ## Dialect Comparison
 
@@ -23,9 +40,7 @@ SQL is not truly standard. `SELECT TOP 10` works in SQL Server but fails in Post
 
 ## SQL Server
 
-```csharp
-opts.Dialect = new SqlServerDialect();
-```
+When using `SqlConnection`, SQL Server syntax is generated.
 
 **Identifier quoting:** Square brackets `[Column]`
 
@@ -43,9 +58,7 @@ OFFSET @Offset ROWS FETCH NEXT @PageSize ROWS ONLY
 
 ## PostgreSQL
 
-```csharp
-opts.Dialect = new PostgreSqlDialect();
-```
+When using `NpgsqlConnection`, PostgreSQL syntax is generated.
 
 **Identifier quoting:** Double quotes `"Column"` — PostgreSQL is case-sensitive with quoted identifiers
 
@@ -63,9 +76,7 @@ LIMIT :PageSize OFFSET :Offset
 
 ## MySQL
 
-```csharp
-opts.Dialect = new MySqlDialect();
-```
+When using `MySqlConnection`, MySQL syntax is generated.
 
 **Identifier quoting:** Backticks `` `Column` ``
 
@@ -84,9 +95,7 @@ CONCAT(`FirstName`, ' ', `LastName`)
 
 ## MariaDB
 
-```csharp
-opts.Dialect = new MariaDbDialect();
-```
+When using `MariaDbConnection`, MariaDB syntax is generated.
 
 MariaDB is **not** a drop-in replacement for MySQL. While the quoting and parameter syntax are identical, MariaDB has its own versioning, features, and behaviors that can diverge. This dedicated dialect ensures correct SQL generation for MariaDB-specific edge cases.
 
@@ -94,9 +103,7 @@ MariaDB is **not** a drop-in replacement for MySQL. While the quoting and parame
 
 ## SQLite
 
-```csharp
-opts.Dialect = new SqliteDialect();
-```
+When using `SqliteConnection`, SQLite syntax is generated.
 
 **Identifier quoting:** Double quotes (ANSI SQL style)
 
@@ -119,9 +126,7 @@ LIMIT @PageSize OFFSET @Offset
 
 ## Oracle
 
-```csharp
-opts.Dialect = new OracleDialect();
-```
+When using `OracleConnection`, Oracle syntax is generated.
 
 **Identifier quoting:** Double quotes — Oracle uppercases unquoted identifiers by default
 
@@ -138,21 +143,9 @@ OFFSET :Offset ROWS FETCH NEXT :PageSize ROWS ONLY
 - No native BOOLEAN type in SQL — uses `1`/`0`
 - The `:` parameter prefix is used by ODP.NET
 
-## Automatic Dialect Resolution
-
-If you don't want to hardcode a dialect, FlexQuery can auto-detect it from the `DbConnection` type:
-
-```csharp
-// The DefaultSqlDialectResolver inspects the connection type name
-var dialect = DapperQueryOptions.GlobalDialectResolver.Resolve(connection);
-```
-
-The resolution priority is:
-1. **Explicit `Dialect` property** on `DapperQueryOptions`
-2. **`GlobalDefaultDialect`** static property
-3. **`GlobalDialectResolver`** which inspects the connection type
-
 ## Custom Dialects
+
+### Implement a New Dialect
 
 Implement `ISqlDialect` for unsupported databases:
 
@@ -181,12 +174,23 @@ public class CockroachDbDialect : ISqlDialect
 }
 ```
 
+### Register the Custom Dialect
+
+The `SqlDialectResolver` is an internal static class. To add support for a custom connection type, extend the resolution logic by adding a new `if` branch:
+
+```csharp
+// Extend SqlDialectResolver (internal) — or fork the resolver for your application
+if (typeName.Contains("CockroachDbConnection", StringComparison.OrdinalIgnoreCase))
+    return new CockroachDbDialect();
+```
+
+If you need full control over resolution, you can implement your own resolution logic and pass the dialect directly to `SqlTranslator`.
+
 ## Best Practices
 
-1. **Match the dialect to your actual database** — Using `SqlServerDialect` against PostgreSQL will generate invalid SQL
-2. **Set the dialect once globally** for single-database applications via `DapperQueryOptions.GlobalDefaultDialect`
-3. **Use SQLite dialect for tests** — SQLite in-memory databases are fast and disposable
-4. **Test pagination with each dialect** — OFFSET/FETCH vs LIMIT/OFFSET edge cases can surface in production
+1. **Use a supported provider** — The resolver supports SQL Server, PostgreSQL, SQLite, MySQL, MariaDB, and Oracle out of the box. Unsupported providers throw `NotSupportedException`.
+2. **Use SQLite for tests** — SQLite in-memory databases are fast and disposable; the resolver auto-detects `SqliteConnection`
+3. **Test pagination with each dialect** — OFFSET/FETCH vs LIMIT/OFFSET edge cases can surface in production
 
 ## Related Features
 

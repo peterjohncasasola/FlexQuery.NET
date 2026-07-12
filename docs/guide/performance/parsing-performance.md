@@ -89,14 +89,14 @@ Gridify and Sieve are excluded here because they do not parse sort/pagination/se
 
 ## DSL Format Comparison (FlexQuery.NET Only)
 
-FlexQuery.NET supports two textual formats: **DSL** (colon-delimited) and **JQL** (SQL-like).
+FlexQuery.NET supports two textual formats: **DSL** (colon-delimited) and **FQL** (SQL-like).
 
 | Format | Example | Mean | Allocated | Relative |
 |:-------|---------|-----:|----------:|---------:|
 | **DSL** | `status:eq:active` | 313.9 ns | 784 B | 1.00× |
-| **JQL** | `status = "active"` | 566.0 ns | 1,440 B | 1.80× |
+| **FQL** | `status = "active"` | 566.0 ns | 1,440 B | 1.80× |
 
-JQL parsing is ~1.8× slower due to more complex tokenization (handling quotes, whitespace, operator precedence). This is expected and still sub-microsecond.
+FQL parsing is ~1.8× slower due to more complex tokenization (handling quotes, whitespace, operator precedence). This is expected and still sub-microsecond.
 
 ---
 
@@ -134,4 +134,4 @@ Unless your workload consists of:
 
 ...then parsing overhead is unlikely to be your bottleneck.
 
-**Focus on the [End-to-End Execution Benchmarks](../execution.md) instead.** Those reflect actual HTTP request latency.
+**Focus on the [End-to-End Execution Benchmarks](../execution-pipeline) instead.** Those reflect actual HTTP request latency.

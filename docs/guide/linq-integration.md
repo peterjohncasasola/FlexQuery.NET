@@ -10,13 +10,13 @@ You can apply these filters using standard LINQ `.Where()` calls before passing 
 
 ### Basic Example (The Secure Way)
 
-Using `ApplyValidatedQueryOptions` is the recommended way to apply dynamic logic. It automatically runs the validation pipeline and throws a `QueryValidationException` if the client input is malicious or malformed.
+Using `ApplyFilter`, `ApplySort`, `ApplyPaging`, and `ApplySelect` gives you fine-grained control over each pipeline stage. For a unified approach, use `FlexQueryAsync` which handles parsing, validation, and execution in a single call.
 
 ```csharp
 [HttpGet]
-public async Task<IActionResult> Get([FromQuery] QueryRequest request)
+public async Task<IActionResult> Get([FromQuery] FlexQueryParameters parameters)
 {
-    var options = QueryOptionsParser.Parse(request);
+    var options = parameters.ToQueryOptions();
 
     // 1. Define your base query with fixed logic
     var baseQuery = _context.Products
@@ -24,9 +24,11 @@ public async Task<IActionResult> Get([FromQuery] QueryRequest request)
         .Where(p => p.TenantId == _currentUser.TenantId);
 
     // 2. Layer FlexQuery on top securely
-    // This will throw if 'options' contains forbidden fields or invalid operators
     var results = await baseQuery
-        .ApplyValidatedQueryOptions(options) 
+        .ApplyFilter(options)
+        .ApplySort(options)
+        .ApplyPaging(options)
+        .ApplySelect(options)
         .ToListAsync();
 
     return Ok(results);
@@ -82,15 +84,17 @@ OFFSET 10 ROWS FETCH NEXT 10 ROWS ONLY -- From dynamic Paging
 
 ## EF Core: Filtered Includes
 
-If you are using **Entity Framework Core**, you can use `ApplyFilteredIncludes` to apply dynamic filters to related collections within an `Include` statement. This is useful for "Search inside Include" scenarios.
+If you are using **Entity Framework Core**, you can use `ApplyExpand` to apply dynamic includes with inline filters to related collections. This is useful for "Search inside Include" scenarios.
 
 ```csharp
-// Example Request: ?include=Orders(status = "Shipped") or ?include=Orders(status:eq:"Shipped")
-var options = QueryOptionsParser.Parse(Request.Query);
+// Example Request: ?include=Orders(status:eq:"Shipped")
+var parameters = new FlexQueryParameters { Include = @"Orders(status:eq:""Shipped"")" };
+var options = parameters.ToQueryOptions();
 
 var customers = await _context.Customers
-    .ApplyFilteredIncludes(options) // Applies the filtered navigation
-    .ApplyValidatedQueryOptions(options) // Applies root filters/paging
+    .ApplyExpand(options) // Applies the filtered navigation
+    .ApplyFilter(options)
+    .ApplySort(options)
     .ToListAsync();
 ```
 
@@ -118,7 +122,10 @@ var query = _context.Users
     .Where(u => u.IsActive); // Base condition
 
 var results = await query
-    .ApplyValidatedQueryOptions(options)
+    .ApplyFilter(options)
+    .ApplySort(options)
+    .ApplyPaging(options)
+    .ApplySelect(options)
     .ToListAsync();
 ```
 

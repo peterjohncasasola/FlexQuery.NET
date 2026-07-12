@@ -211,7 +211,7 @@ OData emphasizes standardized metadata-driven REST interoperability, but brings 
 GET /api/users?filter=orders:any:status:eq:shipped
 ```
 
-### FlexQuery.NET (JQL)
+### FlexQuery.NET (FQL)
 
 ```http
 GET /api/users?query=Orders.any(Status = "shipped")

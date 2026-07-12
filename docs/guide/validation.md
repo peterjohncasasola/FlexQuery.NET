@@ -43,11 +43,11 @@ if (!result.IsValid)
 
 ### With Global Configuration
 
-When `FlexQueryOptions` is registered via DI, the validator automatically merges global defaults with per-request overrides:
+Global defaults are configured once at startup via `FlexQueryCore.Configure`. The validator automatically merges global defaults with per-request overrides:
 
 ```csharp
 // In Program.cs - global defaults
-builder.Services.AddFlexQuery(options =>
+FlexQueryCore.Configure(options =>
 {
     options.MaxPageSize = 1000;
     options.MaxFieldDepth = 5;
@@ -241,7 +241,7 @@ public async Task<IActionResult> GetUsers([FromQuery] FlexQueryParameters parame
         MaxFieldDepth = 2
     };
 
-    var result = await _context.Users.FlexQueryAsync<User>(parameters, execOptions);
+    var result = await _context.Users.FlexQueryAsync(parameters, execOptions);
     return Ok(result);
 }
 ```
@@ -252,7 +252,7 @@ Or with inline configuration:
 [HttpGet]
 public async Task<IActionResult> GetUsers([FromQuery] FlexQueryParameters parameters)
 {
-    var result = await _context.Users.FlexQueryAsync<User>(parameters, exec =>
+    var result = await _context.Users.FlexQueryAsync(parameters, exec =>
     {
         exec.AllowedFields = new HashSet<string> { "id", "name", "email", "status" };
         exec.BlockedFields = new HashSet<string> { "passwordHash" };

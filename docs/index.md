@@ -19,7 +19,7 @@ hero:
 features:
   - icon: 🔍
     title: Dynamic Filtering
-    details: Support for DSL, JQL, JSON, and indexed query-string formats. Nested AND/OR, collection predicates (any/all), and 20+ operators out of the box.
+    details: Support for DSL and FQL query-string formats. Nested AND/OR, collection predicates (any/all), and 20+ operators out of the box.
   - icon: ↕️
     title: Sorting & Paging
     details: Multi-field sorting with aggregate sort support. Server-safe paging with automatic default ordering to prevent EF Core errors.
@@ -73,7 +73,7 @@ GET /api/users?filter=status:eq:active&sort=createdAt:desc&page=1&pageSize=10&se
 [HttpGet]
 public async Task<IActionResult> GetUsers([FromQuery] FlexQueryParameters parameters)
 {
-    var result = await _context.Users.FlexQueryAsync<User>(parameters, exec =>
+    var result = await _context.Users.FlexQueryAsync(parameters, exec =>
     {
         exec.AllowedFields = new HashSet<string> { "id", "name", "email", "status", "createdAt" };
     });
@@ -129,7 +129,7 @@ FlexQueryParameters (HTTP DTO)
          ├── ApplyFilter()              ← WHERE clause (expression tree)
          ├── ApplySort()                ← ORDER BY
          ├── ApplyPaging()              ← SKIP / TAKE
-         ├── ApplyFilteredIncludes()    ← Include pipeline (independent)
+          ├── ApplyExpand()             ← Include pipeline (independent)
          └── ApplySelect()             ← Dynamic projection
                    │
                    ▼
@@ -150,9 +150,7 @@ FlexQuery.NET auto-detects the input format:
 | Format | Example |
 | :--- | :--- |
 | **DSL** | `filter=status:eq:active` |
-| **JQL** | `query=status = "active" AND age >= 18` |
-| **JSON** | `filter={"logic":"and","filters":[{"field":"status","operator":"eq","value":"active"}]}` |
-| **Indexed** | `filter[0].field=status&filter[0].operator=eq&filter[0].value=active` |
+| **FQL** | `query=status = "active" AND age >= 18` |
 
 ---
 
@@ -161,7 +159,8 @@ FlexQuery.NET auto-detects the input format:
 | Package | Purpose |
 | :--- | :--- |
 | `FlexQuery.NET` | Core library — filtering, sorting, paging, projection, validation |
-| `FlexQuery.NET.EntityFrameworkCore` | EF Core async execution — `FlexQueryAsync`, `ApplyFilteredIncludes` |
+| `FlexQuery.NET.EntityFrameworkCore` | EF Core async execution — `FlexQueryAsync`, `ApplyExpand` |
+| `FlexQuery.NET.Dapper` | Dapper async execution — `FlexQueryAsync` for raw ADO.NET connections |
 | `FlexQuery.NET.AspNetCore` | ASP.NET Core integration — `FieldAccessFilter`, `[FieldAccess]` attribute |
 
 ---
@@ -179,7 +178,7 @@ Detailed documentation for each NuGet package:
 | `FlexQuery.NET.Diagnostics` | [README](https://github.com/peterjohncasasola/FlexQuery.NET/blob/main/src/FlexQuery.NET.Diagnostics/README.md) |
 | `FlexQuery.NET.Adapters.AgGrid` | [README](https://github.com/peterjohncasasola/FlexQuery.NET/blob/main/src/FlexQuery.NET.Adapters.AgGrid/README.md) |
 | `FlexQuery.NET.Adapters.Kendo` | [README](https://github.com/peterjohncasasola/FlexQuery.NET/blob/main/src/FlexQuery.NET.Adapters.Kendo/README.md) |
-| `FlexQuery.NET.Parsers.Jql` | [README](https://github.com/peterjohncasasola/FlexQuery.NET/blob/main/src/FlexQuery.NET.Parsers.Jql/README.md) |
+| `FlexQuery.NET.Parsers.FQL` | [README](https://github.com/peterjohncasasola/FlexQuery.NET/blob/main/src/FlexQuery.NET.Parsers.FQL/README.md) |
 | `FlexQuery.NET.Parsers.MiniOData` | [README](https://github.com/peterjohncasasola/FlexQuery.NET/blob/main/src/FlexQuery.NET.Parsers.MiniOData/README.md) |
 
 </div>

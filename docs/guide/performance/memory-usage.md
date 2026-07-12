@@ -23,7 +23,7 @@ Allocation directly impacts garbage collection (GC) frequency and pause times:
 
 ### Scenario 1: Filter + Sort + Page (20–100 records)
 
-From [Execution Benchmarks](../execution.md):
+From [Execution Benchmarks](../execution-pipeline):
 
 | Page Size | FlexQuery.NET | Handwritten LINQ | Gridify | Sieve | OData |
 |:----------:|--------------:|-----------------:|--------:|------:|------:|
@@ -175,10 +175,9 @@ However, **total working set** still scales with result count because entity mat
 ### 1. Set Maximum Page Size
 
 ```csharp
-services.AddFlexQuery(options =>
+FlexQueryCore.Configure(options =>
 {
     options.MaxPageSize = 1000;   // Prevent memory exhaustion
-    options.MaxRecords = 10000;   // Absolute hard limit
 });
 ```
 
@@ -209,11 +208,7 @@ Use `dotnet-counters` or Application Insights to track:
 
 ### 4. Enable Caching for Repeated Queries
 
-```csharp
-FlexQueryCacheSettings.EnableCache = true;
-```
-
-Cached queries skip parsing and expression generation, reducing per-request allocation by ~40–50% for repeated query shapes.
+Expression caching is **enabled by default**. Cached queries skip parsing and expression generation, reducing per-request allocation by ~40–50% for repeated query shapes. Tune via `FlexQueryCacheSettings.MaxCacheSize` if needed.
 
 ### 5. Consider Compression for Large Payloads
 
@@ -238,6 +233,6 @@ For responses > 100 KB:
 ## Related Pages
 
 - [Scalability](./scalability.md) — How performance scales with dataset size
-- [Execution Benchmarks](../execution.md) — Full pipeline including allocation numbers
+- [Execution Benchmarks](../execution-pipeline) — Full pipeline including allocation numbers
 - [API Benchmarks](./api-benchmarks.md) — Real-world HTTP request memory usage
 - [Database Execution](./database-execution.md) — SQL Server memory characteristics

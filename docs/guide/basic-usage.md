@@ -111,6 +111,32 @@ public async Task<IActionResult> GetUsers([FromQuery] FlexQueryParameters parame
 }
 ```
 
+### HTTP POST Requests
+If your query is too large for a URL query string, you can use the `FlexQueryRequest` model to accept the query via a JSON POST body. The properties are exactly the same as `FlexQueryParameters`.
+
+```csharp
+[HttpPost("query")]
+public async Task<IActionResult> QueryUsers([FromBody] FlexQueryRequest request)
+{
+    var result = await _context.Users.FlexQueryAsync(request, options => 
+    {
+        options.AllowedFields = ["Id", "Name", "Price", "Status"];
+    });
+
+    return Ok(result);
+}
+```
+
+**JSON Payload:**
+```json
+{
+  "filter": "Status:eq:Active",
+  "sort": "Name:asc",
+  "page": 1,
+  "pageSize": 20
+}
+```
+
 This single call handles:
 1. Parsing the query string.
 2. Validating the requested fields against your `AllowedFields` policy.

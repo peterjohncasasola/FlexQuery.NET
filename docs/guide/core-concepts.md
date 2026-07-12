@@ -77,19 +77,19 @@ public async Task<IActionResult> Get([FromQuery] FlexQueryParameters parameters)
 
 | Property | Type | Purpose |
 | :--- | :--- | :--- |
-| `Filter` | `string?` | DSL filter expression (`Name:eq:Alice`) |
-| `Query` | `string?` | Alternative JQL/OData-style string parser |
-| `Sort` | `string?` | Sort expression (`Name:asc,Age:desc`) |
+| `Filter` | `string?` | DSL filter expression (`Status:eq:Active`) |
+| `Sort` | `string?` | Sort expression (`LastName:asc,CreatedAt:desc`) |
 | `Select` | `string?` | Comma-separated fields to project |
 | `Include` | `string?` | Navigation properties to include / expand |
 | `GroupBy` | `string?` | Fields to group by |
 | `Having` | `string?` | Aggregate condition on groups |
+| `Aggregate` | `string?` | Aggregate expressions (`SUM(TotalDue) AS Revenue`) |
 | `Page` | `int?` | Page number (1-indexed) |
 | `PageSize` | `int?` | Items per page |
 | `IncludeCount` | `bool?` | Whether to return total count |
 | `Distinct` | `bool?` | Apply DISTINCT |
 | `Mode` | `string?` | Projection mode: `Nested`, `Flat`, `FlatMixed` |
-| `UseKeysetPagination` | `bool?` | Force keyset pagination engine |
+| `UseKeysetPagination` | `bool` | Force keyset pagination engine |
 | `Cursor` | `string?` | Keyset pagination token from a previous request |
 
 ---
@@ -144,22 +144,19 @@ var result = await _db.Users.FlexQueryAsync(parameters, exec =>
 
 ## Parsing Formats
 
-FlexQuery auto-detects the input format based on the property used in `FlexQueryParameters`:
+FlexQuery supports multiple query syntaxes. The active syntax is configured globally via `FlexQueryCore.Configure()` and parser registration. The default is **DSL** (`QuerySyntax.NativeDsl`).
 
-### DSL Format (Standard)
+### DSL Format (Default)
 ```http
-GET /api/users?filter=status:eq:active%26name:contains:alice&sort=name:asc
+GET /api/users?filter=Status:eq:Active%26LastName:contains:Smi&sort=LastName:asc
 ```
 
-### JQL Format
+### FQL Format (SQL-like)
+Requires `Fql.Register()` at startup and `QuerySyntax.Fql`:
 ```http
-GET /api/users?query=status = "active" AND age >= 18&sort=name:asc
+GET /api/users?filter=Status = "Active" AND LastName CONTAINS "Smi"&sort=LastName:asc
 ```
 
-### JSON Format
-```http
-GET /api/users?filter={"logic":"and","filters":[{"field":"status","operator":"eq","value":"active"}]}
-```
 
 ---
 

@@ -13,7 +13,7 @@ FlexQueryParameters (raw input from any source)
         │
         ▼
     Parser Layer (shared)
-    ├── JqlQueryParser
+    ├── FQLQueryParser
     ├── JsonQueryParser
     ├── DslQueryParser
     ├── MiniODataQueryParser (optional)
@@ -43,7 +43,7 @@ FlexQueryParameters (raw input from any source)
         │       ├── ApplySort()        → OrderBy/ThenBy expressions
         │       ├── ApplyPaging()      → Skip/Take
         │       ├── ApplySelect()      → Dynamic projection
-        │       └── ApplyFilteredIncludes() → Include/ThenInclude
+        │       └── ApplyExpand() → Include/ThenInclude
         │       │
         │       ▼
         │   EF Core → SQL (via database provider)
@@ -117,7 +117,7 @@ The validation pipeline checks:
 | **Filtered includes** | ✅ Via `Include().Where()` | ✅ Via JOIN + WHERE |
 | **Aggregation** | ✅ Via LINQ GroupBy | ✅ Via SQL GROUP BY |
 | **SQL preview** | ✅ `ToSqlPreview()` | ✅ Access `SqlCommand.Sql` directly |
-| **Dialect awareness** | ❌ Handled by EF provider | ✅ Explicit `ISqlDialect` |
+| **Dialect awareness** | ❌ Handled by EF provider | ✅ Auto-detected from `DbConnection` |
 | **Connection management** | ✅ Via DbContext | ❌ You manage `DbConnection` |
 | **Migrations** | ✅ EF Migrations | ❌ Not applicable |
 

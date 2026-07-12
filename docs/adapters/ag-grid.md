@@ -263,10 +263,9 @@ public class SalesController : ControllerBase
         // 1. Parse the AG Grid payload
         var options = request.ToQueryOptions();
 
-        // 2. Execute with Dapper
+        // 2. Execute with Dapper (dialect is auto-detected from the DbConnection)
         var result = await ((DbConnection)_db).FlexQueryAsync<SalesRecord>(options, opts =>
         {
-            opts.Dialect = new SqlServerDialect();
             opts.AllowedFields = new HashSet<string>
             {
                 "Id", "Product", "Category", "Region", "Amount", "SaleDate"

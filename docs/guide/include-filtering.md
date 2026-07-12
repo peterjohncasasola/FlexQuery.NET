@@ -101,7 +101,7 @@ var data = await query.ToListAsync();
 `FlexQueryAsync` applies the include pipeline automatically:
 
 ```csharp
-var result = await _context.Users.FlexQueryAsync<User>(parameters, exec =>
+var result = await _context.Users.FlexQueryAsync(parameters, exec =>
 {
     exec.AllowedFields = new HashSet<string> { "id", "name", "orders.*" };
 });
@@ -185,12 +185,12 @@ GET /api/users?filter=orders:any:status:eq:shipped
 
 Both are valid — just different use cases. Know which one you need.
 
-### ❌ Calling ApplyFilteredIncludes after ToListAsync
+### ❌ Calling ApplyExpand after ToListAsync
 
 ```csharp
 // WRONG — query already materialized
 var data = await query.ToListAsync();
-query = query.ApplyFilteredIncludes(options); // too late
+query = query.ApplyExpand(options); // too late
 ```
 
 ```csharp
@@ -205,17 +205,17 @@ var data = await query.ToListAsync();
 
 When including multiple collections (e.g., `?include=Orders,Profiles`), EF Core may generate a "cartesian explosion" where the result set grows exponentially.
 
-To optimize this, you can enable **Split Queries** in the execution configuration:
+To optimize this, configure EF Core's native query splitting behavior on the `DbContext`:
 
 ```csharp
-var result = await _context.Users.FlexQueryAsync(parameters, exec =>
+protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
 {
-    exec.UseSplitQuery = true;
-});
+    optionsBuilder.UseSqlServer(connectionString, opt =>
+        opt.UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery));
+}
 ```
 
-This ensures that each collection is fetched via a separate SQL query, reducing the amount of redundant data transferred.
+> [!NOTE]
+> The `UseSplitQuery` option was removed from FlexQuery options in v4. Use EF Core's native query splitting configuration instead.
 
 ---
-
-## Summary

@@ -139,7 +139,7 @@ var data = await projected.ToListAsync();
 ### Restricting Selectable Fields
 
 ```csharp
-var result = await _context.Users.FlexQueryAsync<User>(parameters, exec =>
+var result = await _context.Users.FlexQueryAsync(parameters, exec =>
 {
     exec.SelectableFields = new HashSet<string>
     {
@@ -214,7 +214,7 @@ GET /api/users?select=id,name,address.city&mode=nested
 
 ```csharp
 // WRONG — client could select passwordHash, internalNotes, etc.
-var result = await _context.Users.FlexQueryAsync<User>(parameters);
+var result = await _context.Users.FlexQueryAsync(parameters);
 ```
 
 ### ❌ Requesting non-existent fields

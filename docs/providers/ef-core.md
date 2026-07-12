@@ -95,7 +95,7 @@ query
     .ThenInclude(o => o.OrderItems.Where(i => i.Quantity > 5))
 ```
 
-### Using ApplyFilteredIncludes
+### Using ApplyExpand
 
 If you need to apply includes separately from the main query:
 
@@ -134,12 +134,14 @@ For nested projections with includes:
 FlexQuery supports grand total aggregation via LINQ:
 
 ```csharp
+using FlexQuery.NET.Models.Aggregates;
+
 var options = parameters.ToQueryOptions();
 options.Aggregates = new List<AggregateModel>
 {
-    new() { Function = "sum", Field = "Price", Alias = "priceSum" },
-    new() { Function = "avg", Field = "Price", Alias = "priceAvg" },
-    new() { Function = "count", Field = "Id", Alias = "idCount" }
+    new() { Function = AggregateFunction.Sum, Field = "Price", Alias = "priceSum" },
+    new() { Function = AggregateFunction.Avg, Field = "Price", Alias = "priceAvg" },
+    new() { Function = AggregateFunction.Count, Field = "Id", Alias = "idCount" }
 };
 
 var result = await _context.Products.FlexQueryAsync<Product>(options);
@@ -150,18 +152,47 @@ var result = await _context.Products.FlexQueryAsync<Product>(options);
 
 When `GroupBy` is specified alongside aggregates, the pipeline uses `GroupByBuilder` to generate grouped aggregation queries that EF Core translates into SQL `GROUP BY` with aggregate functions.
 
-## UseNoTracking
+## EF Core Query Options
 
-For read-only API endpoints (which is most query endpoints), disable EF Core's change tracker:
+The EF Core provider introduces `EfCoreQueryOptions`, which allows you to control query compilation behavior per-request without modifying the underlying `DbContext`.
 
 ```csharp
 var result = await _context.Products.FlexQueryAsync(parameters, opts =>
 {
-    opts.UseNoTracking = true;  // Adds .AsNoTracking() to the query
+    opts.UseNoTracking = true;       // Adds .AsNoTracking()
 });
 ```
 
-**Performance impact:** Disabling change tracking can improve query performance by 20-40% for large result sets because EF Core skips identity resolution and snapshot creation.
+### UseNoTracking
+Disabling change tracking can improve query performance by 20-40% for large result sets because EF Core skips identity resolution and snapshot creation. Recommended for all read-only API endpoints.
+
+### Split Query Optimization
+When your query includes multiple collection navigations, EF Core normally generates a single massive SQL query with multiple `LEFT JOIN`s, which can cause a "cartesian explosion" of data transfer. Configure EF Core's native query splitting behavior on the `DbContext` level:
+
+```csharp
+protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
+{
+    optionsBuilder.UseSqlServer(connectionString, opt =>
+        opt.UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery));
+}
+```
+
+> [!NOTE]
+> The `UseSplitQuery` option was removed from FlexQuery options in v4. Use EF Core's native query splitting configuration instead.
+
+### IgnoreAutoIncludes & IgnoreQueryFilters
+These options are not available in FlexQuery v4. To bypass globally configured EF Core behaviors, configure them directly on the `DbContext` before passing the queryable to `FlexQueryAsync`:
+
+```csharp
+var query = _context.Products
+    .IgnoreAutoIncludes()
+    .IgnoreQueryFilters();
+
+var result = await query.FlexQueryAsync(parameters, opts =>
+{
+    opts.UseNoTracking = true;
+});
+```
 
 ## ToSqlPreview
 

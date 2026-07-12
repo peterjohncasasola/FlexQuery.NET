@@ -177,19 +177,19 @@ GET /api/users?filter=orders:count:gt:5
 WHERE (SELECT COUNT(*) FROM Orders o WHERE o.UserId = u.Id) > 5
 ```
 
-### Nested any (JQL)
+### Nested any (FQL)
 
 ```
-GET /api/users?query=Orders.any(Status = "shipped" AND Amount > 100)
+GET /api/users?filter=Orders.any(Status = "shipped" AND Amount > 100)
 ```
 
 ---
 
-## JQL Operator Syntax
+## FQL Operator Syntax
 
-JQL uses natural language symbols:
+FQL uses natural language symbols:
 
-| JQL Syntax | Operator |
+| FQL Syntax | Operator |
 | :--- | :--- |
 | `=` | eq |
 | `!=` | neq |
@@ -201,12 +201,12 @@ JQL uses natural language symbols:
 | `startsWith(field, "val")` | startswith |
 | `.any(...)` | any (collection) |
 
-**JQL examples:**
+**FQL examples:**
 
 ```
-GET /api/users?query=status = "active" AND age >= 18
-GET /api/users?query=(name = "alice" OR name = "bob") AND status = "active"
-GET /api/users?query=Orders.any(Status = "shipped")
+GET /api/users?filter=status = "active" AND age >= 18
+GET /api/users?filter=(name = "alice" OR name = "bob") AND status = "active"
+GET /api/users?filter=Orders.any(Status = "shipped")
 ```
 
 ---

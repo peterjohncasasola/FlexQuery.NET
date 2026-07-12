@@ -13,7 +13,7 @@ Filtering applies a `WHERE` clause to your `IQueryable`. It supports:
 - Null checks
 - Collection predicates (`any`, `all`)
 - Nested AND/OR logic groups
-- Multiple input formats (DSL, JQL, JSON, Indexed)
+- Multiple input formats (DSL, FQL, MiniOData)
 
 ---
 
@@ -32,7 +32,7 @@ Use filtering when clients need to **search or narrow down results** at runtime 
 
 ## Filter Formats
 
-FlexQuery.NET auto-detects the format from the query string.
+FlexQuery.NET supports multiple filter syntaxes. The active syntax is configured globally via `FlexQueryCore.Configure()` and parser registration (`Fql.Register()`, `MiniOData.Register()`). The default is **DSL** (`QuerySyntax.NativeDsl`).
 
 ### DSL Format
 
@@ -50,53 +50,20 @@ GET /api/users?filter=name:contains:alice
 GET /api/users?filter=status:eq:active%26age:gte:18
 ```
 
-### JQL Format (SQL-like)
+### FQL Format (SQL-like)
 
-Natural language query syntax using the `query` parameter.
+Natural language query syntax. FQL uses the same `filter` parameter as DSL but requires SQL-like expressions. To enable FQL, register the parser at startup:
 
-```
-GET /api/users?query=status = "active" AND age >= 18
-GET /api/users?query=(name = "alice" OR name = "bob") AND status = "active"
-```
-
-### JSON Format
-
-Structured filter tree for complex nested logic.
-
-```
-GET /api/users?filter={"logic":"and","filters":[
-  {"field":"status","operator":"eq","value":"active"},
-  {"field":"age","operator":"gte","value":"18"}
-]}
+```csharp
+FlexQueryCore.Configure(options => options.QuerySyntax = QuerySyntax.Fql);
+Fql.Register();
 ```
 
-**Nested OR group:**
-
-```json
-{
-  "logic": "and",
-  "filters": [
-    { "field": "status", "operator": "eq", "value": "active" },
-    {
-      "logic": "or",
-      "filters": [
-        { "field": "name", "operator": "contains", "value": "alice" },
-        { "field": "name", "operator": "contains", "value": "bob" }
-      ]
-    }
-  ]
-}
+```
+GET /api/users?filter=status = "active" AND age >= 18
+GET /api/users?filter=(name = "alice" OR name = "bob") AND status = "active"
 ```
 
-### Indexed Format
-
-Good for form-based UIs.
-
-```
-GET /api/users?filter[0].field=status&filter[0].operator=eq&filter[0].value=active
-              &filter[1].field=age&filter[1].operator=gte&filter[1].value=18
-              &logic=and
-```
 
 ---
 
@@ -158,11 +125,11 @@ SELECT * FROM Users u WHERE EXISTS (
 )
 ```
 
-### Nested ANY Filter
+### Nested ANY Filter (FQL)
 
-Request:
+Request (FQL syntax):
 ```
-GET /api/users?query=Orders.any(Status = "shipped" AND Amount > 100)
+GET /api/users?filter=Orders.any(Status = "shipped" AND Amount > 100)
 ```
 
 ### Range Filter
@@ -226,12 +193,12 @@ GET /api/users?filter=status:eq:active&page=1&pageSize=3
 
 ```csharp
 // WRONG — client can filter on any field, including sensitive ones
-var result = await _context.Users.FlexQueryAsync<User>(parameters);
+var result = await _context.Users.FlexQueryAsync(parameters);
 ```
 
 ```csharp
 // CORRECT
-var result = await _context.Users.FlexQueryAsync<User>(parameters, exec =>
+var result = await _context.Users.FlexQueryAsync(parameters, exec =>
 {
     exec.AllowedFields = new HashSet<string> { "name", "email", "status" };
 });
@@ -270,4 +237,4 @@ FlexQuery.NET uses expression trees — never string concatenation.
 - Collection predicates (`any`, `all`) generate `EXISTS` subqueries in SQL — efficient and server-side.
 - `contains` maps to SQL `LIKE '%value%'` which **cannot use an index**. Prefer `startswith` for large tables.
 - Deeply nested OR groups with `contains` can be slow — consider full-text search for those cases.
-- `CaseInsensitive = true` (default) uses database collation — no performance penalty on most providers.
+- String comparisons respect the database collation — case sensitivity is handled by the database provider.

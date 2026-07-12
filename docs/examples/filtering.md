@@ -29,7 +29,7 @@ Customers who have *at least one* order over £500.
 
 ### Request
 ```http
-GET /api/customers?query=orders.any(total > 500)
+GET /api/customers?filter=orders.any(total > 500)
 ```
 
 ### LINQ Translation
@@ -47,7 +47,7 @@ Customers with a single order that is BOTH cancelled AND over £500.
 
 ### Request
 ```http
-GET /api/customers?query=orders.any(status = "Cancelled" AND total > 500)
+GET /api/customers?filter=orders.any(status = "Cancelled" AND total > 500)
 ```
 
 ### LINQ Translation
@@ -63,7 +63,7 @@ Customers with a cancelled order that contains a specific product.
 
 ### Request
 ```http
-GET /api/customers?query=orders.any(status = "Cancelled" AND orderItems.any(productName CONTAINS "Laptop"))
+GET /api/customers?filter=orders.any(status = "Cancelled" AND orderItems.any(productName CONTAINS "Laptop"))
 ```
 
 ---
@@ -76,7 +76,7 @@ Customers where ALL orders are completed.
 
 ### Request
 ```http
-GET /api/customers?query=orders.all(status = "Shipped" OR status = "Delivered")
+GET /api/customers?filter=orders.all(status = "Shipped" OR status = "Delivered")
 ```
 
 ### LINQ Translation
@@ -92,8 +92,8 @@ Customers without an assigned profile, or with a specific nested null check.
 
 ### Request
 ```http
-GET /api/customers?query=profile isnull
-GET /api/customers?query=profile.bio notnull
+GET /api/customers?filter=profile isnull
+GET /api/customers?filter=profile.bio notnull
 ```
 
 ---
@@ -104,7 +104,7 @@ Customers with more than 3 orders.
 
 ### Request
 ```http
-GET /api/customers?query=orders count > 3
+GET /api/customers?filter=orders count > 3
 ```
 
 ---
@@ -115,5 +115,5 @@ Orders placed in Q1 2026.
 
 ### Request
 ```http
-GET /api/orders?query=orderDate between "2026-01-01","2026-03-31"
+GET /api/orders?filter=orderDate between "2026-01-01","2026-03-31"
 ```

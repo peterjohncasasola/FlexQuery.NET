@@ -19,7 +19,7 @@ HTTP Query String
   FlexQueryParameters          ← Plain DTO bound from [FromQuery]
         │
         ▼
-  QueryOptionsParser.Parse()   ← Auto-detects DSL / JQL / JSON / Indexed format
+  ToQueryOptions()             ← Parses using configured QuerySyntax
         │
         ▼
       QueryOptions              ← Internal AST: FilterGroup, SortNode[], PagingOptions, etc.
@@ -54,9 +54,8 @@ It automatically detects which format was used:
 | Format | Detection | Example |
 | :--- | :--- | :--- |
 | **DSL** | `filter=` with colon syntax | `filter=status:eq:active` |
-| **JQL** | `query=` parameter present | `query=status = "active"` |
-| **JSON** | `filter=` value starts with `{` | `filter={"logic":"and",...}` |
-| **Indexed** | Keys like `filter[0].field=` | `filter[0].field=status` |
+| **FQL** | `filter=` parameter present | `filter=status = "active"` |
+
 
 The parsed output is a structured `QueryOptions`:
 
@@ -134,7 +133,7 @@ The expressions are applied to your `IQueryable` using standard LINQ methods:
 query = query.Where(filterPredicate);     // ApplyFilter
 query = query.OrderBy(keySelector);       // ApplySort
 query = query.Skip(skip).Take(take);      // ApplyPaging
-query = query.Include(...).Where(...);    // ApplyFilteredIncludes
+query = query.Include(...).Where(...);    // ApplyExpand
 var projected = query.Select(projection); // ApplySelect
 ```
 

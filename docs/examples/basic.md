@@ -142,7 +142,7 @@ ORDER BY Status ASC, Name ASC, CreatedAt DESC
 
 ---
 
-## Example 5: JQL Filter
+## Example 5: FQL Filter
 
 **Request:**
 ```

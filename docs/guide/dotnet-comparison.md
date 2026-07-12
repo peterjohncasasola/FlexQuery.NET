@@ -28,7 +28,7 @@ When building dynamic APIs in .NET, teams often evaluate a spectrum of tools ran
 | | FlexQuery.NET | Gridify | Sieve | System.Linq.Dynamic.Core |
 | :--- | :--- | :--- | :--- | :--- |
 | **Primary focus** | Unified query pipeline | Lightweight filtering | Attribute-based filtering | Dynamic LINQ expressions |
-| **Input style** | DSL, JQL, JSON, Indexed | Custom DSL | Query model | LINQ expression strings |
+| **Input style** | DSL, FQL | Custom DSL | Query model | LINQ expression strings |
 | **Projection (`select`)** | ✅ | ❌ | ❌ | ✅ |
 | **Grouping / Aggregates**| ✅ | ❌ | ❌ | ✅ |
 | **Filtered includes** | ✅ | ❌ | ❌ | ❌ |

@@ -35,6 +35,7 @@ export default defineConfig({
     nav: [
       { text: 'Guide', link: '/guide/getting-started' },
       { text: 'Examples', link: '/examples/basic' },
+      { text: 'Migration v3→v4', link: '/migration/v3-to-v4' },
       { text: 'Migration v2→v3', link: '/migration/v2-to-v3' },
       {
         text: 'Links',
@@ -149,7 +150,7 @@ export default defineConfig({
         {
           text: 'Architecture',
           items: [
-            { text: 'Provider Model', link: '/guide/architecture/provider-model' }
+            { text: 'Provider Model', link: '/architecture/provider-model' }
           ]
         },
         {
@@ -158,7 +159,8 @@ export default defineConfig({
             { text: 'Query Language', link: '/shared/query-language' },
             { text: 'Operators', link: '/shared/operators' },
             { text: 'Migration v1 → v2', link: '/migration' },
-            { text: 'Migration v2 → v3', link: '/migration/v2-to-v3' }
+            { text: 'Migration v2 → v3', link: '/migration/v2-to-v3' },
+            { text: 'Migration v3 → v4', link: '/migration/v3-to-v4' }
           ]
         }
       ],
