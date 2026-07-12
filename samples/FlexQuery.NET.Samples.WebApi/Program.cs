@@ -21,17 +21,6 @@ builder.Services.AddControllers()
         options.JsonSerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.CamelCase;
     });
 
-// //Global Config
-// builder.Services.AddFlexQueryDapper(cfg =>
-// {
-//     cfg.Model.Entity<Customer>()
-//         .ToTable("Customers")
-//         .HasMany(c => c.Orders).WithForeignKey("CustomerId");
-//     cfg.Model.Entity<Order>()
-//         .ToTable("Orders");
-// });
-
-FlexQueryConfiguration.Configure();
 
 // 4. Configure Swagger
 builder.Services.AddEndpointsApiExplorer();
