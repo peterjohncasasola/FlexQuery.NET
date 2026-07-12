@@ -31,7 +31,7 @@ internal sealed class DslAstParser
     {
         var children = new List<DslAstNode> { ParseAnd() };
 
-        while (Match(DslTokenKind.Or))
+        while (MatchOr())
         {
             children.Add(ParseAnd());
         }
@@ -45,7 +45,7 @@ internal sealed class DslAstParser
     {
         var children = new List<DslAstNode> { ParsePrimary() };
 
-        while (Match(DslTokenKind.And))
+        while (MatchAnd())
         {
             children.Add(ParsePrimary());
         }
@@ -53,6 +53,22 @@ internal sealed class DslAstParser
         return children.Count == 1
             ? children[0]
             : new LogicalNode("and", Flatten("and", children));
+    }
+
+    private bool MatchOr()
+    {
+        if (Current.Kind == DslTokenKind.Or) { _position++; return true; }
+        if (Current.Kind == DslTokenKind.Identifier && Current.Value.Equals("OR", StringComparison.OrdinalIgnoreCase))
+        { _position++; return true; }
+        return false;
+    }
+
+    private bool MatchAnd()
+    {
+        if (Current.Kind == DslTokenKind.And) { _position++; return true; }
+        if (Current.Kind == DslTokenKind.Identifier && Current.Value.Equals("AND", StringComparison.OrdinalIgnoreCase))
+        { _position++; return true; }
+        return false;
     }
 
     private DslAstNode ParsePrimary()

@@ -75,7 +75,7 @@ internal static class ExampleProvider
 
     internal static FlexQueryParameters CreateParametersExample() => new()
     {
-        Filter = "Status:eq:Active,Age:gte:18&(Role:eq:Admin|Role:eq:Manager)",
+        Filter = "Status:eq:Active,Age:gte:18 AND (Role:eq:Admin OR Role:eq:Manager)",
         Sort = "LastName:asc,FirstName:asc",
         Select = "Id,FirstName,LastName,Email,Profile.AvatarUrl",
         Include = "Orders,Profile",

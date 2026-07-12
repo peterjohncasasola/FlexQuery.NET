@@ -342,7 +342,7 @@ public class FilterTests : IDisposable
     {
         var opts = Parse(new()
         {
-            ["filter"] = "((city:eq:London|city:eq:Berlin)&(age:between:25,40|status:eq:Pending))"
+            ["filter"] = "((city:eq:London OR city:eq:Berlin) AND (age:between:25,40 OR status:eq:Pending))"
         });
         opts.Paging.Disabled = true;
 

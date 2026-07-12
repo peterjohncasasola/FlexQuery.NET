@@ -81,7 +81,7 @@ public class IncludeParserTests
     [Fact]
     public void DslParse_ComplexFilterWithParentheses_IgnoresInnerParenthesesForSplit()
     {
-        var result = DslIncludeParser.Parse("orders(status:eq:Cancelled&(total:gt:100|type:eq:VIP)),profile");
+        var result = DslIncludeParser.Parse("orders(status:eq:Cancelled AND (total:gt:100 OR type:eq:VIP)),profile");
 
         result.Should().HaveCount(2);
         
@@ -102,8 +102,8 @@ public class IncludeParserTests
     [InlineData("orders(Amount:gte:100)")]
     [InlineData("orders(Amount:lt:50)")]
     [InlineData("orders(Amount:lte:200)")]
-    [InlineData("orders(Status:eq:Active&Amount:gt:100)")]
-    [InlineData("orders(Status:eq:Active|Status:eq:Pending)")]
+    [InlineData("orders(Status:eq:Active AND Amount:gt:100)")]
+    [InlineData("orders(Status:eq:Active OR Status:eq:Pending)")]
     public void DslParse_ValidSyntax_DoesNotThrow(string input)
     {
         var act = () => DslIncludeParser.Parse(input);
