@@ -82,7 +82,7 @@ OData focuses on standardized REST querying and interoperability. It is commonly
 
 ```http
 GET /api/users
-    ?filter=name:contains:alice%26status:eq:active
+    ?filter=name:contains:'alice' AND status:eq:'active'
     &sort=createdAt:desc
     &page=1
     &pageSize=10

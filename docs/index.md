@@ -151,7 +151,7 @@ All expression trees are translated to SQL by EF Core. No client-side evaluation
 
 | Format | Example |
 | :--- | :--- |
-| **DSL** | `filter=status:eq:active & salary:gte:50000` |
+| **DSL** | `filter=status:eq:active AND salary:gte:50000` |
 | **FQL** | `filter=status = "active" AND salary >= 50000` |
 
 ---

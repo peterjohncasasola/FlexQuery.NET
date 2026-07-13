@@ -93,7 +93,7 @@ Because expressions are string-based and parsed blindly, applications typically 
 ### FlexQuery.NET
 
 ```http
-GET /api/customers?filter=status:eq:active%26salary:gte:50000&sort=name:asc&page=2&pageSize=10
+GET /api/customers?filter=status:eq:'active' AND salary:gte:50000&sort=name:asc&page=2&pageSize=10
 ```
 
 ```csharp

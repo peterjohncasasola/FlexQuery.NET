@@ -10,7 +10,7 @@ FQL is a SQL-inspired query language parser package. It translates human-readabl
 
 ### Why It Exists
 
-Many developers prefer SQL-like syntax for ad-hoc queries, admin tools, and developer-facing APIs. FQL lets you accept natural language expressions (`Status = 'Active' AND Salary >= 50000`) instead of colon-separated DSL (`status:eq:active & salary:gte:50000`), making APIs more accessible to users familiar with SQL.
+Many developers prefer SQL-like syntax for ad-hoc queries, admin tools, and developer-facing APIs. FQL lets you accept natural language expressions (`Status = 'Active' AND Salary >= 50000`) instead of colon-separated DSL (`status:eq:active AND salary:gte:50000`), making APIs more accessible to users familiar with SQL.
 
 ### When to Use It
 

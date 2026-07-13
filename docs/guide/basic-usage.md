@@ -28,9 +28,9 @@ Filtering allows you to restrict the results based on property values. The stand
 - **In Collection**: `Status:in:Active,Pending`
 
 ### Multiple Filters
-Multiple filters are combined using the **AND** operator (`&`), which must be URL-encoded as `%26` in HTTP requests.
+Multiple filters are combined using the `AND` keyword.
 
-`?filter=Status:eq:Active%26Price:gt:100`
+`?filter=Status:eq:'Active' AND Price:gt:100`
 
 ### Nested Properties
 You can filter on nested navigation properties using dot notation. FlexQuery automatically handles generating the underlying SQL `JOIN` or EF Core `Include` logic.
@@ -150,5 +150,4 @@ This single call handles:
 
 ## Best Practices
 
-- **URL Encode:** Always remind frontend developers to use `encodeURIComponent()` (in JavaScript/TypeScript) on their filter strings. The `&` character will break HTTP routing if it is not encoded as `%26`.
 - **Use Paging Defaults:** Always specify a `DefaultPageSize` and `MaxPageSize` in your execution options to prevent accidental `SELECT * FROM Table` scenarios.

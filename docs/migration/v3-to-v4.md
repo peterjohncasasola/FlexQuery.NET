@@ -1,4 +1,4 @@
-# Migrating from FlexQuery.NET 3.1.1 to 4.0
+# Migrating from v3.1.1 to v4.0.0
 
 This guide walks through upgrading an existing FlexQuery.NET v3.1.1 application to v4. It focuses on the changes developers must make—organized by developer task rather than by individual API.
 
@@ -397,7 +397,7 @@ if (aggregate.Function == AggregateFunction.Sum) { ... }
 
 #### Aggregates Require a Dedicated Parameter
 
-Aggregates embedded in the `select` parameter are no longer recognized. A dedicated `aggregates` query parameter is required.
+Aggregates embedded in the `select` parameter are no longer recognized. A dedicated `aggregate` query parameter is required.
 
 **Before:**
 ```http
@@ -406,7 +406,7 @@ GET /api/orders?select=status,sum(amount),count(id)&groupBy=status
 
 **After:**
 ```http
-GET /api/orders?select=status&aggregates=amount:sum,id:count&groupBy=status
+GET /api/orders?select=status&aggregate=amount:sum,id:count&groupBy=status
 ```
 
 #### AggregateModel and HavingCondition Namespaces Changed
@@ -598,6 +598,24 @@ v3.1.1 extracted aggregate expressions like `sum(amount)` from the `select` para
 
 **Review:** If your application embeds aggregates in `select`, move them to the `aggregates` parameter.
 
+#### DSL Logical Operators Changed from Symbols to Keywords
+
+v3.1.1 used single-character symbols for logical composition in DSL filters: `&` for AND and `|` for OR. v4 replaces these with keyword operators: `AND` and `OR`.
+
+**Before:**
+```http
+GET /api/customers?filter=status:eq:'active'&city:eq:'New York'
+GET /api/customers?filter=status:eq:'active'|status:eq:'pending'
+```
+
+**After:**
+```http
+GET /api/customers?filter=status:eq:'active' AND city:eq:'New York'
+GET /api/customers?filter=status:eq:'active' OR status:eq:'pending'
+```
+
+**Review:** Update all client code and documentation that constructs DSL filter strings. The keyword operators do not require URL encoding, which also simplifies filter string construction.
+
 ---
 
 ## Troubleshooting
@@ -786,7 +804,11 @@ No. Both versions cannot be referenced in the same project. Upgrade all FlexQuer
 
 #### Can I continue using DSL after upgrading?
 
-Yes. DSL (default syntax) remains fully supported and unchanged. The only required change is replacing `QueryOptionsParser.Parse(parameters)` with `parameters.ToQueryOptions()`.
+Yes. DSL (default syntax) remains fully supported. The main DSL change is that logical operators are now keyword-based (`AND`/`OR`) instead of symbolic (`&`/`|`). Update any filter strings accordingly, and replace `QueryOptionsParser.Parse(parameters)` with `parameters.ToQueryOptions()`.
+
+#### Why were the generic/indexed and raw JSON `filter` formats removed?
+
+v3 supported additional filter formats (generic/indexed `filter[0].field=...` and raw JSON `filter` strings) that added parser complexity and conflicted with model-binding conventions. The recommended replacement is to use the strongly-typed request DTOs: `FlexQueryParameters` for GET query-string parameters, `FlexQueryRequest` for POST JSON bodies, and `MiniODataRequest` for MiniOData-style requests.
 
 ---
 

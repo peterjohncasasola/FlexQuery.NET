@@ -76,8 +76,7 @@ FlexQueryCore.Configure(options =>
 The most compact format. Fields, operators, and values are separated by colons:
 
 ```
-GET /api/customers?filter=City:eq:New York&sort=Name:asc
-GET /api/customers?filter=City:eq:New York%26Status:eq:Active
+GET /api/customers?filter=City:eq:'New York' AND Status:eq:'Active'
 GET /api/customers?filter=LastName:startswith:Smi&select=Id,LastName,Email
 ```
 

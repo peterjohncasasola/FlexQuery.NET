@@ -165,7 +165,7 @@ FlexQuery supports multiple query syntaxes. The active syntax is configured glob
 
 ### DSL Format (Default)
 ```http
-GET /api/customers?filter=Status:eq:Active%26LastName:contains:Smi&sort=LastName:asc
+GET /api/customers?filter=Status:eq:'Active' AND LastName:contains:Smi&sort=LastName:asc
 ```
 
 ### FQL Format (SQL-like)

@@ -17,18 +17,18 @@ GET /api/customers?filter=status:eq:active&sort=name:asc
 
 ### Compound Filter (AND)
 
-Multiple conditions are separated by commas (AND logic). URL-encode `&` as `%26`.
+Multiple conditions are separated by commas (AND logic). Use the `AND` keyword to join additional conditions.
 
 **Request:**
 ```http
-GET /api/customers?filter=status:eq:active%26city:eq:New York
+GET /api/customers?filter=status:eq:'active' AND city:eq:'New York'
 ```
 
 ### OR Logic
 
 **Request:**
 ```http
-GET /api/customers?filter=status:eq:active|status:eq:pending
+GET /api/customers?filter=status:eq:'active' OR status:eq:'pending'
 ```
 
 ### Range and Set Filter
@@ -36,7 +36,7 @@ GET /api/customers?filter=status:eq:active|status:eq:pending
 **Request:**
 ```http
 GET /api/customers
-  ?filter=(salary:between:50000,100000)%26(status:in:Active,Review)
+  ?filter=(salary:between:50000,100000) AND (status:in:'Active',Review)
   &sort=salary:asc
 ```
 
@@ -190,7 +190,7 @@ GET /api/customers?$filter=status eq 'active'&$count=true
 | :--- | :--- | :--- | :--- | :--- |
 | **URL-friendly** | ✅ Very | ⚠️ Needs encoding | ⚠️ Needs encoding | ✅ Good |
 | **Human-readable** | Medium | ✅ High | Medium | ✅ High |
-| **Nested logic** | Limited | ✅ Full | ✅ Full | ✅ Full |
+| **Nested logic** | ✅ Full | ✅ Full | ✅ Full | ✅ Full |
 | **Package required** | Core (default) | `FlexQuery.NET.Parsers.Fql` | Core (default) | `FlexQuery.NET.Parsers.MiniOData` |
 | **Registration** | None | `Fql.Register()` | None | `MiniOData.Register()` |
 | **Best for** | Internal tools | Developer tools | Complex conditions | OData migration |

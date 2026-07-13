@@ -44,10 +44,10 @@ GET /api/customers?filter=salary:gte:50000
 GET /api/customers?filter=name:contains:alice
 ```
 
-**Compound (AND — URL-encode `&` as `%26`):**
+**Compound (AND):**
 
 ```http
-GET /api/customers?filter=status:eq:active%26city:eq:'New York'
+GET /api/customers?filter=status:eq:active AND city:eq:'New York'
 ```
 
 ### FQL Format (SQL-like)

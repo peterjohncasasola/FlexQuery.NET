@@ -180,7 +180,7 @@ ORDER BY [u].[Name]
 
 ### "My filter isn't working"
 
-1. Check `options.Filter` in the parsed AST — is it null? The format might not have been recognized, or a URL decoding issue occurred (e.g., using `&` instead of `%26` for multiple filters).
+1. Check `options.Filter` in the parsed AST — is it null? The format might not have been recognized, or a syntax issue occurred (e.g., using `AND`/`OR` keywords instead of the old `&`/`|` symbols).
 2. Check the operator — typos in operator strings are silently ignored during parsing but caught during validation. 
 
 ### "Results are empty but shouldn't be"
