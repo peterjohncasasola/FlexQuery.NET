@@ -38,7 +38,7 @@ The native FlexQuery DSL is included by default.
 
 ```http
 GET /api/products?
-filter=category:eq:electronics|price:between:1000,5000
+filter=category:eq:electronics OR price:between:1000,5000
 &select=id,name,price,supplier.name
 &sort=price:desc,name:asc
 &include=supplier,reviews

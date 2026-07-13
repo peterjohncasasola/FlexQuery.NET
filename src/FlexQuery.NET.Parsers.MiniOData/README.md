@@ -94,5 +94,5 @@ fails with a clear `MiniODataParseException` rather than being silently ignored.
 
 ## Documentation
 
-- [MiniOData Integration Guide](https://flexquery.vercel.app/adapters/miniodata)
+- [MiniOData Integration Guide](https://flexquery.vercel.app/parsers/miniodata)
 - [Query Formats Guide](https://flexquery.vercel.app/guide/query-formats)

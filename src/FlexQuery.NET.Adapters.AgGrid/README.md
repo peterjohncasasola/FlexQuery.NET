@@ -20,6 +20,7 @@ dotnet add package FlexQuery.NET.Adapters.AgGrid
 
 ```csharp
 using FlexQuery.NET.Adapters.AgGrid;
+using FlexQuery.NET.Adapters.AgGrid.Models;
 
 [HttpPost("grid-data")]
 public async Task<IActionResult> GetGridData([FromBody] AgGridRequest request)
