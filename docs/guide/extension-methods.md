@@ -10,7 +10,9 @@ Extension methods preserve the idiomatic .NET style. Your controller logic stays
 
 ---
 
-## `FlexQueryAsync` ⭐ Recommended
+## Core Pipeline (`IQueryable<T>`)
+
+### `FlexQueryAsync` ⭐ Recommended
 
 The all-in-one unified pipeline method. Handles parsing, validation, filtering, sorting, paging, includes, and projection in a single secure call.
 
@@ -18,7 +20,7 @@ The all-in-one unified pipeline method. Handles parsing, validation, filtering, 
 [HttpGet]
 public async Task<IActionResult> Get([FromQuery] FlexQueryParameters parameters)
 {
-    var result = await _context.Users.FlexQueryAsync(parameters, exec =>
+    var result = await _context.Customers.FlexQueryAsync(parameters, exec =>
     {
         exec.AllowedFields = ["Id", "Name", "Email"];
         exec.MaxFieldDepth = 2;
@@ -26,6 +28,19 @@ public async Task<IActionResult> Get([FromQuery] FlexQueryParameters parameters)
 
     return Ok(result);
 }
+```
+
+```
+
+---
+
+## Request Parsing
+
+### `.ToQueryOptions()`
+Converts an incoming `FlexQueryParameters`, `FlexQueryRequest`, or `MiniODataRequest` into the canonical `QueryOptions` AST. This is typically the first step if you are building a custom pipeline.
+
+```csharp
+var options = parameters.ToQueryOptions();
 ```
 
 ---
@@ -98,6 +113,46 @@ var total = await filteredQuery.CountAsync();
 var data = await pagedQuery.ApplySelect(options).ToListAsync();
 
 return Ok(options.BuildQueryResult(data, total));
+```
+
+---
+
+## QueryResult Mapping
+
+If you need to project or map the results inside a `QueryResult<T>` *after* execution (for example, mapping entities to DTOs), FlexQuery provides helper extensions to safely cast the data while preserving pagination metadata.
+
+### `.ToProjectedQueryResult<TSource, TProjected>()`
+Casts the underlying `Data` collection from one type to another.
+
+```csharp
+var entityResult = await _context.Customers.FlexQueryAsync(options);
+var dtoResult = entityResult.ToProjectedQueryResult<User, UserDto>();
+```
+
+### `.ToObjectResult()` & `.ToDynamicResult()`
+Casts the inner generic types to `object` or `dynamic`, which is useful for untyped serialization or dynamic projection results.
+
+```csharp
+var objResult = entityResult.ToObjectResult();
+```
+
+---
+
+## Dapper Extensions (`DbConnection`)
+
+If you are using the `FlexQuery.NET.Dapper` provider, extension methods are provided directly on `System.Data.Common.DbConnection`.
+
+### `.FlexQueryAsync<T>()`
+Executes the full FlexQuery pipeline against an open database connection using Dapper.
+
+```csharp
+await using var connection = new SqlConnection(_connectionString);
+await connection.OpenAsync();
+
+var result = await connection.FlexQueryAsync<User>(parameters, opts => 
+{
+    opts.AllowedFields = ["Id", "Name", "Email"];
+});
 ```
 
 ## Related Topics

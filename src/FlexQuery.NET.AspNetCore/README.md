@@ -17,10 +17,6 @@ dotnet add package FlexQuery.NET.AspNetCore
 ## Registration
 
 ```csharp
-builder.Services.AddFlexQuery();
-builder.Services.AddFlexQuerySecurity();
-
-// Or combine with MVC:
 builder.Services.AddControllers()
     .AddFlexQuerySecurity();
 ```
@@ -37,8 +33,10 @@ public class UsersController : ControllerBase
                  MaxFieldDepth = 2)]
     public async Task<IActionResult> GetUsers([FromQuery] FlexQueryParameters parameters)
     {
-        // FieldAccess settings are automatically resolved from HttpContext.
-        var result = await _context.Users.FlexQueryAsync(parameters, HttpContext);
+        var options = HttpContext.GetFlexQueryExecutionOptions();
+        options.AllowedFields = new HashSet<string> { "Id", "Name", "Email", "Status" };
+
+        var result = await _context.Users.FlexQueryAsync(parameters, options);
         return Ok(result);
     }
 }
@@ -48,7 +46,7 @@ public class UsersController : ControllerBase
 
 - **`[FieldAccess]` Attribute** — Declare Allowed, Blocked, Filterable, Sortable, Selectable, Groupable, Aggregatable fields per-endpoint
 - **`FieldAccessFilter`** — Action filter that applies attribute settings to `QueryExecutionOptions`
-- **`Automatic Security Resolution** — Extension method accepting `HttpContext` for automatic options resolution
+- **`GetFlexQueryExecutionOptions`** — Extension method on `HttpContext` to retrieve `QueryExecutionOptions` populated by the `FieldAccessFilter`
 - **Swagger Integration** — Works with Swagger/Swashbuckle for API documentation
 
 ## Related Packages

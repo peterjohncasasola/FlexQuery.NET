@@ -21,22 +21,22 @@ A quick side-by-side comparison. For the full analysis with complete request/res
 
 ## The Same Query
 
-**Get active users named "alice", sorted by creation date, page 1:**
+**Get active customers named "alice", sorted by creation date, page 1:**
 
 ### FlexQuery.NET
 ```
-GET /api/users?filter=name:contains:alice,status:eq:active&sort=createdAt:desc&page=1&pageSize=10&select=id,name,email
+GET /api/customers?filter=name:contains:alice,status:eq:active&sort=createdDate:desc&page=1&pageSize=10&select=id,name,email
 ```
 
 ### GraphQL
 ```graphql
 POST /graphql
-{ users(where: { and: [{ name: { contains: "alice" } }, { status: { eq: "active" } }] }, order: [{ createdAt: DESC }], skip: 0, take: 10) { totalCount items { id name email } } }
+{ customers(where: { and: [{ name: { contains: "alice" } }, { status: { eq: "active" } }] }, order: [{ createdDate: DESC }], skip: 0, take: 10) { totalCount items { id name email } } }
 ```
 
 ### OData
 ```
-GET /odata/Users?$filter=contains(Name,'alice') and Status eq 'active'&$orderby=CreatedAt desc&$top=10&$skip=0&$select=Id,Name,Email&$count=true
+GET /odata/Customers?$filter=contains(Name,'alice') and Status eq 'active'&$orderby=CreatedDate desc&$top=10&$skip=0&$select=Id,Name,Email&$count=true
 ```
 
 ---

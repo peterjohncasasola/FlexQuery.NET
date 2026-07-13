@@ -82,7 +82,7 @@ OData focuses on standardized REST querying and interoperability. It is commonly
 
 ```http
 GET /api/users
-    ?filter=name:contains:alice%26status:eq:active
+    ?filter=name:contains:'alice' AND status:eq:'active'
     &sort=createdAt:desc
     &page=1
     &pageSize=10
@@ -208,13 +208,13 @@ OData emphasizes standardized metadata-driven REST interoperability, but brings 
 ### FlexQuery.NET (DSL)
 
 ```http
-GET /api/users?filter=orders:any:status:eq:shipped
+GET /api/customers?filter=orders.any(status:eq:'shipped')
 ```
 
-### FlexQuery.NET (JQL)
+### FlexQuery.NET (FQL)
 
 ```http
-GET /api/users?query=Orders.any(Status = "shipped")
+GET /api/customers?filter=Orders.any(Status = "shipped")
 ```
 
 ### GraphQL
@@ -243,7 +243,7 @@ query {
 ### OData
 
 ```http
-GET /api/users?$filter=orders/any(o: o/Status eq 'shipped')
+GET /api/customers?$filter=orders/any(o: o/Status eq 'shipped')
 ```
 
 All three approaches support nested collection filtering, but with different query styles and ecosystem expectations.
@@ -267,9 +267,9 @@ All three approaches support nested collection filtering, but with different que
 
 ```csharp
 [HttpGet]
-public async Task<IActionResult> GetUsers([FromQuery] FlexQueryParameters parameters)
+public async Task<IActionResult> GetCustomers([FromQuery] FlexQueryParameters parameters)
 {
-    var result = await _context.Users.FlexQueryAsync(parameters, exec =>
+    var result = await _context.Customers.FlexQueryAsync(parameters, exec =>
     {
         // Security policy enforced immediately inline
         exec.AllowedFields = ["id", "name", "email", "status"];
@@ -300,7 +300,7 @@ public class Query
     [UseProjection]
     [UseFiltering]
     [UseSorting]
-    public IQueryable<User> GetUsers([ScopedService] AppDbContext db) => db.Users;
+    public IQueryable<Customer> GetCustomers([ScopedService] AppDbContext db) => db.Customers;
 }
 ```
 
@@ -323,9 +323,9 @@ builder.Services
 
 [EnableQuery]
 [HttpGet]
-public IQueryable<User> GetUsers()
+public IQueryable<Customer> GetCustomers()
 {
-    return _context.Users;
+    return _context.Customers;
 }
 ```
 

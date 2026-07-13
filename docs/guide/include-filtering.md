@@ -46,31 +46,31 @@ Use filtered includes when:
 ### Load Orders for Each User (No Filter)
 
 ```
-GET /api/users?include=Orders
+GET /api/customers?include=Orders
 ```
 
 ### Load Only Shipped Orders
 
 ```
-GET /api/users?include=Orders(status:eq:shipped)
+GET /api/customers?include=Orders(status:eq:shipped)
 ```
 
 ### Load Orders with Amount Above 100
 
 ```
-GET /api/users?include=Orders(amount:gt:100)
+GET /api/customers?include=Orders(total:gt:100)
 ```
 
 ### Multiple Includes
 
 ```
-GET /api/users?include=Orders(status:eq:active),Profile
+GET /api/customers?include=Orders(status:eq:active),Address
 ```
 
 ### Nested Include
 
 ```
-GET /api/users?include=Orders(status:eq:active).Items
+GET /api/customers?include=Orders(status:eq:active).Items
 ```
 
 ---
@@ -82,7 +82,7 @@ GET /api/users?include=Orders(status:eq:active).Items
 ```csharp
 var options = parameters.ToQueryOptions();
 
-var query = _context.Users.AsQueryable();
+var query = _context.Customers.AsQueryable();
 query = query.ApplyFilter(options);
 query = query.ApplySort(options);
 
@@ -101,9 +101,9 @@ var data = await query.ToListAsync();
 `FlexQueryAsync` applies the include pipeline automatically:
 
 ```csharp
-var result = await _context.Users.FlexQueryAsync<User>(parameters, exec =>
-{
-    exec.AllowedFields = new HashSet<string> { "id", "name", "orders.*" };
+var result = await _context.Customers.FlexQueryAsync(parameters, exec =>
+    {
+        exec.AllowedFields = new HashSet<string> { "id", "name", "orders.*" };
 });
 ```
 
@@ -113,7 +113,7 @@ var result = await _context.Users.FlexQueryAsync<User>(parameters, exec =>
 
 **Request:**
 ```
-GET /api/users?include=Orders(status:eq:shipped)&select=id,name&page=1&pageSize=2
+GET /api/customers?include=Orders(status:eq:shipped)&select=id,name&page=1&pageSize=2
 ```
 
 **Response:**
@@ -132,8 +132,8 @@ GET /api/users?include=Orders(status:eq:shipped)&select=id,name&page=1&pageSize=
       "id": 1,
       "name": "Alice Chen",
       "orders": [
-        { "id": 101, "status": "shipped", "amount": 250.00 },
-        { "id": 105, "status": "shipped", "amount": 89.99 }
+        { "id": 101, "status": "shipped", "total": 250.00 },
+        { "id": 105, "status": "shipped", "total": 89.99 }
       ]
     },
     {
@@ -157,16 +157,16 @@ Note: Bob Smith has no shipped orders, so his `orders` array is empty — but he
 | **Affects root query** | ✅ Yes | ❌ No |
 | **Affects result count** | ✅ Yes | ❌ No |
 | **Where condition applied** | Root entity | Related collection |
-| **Use case** | Find users where any order is shipped | Get all users, include only their shipped orders |
+| **Use case** | Find customers where any order is shipped | Get all customers, include only their shipped orders |
 
 **Example showing the difference:**
 
 ```
-# Returns only users who HAVE a shipped order
-GET /api/users?filter=orders:any:status:eq:shipped
+# Returns only customers who HAVE a shipped order
+GET /api/customers?filter=orders:any:status:eq:shipped
 
-# Returns ALL users, each with their shipped orders only
-GET /api/users?include=Orders(status:eq:shipped)
+# Returns ALL customers, each with their shipped orders only
+GET /api/customers?include=Orders(status:eq:shipped)
 ```
 
 ---
@@ -176,21 +176,21 @@ GET /api/users?include=Orders(status:eq:shipped)
 ### ❌ Confusing Include filter with root filter
 
 ```
-# This returns all users, with only their shipped orders included
-GET /api/users?include=Orders(status:eq:shipped)
+# This returns all customers, with only their shipped orders included
+GET /api/customers?include=Orders(status:eq:shipped)
 
-# This returns ONLY users who have at least one shipped order
-GET /api/users?filter=orders:any:status:eq:shipped
+# This returns ONLY customers who have at least one shipped order
+GET /api/customers?filter=orders:any:status:eq:shipped
 ```
 
 Both are valid — just different use cases. Know which one you need.
 
-### ❌ Calling ApplyFilteredIncludes after ToListAsync
+### ❌ Calling ApplyExpand after ToListAsync
 
 ```csharp
 // WRONG — query already materialized
 var data = await query.ToListAsync();
-query = query.ApplyFilteredIncludes(options); // too late
+query = query.ApplyExpand(options); // too late
 ```
 
 ```csharp
@@ -205,17 +205,17 @@ var data = await query.ToListAsync();
 
 When including multiple collections (e.g., `?include=Orders,Profiles`), EF Core may generate a "cartesian explosion" where the result set grows exponentially.
 
-To optimize this, you can enable **Split Queries** in the execution configuration:
+To optimize this, configure EF Core's native query splitting behavior on the `DbContext`:
 
 ```csharp
-var result = await _context.Users.FlexQueryAsync(parameters, exec =>
+protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
 {
-    exec.UseSplitQuery = true;
-});
+    optionsBuilder.UseSqlServer(connectionString, opt =>
+        opt.UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery));
+}
 ```
 
-This ensures that each collection is fetched via a separate SQL query, reducing the amount of redundant data transferred.
+> [!NOTE]
+> The `UseSplitQuery` option was removed from FlexQuery options in v4. Use EF Core's native query splitting configuration instead.
 
 ---
-
-## Summary

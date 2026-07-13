@@ -13,7 +13,7 @@ Filtering applies a `WHERE` clause to your `IQueryable`. It supports:
 - Null checks
 - Collection predicates (`any`, `all`)
 - Nested AND/OR logic groups
-- Multiple input formats (DSL, JQL, JSON, Indexed)
+- Multiple input formats (DSL, FQL, MiniOData)
 
 ---
 
@@ -32,71 +32,38 @@ Use filtering when clients need to **search or narrow down results** at runtime 
 
 ## Filter Formats
 
-FlexQuery.NET auto-detects the format from the query string.
+FlexQuery.NET supports multiple filter syntaxes. The active syntax is configured globally via `FlexQueryCore.Configure()` and parser registration (`Fql.Register()`, `MiniOData.Register()`). The default is **DSL** (`QuerySyntax.NativeDsl`).
 
 ### DSL Format
 
 Simple colon-delimited expressions.
 
 ```
-GET /api/users?filter=status:eq:active
-GET /api/users?filter=age:gte:18
-GET /api/users?filter=name:contains:alice
+GET /api/customers?filter=status:eq:active
+GET /api/customers?filter=salary:gte:50000
+GET /api/customers?filter=name:contains:alice
 ```
 
-**Compound (AND — URL-encode `&` as `%26`):**
+**Compound (AND):**
 
 ```http
-GET /api/users?filter=status:eq:active%26age:gte:18
+GET /api/customers?filter=status:eq:active AND city:eq:'New York'
 ```
 
-### JQL Format (SQL-like)
+### FQL Format (SQL-like)
 
-Natural language query syntax using the `query` parameter.
+Natural language query syntax. FQL uses the same `filter` parameter as DSL but requires SQL-like expressions. To enable FQL, register the parser at startup:
 
-```
-GET /api/users?query=status = "active" AND age >= 18
-GET /api/users?query=(name = "alice" OR name = "bob") AND status = "active"
-```
-
-### JSON Format
-
-Structured filter tree for complex nested logic.
-
-```
-GET /api/users?filter={"logic":"and","filters":[
-  {"field":"status","operator":"eq","value":"active"},
-  {"field":"age","operator":"gte","value":"18"}
-]}
+```csharp
+FlexQueryCore.Configure(options => options.QuerySyntax = QuerySyntax.Fql);
+Fql.Register();
 ```
 
-**Nested OR group:**
-
-```json
-{
-  "logic": "and",
-  "filters": [
-    { "field": "status", "operator": "eq", "value": "active" },
-    {
-      "logic": "or",
-      "filters": [
-        { "field": "name", "operator": "contains", "value": "alice" },
-        { "field": "name", "operator": "contains", "value": "bob" }
-      ]
-    }
-  ]
-}
+```
+GET /api/customers?filter=status = "active" AND salary >= 50000
+GET /api/customers?filter=(name = "alice" OR name = "bob") AND status = "active"
 ```
 
-### Indexed Format
-
-Good for form-based UIs.
-
-```
-GET /api/users?filter[0].field=status&filter[0].operator=eq&filter[0].value=active
-              &filter[1].field=age&filter[1].operator=gte&filter[1].value=18
-              &logic=and
-```
 
 ---
 
@@ -106,10 +73,10 @@ GET /api/users?filter[0].field=status&filter[0].operator=eq&filter[0].value=acti
 | :--- | :--- | :--- |
 | `eq` | Equals | `status:eq:active` |
 | `neq` | Not equals | `status:neq:deleted` |
-| `gt` | Greater than | `age:gt:18` |
-| `gte` | Greater than or equal | `age:gte:18` |
-| `lt` | Less than | `price:lt:100` |
-| `lte` | Less than or equal | `price:lte:100` |
+| `gt` | Greater than | `salary:gt:50000` |
+| `gte` | Greater than or equal | `salary:gte:50000` |
+| `lt` | Less than | `salary:lt:100000` |
+| `lte` | Less than or equal | `salary:lte:100000` |
 | `contains` | String contains | `name:contains:alice` |
 | `startswith` | String starts with | `email:startswith:admin` |
 | `endswith` | String ends with | `email:endswith:.com` |
@@ -134,7 +101,7 @@ GET /api/users?filter[0].field=status&filter[0].operator=eq&filter[0].value=acti
 
 ```csharp
 var options = parameters.ToQueryOptions();
-var query = _context.Users.AsQueryable();
+var query = _context.Customers.AsQueryable();
 var filtered = query.ApplyFilter(options);
 var users = await filtered.ToListAsync();
 ```
@@ -143,12 +110,12 @@ var users = await filtered.ToListAsync();
 
 Request:
 ```
-GET /api/users?filter=orders:any:status:eq:shipped
+GET /api/customers?filter=orders:any:status:eq:shipped
 ```
 
 This translates to:
 ```csharp
-_context.Users.Where(u => u.Orders.Any(o => o.Status == "shipped"))
+_context.Customers.Where(u => u.Orders.Any(o => o.Status == "shipped"))
 ```
 
 SQL:
@@ -158,18 +125,18 @@ SELECT * FROM Users u WHERE EXISTS (
 )
 ```
 
-### Nested ANY Filter
+### Nested ANY Filter (FQL)
 
-Request:
+Request (FQL syntax):
 ```
-GET /api/users?query=Orders.any(Status = "shipped" AND Amount > 100)
+GET /api/customers?filter=Orders.any(Status = "shipped" AND Total > 100)
 ```
 
 ### Range Filter
 
 Request:
 ```
-GET /api/users?filter=age:between:18,65
+GET /api/customers?filter=salary:between:50000,150000
 ```
 
 SQL:
@@ -181,7 +148,7 @@ SELECT * FROM Users WHERE Age BETWEEN 18 AND 65
 
 Request:
 ```
-GET /api/users?filter=status:in:active,pending,trial
+GET /api/customers?filter=status:in:active,pending,trial
 ```
 
 SQL:
@@ -195,7 +162,7 @@ SELECT * FROM Users WHERE Status IN ('active', 'pending', 'trial')
 
 **Request:**
 ```
-GET /api/users?filter=status:eq:active&page=1&pageSize=3
+GET /api/customers?filter=status:eq:active&page=1&pageSize=3
 ```
 
 **Response:**
@@ -226,12 +193,12 @@ GET /api/users?filter=status:eq:active&page=1&pageSize=3
 
 ```csharp
 // WRONG — client can filter on any field, including sensitive ones
-var result = await _context.Users.FlexQueryAsync<User>(parameters);
+var result = await _context.Customers.FlexQueryAsync(parameters);
 ```
 
 ```csharp
 // CORRECT
-var result = await _context.Users.FlexQueryAsync<User>(parameters, exec =>
+var result = await _context.Customers.FlexQueryAsync(parameters, exec =>
 {
     exec.AllowedFields = new HashSet<string> { "name", "email", "status" };
 });
@@ -241,14 +208,14 @@ var result = await _context.Users.FlexQueryAsync<User>(parameters, exec =>
 
 ```csharp
 // WRONG — tenant filter applied after FlexQuery, may expose cross-tenant data
-var query = _context.Users.AsQueryable();
+var query = _context.Customers.AsQueryable();
 query = query.ApplyFilter(options);
 query = query.Where(u => u.TenantId == tenantId); // too late
 ```
 
 ```csharp
 // CORRECT — always apply server-side constraints FIRST
-var query = _context.Users.Where(u => u.TenantId == tenantId);
+var query = _context.Customers.Where(u => u.TenantId == tenantId);
 query = query.ApplyFilter(options);
 ```
 
@@ -270,4 +237,4 @@ FlexQuery.NET uses expression trees — never string concatenation.
 - Collection predicates (`any`, `all`) generate `EXISTS` subqueries in SQL — efficient and server-side.
 - `contains` maps to SQL `LIKE '%value%'` which **cannot use an index**. Prefer `startswith` for large tables.
 - Deeply nested OR groups with `contains` can be slow — consider full-text search for those cases.
-- `CaseInsensitive = true` (default) uses database collation — no performance penalty on most providers.
+- String comparisons respect the database collation — case sensitivity is handled by the database provider.

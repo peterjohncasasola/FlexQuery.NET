@@ -35,13 +35,12 @@ public async Task<IActionResult> GetUsers([FromQuery] FlexQueryParameters parame
 
 ## Features
 
-- **FlexQueryAsync** — Unified parse-validate-execute pipeline with configurable `QueryExecutionOptions`
-- **Filtered Includes** — Include related collections with inline WHERE filters via `ApplyFilteredIncludes<T>()`
+- **FlexQueryAsync** — Unified parse-validate-execute pipeline with `EfCoreQueryOptions`
+- **Expanded Includes** — Include related collections with inline WHERE filters via `ApplyExpand<T>()`
 - **Projection** — Nested, Flat, and FlatMixed projection modes
-- **Execution Options** — `UseSplitQuery` to avoid cartesian explosion, `UseNoTracking` for read-only queries
-- **SQL Preview** — `ToSqlPreview()` to inspect the generated SQL without executing
-- **Diagnostics** — Pass `Action<FlexQueryExecutionConfig>` to observe pipeline stages
-- **EF Core Operators** — `UseEfCoreOperators()` to register `LIKE` operator handler for EF Core translation
+- **Keyset Pagination** — High-performance cursor-based pagination
+- **Execution Options** — `UseNoTracking` for read-only queries
+- **Static Configuration** — Configure via `FlexQueryEFCore.Configure()` or `FlexQueryEFCore.Setup()` at startup
 
 
 ## Related Packages

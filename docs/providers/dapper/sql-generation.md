@@ -8,6 +8,8 @@ The SQL generation pipeline is the core of `FlexQuery.NET.Dapper`. It transforms
 
 The `SqlTranslator` class is an orchestrator that resolves entity mappings, builds a selection tree, and delegates to specialized builders for each SQL clause. The result is a `SqlCommand` object containing the SQL string and a dictionary of named parameters.
 
+> **Dialect auto-detection:** The SQL dialect is resolved at runtime from the supplied `DbConnection` by `SqlDialectResolver`. No manual dialect configuration is needed — the connection type determines whether SQL Server, PostgreSQL, MySQL, MariaDB, SQLite, or Oracle syntax is generated.
+
 ### Why It Exists
 
 Manually building SQL WHERE clauses from dynamic user input is tedious, error-prone, and a security risk. The SQL generation pipeline handles operator translation, parameter naming, identifier quoting, JOIN generation, and dialect-specific syntax — all from the same `QueryOptions` model that EF Core uses.
@@ -139,11 +141,10 @@ var parameters = new FlexQueryParameters
     Select = "Id,Name,Email"
 };
 
-var result = await connection.FlexQueryAsync<User>(parameters, opts =>
-{
-    opts.Dialect = new SqlServerDialect();
-});
+var result = await connection.FlexQueryAsync<User>(parameters);
 
+// The SQL dialect is auto-detected from the connection's type.
+// For a SqlConnection, SQL Server syntax is generated:
 // Generated SQL:
 // SELECT [Id], [Name], [Email]
 // FROM [Users]

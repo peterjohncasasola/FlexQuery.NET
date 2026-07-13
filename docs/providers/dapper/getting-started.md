@@ -35,46 +35,21 @@ This package depends on `FlexQuery.NET` (core) and `Dapper`.
 
 ## Registration
 
-Register the Dapper provider in your DI container:
+Configure the Dapper provider once at startup with the static `FlexQueryDapper.Configure` method:
 
 ```csharp
 using FlexQuery.NET.Dapper;
-using FlexQuery.NET.Dapper.Dialects;
 
-builder.Services.AddFlexQueryDapper(opts =>
+FlexQueryDapper.Configure(opts =>
 {
-    // Required: specify your database dialect
-    opts.Dialect = new SqlServerDialect();
+    // Configure entity mappings (optional — conventions will be used by default)
+    opts.Model.Entity<User>().ToTable("app_users");
 });
 ```
 
-The `AddFlexQueryDapper` method registers `DapperQueryOptions` as a singleton in the service container, making it available for injection into your controllers and services.
+The `FlexQueryDapper.Configure` method builds the entity mapping model and stores it internally as the global runtime model. No DI registration is needed.
 
-## Dialect Configuration
-
-Every database has slightly different SQL syntax. The dialect tells the translator how to quote identifiers, build pagination clauses, and format parameters:
-
-```csharp
-// SQL Server
-opts.Dialect = new SqlServerDialect();
-
-// PostgreSQL
-opts.Dialect = new PostgreSqlDialect();
-
-// MySQL
-opts.Dialect = new MySqlDialect();
-
-// MariaDB (not a MySQL drop-in!)
-opts.Dialect = new MariaDbDialect();
-
-// SQLite (great for testing)
-opts.Dialect = new SqliteDialect();
-
-// Oracle (12c+)
-opts.Dialect = new OracleDialect();
-```
-
-See the [Dialects](/providers/dapper/dialects) page for complete details on each dialect.
+The SQL dialect is **auto-detected** from the supplied `DbConnection` at runtime — no manual dialect configuration is required.
 
 ## Your First Query
 
@@ -83,17 +58,16 @@ See the [Dialects](/providers/dapper/dialects) page for complete details on each
 The simplest approach — pass raw parameters and let FlexQuery parse, validate, and execute:
 
 ```csharp
-[HttpGet("users")]
-public async Task<IActionResult> GetUsers(
+[HttpGet("customers")]
+public async Task<IActionResult> GetCustomers(
     [FromQuery] FlexQueryParameters parameters)
 {
     await using var connection = new SqlConnection(_connectionString);
     await connection.OpenAsync();
 
-    var result = await connection.FlexQueryAsync<User>(parameters, opts =>
+    var result = await connection.FlexQueryAsync<Customer>(parameters, opts =>
     {
-        opts.Dialect = new SqlServerDialect();
-        opts.AllowedFields = new HashSet<string> { "Id", "Name", "Email", "CreatedAt" };
+        opts.AllowedFields = new HashSet<string> { "Id", "Name", "Email", "City", "CreatedDate" };
         opts.MaxPageSize = 100;
     });
 
@@ -109,10 +83,10 @@ When composing with adapters (AG Grid, MiniOData) or building queries programmat
 // Step 1: Parse from any source
 var options = AgGridQueryOptionsParser.Parse(agGridRequest);
 
-// Step 2: Execute with Dapper
+// Step 2: Execute with Dapper (dialect is auto-detected from the connection)
 var result = await connection.FlexQueryAsync<User>(options, opts =>
 {
-    opts.Dialect = new SqlServerDialect();
+    opts.AllowedFields = new HashSet<string> { "Id", "Name" };
 });
 ```
 
@@ -123,8 +97,7 @@ For full control over all execution options:
 ```csharp
 var dapperOptions = new DapperQueryOptions
 {
-    Dialect = new PostgreSqlDialect(),
-    CommandTimeoutSeconds = 60,
+    CommandTimeout = 60,
     AllowedFields = new HashSet<string> { "Id", "Name" },
     StrictFieldValidation = true,
     MaxPageSize = 50
@@ -182,18 +155,18 @@ Data.Count  = groups returned in the current page
 
 ## Best Practices
 
-1. **Always specify a dialect** — The translator cannot generate correct SQL without one
+1. **The SQL dialect is auto-detected from the `DbConnection`** — no manual dialect configuration is needed
 2. **Use `AllowedFields`** — Dapper generates raw SQL; restricting fields is critical for security
-3. **Set `CommandTimeoutSeconds`** for complex queries — The default is 30 seconds
+3. **Set `CommandTimeout` for complex queries** — The default is 30 seconds
 4. **Prefer `FlexQueryParameters` overloads** for API endpoints — They handle parsing and validation automatically
-5. **Use `ScanEntitiesFromAssembly`** during startup — Avoid lazy mapping discovery in hot paths
+5. **Configure entity mappings during startup** — Use `FlexQueryDapper.Configure` to set up mappings once
 6. **Reuse connections** — FlexQuery does not manage connection lifecycle; follow Dapper's connection pooling best practices
 
 ## Common Pitfalls
 
 | Pitfall | Solution |
 |---------|----------|
-| Forgetting to set a dialect | Throws at runtime. Always configure `opts.Dialect` |
+| Using an unsupported database provider | Throws `NotSupportedException`. Supported: SQL Server, PostgreSQL, SQLite, MySQL, MariaDB, Oracle |
 | Property names don't match column names | Use `Entity<T>().Property()` for explicit mapping |
 | N+1 queries with includes | Dapper includes generate JOINs — no N+1, but watch for Cartesian explosion with multiple collections |
 | Connection not opened before query | Call `await connection.OpenAsync()` before `FlexQueryAsync` |

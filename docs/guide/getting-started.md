@@ -36,16 +36,14 @@ dotnet add package FlexQuery.NET.AspNetCore
 
 ### Step 1: Configure Services
 
-In `Program.cs`, you must register the core engine and your execution provider.
+In `Program.cs`, configure the global FlexQuery defaults and register the ASP.NET Core integration.
 
 ```csharp
-using FlexQuery.NET.DependencyInjection;
-using FlexQuery.NET.EntityFrameworkCore.DependencyInjection;
-using FlexQuery.NET.AspNetCore.DependencyInjection;
+using FlexQuery.NET;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.DependencyInjection;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -53,8 +51,8 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddDbContext<AppDbContext>(opt =>
     opt.UseSqlServer(builder.Configuration.GetConnectionString("Default")));
 
-// 1. Register FlexQuery Core globally
-builder.Services.AddFlexQuery(options =>
+// 1. Configure global FlexQuery defaults (optional — called once at startup)
+FlexQueryCore.Configure(options =>
 {
     options.MaxPageSize = 1000;
     options.DefaultPageSize = 50;
@@ -64,10 +62,7 @@ builder.Services.AddFlexQuery(options =>
     options.MaxFieldDepth = 5;
 });
 
-// 2. Register the EF Core Provider
-builder.Services.AddFlexQueryEntityFrameworkCore();
-
-// 3. Register MVC and optional declarative Security ([FieldAccess])
+// 2. Register MVC and optional declarative Security ([FieldAccess])
 builder.Services
     .AddControllers()
     .AddFlexQuerySecurity();
@@ -83,22 +78,23 @@ app.Run();
 This optional integration automatically registers the `FieldAccessFilter` into the ASP.NET Core MVC pipeline. This enables you to use declarative security attributes directly on your controllers:
 
 ```csharp
-[FieldAccess(AllowedFields = new[] { "Id", "Name", "Email" })]
+[FieldAccess(Allowed = new[] { "Id", "Name", "Email" })]
 [HttpGet]
-public async Task<IActionResult> GetUsers() { ... }
+public async Task<IActionResult> GetCustomers() { ... }
 ```
 
 ### Step 2: Define Your Entity
 
 ```csharp
-public class User
+public class Customer
 {
     public int Id { get; set; }
     public string Name { get; set; } = "";
     public string Email { get; set; } = "";
+    public string City { get; set; } = "";
     public string Status { get; set; } = "active";
-    public int Age { get; set; }
-    public DateTime CreatedAt { get; set; }
+    public decimal Salary { get; set; }
+    public DateTime CreatedDate { get; set; }
     public List<Order> Orders { get; set; } = new();
 }
 ```
@@ -108,6 +104,8 @@ public class User
 ## Your First Endpoint (Complete Runnable Example)
 
 This is the recommended production pattern using `FlexQueryAsync`, which automatically handles parsing, validation, and execution in a single line.
+
+> **Note:** `FlexQueryAsync` requires the `FlexQuery.NET.EntityFrameworkCore` or `FlexQuery.NET.Dapper` package. The core `FlexQuery.NET` package provides synchronous `FlexQuery` for advanced scenarios.
 
 ```csharp
 using FlexQuery.NET.EntityFrameworkCore;
@@ -119,27 +117,27 @@ using System.Collections.Generic;
 
 [ApiController]
 [Route("api/[controller]")]
-public class UsersController : ControllerBase
+public class CustomersController : ControllerBase
 {
     private readonly AppDbContext _context;
 
-    public UsersController(AppDbContext context) => _context = context;
+    public CustomersController(AppDbContext context) => _context = context;
 
     [HttpGet]
-    public async Task<IActionResult> GetUsers([FromQuery] FlexQueryParameters parameters)
+    public async Task<IActionResult> GetCustomers([FromQuery] FlexQueryParameters parameters)
     {
         try
         {
-            var result = await _context.Users.FlexQueryAsync(parameters, exec =>
+            var result = await _context.Customers.FlexQueryAsync(parameters, exec =>
             {
                 // Security: Declare which fields clients are allowed to view/filter/sort
                 exec.AllowedFields = new HashSet<string>
                 {
-                    "Id", "Name", "Email", "Status", "Age", "CreatedAt"
+                    "Id", "Name", "Email", "Status", "City", "Salary", "CreatedDate"
                 };
 
                 // Block highly sensitive fields absolutely
-                exec.BlockedFields = new HashSet<string> { "PasswordHash" };
+                exec.BlockedFields = new HashSet<string> { "Email" };
 
                 // Limit nesting depth (prevents infinite traversal via includes)
                 exec.MaxFieldDepth = 2;
@@ -159,7 +157,7 @@ public class UsersController : ControllerBase
 ### Sample Request
 
 ```http
-GET /api/users?filter=Status:eq:active&sort=Name:asc&page=1&pageSize=10&select=Id,Name,Email
+GET /api/customers?filter=Status:eq:active&sort=Name:asc&page=1&pageSize=10&select=Id,Name,Email
 ```
 
 ### Sample Response
@@ -188,23 +186,26 @@ GET /api/users?filter=Status:eq:active&sort=Name:asc&page=1&pageSize=10&select=I
 
 `FlexQueryParameters` is the public-facing DTO. Bind it directly from the query string in GET requests.
 
+`FlexQueryParameters` inherits from `FlexQueryBase` and exposes all common query options:
+
 ```csharp
-public class FlexQueryParameters
+public class FlexQueryParameters : FlexQueryBase
 {
-    public string? Query    { get; set; }  // JQL: query=status="active"
-    public string? Filter   { get; set; }  // DSL: filter=status:eq:active
-    public string? Sort     { get; set; }  // sort=name:asc,createdAt:desc
-    public string? Select   { get; set; }  // select=id,name,email
-    public string? Include  { get; set; }  // include=Orders,Profile
-    public string? GroupBy  { get; set; }  // groupBy=status
-    public string? Having   { get; set; }  // having=count:gt:5
-    public int?    Page     { get; set; }  // page=1
-    public int?    PageSize { get; set; }  // pageSize=20
+    // All properties inherited from FlexQueryBase:
+    public string? Filter    { get; set; }  // DSL: filter=status:eq:active
+    public string? Sort      { get; set; }  // sort=name:asc,createdAt:desc
+    public string? Select    { get; set; }  // select=id,name,email
+    public string? Include   { get; set; }  // include=Orders,Profile
+    public string? GroupBy   { get; set; }  // groupBy=status
+    public string? Having    { get; set; }  // having=count:gt:5
+    public string? Aggregate { get; set; }  // aggregate=SUM(Amount) AS Total
+    public int?    Page      { get; set; }  // page=1
+    public int?    PageSize  { get; set; }  // pageSize=20
     public bool?   IncludeCount { get; set; }  // includeCount=true
     public bool?   Distinct     { get; set; }  // distinct=true
-    public string? Mode     { get; set; }  // mode=Flat
-    public bool?   UseKeysetPagination { get; set; }
-    public string? Cursor   { get; set; }
+    public string? Mode      { get; set; }  // mode=Flat
+    public bool    UseKeysetPagination { get; set; }
+    public string? Cursor    { get; set; }
 }
 ```
 
@@ -218,17 +219,17 @@ public class FlexQueryParameters
 
 ## How FlexQueryAsync Works Under the Hood
 
-`FlexQueryAsync` is the unified high-level method. It internally manages the entire query lifecycle:
+`FlexQueryAsync` (available in `FlexQuery.NET.EntityFrameworkCore` and `FlexQuery.NET.Dapper`) is the unified high-level method. It internally manages the entire query lifecycle:
 
 ```text
 FlexQueryParameters
-    → Parse (QueryOptionsParser)
+    → Parse (ToQueryOptions())
     → Validate (field access, operators, depth against Server Policy)
     → ApplyFilter
     → ApplySort
     → CountAsync (for totalCount)
     → ApplyPaging
-    → ApplyFilteredIncludes
+    → ApplyExpand
     → ApplySelect (if projection requested)
     → ToListAsync
     → QueryResult<object>
@@ -245,7 +246,7 @@ using FlexQuery.NET;
 using FlexQuery.NET.EntityFrameworkCore;
 
 [HttpGet("manual")]
-public async Task<IActionResult> GetUsersManual([FromQuery] FlexQueryParameters parameters)
+public async Task<IActionResult> GetCustomersManual([FromQuery] FlexQueryParameters parameters)
 {
     // 1. Parse
     var options = parameters.ToQueryOptions();
@@ -255,10 +256,10 @@ public async Task<IActionResult> GetUsersManual([FromQuery] FlexQueryParameters 
     {
         AllowedFields = new HashSet<string> { "Id", "Name", "Email", "Status" }
     };
-    options.ValidateOrThrow<User>(execOptions);
+    options.ValidateOrThrow<Customer>(execOptions);
 
     // 3. Start composing the IQueryable
-    var query = _context.Users.AsQueryable();
+    var query = _context.Customers.AsQueryable();
     query = query.ApplyFilter(options);
     query = query.ApplySort(options);
 
@@ -286,20 +287,20 @@ public async Task<IActionResult> GetUsersManual([FromQuery] FlexQueryParameters 
 var execOptions = new QueryExecutionOptions
 {
     AllowedFields     = new HashSet<string> { "Name", "Email", "Status" },
-    BlockedFields     = new HashSet<string> { "PasswordHash", "InternalNotes" },
+    BlockedFields     = new HashSet<string> { "Email", "InternalNotes" },
     FilterableFields  = new HashSet<string> { "Name", "Status" },
-    SortableFields    = new HashSet<string> { "Name", "CreatedAt" },
+    SortableFields    = new HashSet<string> { "Name", "CreatedDate" },
     SelectableFields  = new HashSet<string> { "Id", "Name", "Email" },
     MaxFieldDepth     = 2
 };
 
-options.ValidateOrThrow<User>(execOptions);
+options.ValidateOrThrow<Customer>(execOptions);
 ```
 
 If you prefer to avoid exceptions for control flow, you can use `ValidateSafe<T>` to return structured errors:
 
 ```csharp
-var result = options.ValidateSafe<User>(execOptions);
+var result = options.ValidateSafe<Customer>(execOptions);
 
 if (!result.IsValid)
 {
@@ -313,14 +314,13 @@ if (!result.IsValid)
 
 For extremely high-traffic APIs using the EF Core provider, you can enable **Expression Caching**. This instructs FlexQuery to cache the compiled LINQ Expression Trees for repeated query shapes, bypassing the CPU overhead of reflection and tree generation on subsequent identical requests.
 
-In `Program.cs` (Global configuration):
+Expression caching is **enabled by default**. You can tune it globally at startup:
 
 ```csharp
 using FlexQuery.NET.Caching;
 
-// Enable global expression caching
-FlexQueryCacheSettings.EnableCache = true;
-FlexQueryCacheSettings.MaxCacheSize = 5000;
+// Expression caching is enabled by default (MaxCacheSize = 2000)
+FlexQueryCacheSettings.MaxCacheSize = 5000; // Increase for high-traffic APIs
 ```
 
 ## Best Practices

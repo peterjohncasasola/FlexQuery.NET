@@ -13,30 +13,30 @@ Without a query abstraction layer, you end up writing this:
 ```csharp
 // ❌ Before FlexQuery.NET — manual, brittle, insecure
 
-[HttpGet("users")]
-public async Task<IActionResult> GetUsers(
+[HttpGet("customers")]
+public async Task<IActionResult> GetCustomers(
     string? name,
     string? status,
-    int? minAge,
+    decimal? minSalary,
     string? sortBy,
     bool sortDesc = false,
     int page = 1,
     int pageSize = 20)
 {
-    var query = _context.Users.AsQueryable();
+    var query = _context.Customers.AsQueryable();
 
     if (!string.IsNullOrEmpty(name))
-        query = query.Where(u => u.Name.Contains(name));
+        query = query.Where(c => c.Name.Contains(name));
 
     if (!string.IsNullOrEmpty(status))
-        query = query.Where(u => u.Status == status);
+        query = query.Where(c => c.Status == status);
 
-    if (minAge.HasValue)
-        query = query.Where(u => u.Age >= minAge.Value);
+    if (minSalary.HasValue)
+        query = query.Where(c => c.Salary >= minSalary.Value);
 
     if (sortBy == "name") query = sortDesc
-        ? query.OrderByDescending(u => u.Name)
-        : query.OrderBy(u => u.Name);
+        ? query.OrderByDescending(c => c.Name)
+        : query.OrderBy(c => c.Name);
 
     // ... repeated for every field
 
@@ -65,9 +65,9 @@ FlexQuery.NET replaces all of that with a **query abstraction layer**:
 // ✅ After FlexQuery.NET — declarative, safe, composable
 
 [HttpGet("users")]
-public async Task<IActionResult> GetUsers([FromQuery] FlexQueryParameters parameters)
+public async Task<IActionResult> GetCustomers([FromQuery] FlexQueryParameters parameters)
 {
-    var result = await _context.Users.FlexQueryAsync<User>(parameters, exec =>
+    var result = await _context.Customers.FlexQueryAsync(parameters, exec =>
     {
         exec.AllowedFields = new HashSet<string>
         {
@@ -91,7 +91,7 @@ The client can now filter, sort, page, and project **any allowed field** without
 It accepts query parameters in multiple formats and converts them into a structured, validated AST — `QueryOptions`.
 
 ```
-GET /api/users?filter=status:eq:active&sort=name:asc&page=1&pageSize=20&select=id,name,email
+GET /api/customers?filter=status:eq:active&sort=name:asc&page=1&pageSize=20&select=id,name,email
 ```
 
 ### 2. Validates Before Execution
@@ -125,7 +125,7 @@ if (!string.IsNullOrEmpty(name))
 
 **After:**
 ```
-GET /api/users?filter=name:contains:alice
+GET /api/customers?filter=name:contains:alice
 ```
 
 ### Sorting
@@ -138,7 +138,7 @@ if (sortBy == "name")
 
 **After:**
 ```
-GET /api/users?sort=name:asc,createdAt:desc
+GET /api/customers?sort=name:asc,city:desc
 ```
 
 ### Projection
@@ -151,7 +151,7 @@ return Ok(users);
 
 **After:**
 ```
-GET /api/users?select=id,name,email
+GET /api/customers?select=id,name,email
 ```
 
 The response only contains the 3 requested fields. Smaller payload. Faster response.

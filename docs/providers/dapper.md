@@ -4,17 +4,18 @@
 
 ## Registration
 
-To use the Dapper extensions, register them in your DI container and specify your target SQL dialect:
+Configure the Dapper provider once at startup with the static `FlexQueryDapper.Configure` method:
 
 ```csharp
 using FlexQuery.NET.Dapper;
-using FlexQuery.NET.Dapper.Dialects;
 
-builder.Services.AddFlexQueryDapper(opts => {
-    // Specify the database dialect (SqlServer, Postgres, Sqlite, etc.)
-    opts.Dialect = new SqlServerDialect(); 
+FlexQueryDapper.Configure(opts => {
+    // Configure entity mappings (optional)
+    opts.Model.Entity<User>().ToTable("app_users");
 });
 ```
+
+The SQL dialect is **auto-detected** from the supplied `DbConnection` at runtime.
 
 ## SQL Translation
 

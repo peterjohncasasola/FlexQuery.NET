@@ -2,6 +2,8 @@
 
 Complete, production-ready examples showing FlexQuery.NET in real application contexts.
 
+> **Note:** Examples using `FlexQueryAsync` require the `FlexQuery.NET.EntityFrameworkCore` or `FlexQuery.NET.Dapper` package. The core `FlexQuery.NET` package provides synchronous `FlexQuery` for advanced scenarios.
+
 ---
 
 ## Scenario 1: E-Commerce Order Dashboard
@@ -12,13 +14,13 @@ An admin dashboard needs to filter orders by status, date range, and customer �
 ```csharp
 public class Order
 {
-    public int      Id         { get; set; }
-    public int      CustomerId { get; set; }
-    public string   Status     { get; set; } = "";
-    public decimal  Amount     { get; set; }
-    public DateTime CreatedAt  { get; set; }
-    public Customer Customer   { get; set; } = null!;
-    public List<OrderItem> Items { get; set; } = new();
+    public int      Id            { get; set; }
+    public int      CustomerId    { get; set; }
+    public string   OrderNumber   { get; set; } = "";
+    public decimal  Total         { get; set; }
+    public DateTime OrderDate     { get; set; }
+    public string   Status        { get; set; } = "";
+    public Customer Customer      { get; set; } = null!;
 }
 ```
 
@@ -27,17 +29,17 @@ public class Order
 [HttpGet("orders")]
 public async Task<IActionResult> GetOrders([FromQuery] FlexQueryParameters parameters, CancellationToken ct)
 {
-    var result = await _context.Orders.FlexQueryAsync<Order>(parameters, exec =>
+    var result = await _context.Orders.FlexQueryAsync(parameters, exec =>
     {
         exec.AllowedFields = new HashSet<string>
         {
-            "id", "customerId", "status", "amount", "createdAt",
+            "id", "orderNumber", "total", "status", "orderDate",
             "customer.name", "customer.email"
         };
-        exec.FilterableFields  = new HashSet<string> { "status", "amount", "createdAt", "customerId" };
-        exec.SortableFields    = new HashSet<string> { "amount", "createdAt", "status" };
-        exec.SelectableFields  = new HashSet<string> { "id", "status", "amount", "createdAt", "customer.name" };
-        exec.BlockedFields     = new HashSet<string> { "customer.passwordHash" };
+        exec.FilterableFields  = new HashSet<string> { "status", "total", "orderDate", "customerId" };
+        exec.SortableFields    = new HashSet<string> { "total", "orderDate", "status" };
+        exec.SelectableFields  = new HashSet<string> { "id", "status", "total", "orderDate", "customer.name" };
+        exec.BlockedFields     = new HashSet<string> { "customer.email" };
         exec.MaxFieldDepth     = 2;
     }, ct);
 
@@ -45,12 +47,12 @@ public async Task<IActionResult> GetOrders([FromQuery] FlexQueryParameters param
 }
 ```
 
-**Sample Request — Orders in date range, sorted by amount:**
+**Sample Request — Orders in date range, sorted by total:**
 ```
-GET /api/orders?filter=createdAt:between:2024-01-01,2024-12-31,status:in:pending,processing
-              &sort=amount:desc
+GET /api/orders?filter=orderDate:between:2024-01-01,2024-12-31,status:in:pending,processing
+              &sort=total:desc
               &page=1&pageSize=25
-              &select=id,status,amount,createdAt,customer.name
+              &select=id,status,total,orderDate,customer.name
 ```
 
 **Response:**
@@ -68,15 +70,15 @@ GET /api/orders?filter=createdAt:between:2024-01-01,2024-12-31,status:in:pending
     {
       "id": 1001,
       "status": "processing",
-      "amount": 1250.00,
-      "createdAt": "2024-11-15T08:00:00Z",
+      "total": 1250.00,
+      "orderDate": "2024-11-15T08:00:00Z",
       "customer": { "name": "Alice Chen" }
     },
     {
       "id": 998,
       "status": "pending",
-      "amount": 870.50,
-      "createdAt": "2024-11-14T16:30:00Z",
+      "total": 870.50,
+      "orderDate": "2024-11-14T16:30:00Z",
       "customer": { "name": "Bob Smith" }
     }
   ],
@@ -86,23 +88,23 @@ GET /api/orders?filter=createdAt:between:2024-01-01,2024-12-31,status:in:pending
 
 ---
 
-## Scenario 2: Multi-Tenant SaaS User Management
+## Scenario 2: Multi-Tenant SaaS Customer Management
 
 A SaaS platform with admin and viewer roles — each role sees different fields.
 
 **Controller:**
 ```csharp
-[HttpGet("users")]
-public async Task<IActionResult> GetUsers([FromQuery] FlexQueryParameters parameters, CancellationToken ct)
+[HttpGet("customers")]
+public async Task<IActionResult> GetCustomers([FromQuery] FlexQueryParameters parameters, CancellationToken ct)
 {
     var isAdmin = User.IsInRole("admin");
 
-    var result = await _context.Users.FlexQueryAsync<User>(parameters, exec =>
+    var result = await _context.Customers.FlexQueryAsync(parameters, exec =>
     {
         // Base fields available to all roles
         exec.AllowedFields = new HashSet<string>
         {
-            "id", "name", "email", "status", "createdAt"
+            "id", "name", "email", "status", "city"
         };
 
         // Role-specific additional fields
@@ -110,8 +112,8 @@ public async Task<IActionResult> GetUsers([FromQuery] FlexQueryParameters parame
         {
             ["admin"] = new HashSet<string>
             {
-                "id", "name", "email", "status", "createdAt",
-                "salary", "internalRating", "lastLoginAt", "tenantId"
+                "id", "name", "email", "status", "city",
+                "salary", "createdDate"
             },
             ["viewer"] = new HashSet<string>
             {
@@ -120,7 +122,7 @@ public async Task<IActionResult> GetUsers([FromQuery] FlexQueryParameters parame
         };
 
         exec.CurrentRole = isAdmin ? "admin" : "viewer";
-        exec.BlockedFields = new HashSet<string> { "passwordHash", "twoFactorSecret" };
+        exec.BlockedFields = new HashSet<string> { "email" };
         exec.MaxFieldDepth = 2;
 
         // Scope to current tenant automatically
@@ -133,12 +135,12 @@ public async Task<IActionResult> GetUsers([FromQuery] FlexQueryParameters parame
 
 **Admin Request:**
 ```
-GET /api/users?filter=salary:gt:80000&select=id,name,salary,internalRating&sort=salary:desc
+GET /api/customers?filter=salary:gt:80000&select=id,name,salary,city&sort=salary:desc
 ```
 
 **Viewer Request (same endpoint):**
 ```
-GET /api/users?filter=salary:gt:80000
+GET /api/customers?filter=salary:gt:80000
 ```
 
 **Viewer Response (400):**
@@ -156,58 +158,60 @@ GET /api/users?filter=salary:gt:80000
 
 ---
 
-## Scenario 3: Product Catalog with Filtered Relations
+## Scenario 3: Customer Catalog with Filtered Relations
 
 **Entity:**
 ```csharp
-public class Product
+public class Customer
 {
-    public int          Id         { get; set; }
-    public string       Name       { get; set; } = "";
-    public string       Category   { get; set; } = "";
-    public decimal      Price      { get; set; }
-    public List<Review> Reviews    { get; set; } = new();
-    public List<Tag>    Tags       { get; set; } = new();
+    public int          Id          { get; set; }
+    public string       Name        { get; set; } = "";
+    public string       Email       { get; set; } = "";
+    public string       City        { get; set; } = "";
+    public string       Status      { get; set; } = "";
+    public decimal      Salary      { get; set; }
+    public DateTime     CreatedDate { get; set; }
+    public List<Order>  Orders      { get; set; } = new();
 }
 ```
 
-**Request — Products in electronics, with 5-star reviews only:**
+**Request — Customers in New York, with recent orders only:**
 ```
-GET /api/products?filter=category:eq:electronics,price:lte:500
-                &include=Reviews(rating:eq:5)
-                &sort=price:asc
+GET /api/customers?filter=city:eq:New York,salary:gte:50000
+                &include=Orders(status:eq:shipped)
+                &sort=salary:desc
                 &page=1&pageSize=10
-                &select=id,name,price,category
+                &select=id,name,email,city,orders.orderNumber,orders.total
 ```
 
 **Response:**
 ```json
 {
-  "totalCount": 28,
-  "resultCount": 28,
+  "totalCount": 12,
+  "resultCount": 12,
   "page": 1,
   "pageSize": 10,
-  "totalPages": 3,
+  "totalPages": 2,
   "hasNextPage": true,
   "hasPreviousPage": false,
   "aggregates": null,
   "data": [
     {
       "id": 5,
-      "name": "Wireless Earbuds",
-      "price": 89.99,
-      "category": "electronics",
-      "reviews": [
-        { "id": 201, "rating": 5, "comment": "Amazing sound quality!" },
-        { "id": 208, "rating": 5, "comment": "Best earbuds I've owned." }
+      "name": "Carol White",
+      "email": "carol@example.com",
+      "city": "New York",
+      "orders": [
+        { "id": 501, "orderNumber": "ORD-501", "total": 299.99 },
+        { "id": 508, "orderNumber": "ORD-508", "total": 149.50 }
       ]
     },
     {
       "id": 12,
-      "name": "USB-C Hub",
-      "price": 45.00,
-      "category": "electronics",
-      "reviews": []
+      "name": "Dave Brown",
+      "email": "dave@example.com",
+      "city": "New York",
+      "orders": []
     }
   ],
   "nextCursorToken": null
@@ -218,7 +222,7 @@ GET /api/products?filter=category:eq:electronics,price:lte:500
 
 ## Scenario 4: Analytics / Reporting Endpoint
 
-**Scenario:** Monthly revenue report grouped by region and product category.
+**Scenario:** Monthly revenue report grouped by city and customer status.
 
 **Controller:**
 ```csharp
@@ -226,11 +230,11 @@ GET /api/products?filter=category:eq:electronics,price:lte:500
 [Authorize(Roles = "admin,analyst")]
 public async Task<IActionResult> GetRevenueReport([FromQuery] FlexQueryParameters parameters, CancellationToken ct)
 {
-    var result = await _context.Orders.FlexQueryAsync<Order>(parameters, exec =>
+    var result = await _context.Customers.FlexQueryAsync(parameters, exec =>
     {
         exec.AllowedFields = new HashSet<string>
         {
-            "status", "region", "category", "amount", "createdAt"
+            "city", "status", "salary", "createdDate"
         };
         exec.MaxFieldDepth = 1;
     }, ct);
@@ -241,11 +245,11 @@ public async Task<IActionResult> GetRevenueReport([FromQuery] FlexQueryParameter
 
 **Request:**
 ```
-GET /api/reports/revenue?filter=createdAt:between:2024-01-01,2024-12-31,status:eq:completed
-                        &select=region,count(),sum(amount),avg(amount)
-                        &groupBy=region
-                        &having=sum(amount):gt:10000
-                        &sort=sum(amount):desc
+GET /api/reports/revenue?filter=createdDate:between:2024-01-01,2024-12-31,status:eq:active
+                        &select=city,count(),sum(salary),avg(salary)
+                        &groupBy=city
+                        &having=sum(salary):gt:50000
+                        &sort=sum(salary):desc
 ```
 
 **Response:**
@@ -257,9 +261,9 @@ GET /api/reports/revenue?filter=createdAt:between:2024-01-01,2024-12-31,status:e
   "pageSize": 20,
   "aggregates": null,
   "data": [
-    { "region": "North America", "allCount": 512, "amountSum": 128000.00, "amountAvg": 250.00 },
-    { "region": "Europe",        "allCount": 380, "amountSum": 95000.00,  "amountAvg": 250.00 },
-    { "region": "Asia Pacific",  "allCount": 210, "amountSum": 52500.00,  "amountAvg": 250.00 }
+    { "city": "New York",  "allCount": 24, "salarySum": 180000.00, "salaryAvg": 7500.00 },
+    { "city": "London",    "allCount": 18, "salarySum": 126000.00, "salaryAvg": 7000.00 },
+    { "city": "Singapore", "allCount": 12, "salarySum": 72000.00,  "salaryAvg": 6000.00 }
   ],
   "nextCursorToken": null
 }
@@ -270,16 +274,16 @@ GET /api/reports/revenue?filter=createdAt:between:2024-01-01,2024-12-31,status:e
 ## Scenario 5: Minimal API (No Controller)
 
 ```csharp
-app.MapGet("/api/products", async (
+app.MapGet("/api/customers", async (
     [AsParameters] FlexQueryParameters parameters,
     AppDbContext db,
     CancellationToken ct) =>
 {
     try
     {
-        var result = await db.Products.FlexQueryAsync<Product>(parameters, exec =>
+        var result = await db.Customers.FlexQueryAsync<Customer>(parameters, exec =>
         {
-            exec.AllowedFields = new HashSet<string> { "id", "name", "price", "category", "inStock" };
+            exec.AllowedFields = new HashSet<string> { "id", "name", "email", "city", "status" };
             exec.MaxFieldDepth = 1;
         }, ct);
 
@@ -294,5 +298,5 @@ app.MapGet("/api/products", async (
 
 **Request:**
 ```
-GET /api/products?filter=inStock:eq:true,price:between:10,100&sort=price:asc&page=1&pageSize=20
+GET /api/customers?filter=city:eq:New York,status:eq:active&sort=salary:desc&page=1&pageSize=20
 ```

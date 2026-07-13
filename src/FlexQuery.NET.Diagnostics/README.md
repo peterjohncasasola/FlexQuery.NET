@@ -29,9 +29,7 @@ var collector = new FlexQueryDiagnosticsCollector();
 var result = await _context.Users.FlexQueryAsync(parameters, options =>
 {
     options.AllowedFields = new HashSet<string> { "Id", "Name" };
-}, execution =>
-{
-    execution.Listener = collector;
+    options.Listener = collector;
 });
 
 var report = collector.BuildReport();

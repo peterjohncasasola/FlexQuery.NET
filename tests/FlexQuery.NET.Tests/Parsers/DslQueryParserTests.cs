@@ -23,7 +23,7 @@ public class DslQueryParserTests
     {
         var opts = Parse(new()
         {
-            ["filter"] = "(name:eq:john|name:eq:doe)&age:gt:20"
+            ["filter"] = "(name:eq:john OR name:eq:doe) AND age:gt:20"
         });
 
         opts.Filter.Should().NotBeNull();
@@ -41,7 +41,7 @@ public class DslQueryParserTests
     {
         var opts = Parse(new()
         {
-            ["filter"] = "orders.customer.name:contains:'john doe'&status:in:Active,Pending",
+            ["filter"] = "orders.customer.name:contains:'john doe' AND status:in:Active,Pending",
             ["page"] = "2",
             ["pageSize"] = "15"
         });
@@ -88,7 +88,7 @@ public class DslQueryParserTests
     {
         var opts = Parse(new()
         {
-            ["filter"] = "(name:startswith:jo|name:endswith:hn)&status:notin:Inactive,Deleted&age:between:18,60&deletedAt:notnull"
+            ["filter"] = "(name:startswith:jo OR name:endswith:hn) AND status:notin:Inactive,Deleted AND age:between:18,60 AND deletedAt:notnull"
         });
 
         opts.Filter!.Logic.Should().Be(LogicOperator.And);
@@ -108,7 +108,7 @@ public class DslQueryParserTests
     {
         var opts = Parse(new()
         {
-            ["filter"] = "((city:eq:London|city:eq:Berlin)&(age:between:25,40|status:eq:Pending))"
+            ["filter"] = "((city:eq:London OR city:eq:Berlin) AND (age:between:25,40 OR status:eq:Pending))"
         });
 
         opts.Filter.Should().NotBeNull();
@@ -134,7 +134,7 @@ public class DslQueryParserTests
     {
         var opts = Parse(new()
         {
-            ["filter"] = "(name:eq:john|name:eq:doe)&age:gt:20"
+            ["filter"] = "(name:eq:john OR name:eq:doe) AND age:gt:20"
         });
 
         opts.Filter.Should().NotBeNull();
@@ -161,7 +161,7 @@ public class DslQueryParserTests
     {
         var act = () => Parse(new()
         {
-            ["filter"] = "(name:eq:john|age:gt:20"
+            ["filter"] = "(name:eq:john OR age:gt:20"
         });
 
         act.Should().Throw<QueryParseException>()
@@ -802,7 +802,7 @@ public class DslQueryParserTests
     {
         var opts = Parse(new()
         {
-            ["filter"] = "((status:eq:Open|status:eq:Pending)&amount:gt:100)|customer.name:contains:john",
+            ["filter"] = "((status:eq:Open OR status:eq:Pending) AND amount:gt:100) OR customer.name:contains:john",
             ["sort"] = "createdAt:desc,name:asc",
             ["select"] = "Id,Name,CustomerName",
             ["include"] = "Orders,Profile",

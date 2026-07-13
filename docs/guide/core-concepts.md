@@ -20,8 +20,8 @@ FlexQuery is a pipeline engine. To effectively debug complex projection queries,
 FlexQuery.NET exposes two complementary API layers:
 
 | API Level | Recommended For | Entry Point |
-|---|---|---|
-| **High-Level API** | Controllers, APIs, frontend-driven filtering | `FlexQueryParameters` + `FlexQueryAsync()` |
+| :--- | :--- | :--- |
+| **High-Level API** | Controllers, APIs, frontend-driven filtering | `FlexQueryParameters` + `FlexQueryAsync()` (EF Core/Dapper) or `FlexQuery()` (Core) |
 | **Advanced API** | Server-side query composition, strongly-typed filters | `QueryOptions` + `ApplyFilter()`, `ApplySort()` |
 
 Most applications should use the high-level API.
@@ -50,7 +50,7 @@ HTTP Query String
        ▼
      QueryOptions             ← The internal parsed model
        │
-       ├── ValidateOrThrow()  ← Enforces Server Policy (Field access, depth)
+       │   (FlexQueryAsync includes validation automatically)
        │
        ├── ApplyFilter()      ← AST → SQL WHERE / Expression Tree
        ├── ApplySort()        ← AST → SQL ORDER BY
@@ -77,19 +77,19 @@ public async Task<IActionResult> Get([FromQuery] FlexQueryParameters parameters)
 
 | Property | Type | Purpose |
 | :--- | :--- | :--- |
-| `Filter` | `string?` | DSL filter expression (`Name:eq:Alice`) |
-| `Query` | `string?` | Alternative JQL/OData-style string parser |
-| `Sort` | `string?` | Sort expression (`Name:asc,Age:desc`) |
+| `Filter` | `string?` | DSL filter expression (`Status:eq:Active`) |
+| `Sort` | `string?` | Sort expression (`LastName:asc,CreatedAt:desc`) |
 | `Select` | `string?` | Comma-separated fields to project |
 | `Include` | `string?` | Navigation properties to include / expand |
 | `GroupBy` | `string?` | Fields to group by |
 | `Having` | `string?` | Aggregate condition on groups |
+| `Aggregate` | `string?` | Aggregate expressions (`SUM(TotalDue) AS Revenue`) |
 | `Page` | `int?` | Page number (1-indexed) |
 | `PageSize` | `int?` | Items per page |
 | `IncludeCount` | `bool?` | Whether to return total count |
 | `Distinct` | `bool?` | Apply DISTINCT |
 | `Mode` | `string?` | Projection mode: `Nested`, `Flat`, `FlatMixed` |
-| `UseKeysetPagination` | `bool?` | Force keyset pagination engine |
+| `UseKeysetPagination` | `bool` | Force keyset pagination engine |
 | `Cursor` | `string?` | Keyset pagination token from a previous request |
 
 ---
@@ -124,7 +124,7 @@ While `QueryOptions` represents what the *client wants*, `BaseQueryOptions` (and
 You configure this via the lambda in `FlexQueryAsync`:
 
 ```csharp
-var result = await _db.Users.FlexQueryAsync(parameters, exec =>
+var result = await _db.Customers.FlexQueryAsync(parameters, exec =>
 {
     exec.AllowedFields = new HashSet<string> { "Id", "Name", "Email" };
     exec.MaxFieldDepth = 2;
@@ -136,30 +136,44 @@ var result = await _db.Users.FlexQueryAsync(parameters, exec =>
 | :--- | :--- |
 | `AllowedFields` | Global allow-list. If a client requests a field not on this list, it is rejected. |
 | `BlockedFields` | Explicitly blocked fields (e.g. `PasswordHash`). Overrides `AllowedFields`. |
+| `FilterableFields` | Fields allowed specifically in filter expressions. |
+| `SortableFields` | Fields allowed specifically in sort expressions. |
+| `SelectableFields` | Fields allowed specifically in projection/select expressions. |
+| `GroupableFields` | Fields allowed specifically in group-by expressions. |
+| `AggregatableFields` | Fields allowed specifically in aggregate expressions. |
+| `AllowedIncludes` | Navigation properties allowed for include/expand. |
+| `AllowedOperators` | Per-field operator restrictions. |
 | `MaxFieldDepth` | Maximum dot-notation path depth. `2` allows `Category.Name` but blocks `Category.Company.Name`. |
 | `MaxPageSize` | Hard cap on `pageSize` to prevent memory exhaustion. |
 | `StrictFieldValidation` | `true` = Throw exception on violation. `false` = Silently strip unauthorized fields from the query. |
+| `DefaultSortField` | Default sort field when client doesn't specify. |
+| `DefaultSortDescending` | Default sort direction. |
+| `CaseInsensitive` | Whether field name matching is case-insensitive. |
+| `IncludeTotalCount` | Whether to include total count by default. |
+| `ExpressionMappings` | Maps DTO field aliases to entity expressions. |
+| `FieldMappings` | Maps external field aliases to internal property names. |
+| `RoleAllowedFields` | Per-role field allow-lists. |
+| `CurrentRole` | The active role for evaluating `RoleAllowedFields`. |
+| `AllowedFieldsResolver` | Dynamic resolver for allowed fields based on entity type. |
+| `Listener` | Optional execution event listener. |
 
 ---
 
 ## Parsing Formats
 
-FlexQuery auto-detects the input format based on the property used in `FlexQueryParameters`:
+FlexQuery supports multiple query syntaxes. The active syntax is configured globally via `FlexQueryCore.Configure()` and parser registration. The default is **DSL** (`QuerySyntax.NativeDsl`).
 
-### DSL Format (Standard)
+### DSL Format (Default)
 ```http
-GET /api/users?filter=status:eq:active%26name:contains:alice&sort=name:asc
+GET /api/customers?filter=Status:eq:'Active' AND LastName:contains:Smi&sort=LastName:asc
 ```
 
-### JQL Format
+### FQL Format (SQL-like)
+Requires `Fql.Register()` at startup and `QuerySyntax.Fql`:
 ```http
-GET /api/users?query=status = "active" AND age >= 18&sort=name:asc
+GET /api/customers?filter=Status = "Active" AND LastName CONTAINS "Smi"&sort=LastName:asc
 ```
 
-### JSON Format
-```http
-GET /api/users?filter={"logic":"and","filters":[{"field":"status","operator":"eq","value":"active"}]}
-```
 
 ---
 
@@ -188,8 +202,8 @@ Preserves the object hierarchy:
 {
   "id": 1,
   "name": "Alice",
-  "profile": {
-    "bio": "Developer"
+  "address": {
+    "city": "Singapore"
   }
 }
 ```
@@ -202,7 +216,7 @@ Flattens all properties to top-level with dot-notation keys:
 {
   "id": 1,
   "name": "Alice",
-  "profile.bio": "Developer"
+  "address.bio": "Developer"
 }
 ```
 
@@ -214,7 +228,7 @@ Scalars at the top level, collections remain nested:
 {
   "id": 1,
   "name": "Alice",
-  "profile_bio": "Developer"
+  "address_city": "Singapore"
 }
 ```
 
@@ -242,15 +256,20 @@ Every high-level method returns a standardized envelope `QueryResult<T>`:
 }
 ```
 
-| Property | Type | Description |
-| :--- | :--- | :--- |
-| `data` | `List<T>` | The current page of results. |
-| `totalCount` | `int?` | Total records before paging (null if `IncludeCount=false` or keyset pagination is used). |
-| `resultCount` | `int?` | Count of records after grouping (often equals `totalCount`). |
-| `page` | `int` | Current page number. |
-| `pageSize` | `int` | Items per page. |
-| `totalPages` | `int` | Computed `Ceiling(resultCount / pageSize)`. |
-| `nextCursorToken` | `string?` | Keyset cursor for the next page, used in high-performance paging. |
+> **Note:** The JSON properties above use camelCase due to default .NET JSON serialization. The actual C# properties on `QueryResult<T>` use PascalCase.
+
+| C# Property | JSON Name | Type | Description |
+| :--- | :--- | :--- | :--- |
+| `TotalCount` | `totalCount` | `int?` | Total records before paging (null if `IncludeCount=false` or keyset pagination is used). |
+| `ResultCount` | `resultCount` | `int?` | Count of records after grouping (often equals `TotalCount`). |
+| `Page` | `page` | `int` | Current page number. |
+| `PageSize` | `pageSize` | `int` | Items per page. |
+| `TotalPages` | `totalPages` | `int` | Computed `Ceiling(ResultCount / pageSize)`. |
+| `HasNextPage` | `hasNextPage` | `bool` | Whether a next page exists. |
+| `HasPreviousPage` | `hasPreviousPage` | `bool` | Whether a previous page exists. |
+| `Aggregates` | `aggregates` | `Dictionary<string, Dictionary<string, object>>?` | Grand total aggregate results. |
+| `Data` | `data` | `IReadOnlyList<T>` | The current page of results. |
+| `NextCursorToken` | `nextCursorToken` | `string?` | Keyset cursor for the next page, used in high-performance paging. |
 
 ## Best Practices
 - **Never skip validation:** Whether you use `FlexQueryAsync` or the manual pipeline, never trust client query definitions blindly. Always configure an execution policy.

@@ -41,15 +41,17 @@ These extension methods provide:
 
 ## High-Level: FlexQueryAsync ⭐ Recommended
 
-`FlexQueryAsync` is the **unified pipeline method**. It parses, validates, and executes in a single call.
+`FlexQueryAsync` (available in `FlexQuery.NET.EntityFrameworkCore` and `FlexQuery.NET.Dapper`) is the **unified pipeline method**. It parses, validates, and executes in a single call.
 
 **When to use:** Any standard public API endpoint.
 
 ```csharp
+using FlexQuery.NET.EntityFrameworkCore;
+
 [HttpGet]
-public async Task<IActionResult> GetUsers([FromQuery] FlexQueryParameters parameters)
+public async Task<IActionResult> GetCustomers([FromQuery] FlexQueryParameters parameters)
 {
-    var result = await _context.Users.FlexQueryAsync(parameters, exec =>
+    var result = await _context.Customers.FlexQueryAsync(parameters, exec =>
     {
         exec.AllowedFields = ["Id", "Name", "Email", "Status"];
         exec.MaxFieldDepth = 2;
@@ -63,7 +65,7 @@ public async Task<IActionResult> GetUsers([FromQuery] FlexQueryParameters parame
 
 ```text
 ToQueryOptions(parameters)
-  → ValidateOrThrow(execOptions)
+  → Validate (field access, operators, depth against Server Policy)
   → ApplyFilter
   → ApplySort
   → CountAsync (if IncludeCount = true and not keyset)
@@ -93,9 +95,9 @@ var filtered = query.ApplyFilter(options);
 - Builds an expression tree; EF Core translates it to SQL.
 
 **Example:**
-`GET /api/users?filter=Status:eq:active`
+`GET /api/customers?filter=Status:eq:active`
 ```sql
-SELECT * FROM Users WHERE Status = 'active'
+SELECT * FROM Customers WHERE Status = 'active'
 ```
 
 ---
@@ -112,9 +114,9 @@ var sorted = query.ApplySort(options);
 - No-op if `options.Sort` is empty.
 
 **Example:**
-`GET /api/users?sort=Name:asc,CreatedAt:desc`
+`GET /api/customers?sort=Name:asc,CreatedDate:desc`
 ```sql
-ORDER BY Name ASC, CreatedAt DESC
+ORDER BY Name ASC, CreatedDate DESC
 ```
 
 ---
@@ -143,10 +145,10 @@ var withIncludes = query.ApplyExpand(options);
 - No-op if `options.Expand` is null or empty.
 
 **Example:**
-`GET /api/users?include=Orders(Status:eq:shipped)`
+`GET /api/customers?include=Orders(Status:eq:shipped)`
 ```csharp
 // Translates internally to:
-query.Include(u => u.Orders.Where(o => o.Status == "shipped"))
+query.Include(c => c.Orders.Where(o => o.Status == "shipped"))
 ```
 
 ---
@@ -177,7 +179,7 @@ var data = await projected.ToListAsync();
 // ❌ DO NOT DO THIS
 var options = parameters.ToQueryOptions();
 
-var query = _context.Users.AsQueryable();
+var query = _context.Customers.AsQueryable();
 
 // 1st Filter: Applied here manually
 query = query.ApplyFilter(options);
@@ -191,7 +193,7 @@ var result = await query.FlexQueryAsync(options);
 
 ```csharp
 // ✅ CORRECT: Everything in one call, filter applied once
-var result = await _context.Users.FlexQueryAsync(parameters, exec =>
+var result = await _context.Customers.FlexQueryAsync(parameters, exec =>
 {
     exec.AllowedFields = ["Id", "Name", "Email"];
 });
@@ -205,7 +207,7 @@ For when you need full control — e.g., injecting custom tenant filter between 
 
 ```csharp
 [HttpGet]
-public async Task<IActionResult> GetUsersManual([FromQuery] FlexQueryParameters parameters, CancellationToken ct)
+public async Task<IActionResult> GetCustomersManual([FromQuery] FlexQueryParameters parameters, CancellationToken ct)
 {
     // 1. Parse
     var options = parameters.ToQueryOptions();
@@ -213,14 +215,14 @@ public async Task<IActionResult> GetUsersManual([FromQuery] FlexQueryParameters 
     // 2. Validate against Server Policy
     var execOptions = new EfCoreQueryOptions
     {
-        AllowedFields = ["Id", "Name", "Email", "Status", "CreatedAt"],
+        AllowedFields = ["Id", "Name", "Email", "Status", "City", "CreatedDate"],
         MaxFieldDepth = 2
     };
-    options.ValidateOrThrow(execOptions);
+    options.ValidateOrThrow<Customer>(execOptions);
 
     // 3. Start query with strict Tenancy limits
-    var query = _context.Users
-        .Where(u => u.TenantId == CurrentTenantId) 
+    var query = _context.Customers
+        .Where(u => u.CustomerId == CurrentTenantId) 
         .AsQueryable();
 
     // 4. Apply FlexQuery filter and sort

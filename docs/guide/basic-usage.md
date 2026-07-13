@@ -4,6 +4,8 @@
 
 FlexQuery.NET uses a consistent, human-readable DSL (Domain Specific Language) for dynamic querying. This guide provides a rapid introduction to the standard formats for filtering, sorting, paging, and projection.
 
+> **Note:** Examples using `FlexQueryAsync` require the `FlexQuery.NET.EntityFrameworkCore` or `FlexQuery.NET.Dapper` package. The core `FlexQuery.NET` package provides synchronous `FlexQuery` for advanced scenarios.
+
 ## Why this feature exists
 
 When building APIs, there is a constant tension between backend rigidity and frontend flexibility. The FlexQuery DSL exists to provide a standardized, secure, and easily-parsable syntax that frontends can use to request exact data shapes without forcing backend developers to write custom SQL or LINQ for every view.
@@ -26,9 +28,9 @@ Filtering allows you to restrict the results based on property values. The stand
 - **In Collection**: `Status:in:Active,Pending`
 
 ### Multiple Filters
-Multiple filters are combined using the **AND** operator (`&`), which must be URL-encoded as `%26` in HTTP requests.
+Multiple filters are combined using the `AND` keyword.
 
-`?filter=Status:eq:Active%26Price:gt:100`
+`?filter=Status:eq:'Active' AND Price:gt:100`
 
 ### Nested Properties
 You can filter on nested navigation properties using dot notation. FlexQuery automatically handles generating the underlying SQL `JOIN` or EF Core `Include` logic.
@@ -98,16 +100,44 @@ In FlexQuery v4, all these features are applied in a single unified pipeline. Yo
 
 ```csharp
 [HttpGet]
-public async Task<IActionResult> GetUsers([FromQuery] FlexQueryParameters parameters)
+public async Task<IActionResult> GetCustomers([FromQuery] FlexQueryParameters parameters)
 {
     // Execute everything in one pass
-    var result = await _context.Users.FlexQueryAsync(parameters, options => 
+    var result = await _context.Customers.FlexQueryAsync(parameters, options => 
     {
         // Enforce your security rules
         options.AllowedFields = ["Id", "Name", "Price", "Category.Name", "Status"];
     });
 
     return Ok(result);
+}
+```
+
+### HTTP POST Requests
+
+If your query is too large for a URL query string, you can use the `FlexQueryRequest` model to accept the query via a JSON POST body. The properties are exactly the same as `FlexQueryParameters`.
+
+```csharp
+[HttpPost("query")]
+public async Task<IActionResult> QueryUsers([FromBody] FlexQueryRequest request)
+{
+    var options = request.ToQueryOptions();
+    var result = await _context.Customers.FlexQueryAsync(options, exec => 
+    {
+        exec.AllowedFields = new HashSet<string> { "Id", "Name", "Price", "Status" };
+    });
+
+    return Ok(result);
+}
+```
+
+**JSON Payload:**
+```json
+{
+  "filter": "Status:eq:Active",
+  "sort": "Name:asc",
+  "page": 1,
+  "pageSize": 20
 }
 ```
 
@@ -120,5 +150,4 @@ This single call handles:
 
 ## Best Practices
 
-- **URL Encode:** Always remind frontend developers to use `encodeURIComponent()` (in JavaScript/TypeScript) on their filter strings. The `&` character will break HTTP routing if it is not encoded as `%26`.
 - **Use Paging Defaults:** Always specify a `DefaultPageSize` and `MaxPageSize` in your execution options to prevent accidental `SELECT * FROM Table` scenarios.

@@ -105,7 +105,7 @@ Client input is treated as inherently hostile. The `QueryOptions` parser acts on
 
 ## Related Topics
 
-- [Installation and Setup](/get-started/installation)
+- [Installation and Setup](/guide/getting-started)
 - [Filtering and Sorting Syntax](/guide/filtering)
 - [Security and Governance](/guide/security)
 - [FlexQuery vs GraphQL/OData](/guide/comparison)
