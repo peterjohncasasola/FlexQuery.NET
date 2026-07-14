@@ -20,7 +20,7 @@ internal sealed class QueryContext
     public Type? TargetType { get; set; }
 
     /// <summary>
-    /// Gets or sets the server-side execution and security rules.
+    /// Gets or sets the server-side governance and security rules.
     /// </summary>
-    public BaseQueryOptions? ExecutionOptions { get; set; }
+    public QueryGovernanceOptions? ExecutionOptions { get; set; }
 }

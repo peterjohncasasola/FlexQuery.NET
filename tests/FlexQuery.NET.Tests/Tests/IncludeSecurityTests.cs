@@ -24,7 +24,7 @@ public class IncludeSecurityTests
         var exec = new QueryExecutionOptions();
         var context = new QueryContext { ExecutionOptions = exec };
         
-        var validator = new IncludeAccessValidator();
+        var validator = new IncludeAccessValidationRule();
         var result = new ValidationResult();
 
         validator.Validate(options, context, result);
@@ -50,7 +50,7 @@ public class IncludeSecurityTests
         };
         var context = new QueryContext { ExecutionOptions = exec };
         
-        var validator = new IncludeAccessValidator();
+        var validator = new IncludeAccessValidationRule();
         var result = new ValidationResult();
 
         validator.Validate(options, context, result);
@@ -69,11 +69,12 @@ public class IncludeSecurityTests
 
         var exec = new QueryExecutionOptions
         {
-            AllowedIncludes = new HashSet<string> { "Orders" }
+            AllowedIncludes = new HashSet<string> { "Orders" },
+            StrictFieldValidation = false
         };
         var context = new QueryContext { ExecutionOptions = exec };
         
-        var validator = new IncludeAccessValidator();
+        var validator = new IncludeAccessValidationRule();
         var result = new ValidationResult();
 
         validator.Validate(options, context, result);
@@ -99,11 +100,12 @@ public class IncludeSecurityTests
 
         var exec = new QueryExecutionOptions
         {
-            AllowedIncludes = new HashSet<string> { "Orders" } // Missing Orders.SecretItems
+            AllowedIncludes = new HashSet<string> { "Orders" }, // Missing Orders.SecretItems
+            StrictFieldValidation = false
         };
         var context = new QueryContext { ExecutionOptions = exec };
         
-        var validator = new IncludeAccessValidator();
+        var validator = new IncludeAccessValidationRule();
         var result = new ValidationResult();
 
         validator.Validate(options, context, result);
@@ -127,7 +129,7 @@ public class IncludeSecurityTests
         };
         var context = new QueryContext { ExecutionOptions = exec };
         
-        var validator = new IncludeAccessValidator();
+        var validator = new IncludeAccessValidationRule();
         var result = new ValidationResult();
 
         validator.Validate(options, context, result);
@@ -150,7 +152,7 @@ public class IncludeSecurityTests
         };
         var context = new QueryContext { ExecutionOptions = exec };
         
-        var validator = new IncludeAccessValidator();
+        var validator = new IncludeAccessValidationRule();
         var result = new ValidationResult();
 
         var ex = Assert.Throws<Exceptions.QueryValidationException>(() => validator.Validate(options, context, result));
@@ -172,7 +174,7 @@ public class IncludeSecurityTests
         };
         var context = new QueryContext { ExecutionOptions = exec };
         
-        var validator = new IncludeAccessValidator();
+        var validator = new IncludeAccessValidationRule();
         var result = new ValidationResult();
 
         validator.Validate(options, context, result);
@@ -208,7 +210,7 @@ public class IncludeSecurityTests
         };
         var context = new QueryContext { ExecutionOptions = exec };
         
-        var validator = new IncludeAccessValidator();
+        var validator = new IncludeAccessValidationRule();
         var result = new ValidationResult();
 
         validator.Validate(options, context, result);

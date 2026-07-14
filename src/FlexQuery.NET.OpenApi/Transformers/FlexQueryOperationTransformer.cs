@@ -1,3 +1,5 @@
+using System.Threading;
+using System.Threading.Tasks;
 using FlexQuery.NET.OpenApi.Documentation;
 using Microsoft.AspNetCore.OpenApi;
 
@@ -13,6 +15,7 @@ internal sealed class FlexQueryOperationTransformer : IOpenApiOperationTransform
 {
     public Task TransformAsync(OpenApiOperation operation, OpenApiOperationTransformerContext context, CancellationToken cancellationToken)
     {
+        if (operation.Parameters == null) return Task.CompletedTask;
         foreach (var parameter in operation.Parameters)
         {
             var description = parameter.Name switch
@@ -29,6 +32,7 @@ internal sealed class FlexQueryOperationTransformer : IOpenApiOperationTransform
             if (description is not null)
                 parameter.Description = description;
         }
+
         return Task.CompletedTask;
     }
 }

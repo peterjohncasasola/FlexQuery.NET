@@ -735,7 +735,7 @@ public class FieldSecurityTests
             SortableFields = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "Name", "Id" }
         };
 
-        Action act = () => FieldAccessValidator.ValidateDefaultSortFieldConfiguration(execOptions);
+        Action act = () => FieldAccessValidationRule.ValidateDefaultSortFieldConfiguration(execOptions);
 
         act.Should().NotThrow();
     }
@@ -749,7 +749,7 @@ public class FieldSecurityTests
             BlockedFields = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "SSN" }
         };
 
-        Action act = () => FieldAccessValidator.ValidateDefaultSortFieldConfiguration(execOptions);
+        Action act = () => FieldAccessValidationRule.ValidateDefaultSortFieldConfiguration(execOptions);
 
         act.Should().Throw<QueryValidationException>()
            .Which.Message.Should().Contain("BlockedFields");

@@ -15,7 +15,7 @@ namespace FlexQuery.NET.Validation.Rules;
 /// are silently removed from the query. In strict mode (default), validation
 /// errors cause exceptions to be thrown.
 /// </remarks>
-internal sealed class IncludeAccessValidator : IValidationRule
+internal sealed class IncludeAccessValidationRule : IValidationRule
 {
     /// <inheritdoc />
     public void Validate(QueryOptions options, QueryContext context, ValidationResult result)
@@ -67,7 +67,7 @@ internal sealed class IncludeAccessValidator : IValidationRule
         IncludeNode node,
         string parentPath,
         HashSet<string> allowedIncludes,
-        BaseQueryOptions options,
+        QueryGovernanceOptions options,
         ValidationResult result)
     {
         var currentPath = string.IsNullOrEmpty(parentPath) ? node.Path : $"{parentPath}.{node.Path}";

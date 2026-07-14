@@ -7,7 +7,7 @@ namespace FlexQuery.NET.EntityFrameworkCore.Options;
 /// FlexQuery request.
 /// </summary>
 /// <inheritdoc/>
-public sealed class EfCoreQueryOptions : BaseQueryOptions
+public sealed class EfCoreQueryOptions : QueryGovernanceOptions
 {
     /// <summary>
     /// Initializes a new instance of the <see cref="EfCoreQueryOptions"/> class.

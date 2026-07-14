@@ -19,4 +19,5 @@ internal static class ValidationErrorCodes
     public const string CursorMismatch = "CURSOR_MISMATCH";
     public const string CursorNullValue = "CURSOR_NULL_VALUE";
     public const string PaginationModeConflict = "PAGINATION_MODE_CONFLICT";
+    public const string GovernanceFieldNotFound = "GOVERNANCE_FIELD_NOT_FOUND";
 }

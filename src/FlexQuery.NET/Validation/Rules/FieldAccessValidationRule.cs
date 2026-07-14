@@ -23,7 +23,7 @@ namespace FlexQuery.NET.Validation.Rules;
 /// silently removed from the query. In strict mode (default), validation errors
 /// cause exceptions to be thrown.
 /// </remarks>
-internal sealed class FieldAccessValidator : IValidationRule
+internal sealed class FieldAccessValidationRule : IValidationRule
 {
     private static readonly ConcurrentDictionary<string, string> _normalizationCache = new();
 
@@ -149,7 +149,7 @@ internal sealed class FieldAccessValidator : IValidationRule
         }
     }
 
-    private static void ApplyDefaultSort(QueryOptions options, BaseQueryOptions execOptions)
+    private static void ApplyDefaultSort(QueryOptions options, QueryGovernanceOptions execOptions)
     {
         if (string.IsNullOrWhiteSpace(execOptions.DefaultSortField)) return;
         if (options.Sort.Count > 0) return;
@@ -182,7 +182,7 @@ internal sealed class FieldAccessValidator : IValidationRule
         Type? currentType,
         QueryContext context,
         ValidationResult result,
-        BaseQueryOptions execOptions)
+        QueryGovernanceOptions execOptions)
     {
         if (node.IncludeAllScalars && currentType != null)
         {
@@ -260,7 +260,7 @@ internal sealed class FieldAccessValidator : IValidationRule
         return null;
     }
 
-    private bool IsSecurityActive(BaseQueryOptions options)
+    private bool IsSecurityActive(QueryGovernanceOptions options)
     {
         return options.MaxFieldDepth.HasValue ||
                options.AllowedFields?.Count > 0 ||
@@ -278,7 +278,7 @@ internal sealed class FieldAccessValidator : IValidationRule
         FilterGroup group,
         QueryContext context,
         ValidationResult result,
-        BaseQueryOptions execOptions,
+        QueryGovernanceOptions execOptions,
         string? prefix = null)
     {
         // Iterate backwards to allow removal during enumeration
@@ -364,6 +364,20 @@ internal sealed class FieldAccessValidator : IValidationRule
             }
         }
 
+        // Step 5b: Navigation traversal authorized by AllowedIncludes (additive).
+        // For query-execution operations, a navigation whose path is present in
+        // AllowedIncludes authorizes traversal into that navigation (e.g. filtering or
+        // sorting on 'customerGroup.groupName' when 'customerGroup' is an allowed include),
+        // even when the scalar-only operation lists or the global AllowedFields whitelist
+        // would otherwise reject the dotted path. Blocked fields, role restrictions,
+        // depth limits, and custom resolvers are enforced earlier and still take precedence.
+        if (operation is QueryOperation.Filter or QueryOperation.Sort or QueryOperation.Group
+                or QueryOperation.Aggregate or QueryOperation.Having
+            && IsNavigationTraversalAllowedByIncludes(field, context, execOptions))
+        {
+            return true;
+        }
+
         // Step 6: Operation-Level Rules
         HashSet<string>? opList = operation switch
         {
@@ -399,11 +413,72 @@ internal sealed class FieldAccessValidator : IValidationRule
     }
 
     /// <summary>
+    /// Determines whether a navigation-bearing field path is authorized for query
+    /// execution (filter/sort/group/aggregate/having) because its navigation prefix
+    /// is listed in <see cref="QueryGovernanceOptions.AllowedIncludes"/>.
+    /// </summary>
+    /// <remarks>
+    /// This is the single navigation governance point described by the design:
+    /// "includeable ⇒ traversable". A bare navigation (e.g. <c>Orders</c> used by a
+    /// collection scoped filter) is authorized when it is itself an allowed include;
+    /// a dotted path (e.g. <c>customerGroup.groupName</c>) is authorized when its
+    /// navigation prefix (<c>customerGroup</c>) is an allowed include. The prefix must
+    /// also resolve to an actual navigation on the target type.
+    /// </remarks>
+    private static bool IsNavigationTraversalAllowedByIncludes(
+        string field,
+        QueryContext context,
+        QueryGovernanceOptions execOptions)
+    {
+        if (execOptions.AllowedIncludes is not { Count: > 0 }) return false;
+
+        var targetType = context.TargetType;
+        if (targetType == null) return false;
+
+        var dotIndex = field.LastIndexOf('.');
+        var navPath = dotIndex < 0 ? field : field[..dotIndex];
+        if (string.IsNullOrEmpty(navPath)) return false;
+
+        return IsIncludeListed(navPath, execOptions)
+               && IsNavigationPath(targetType, navPath);
+    }
+
+    private static bool IsIncludeListed(string navPath, QueryGovernanceOptions execOptions)
+    {
+        var allowed = execOptions.AllowedIncludes!;
+        var comparison = execOptions.CaseInsensitive
+            ? StringComparison.OrdinalIgnoreCase
+            : StringComparison.Ordinal;
+
+        foreach (var include in allowed)
+        {
+            if (string.Equals(include, navPath, comparison))
+                return true;
+        }
+        return false;
+    }
+
+    private static bool IsNavigationPath(Type rootType, string path)
+    {
+        if (!SafePropertyResolver.TryResolveChain(rootType, path, out var chain) || chain.Count == 0)
+            return false;
+
+        var last = chain[^1];
+        if (SafePropertyResolver.TryGetCollectionElementType(last.PropertyType, out _))
+            return true;
+
+        var propertyType = last.PropertyType;
+        return propertyType.IsClass
+               && propertyType != typeof(string)
+               && !TypeClassification.IsScalarType(propertyType);
+    }
+
+    /// <summary>
     /// Validates that the DefaultSortField is compatible with the configured governance rules.
     /// Call this at application startup to catch configuration errors early.
     /// Throws <see cref="QueryValidationException"/> if DefaultSortField violates governance.
     /// </summary>
-    public static void ValidateDefaultSortFieldConfiguration(BaseQueryOptions execOptions)
+    public static void ValidateDefaultSortFieldConfiguration(QueryGovernanceOptions execOptions)
     {
         if (string.IsNullOrWhiteSpace(execOptions.DefaultSortField))
             return;
@@ -443,22 +518,26 @@ internal sealed class FieldAccessValidator : IValidationRule
 
     private static void AddDenied(
         ValidationResult result,
-        BaseQueryOptions options,
+        QueryGovernanceOptions options,
         string field,
         string message)
     {
+        var error = new ValidationError(message, ValidationErrorCodes.FieldAccessDenied, field);
+
         if (options.StrictFieldValidation)
         {
-            throw new QueryValidationException($"{message} (Field: {field})")
-            {
-                // Store the field in Result for consumers that inspect it
-            };
+            // Carry the field-access error on the exception's Result so callers can
+            // inspect the precise denial (code + field), consistent with the errors
+            // accumulated in lenient mode.
+            var strictResult = new ValidationResult();
+            strictResult.Errors.Add(error);
+            throw new QueryValidationException($"{message} (Field: {field})", strictResult);
         }
 
-        result.Errors.Add(new ValidationError(message, ValidationErrorCodes.FieldAccessDenied, field));
+        result.Errors.Add(error);
     }
 
-    private string NormalizeField(string rawField, BaseQueryOptions options)
+    private string NormalizeField(string rawField, QueryGovernanceOptions options)
     {
         if (options.FieldMappings != null && options.FieldMappings.TryGetValue(rawField, out var mapped))
         {

@@ -43,7 +43,7 @@ internal sealed class FieldExistenceRule : IValidationRule
            && options.Aggregates.Any(aggregate =>
                aggregate.Alias.Equals(field, StringComparison.OrdinalIgnoreCase));
 
-    private void ValidateFilterGroup(FilterGroup group, Type entityType, BaseQueryOptions? executionOptions, ValidationResult result)
+    private void ValidateFilterGroup(FilterGroup group, Type entityType, QueryGovernanceOptions? executionOptions, ValidationResult result)
     {
         foreach (var filter in group.Filters)
         {

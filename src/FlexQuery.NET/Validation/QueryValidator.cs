@@ -16,9 +16,10 @@ internal sealed class QueryValidator : IQueryValidator
     /// </summary>
     public QueryValidator()
     {
+        _rules.Add(new GovernanceConfigValidationRule());
         _rules.Add(new DefaultProjectionRule());
-        _rules.Add(new FieldAccessValidator());
-        _rules.Add(new IncludeAccessValidator());
+        _rules.Add(new FieldAccessValidationRule());
+        _rules.Add(new IncludeAccessValidationRule());
         _rules.Add(new FieldExistenceRule());
         _rules.Add(new ExpandPathValidationRule());
         _rules.Add(new OperatorValidityRule());

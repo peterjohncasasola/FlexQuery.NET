@@ -9,7 +9,7 @@ namespace FlexQuery.NET.Dapper.Options;
 /// at runtime — no manual dialect configuration is required.
 /// </summary>
 /// <inheritdoc/>
-public sealed class DapperQueryOptions : BaseQueryOptions
+public sealed class DapperQueryOptions : QueryGovernanceOptions
 {
     /// <summary>
     /// Initializes a new instance of the <see cref="DapperQueryOptions"/> class.

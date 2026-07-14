@@ -36,7 +36,7 @@ internal static class FieldResolver
     public static bool TryResolveType(
         Type entityType,
         string path,
-        BaseQueryOptions? execOptions,
+        QueryGovernanceOptions? execOptions,
         out Type resolvedType)
     {
         resolvedType = null!;

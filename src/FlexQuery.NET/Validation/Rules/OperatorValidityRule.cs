@@ -19,7 +19,7 @@ internal sealed class OperatorValidityRule : IValidationRule
             ValidateFilterGroup(options.Filter!, result, context.ExecutionOptions);
         }
     }
-    private void ValidateFilterGroup(FilterGroupNode group, ValidationResult result, BaseQueryOptions? execOptions)
+    private void ValidateFilterGroup(FilterGroupNode group, ValidationResult result, QueryGovernanceOptions? execOptions)
     {
         foreach (var child in group.Children)
         {

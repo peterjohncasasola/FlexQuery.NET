@@ -5,7 +5,7 @@ namespace FlexQuery.NET.Options;
 /// Exists because <see cref="BaseQueryOptions"/> has a protected constructor,
 /// providing a way to create Core-only options without depending on a provider package.
 /// </summary>
-public sealed class QueryExecutionOptions : BaseQueryOptions
+public sealed class QueryExecutionOptions : QueryGovernanceOptions
 {
     /// <inheritdoc />
     public QueryExecutionOptions()
