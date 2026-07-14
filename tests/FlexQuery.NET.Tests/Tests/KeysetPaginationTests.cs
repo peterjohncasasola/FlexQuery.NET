@@ -167,7 +167,7 @@ public class KeysetPaginationTests : IDisposable
     }
 
     [Fact]
-    public void SeekAfter_WithoutOrderBy_Throws()
+    public void SeekAfter_WithOrderBy_DoesNotThrow()
     {
         var act = () => _db.Entities
             .OrderBy(e => e.Id)     // becomes IOrderedQueryable
@@ -175,8 +175,21 @@ public class KeysetPaginationTests : IDisposable
             .Take(3)
             .ToList();
 
-        // Should not throw - valid
+        // Valid: an ordered query supports keyset pagination.
         act.Should().NotThrow();
+    }
+
+    [Fact]
+    public void SeekAfter_WithoutOrderBy_Throws()
+    {
+        IQueryable<TestEntity> unordered = new List<TestEntity>().AsQueryable();
+        var act = () => ((IOrderedQueryable<TestEntity>)unordered)
+            .SeekAfter(1)
+            .Take(3)
+            .ToList();
+
+        act.Should().Throw<InvalidOperationException>()
+            .WithMessage("*at least one OrderBy*");
     }
 
     [Fact]

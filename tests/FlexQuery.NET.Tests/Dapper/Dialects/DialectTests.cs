@@ -1,5 +1,6 @@
 using FlexQuery.NET.Models;
 using FlexQuery.NET.Dapper.Mapping;
+using FlexQuery.NET.Dapper.Sql.Models;
 using FlexQuery.NET.Dapper.Sql.Translators;
 using FlexQuery.NET.Dapper.Dialects;
 using FlexQuery.NET.Models.Aggregates;
@@ -612,7 +613,18 @@ public class DialectTests
         var sqliteCmd = new SqlTranslator(_registry, new SqliteDialect()).Translate(options);
         var oracleCmd = new SqlTranslator(_registry, new OracleDialect()).Translate(options);
 
-        //throw new System.Exception("SQLSERVER: " + sqlServerCmd.Sql + "\nPG: " + pgCmd.Sql + "\nMYSQL: " + mySqlCmd.Sql + "\nSQLITE: " + sqliteCmd.Sql + "\nORACLE: " + oracleCmd.Sql);
+        AssertLike(sqlServerCmd);
+        AssertLike(pgCmd);
+        AssertLike(mySqlCmd);
+        AssertLike(mariadbCmd);
+        AssertLike(sqliteCmd);
+        AssertLike(oracleCmd);
+    }
+
+    private static void AssertLike(SqlCommand command)
+    {
+        command.Sql.Should().Contain("LIKE");
+        command.Parameters.Values.Should().Contain("%test%");
     }
 
     [Fact]
