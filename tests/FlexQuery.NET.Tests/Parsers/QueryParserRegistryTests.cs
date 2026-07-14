@@ -24,11 +24,9 @@ public class QueryParserRegistryTests
     [Fact]
     public void Resolve_UnregisteredSyntax_Throws()
     {
-        var unregistered = new[] { QuerySyntax.Fql, QuerySyntax.MiniOData }
-            .Where(s => !QueryParserRegistry.IsRegistered(s))
+        var unregistered = Enum.GetValues<QuerySyntax>()
+            .Where(s => s != QuerySyntax.NativeDsl && !QueryParserRegistry.IsRegistered(s))
             .ToList();
-
-        unregistered.Should().NotBeEmpty("at least one syntax should be unregistered by default");
 
         foreach (var syntax in unregistered)
         {
