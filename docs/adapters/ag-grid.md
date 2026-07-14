@@ -39,7 +39,7 @@ AG Grid Enterprise (Browser)
      │
 ASP.NET Controller
      │
-     ▼ ToQueryOptions()
+     ▼ AgGridQueryOptionsParser.Parse()
      │
 QueryOptions (canonical AST)
      │
@@ -53,21 +53,18 @@ QueryResult<T>
 ## Basic Example
 
 ```csharp
-using FlexQuery.NET.Adapters.AgGrid;
-using FlexQuery.NET.Adapters.AgGrid.Models;
-
 [HttpPost("grid-data")]
 public async Task<IActionResult> GetGridData([FromBody] JsonElement agGridPayload)
 {
-    var options = agGridPayload.ToQueryOptions();
+    var options = AgGridQueryOptionsParser.Parse(agGridPayload);
 
-    var result = await _context.Products.FlexQueryAsync(options, opts =>
+    var result = await _context.Products.FlexQueryAsync<Product>(options, opts =>
     {
         opts.AllowedFields = new HashSet<string> { "Id", "Name", "Price", "Category" };
         opts.MaxPageSize = 200;
     });
 
-    return Ok(options);
+    return Ok(result);
 }
 ```
 
@@ -266,9 +263,10 @@ public class SalesController : ControllerBase
         // 1. Parse the AG Grid payload
         var options = request.ToQueryOptions();
 
-        // 2. Execute with Dapper (dialect is auto-detected from the DbConnection)
+        // 2. Execute with Dapper
         var result = await ((DbConnection)_db).FlexQueryAsync<SalesRecord>(options, opts =>
         {
+            opts.Dialect = new SqlServerDialect();
             opts.AllowedFields = new HashSet<string>
             {
                 "Id", "Product", "Category", "Region", "Amount", "SaleDate"

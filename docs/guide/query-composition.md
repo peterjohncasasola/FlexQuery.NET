@@ -35,7 +35,7 @@ Real-world applications often require more than just passing a user's filter to 
 String-based queries are the standard for external API interaction. They are lightweight, URL-friendly, and easy to consume from frontend frameworks.
 
 ```http
-GET /api/customers?filter=status:eq:active&sort=createdDate:desc&page=1&pageSize=20
+GET /api/products?filter=status:eq:active&sort=createdAt:desc&page=1&pageSize=20
 ```
 
 FlexQuery.NET parses this into a structured `QueryOptions` object, which is then validated against your server-side security policies before execution.
@@ -49,7 +49,6 @@ For internal logic, you can construct a `QueryOptions` object manually. This pro
 ```csharp
 using FlexQuery.NET.Models;
 using FlexQuery.NET.Constants;
-using FlexQuery.NET.Builders;
 
 var options = new QueryOptions
 {
@@ -66,9 +65,9 @@ var options = new QueryOptions
             },
             new FilterCondition
             {
-                Field = "Salary",
+                Field = "Price",
                 Operator = FilterOperators.GreaterThan,
-                Value = "50000"
+                Value = "100"
             }
         }
     },
@@ -93,10 +92,13 @@ var options = new QueryOptions
 };
 
 // Apply directly to any IQueryable
-var results = await QueryBuilder
-    .Apply(query, options)
+var results = await query
+    .Apply(options)
     .ToListAsync();
 ```
+
+> [!IMPORTANT]
+> In FlexQuery.NET v2, the sorting model was renamed to **`SortNode`** to align with the AST-based architecture.
 
 ---
 
@@ -112,23 +114,23 @@ var options = new QueryOptions
         Logic = LogicOperator.And,
         Groups = new List<FilterGroup>
         {
-            // Group 1: (City == 'New York' AND Status == 'Active')
+            // Group 1: (Category == 'Electronics' AND Status == 'Active')
             new FilterGroup
             {
                 Logic = LogicOperator.And,
                 Filters = new List<FilterCondition>
                 {
-                    new FilterCondition { Field = "City", Operator = "eq", Value = "New York" },
+                    new FilterCondition { Field = "Category", Operator = "eq", Value = "Electronics" },
                     new FilterCondition { Field = "Status", Operator = "eq", Value = "Active" }
                 }
             },
-            // Group 2: (Salary > 50000)
+            // Group 2: (Price > 1000)
             new FilterGroup
             {
                 Logic = LogicOperator.And,
                 Filters = new List<FilterCondition>
                 {
-                    new FilterCondition { Field = "Salary", Operator = "gt", Value = "50000" }
+                    new FilterCondition { Field = "Price", Operator = "gt", Value = "1000" }
                 }
             }
         }
@@ -147,7 +149,7 @@ One of the most powerful features of FlexQuery.NET is the ability to **augment**
 public async Task<IActionResult> Get([FromQuery] FlexQueryParameters parameters)
 {
     // 1. Parse the user's query from the URL
-    var options = parameters.ToQueryOptions();
+    var options = QueryOptionsParser.Parse(parameters);
 
     // 2. Inject a mandatory tenant restriction
     options.Filter ??= new FilterGroup { Logic = LogicOperator.And };
@@ -228,7 +230,7 @@ FlexQuery.NET includes a strongly-typed fluent builder for developers who prefer
 ```csharp
 using FlexQuery.NET;
 
-var results = await _context.Customers
+var results = await _context.Users
     .Filter<User>(f => f
         .And(x => x.IsActive).Eq(true)
         .AndGroup(g => g

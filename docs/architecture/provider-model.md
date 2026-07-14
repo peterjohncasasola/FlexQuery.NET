@@ -13,7 +13,7 @@ FlexQueryParameters (raw input from any source)
         │
         ▼
     Parser Layer (shared)
-    ├── FQLQueryParser
+    ├── JqlQueryParser
     ├── JsonQueryParser
     ├── DslQueryParser
     ├── MiniODataQueryParser (optional)
@@ -43,7 +43,7 @@ FlexQueryParameters (raw input from any source)
         │       ├── ApplySort()        → OrderBy/ThenBy expressions
         │       ├── ApplyPaging()      → Skip/Take
         │       ├── ApplySelect()      → Dynamic projection
-        │       └── ApplyExpand() → Include/ThenInclude
+        │       └── ApplyFilteredIncludes() → Include/ThenInclude
         │       │
         │       ▼
         │   EF Core → SQL (via database provider)
@@ -117,7 +117,7 @@ The validation pipeline checks:
 | **Filtered includes** | ✅ Via `Include().Where()` | ✅ Via JOIN + WHERE |
 | **Aggregation** | ✅ Via LINQ GroupBy | ✅ Via SQL GROUP BY |
 | **SQL preview** | ✅ `ToSqlPreview()` | ✅ Access `SqlCommand.Sql` directly |
-| **Dialect awareness** | ❌ Handled by EF provider | ✅ Auto-detected from `DbConnection` |
+| **Dialect awareness** | ❌ Handled by EF provider | ✅ Explicit `ISqlDialect` |
 | **Connection management** | ✅ Via DbContext | ❌ You manage `DbConnection` |
 | **Migrations** | ✅ EF Migrations | ❌ Not applicable |
 
@@ -164,6 +164,7 @@ public async Task<IActionResult> GetProducts([FromQuery] FlexQueryParameters p)
 public async Task<IActionResult> GetSalesReport([FromQuery] FlexQueryParameters p)
 {
     await using var conn = new SqlConnection(_connectionString);
+    await conn.OpenAsync();
     return Ok(await conn.FlexQueryAsync<SalesRow>(p, ConfigureOptions));
 }
 

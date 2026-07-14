@@ -292,7 +292,7 @@ The “manual LINQ” baseline represents:
 Example:
 
 ```csharp
-_context.Customers
+_context.Users
     .Where(u => u.Status == "active")
 ```
 

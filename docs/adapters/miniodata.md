@@ -16,11 +16,11 @@ Many enterprise applications have existing clients that send OData-style queries
 
 - You are migrating from Microsoft.AspNetCore.OData or similar OData libraries
 - You have existing clients that send `$filter`, `$orderby`, `$top`, `$skip` parameters
-- You want to accept OData syntax on the same endpoint that handles JSON and FQL queries
+- You want to accept OData syntax on the same endpoint that handles JSON and JQL queries
 
 ### When NOT to Use It
 
-- You are building a new API from scratch — use FlexQuery's native JSON or FQL syntax instead
+- You are building a new API from scratch — use FlexQuery's native JSON or JQL syntax instead
 - You need full OData compliance (metadata, batch, delta, etc.) — use the official OData library
 - Your clients can be updated to use FlexQuery's native formats
 
@@ -35,12 +35,12 @@ dotnet add package FlexQuery.NET.Parsers.MiniOData
 ```csharp
 using FlexQuery.NET.Parsers.MiniOData;
 
-MiniOData.Register();
+builder.Services.AddFlexQueryMiniOData();
 ```
 
-This registers the `MiniODataQueryParser` with the `QueryOptionsParser` and enables the MiniOData syntax. Must be called **once** at startup.
+This registers the `MiniODataQueryParser` with the `QueryOptionsParser` and enables the `MiniODataFeature` flag in the DI container.
 
-**Important:** If the MiniOData assembly is loaded, the parser is also auto-registered via reflection in the `QueryOptionsParser` static constructor. Explicit registration via `MiniOData.Register()` is recommended for clarity.
+**Important:** If the MiniOData assembly is loaded, the parser is also auto-registered via reflection in the `QueryOptionsParser` static constructor. Explicit registration via `AddFlexQueryMiniOData()` is recommended for clarity and to enable the feature flag.
 
 ## Supported Operators
 
@@ -103,21 +103,17 @@ You do **not** need to explicitly tell FlexQuery to use the MiniOData parser. Th
 1. **`$` prefix on parameter keys** — If any raw query parameter starts with `$` (e.g., `$filter`, `$orderby`), the MiniOData parser claims the request
 2. **OData operator keywords** — If the filter string contains `eq`, `ne`, or `contains(`, the parser recognizes it as OData syntax
 
-This means your API can seamlessly accept JSON DSL, FQL, and OData syntax on the **same endpoint** without structural changes.
+This means your API can seamlessly accept JSON DSL, JQL, and OData syntax on the **same endpoint** without structural changes.
 
 ## Basic Example
-
-In v4, MiniOData provides a dedicated `MiniODataRequest` canonical DTO that explicitly accepts OData parameters. This separates transport from parsing.
 
 ```csharp
 [HttpGet("products")]
 public async Task<IActionResult> GetProducts(
-    [FromQuery] MiniODataRequest request)
+    [FromQuery] FlexQueryParameters parameters)
 {
-    // Convert the OData request into standard FlexQuery options
-    var options = request.ToQueryOptions();
-
-    var result = await _context.Products.FlexQueryAsync(options);
+    // Works with OData, JQL, or JSON — auto-detected!
+    var result = await _context.Products.FlexQueryAsync(parameters);
     return Ok(result);
 }
 ```
@@ -140,10 +136,9 @@ public IQueryable<Product> Get() => _context.Products;
 ```csharp
 [HttpGet]
 public async Task<IActionResult> Get(
-    [FromQuery] MiniODataRequest request)
+    [FromQuery] FlexQueryParameters parameters)
 {
-    var options = request.ToQueryOptions();
-    var result = await _context.Products.FlexQueryAsync(options, opts =>
+    var result = await _context.Products.FlexQueryAsync(parameters, opts =>
     {
         opts.AllowedFields = new HashSet<string> { "Id", "Name", "Price", "Category" };
         opts.StrictFieldValidation = true;
@@ -158,7 +153,7 @@ public async Task<IActionResult> Get(
 - Field-level security (`AllowedFields`, `BlockedFields`)
 - Consistent validation across all syntax types
 - No dependency on the full OData model builder
-- Same endpoint handles OData + JSON + FQL clients simultaneously
+- Same endpoint handles OData + JSON + JQL clients simultaneously
 
 **What you lose:**
 - `$metadata` endpoint (replace with Swagger)
@@ -179,7 +174,7 @@ public async Task<IActionResult> Get(
 
 ## Best Practices
 
-1. **Use MiniOData as a migration bridge** — For new APIs, prefer FlexQuery's native JSON or FQL syntax
+1. **Use MiniOData as a migration bridge** — For new APIs, prefer FlexQuery's native JSON or JQL syntax
 2. **Document supported features** — Clearly communicate to clients which OData features are and aren't supported
 3. **Set `AllowedFields`** — OData clients often expect full access to the entity model. Restrict field access explicitly
 4. **Test with real OData clients** — Libraries like `Simple.OData.Client` can verify compatibility

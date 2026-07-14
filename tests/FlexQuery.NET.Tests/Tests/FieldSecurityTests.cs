@@ -186,7 +186,7 @@ public class FieldSecurityTests
     [Fact]
     public void NonStrictValidation_ShouldRemoveUnauthorizedFilterFields()
     {
-        var options = QueryOptionsParser.Parse(new Dictionary<string, StringValues> { { "filter", "Name:eq:john AND SSN:eq:123" } });
+        var options = QueryOptionsParser.Parse(new Dictionary<string, StringValues> { { "filter", "Name:eq:john&SSN:eq:123" } });
         var execOptions = new QueryExecutionOptions
         {
             BlockedFields = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "SSN" },
@@ -254,7 +254,7 @@ public class FieldSecurityTests
     [Fact]
     public void NonStrictValidation_ShouldRemoveUnauthorizedBlockedFields()
     {
-        var options = QueryOptionsParser.Parse(new Dictionary<string, StringValues> { { "filter", "Name:eq:john AND SSN:eq:123" } });
+        var options = QueryOptionsParser.Parse(new Dictionary<string, StringValues> { { "filter", "Name:eq:john&SSN:eq:123" } });
         var execOptions = new QueryExecutionOptions
         {
             BlockedFields = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "SSN" },

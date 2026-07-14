@@ -274,8 +274,7 @@ A fully equivalent handwritten implementation that supports all query combinatio
 FlexQuery.NET supports optional AST and expression caching:
 
 ```csharp
-// Expression caching is enabled by default
-FlexQueryCacheSettings.MaxCacheSize = 5000;
+FlexQueryCacheSettings.EnableCache = true;
 ```
 
 With caching enabled, repeated queries with identical structure (different values) skip parsing and expression generation:
@@ -504,7 +503,7 @@ Performance is only one dimension of API design. Flexibility, maintainability, a
 For a complete picture, see also:
 
 - [Parsing Performance](./parsing-performance.md) — upfront cost breakdown
-- [Execution Benchmarks](../execution-pipeline) — InMemory query pipeline
+- [Execution Benchmarks](../execution-pipeline.md) — InMemory query pipeline
 - [Database Execution](./database-execution.md) — SQL Server performance
 - [Scalability](./scalability.md) — dataset scaling behavior
 - [Fairness Disclaimers](./fairness-disclaimers.md) — architectural context

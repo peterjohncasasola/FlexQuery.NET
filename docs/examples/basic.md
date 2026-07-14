@@ -2,29 +2,26 @@
 
 Real-world examples showing common FlexQuery.NET usage patterns.
 
-
-> **Note:** Examples using `FlexQueryAsync` require the `FlexQuery.NET.EntityFrameworkCore` or `FlexQuery.NET.Dapper` package. The core `FlexQuery.NET` package provides synchronous `FlexQuery` for advanced scenarios.
-
 ---
 
 ## Example 1: List with Filter and Paging
 
-**Scenario:** An admin panel listing customers, searchable by name, filterable by status.
+**Scenario:** An admin panel listing users, searchable by name, filterable by status.
 
 **Request:**
 ```
-GET /api/customers?filter=status:eq:active&sort=name:asc&page=1&pageSize=20
+GET /api/users?filter=status:eq:active&sort=name:asc&page=1&pageSize=20
 ```
 
 **Controller:**
 ```csharp
 [HttpGet]
-public async Task<IActionResult> GetCustomers([FromQuery] FlexQueryParameters parameters)
+public async Task<IActionResult> GetUsers([FromQuery] FlexQueryParameters parameters)
 {
-    var result = await _context.Customers.FlexQueryAsync(parameters, exec =>
+    var result = await _context.Users.FlexQueryAsync<User>(parameters, exec =>
     {
-        exec.AllowedFields  = new HashSet<string> { "id", "name", "email", "status", "createdDate" };
-        exec.SortableFields = new HashSet<string> { "name", "createdDate" };
+        exec.AllowedFields  = new HashSet<string> { "id", "name", "email", "status", "createdAt" };
+        exec.SortableFields = new HashSet<string> { "name", "createdAt" };
         exec.MaxFieldDepth  = 1;
     });
 
@@ -44,9 +41,9 @@ public async Task<IActionResult> GetCustomers([FromQuery] FlexQueryParameters pa
   "hasPreviousPage": false,
   "aggregates": null,
   "data": [
-    { "id": 1,  "name": "Alice Chen",  "email": "alice@example.com",  "status": "active", "createdDate": "2024-03-15T10:00:00Z" },
-    { "id": 2,  "name": "Bob Smith",   "email": "bob@example.com",    "status": "active", "createdDate": "2024-04-01T09:30:00Z" },
-    { "id": 5,  "name": "Carol White", "email": "carol@example.com",  "status": "active", "createdDate": "2024-04-20T14:00:00Z" }
+    { "id": 1,  "name": "Alice Chen",  "email": "alice@example.com",  "status": "active", "createdAt": "2024-03-15T10:00:00Z" },
+    { "id": 2,  "name": "Bob Smith",   "email": "bob@example.com",    "status": "active", "createdAt": "2024-04-01T09:30:00Z" },
+    { "id": 5,  "name": "Carol White", "email": "carol@example.com",  "status": "active", "createdAt": "2024-04-20T14:00:00Z" }
   ],
   "nextCursorToken": null
 }
@@ -58,13 +55,13 @@ public async Task<IActionResult> GetCustomers([FromQuery] FlexQueryParameters pa
 
 **Request:**
 ```
-GET /api/customers?filter=name:contains:ali&sort=name:asc&page=1&pageSize=10
+GET /api/users?filter=name:contains:ali&sort=name:asc&page=1&pageSize=10
 ```
 
 **SQL Generated:**
 ```sql
-SELECT Id, Name, Email, Status, CreatedDate
-FROM Customers
+SELECT Id, Name, Email, Status, CreatedAt
+FROM Users
 WHERE LOWER(Name) LIKE '%ali%'
 ORDER BY Name ASC
 OFFSET 0 ROWS FETCH NEXT 10 ROWS ONLY
@@ -98,13 +95,13 @@ OFFSET 0 ROWS FETCH NEXT 10 ROWS ONLY
 
 **Request:**
 ```
-GET /api/customers?filter=status:eq:active&select=id,name,email&page=1&pageSize=50
+GET /api/users?filter=status:eq:active&select=id,name,email&page=1&pageSize=50
 ```
 
 **SQL Generated:**
 ```sql
 SELECT Id, Name, Email
-FROM Customers
+FROM Users
 WHERE Status = 'active'
 ORDER BY Id
 OFFSET 0 ROWS FETCH NEXT 50 ROWS ONLY
@@ -135,21 +132,21 @@ OFFSET 0 ROWS FETCH NEXT 50 ROWS ONLY
 
 **Request:**
 ```
-GET /api/customers?sort=status:asc,name:asc,createdDate:desc&page=1&pageSize=20
+GET /api/users?sort=status:asc,name:asc,createdAt:desc&page=1&pageSize=20
 ```
 
 **SQL Generated:**
 ```sql
-ORDER BY Status ASC, Name ASC, CreatedDate DESC
+ORDER BY Status ASC, Name ASC, CreatedAt DESC
 ```
 
 ---
 
-## Example 5: FQL Filter
+## Example 5: JQL Filter
 
 **Request:**
 ```
-GET /api/customers?filter=((name = "alice" OR name = "bob") AND status = "active")&page=1&pageSize=10
+GET /api/users?query=(name = "alice" OR name = "bob") AND status = "active"&page=1&pageSize=10
 ```
 
 **Response:**
@@ -177,13 +174,13 @@ GET /api/customers?filter=((name = "alice" OR name = "bob") AND status = "active
 
 **Request:**
 ```
-GET /api/orders?filter=status:in:pending,processing,shipped&sort=orderDate:desc&page=1&pageSize=20
+GET /api/users?filter=status:in:active,trial,pending&sort=createdAt:desc&page=1&pageSize=20
 ```
 
 **SQL Generated:**
 ```sql
-WHERE Status IN ('pending', 'processing', 'shipped')
-ORDER BY OrderDate DESC
+WHERE Status IN ('active', 'trial', 'pending')
+ORDER BY CreatedAt DESC
 ```
 
 ---
@@ -192,13 +189,13 @@ ORDER BY OrderDate DESC
 
 **Request:**
 ```
-GET /api/orders?filter=orderDate:between:2024-01-01,2024-12-31&sort=orderDate:asc
+GET /api/orders?filter=createdAt:between:2024-01-01,2024-12-31&sort=createdAt:asc
 ```
 
 **SQL Generated:**
 ```sql
-WHERE OrderDate BETWEEN '2024-01-01' AND '2024-12-31'
-ORDER BY OrderDate ASC
+WHERE CreatedAt BETWEEN '2024-01-01' AND '2024-12-31'
+ORDER BY CreatedAt ASC
 ```
 
 ---
@@ -207,14 +204,14 @@ ORDER BY OrderDate ASC
 
 **Request:**
 ```
-GET /api/customers?filter=address:isnull&sort=name:asc
+GET /api/users?filter=deletedAt:isnull&sort=name:asc
 ```
 
-Returns only customers that have no address on file.
+Returns only users that have not been soft-deleted.
 
 **SQL Generated:**
 ```sql
-WHERE AddressId IS NULL
+WHERE DeletedAt IS NULL
 ORDER BY Name ASC
 ```
 
@@ -224,7 +221,7 @@ ORDER BY Name ASC
 
 **Request:**
 ```
-GET /api/customers?filter=status:eq:active&page=1&pageSize=20&includeCount=false
+GET /api/users?filter=status:eq:active&page=1&pageSize=20&includeCount=false
 ```
 
 **Response:**
@@ -248,7 +245,7 @@ No `COUNT(*)` query is issued — faster for high-frequency endpoints where coun
 
 **Request:**
 ```
-GET /api/customers?filter=salary:isnotnull
+GET /api/users?filter=passwordHash:isnotnull
 ```
 
 **Response (400):**
@@ -257,9 +254,9 @@ GET /api/customers?filter=salary:isnotnull
   "title": "Query validation failed",
   "errors": [
     {
-      "field": "salary",
+      "field": "passwordHash",
       "code": "FIELD_ACCESS_DENIED",
-      "message": "Field 'salary' is explicitly blocked."
+      "message": "Field 'passwordHash' is explicitly blocked."
     }
   ]
 }

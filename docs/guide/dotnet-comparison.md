@@ -28,7 +28,7 @@ When building dynamic APIs in .NET, teams often evaluate a spectrum of tools ran
 | | FlexQuery.NET | Gridify | Sieve | System.Linq.Dynamic.Core |
 | :--- | :--- | :--- | :--- | :--- |
 | **Primary focus** | Unified query pipeline | Lightweight filtering | Attribute-based filtering | Dynamic LINQ expressions |
-| **Input style** | DSL, FQL | Custom DSL | Query model | LINQ expression strings |
+| **Input style** | DSL, JQL, JSON, Indexed | Custom DSL | Query model | LINQ expression strings |
 | **Projection (`select`)** | ✅ | ❌ | ❌ | ✅ |
 | **Grouping / Aggregates**| ✅ | ❌ | ❌ | ✅ |
 | **Filtered includes** | ✅ | ❌ | ❌ | ❌ |
@@ -93,14 +93,14 @@ Because expressions are string-based and parsed blindly, applications typically 
 ### FlexQuery.NET
 
 ```http
-GET /api/customers?filter=status:eq:'active' AND salary:gte:50000&sort=name:asc&page=2&pageSize=10
+GET /api/users?filter=status:eq:active%26age:gte:18&sort=name:asc&page=2&pageSize=10
 ```
 
 ```csharp
 [HttpGet]
-public async Task<IActionResult> GetCustomers([FromQuery] FlexQueryParameters parameters)
+public async Task<IActionResult> GetUsers([FromQuery] FlexQueryParameters parameters)
 {
-    var result = await _context.Customers.FlexQueryAsync(parameters, exec =>
+    var result = await _context.Users.FlexQueryAsync(parameters, exec =>
     {
         // Enforce server policy
         exec.AllowedFields = new HashSet<string>
@@ -120,14 +120,14 @@ public async Task<IActionResult> GetCustomers([FromQuery] FlexQueryParameters pa
 ### Gridify
 
 ```http
-GET /api/customers?filter=status=active,salary>=50000&orderBy=name&page=2&pageSize=10
+GET /api/users?filter=status=active,age>=18&orderBy=name&page=2&pageSize=10
 ```
 
 ```csharp
 [HttpGet]
-public async Task<IActionResult> GetCustomers([FromQuery] GridifyQuery query)
+public async Task<IActionResult> GetUsers([FromQuery] GridifyQuery query)
 {
-    var result = await _context.Customers.GridifyAsync(query);
+    var result = await _context.Users.GridifyAsync(query);
     return Ok(result);
 }
 ```
@@ -139,16 +139,16 @@ Gridify intentionally keeps configuration lightweight and focused purely on filt
 ### Sieve
 
 ```http
-GET /api/customers?filters=Status==active,Salary>=50000&sorts=Name&page=2&pageSize=10
+GET /api/users?filters=Status==active,Age>=18&sorts=Name&page=2&pageSize=10
 ```
 
 ```csharp
-public class CustomerSieveProcessor : SieveProcessor
+public class UserSieveProcessor : SieveProcessor
 {
-    public CustomerSieveProcessor(IOptions<SieveOptions> options) : base(options) { }
+    public UserSieveProcessor(IOptions<SieveOptions> options) : base(options) { }
 }
 
-public class Customer
+public class User
 {
     [Sieve(CanFilter = true, CanSort = true)]
     public string Name { get; set; }
@@ -157,13 +157,13 @@ public class Customer
     public string Status { get; set; }
 
     [Sieve(CanFilter = true)]
-    public decimal Salary { get; set; }
+    public int Age { get; set; }
 }
 
 [HttpGet]
-public async Task<IActionResult> GetCustomers([FromQuery] SieveModel model)
+public async Task<IActionResult> GetUsers([FromQuery] SieveModel model)
 {
-    var query = _sieveProcessor.Apply(model, _context.Customers);
+    var query = _sieveProcessor.Apply(model, _context.Users);
     return Ok(await query.ToListAsync());
 }
 ```
@@ -176,13 +176,13 @@ Sieve emphasizes declarative configuration through attributes.
 
 ```csharp
 [HttpGet]
-public async Task<IActionResult> GetCustomers(
+public async Task<IActionResult> GetUsers(
     string? filter,
     string? sort,
     int page = 1,
     int pageSize = 10)
 {
-    var query = _context.Customers.AsQueryable();
+    var query = _context.Users.AsQueryable();
 
     if (!string.IsNullOrEmpty(filter))
         query = query.Where(filter);

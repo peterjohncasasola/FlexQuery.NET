@@ -10,7 +10,7 @@ When you use `FlexQueryParameters` in your controller actions, ASP.NET Core and 
 [HttpGet]
 public async Task<IActionResult> Get([FromQuery] FlexQueryParameters parameters)
 {
-    var result = await _context.Customers.FlexQueryAsync(parameters, options => 
+    var result = await _context.Users.FlexQueryAsync<User>(parameters, options => 
     {
         options.AllowedFields = ["Id", "Name", "Email"];
     });
@@ -64,7 +64,7 @@ builder.Services.AddSwaggerGen(c =>
 Once configured, the Swagger UI will show a rich interface for your dynamic endpoint:
 
 - **filter**: Shows examples for the DSL format (`field:operator:value`).
-- **query**: Explains the FQL (Jira Query Language) syntax.
+- **query**: Explains the JQL (Jira Query Language) syntax.
 - **select**: Lists available fields for dynamic projection.
 - **page/pageSize**: Clearly documented integer parameters for pagination.
 - **Default Values**: Swagger will correctly show the default page size (20) and other settings.

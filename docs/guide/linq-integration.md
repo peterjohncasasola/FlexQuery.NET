@@ -10,13 +10,13 @@ You can apply these filters using standard LINQ `.Where()` calls before passing 
 
 ### Basic Example (The Secure Way)
 
-Using `ApplyFilter`, `ApplySort`, `ApplyPaging`, and `ApplySelect` gives you fine-grained control over each pipeline stage. For a unified approach, use `FlexQueryAsync` which handles parsing, validation, and execution in a single call.
+Using `ApplyValidatedQueryOptions` is the recommended way to apply dynamic logic. It automatically runs the validation pipeline and throws a `QueryValidationException` if the client input is malicious or malformed.
 
 ```csharp
 [HttpGet]
-public async Task<IActionResult> Get([FromQuery] FlexQueryParameters parameters)
+public async Task<IActionResult> Get([FromQuery] QueryRequest request)
 {
-    var options = parameters.ToQueryOptions();
+    var options = QueryOptionsParser.Parse(request);
 
     // 1. Define your base query with fixed logic
     var baseQuery = _context.Products
@@ -24,11 +24,9 @@ public async Task<IActionResult> Get([FromQuery] FlexQueryParameters parameters)
         .Where(p => p.TenantId == _currentUser.TenantId);
 
     // 2. Layer FlexQuery on top securely
+    // This will throw if 'options' contains forbidden fields or invalid operators
     var results = await baseQuery
-        .ApplyFilter(options)
-        .ApplySort(options)
-        .ApplyPaging(options)
-        .ApplySelect(options)
+        .ApplyValidatedQueryOptions(options) 
         .ToListAsync();
 
     return Ok(results);
@@ -43,7 +41,7 @@ If you need more control over when specific parts of the query options are appli
 You can use `ApplyFilter` and `ApplySort` to control exactly where in your pipeline the dynamic logic is injected.
 
 ```csharp
-var query = _context.Customers
+var query = _context.Users
     .ApplyFilter(options)  // Only apply dynamic WHERE
     .Where(u => u.Email.EndsWith("@company.com")) // Hard-coded filter after
     .ApplySort(options);   // Only apply dynamic ORDER BY
@@ -84,17 +82,15 @@ OFFSET 10 ROWS FETCH NEXT 10 ROWS ONLY -- From dynamic Paging
 
 ## EF Core: Filtered Includes
 
-If you are using **Entity Framework Core**, you can use `ApplyExpand` to apply dynamic includes with inline filters to related collections. This is useful for "Search inside Include" scenarios.
+If you are using **Entity Framework Core**, you can use `ApplyFilteredIncludes` to apply dynamic filters to related collections within an `Include` statement. This is useful for "Search inside Include" scenarios.
 
 ```csharp
-// Example Request: ?include=Orders(status:eq:"Shipped")
-var parameters = new FlexQueryParameters { Include = @"Orders(status:eq:""Shipped"")" };
-var options = parameters.ToQueryOptions();
+// Example Request: ?include=Orders(status = "Shipped") or ?include=Orders(status:eq:"Shipped")
+var options = QueryOptionsParser.Parse(Request.Query);
 
 var customers = await _context.Customers
-    .ApplyExpand(options) // Applies the filtered navigation
-    .ApplyFilter(options)
-    .ApplySort(options)
+    .ApplyFilteredIncludes(options) // Applies the filtered navigation
+    .ApplyValidatedQueryOptions(options) // Applies root filters/paging
     .ToListAsync();
 ```
 
@@ -113,19 +109,16 @@ WHERE ...
 When you use a query string like `?filter=age:gt:25&sort=createdDate:desc`, FlexQuery translates these into additional LINQ expressions.
 
 ### Example Request
-`GET /api/customers?filter=salary:gt:50000&sort=createdDate:desc`
+`GET /api/users?filter=age:gt:25&sort=createdDate:desc`
 
 If your code looks like this:
 
 ```csharp
-var query = _context.Customers
+var query = _context.Users
     .Where(u => u.IsActive); // Base condition
 
 var results = await query
-    .ApplyFilter(options)
-    .ApplySort(options)
-    .ApplyPaging(options)
-    .ApplySelect(options)
+    .ApplyValidatedQueryOptions(options)
     .ToListAsync();
 ```
 

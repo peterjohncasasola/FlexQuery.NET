@@ -2,20 +2,20 @@
 
 FlexQuery.NET provides two primary request models for handling dynamic queries from your API. While both models use the same underlying engine, they are designed for different levels of complexity and API surface area.
 
-## FlexQueryRequest (Full Feature)
+## QueryRequest (Full Feature)
 
-`FlexQueryRequest` is the comprehensive model that exposes every capability the library offers. Use this when your consumers need full control over the query pipeline.
+`QueryRequest` is the comprehensive model that exposes every capability the library offers. Use this when your consumers need full control over the query pipeline.
 
 - **Capabilities**: 
-  - `Filter`, `Sort`, `Select`, `Include`
-  - `GroupBy`, `Having`, `Aggregate`
+  - `Filter`, `Sort`, `Select`, `Includes`
+  - `GroupBy`, `Having`, `Join`
   - `Mode` (Projection control: Nested, Flat, etc.)
-  - `Expand` (Deep, filtered navigation expansion)
+  - `Query` (Full JQL support)
   - `IncludeCount`, `Distinct`
 - **When to use**: 
   - Advanced APIs requiring deep data shaping.
   - Internal administrative systems.
-  - Scenarios where aggregations and complex projections are required from the client.
+  - Scenarios where SQL-like JOINs and aggregations are required from the client.
 
 ## FlexQueryParameters (Simplified)
 
@@ -33,7 +33,7 @@ FlexQuery.NET provides two primary request models for handling dynamic queries f
 
 As a general rule:
 1. **Start with `FlexQueryParameters`**. It covers 90% of standard API filtering and paging needs.
-2. **Upgrade to `FlexQueryRequest`** only when you specifically need features like explicit Grouping, Aggregates, or complex Projection modes.
+2. **Upgrade to `QueryRequest`** only when you specifically need features like explicit Joins, Grouping, or complex Projection modes.
 
 ## Key Note
 
@@ -43,22 +43,23 @@ Both models map to the same internal `QueryOptions` engine. Using the simplified
 
 ### Simple Usage (Recommended)
 ```csharp
-using FlexQuery.NET.Models;
+using FlexQuery.NET.Parser;
 [HttpGet]
-public async Task<IActionResult> Get([FromQuery] FlexQueryParameters parameters)
+public async Task<IActionResult> Get([FromQuery] FlexQueryParameters request)
 {
-    var options = parameters.ToQueryOptions();
-    return Ok(await _context.Products.FlexQueryAsync(options));
+    var options = QueryOptionsParser.Parse(request);
+    return Ok(await _context.Products.ToQueryResultAsync(options));
 }
 ```
 
 ### Advanced Usage
 ```csharp
+using FlexQuery.NET.Parser;
 [HttpGet]
-public async Task<IActionResult> Search([FromQuery] FlexQueryParameters parameters)
+public async Task<IActionResult> Search([FromQuery] QueryRequest request)
 {
-    var options = parameters.ToQueryOptions();
-    // Allows client to specify includes, GroupBy, and Having
-    return Ok(await _context.Orders.FlexQueryAsync(options));
+    var options = QueryOptionsParser.Parse(request);
+    // Allows client to specify JOINs, GroupBy, and Having
+    return Ok(await _context.Orders.ToQueryResultAsync(options));
 }
 ```

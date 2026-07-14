@@ -39,8 +39,8 @@ Use sorting any time the client should control the order of results — lists, t
 ### Single Field
 
 ```
-GET /api/customers?sort=name:asc
-GET /api/customers?sort=createdDate:desc
+GET /api/users?sort=name:asc
+GET /api/users?sort=createdAt:desc
 ```
 
 ### Multiple Fields
@@ -48,7 +48,7 @@ GET /api/customers?sort=createdDate:desc
 Fields are applied in order (first is primary, subsequent are `ThenBy`):
 
 ```
-GET /api/customers?sort=status:asc,name:asc,createdDate:desc
+GET /api/users?sort=status:asc,name:asc,createdAt:desc
 ```
 
 SQL:
@@ -61,7 +61,7 @@ ORDER BY Status ASC, Name ASC, CreatedAt DESC
 Omitting the direction defaults to ascending:
 
 ```
-GET /api/customers?sort=name
+GET /api/users?sort=name
 ```
 
 ### Aggregate Sort
@@ -69,11 +69,11 @@ GET /api/customers?sort=name
 Sort by a computed aggregate over a related collection:
 
 ```
-GET /api/customers?sort=orders.count():desc
-GET /api/customers?sort=orders.sum(total):desc
-GET /api/customers?sort=orders.avg(total):asc
-GET /api/customers?sort=orders.max(total):desc
-GET /api/customers?sort=orders.min(total):asc
+GET /api/users?sort=orders.count():desc
+GET /api/users?sort=orders.sum(amount):desc
+GET /api/users?sort=orders.avg(amount):asc
+GET /api/users?sort=orders.max(amount):desc
+GET /api/users?sort=orders.min(amount):asc
 ```
 
 ---
@@ -84,7 +84,7 @@ GET /api/customers?sort=orders.min(total):asc
 
 ```csharp
 var options = parameters.ToQueryOptions();
-var query = _context.Customers.AsQueryable();
+var query = _context.Users.AsQueryable();
 var sorted = query.ApplySort(options);
 var data = await sorted.ToListAsync();
 ```
@@ -96,9 +96,9 @@ var execOptions = new QueryExecutionOptions
 {
     SortableFields = new HashSet<string> { "name", "createdAt", "age" }
 };
-options.ValidateOrThrow<Customer>(execOptions);
+options.ValidateOrThrow<User>(execOptions);
 
-var query = _context.Customers.AsQueryable();
+var query = _context.Users.AsQueryable();
 var sorted = query.ApplySort(options);
 ```
 
@@ -115,7 +115,7 @@ var options = new QueryOptions
     }
 };
 
-var query = _context.Customers.AsQueryable();
+var query = _context.Users.AsQueryable();
 var sorted = query.ApplySort(options);
 ```
 
@@ -125,7 +125,7 @@ var sorted = query.ApplySort(options);
 
 **Request:**
 ```
-GET /api/customers?sort=createdDate:desc&page=1&pageSize=3
+GET /api/users?sort=createdAt:desc&page=1&pageSize=3
 ```
 
 **Response:**
@@ -140,9 +140,9 @@ GET /api/customers?sort=createdDate:desc&page=1&pageSize=3
   "hasPreviousPage": false,
   "aggregates": null,
   "data": [
-    { "id": 10, "name": "Zara Khan",   "createdDate": "2025-11-20T09:00:00Z" },
-    { "id": 9,  "name": "Yuki Tanaka", "createdDate": "2025-10-15T14:30:00Z" },
-    { "id": 8,  "name": "Xan Torres",  "createdDate": "2025-09-01T08:00:00Z" }
+    { "id": 10, "name": "Zara Khan",   "createdAt": "2025-11-20T09:00:00Z" },
+    { "id": 9,  "name": "Yuki Tanaka", "createdAt": "2025-10-15T14:30:00Z" },
+    { "id": 8,  "name": "Xan Torres",  "createdAt": "2025-09-01T08:00:00Z" }
   ],
   "nextCursorToken": null
 }
@@ -156,26 +156,26 @@ GET /api/customers?sort=createdDate:desc&page=1&pageSize=3
 
 ```
 # WRONG — cannot sort by a collection property
-GET /api/customers?sort=orders:desc
+GET /api/users?sort=orders:desc
 ```
 
 Use aggregate sort instead:
 
 ```
 # CORRECT
-GET /api/customers?sort=orders.count():desc
+GET /api/users?sort=orders.count():desc
 ```
 
 ### ❌ Unrestricted sort fields on public API
 
 ```csharp
 // WRONG — client could sort by passwordHash or internal fields
-var result = await _context.Customers.FlexQueryAsync(parameters);
+var result = await _context.Users.FlexQueryAsync<User>(parameters);
 ```
 
 ```csharp
 // CORRECT
-var result = await _context.Customers.FlexQueryAsync(parameters, exec =>
+var result = await _context.Users.FlexQueryAsync<User>(parameters, exec =>
 {
     exec.SortableFields = new HashSet<string> { "name", "email", "createdAt" };
 });

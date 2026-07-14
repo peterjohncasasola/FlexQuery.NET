@@ -23,7 +23,7 @@ Works with Entity Framework Core, Dapper, and other FlexQuery.NET providers.
 - **No OData Dependency** — Get powerful querying without OData's complexity and tight coupling
 - **100% Server-Side** — All operations translate to SQL via expression trees — zero client evaluation
 - **Security First** — Declare allowed/blocked fields per-endpoint with strict validation
-- **Multi-Format** — Auto-detects DSL, JSON, FQL, and OData query syntax on the same endpoint
+- **Multi-Format** — Auto-detects DSL, JSON, JQL, and OData query syntax on the same endpoint
 - **Multiple Data Providers** — Works with EF Core, Dapper, or any IQueryable source
 
 ## Package Ecosystem
@@ -41,9 +41,8 @@ graph TD
     Dapper --> Kendo
     AspNet --> AgGrid
     AspNet --> Kendo
-    Core --> Fql["FlexQuery.NET.Parsers.Fql"]
+    Core --> Jql["FlexQuery.NET.Parsers.Jql"]
     Core --> OData["FlexQuery.NET.Parsers.MiniOData"]
-    AspNet --> OpenApi["FlexQuery.NET.OpenApi"]
 ```
 
 | Package | Purpose |
@@ -55,15 +54,14 @@ graph TD
 | [FlexQuery.NET.Diagnostics](https://www.nuget.org/packages/FlexQuery.NET.Diagnostics) | Execution diagnostics, timing, and observability |
 | [FlexQuery.NET.Adapters.AgGrid](https://www.nuget.org/packages/FlexQuery.NET.Adapters.AgGrid) | AG Grid Server-Side Row Model (SSRM) request/response adapter |
 | [FlexQuery.NET.Adapters.Kendo](https://www.nuget.org/packages/FlexQuery.NET.Adapters.Kendo) | Kendo UI DataSource request adapter |
-| [FlexQuery.NET.Parsers.Fql](https://www.nuget.org/packages/FlexQuery.NET.Parsers.Fql) | FQL (FlexQuery Language) syntax parser |
+| [FlexQuery.NET.Parsers.Jql](https://www.nuget.org/packages/FlexQuery.NET.Parsers.Jql) | JQL (Jira Query Language) syntax parser |
 | [FlexQuery.NET.Parsers.MiniOData](https://www.nuget.org/packages/FlexQuery.NET.Parsers.MiniOData) | Lightweight OData-compatible syntax parser |
-| [FlexQuery.NET.OpenApi](https://www.nuget.org/packages/FlexQuery.NET.OpenApi) | OpenAPI/Swagger documentation and examples for FlexQuery endpoints |
 
 ## Supported Query Formats
 
 ```http
 GET /api/users?filter=age:gte:18&sort=name:asc&page=1&pageSize=20     # DSL (default)
-GET /api/users?filter=Age >= 18 AND Status = 'Active'                  # FQL
+GET /api/users?filter=Age >= 18 AND Status = 'Active'                  # JQL
 GET /api/users?$filter=Age ge 18 and Status eq 'Active'               # OData
 ```
 

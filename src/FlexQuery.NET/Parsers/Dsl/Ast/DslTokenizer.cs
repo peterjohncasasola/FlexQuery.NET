@@ -36,15 +36,6 @@ internal sealed class DslTokenizer
                 continue;
             }
 
-            if (StartsWithLogicalKeyword(_position, "AND") || StartsWithLogicalKeyword(_position, "OR"))
-            {
-                var keyword = StartsWithLogicalKeyword(_position, "AND") ? "AND" : "OR";
-                tokens.Add(new DslToken(DslTokenKind.Identifier, keyword, _position));
-                _position += keyword.Length;
-                _colonCount = 0;
-                continue;
-            }
-
             var start = _position;
             switch (current)
             {
@@ -57,6 +48,21 @@ internal sealed class DslTokenizer
                         _valueMode = true;
                     }
                     break;
+                case '&':
+                    tokens.Add(new DslToken(DslTokenKind.And, "&", start));
+                    _position++;
+                    _colonCount = 0;
+                    break;
+                case '|':
+                    tokens.Add(new DslToken(DslTokenKind.Or, "|", start));
+                    _position++;
+                    _colonCount = 0;
+                    break;
+                case '!':
+                    tokens.Add(new DslToken(DslTokenKind.Not, "!", start));
+                    _position++;
+                    _colonCount = 0;
+                    break;
                 case '(':
                     tokens.Add(new DslToken(DslTokenKind.OpenParen, "(", start));
                     _position++;
@@ -64,11 +70,6 @@ internal sealed class DslTokenizer
                     break;
                 case ')':
                     tokens.Add(new DslToken(DslTokenKind.CloseParen, ")", start));
-                    _position++;
-                    _colonCount = 0;
-                    break;
-                case '!':
-                    tokens.Add(new DslToken(DslTokenKind.Not, "!", start));
                     _position++;
                     _colonCount = 0;
                     break;
@@ -84,21 +85,6 @@ internal sealed class DslTokenizer
 
         tokens.Add(new DslToken(DslTokenKind.End, string.Empty, _position));
         return tokens;
-    }
-
-    private bool StartsWithLogicalKeyword(int position, string keyword)
-    {
-        if (position + keyword.Length > _source.Length)
-            return false;
-
-        if (!_source[position..(position + keyword.Length)].Equals(keyword, StringComparison.OrdinalIgnoreCase))
-            return false;
-
-        var after = position + keyword.Length;
-        if (after < _source.Length && char.IsLetter(_source[after]))
-            return false;
-
-        return true;
     }
 
     private DslToken ReadValue()
@@ -125,7 +111,7 @@ internal sealed class DslTokenizer
         while (_position < _source.Length)
         {
             current = _source[_position];
-            if (current is ')' or '(' || StartsWithLogicalKeyword(_position, "AND") || StartsWithLogicalKeyword(_position, "OR"))
+            if (current is '&' or '|' or ')' or '(')
             {
                 break;
             }
@@ -155,7 +141,7 @@ internal sealed class DslTokenizer
         while (_position < _source.Length)
         {
             var current = _source[_position];
-            if (current is ')' or '(' || StartsWithLogicalKeyword(_position, "AND") || StartsWithLogicalKeyword(_position, "OR"))
+            if (current is '&' or '|' or ')' or '(')
             {
                 break;
             }
@@ -188,7 +174,7 @@ internal sealed class DslTokenizer
         while (_position < _source.Length)
         {
             var current = _source[_position];
-            if (current is ':' or '(' or ')' || char.IsWhiteSpace(current) || StartsWithLogicalKeyword(_position, "AND") || StartsWithLogicalKeyword(_position, "OR"))
+            if (current is ':' or '&' or '|' or '(' or ')' || char.IsWhiteSpace(current))
                 break;
 
             if (current == '\\')
@@ -213,7 +199,7 @@ internal sealed class DslTokenizer
         while (_position < _source.Length)
         {
             var current = _source[_position];
-            if (current is ':' or '(' or ')' || char.IsWhiteSpace(current) || StartsWithLogicalKeyword(_position, "AND") || StartsWithLogicalKeyword(_position, "OR"))
+            if (current is ':' or '&' or '|' or '(' or ')' || char.IsWhiteSpace(current))
                 break;
 
             if (current == '\\' && _position + 1 < _source.Length)

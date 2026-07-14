@@ -48,7 +48,7 @@ public async Task<IActionResult> GetCustomers([FromQuery] FlexQueryParameters pa
 ### The Client Request
 
 ```http
-GET /api/customers?filter=displayName:contains:'John' AND company:eq:AcmeCorp&sort=displayName:asc
+GET /api/customers?filter=displayName:contains:John%26company:eq:AcmeCorp&sort=displayName:asc
 ```
 
 ### How it Works (Under the Hood)

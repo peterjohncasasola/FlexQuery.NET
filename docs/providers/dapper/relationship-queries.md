@@ -33,7 +33,7 @@ Multiple includes generate multiple JOINs:
 
 ## Filtered Includes → LEFT JOIN + WHERE-like condition
 
-Filtered includes translate the inline FQL filter into a WHERE condition applied inside the JOIN predicate (or as an additional WHERE clause scoped to that join):
+Filtered includes translate the inline JQL filter into a WHERE condition applied inside the JOIN predicate (or as an additional WHERE clause scoped to that join):
 
 ```
 ?include=Orders(Status = 'Active' AND Total > 100)
@@ -119,8 +119,10 @@ When using standard (non-flat) includes, Dapper returns dynamic rows which are t
 
 ```csharp
 // This is handled automatically by FlexQueryAsync
-// The SQL dialect is auto-detected from the DbConnection type.
-var result = await connection.FlexQueryAsync<User>(parameters);
+var result = await connection.FlexQueryAsync<User>(parameters, opts =>
+{
+    opts.Dialect = new SqlServerDialect();
+});
 
 // result.Data[0].Orders is populated from the JOIN result
 ```

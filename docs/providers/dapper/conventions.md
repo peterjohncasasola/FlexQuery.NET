@@ -24,16 +24,16 @@ Dapper, unlike EF Core, has no built-in model metadata. It doesn't know your tab
 Entity Type (e.g., Customer)
      │
      ▼
-IEntityConvention.Apply()      -> Resolves table name, column mappings
+IEntityConvention.Apply()      → Resolves table name, column mappings
      │
      ▼
-IRelationshipConvention.Apply() -> Discovers navigation properties, JOIN metadata
+IRelationshipConvention.Apply() → Discovers navigation properties, JOIN metadata
      │      │
-     │      ├── IPluralizer           -> "Customer" -> "Customers" (table name)
-     │      └── IForeignKeyConvention -> Infers FK column: "CustomerId"
+     │      ├── IPluralizer           → "Customer" → "Customers" (table name)
+     │      └── IForeignKeyConvention → Infers FK column: "CustomerId"
      │
      ▼
-EntityMapping                   -> Complete mapping ready for SQL generation
+EntityMapping                   → Complete mapping ready for SQL generation
 ```
 
 ## Convention Interfaces
@@ -61,9 +61,9 @@ public interface IEntityConvention
 ```
 
 The `DefaultEntityConvention` maps:
-- **Table name** -> Pluralized class name (e.g., `Customer` -> `Customers`)
-- **Column names** -> Property names (1:1 by default)
-- **Primary key** -> Property named `Id` or `{TypeName}Id`, or decorated with `[Key]`
+- **Table name** → Pluralized class name (e.g., `Customer` → `Customers`)
+- **Column names** → Property names (1:1 by default)
+- **Primary key** → Property named `Id` or `{TypeName}Id`, or decorated with `[Key]`
 
 ### IPluralizer
 
@@ -76,7 +76,7 @@ public interface IPluralizer
 }
 ```
 
-The `DefaultPluralizer` handles common English pluralization rules (e.g., `Customer` -> `Customers`, `Category` -> `Categories`, `Person` -> `People`).
+The `DefaultPluralizer` handles common English pluralization rules (e.g., `Customer` → `Customers`, `Category` → `Categories`, `Person` → `People`).
 
 ### IForeignKeyConvention
 
@@ -107,8 +107,8 @@ internal interface IRelationshipConvention
 ```
 
 The `DefaultRelationshipConvention` inspects navigation properties:
-- **Single reference** (e.g., `public Customer Customer { get; set; }`) -> One-to-one or many-to-one
-- **Collection** (e.g., `public List<Order> Orders { get; set; }`) -> One-to-many
+- **Single reference** (e.g., `public Customer Customer { get; set; }`) → One-to-one or many-to-one
+- **Collection** (e.g., `public List<Order> Orders { get; set; }`) → One-to-many
 
 ## Default Convention Behavior
 
@@ -137,7 +137,7 @@ The conventions produce:
 | Entity | Table Name | Primary Key | FK Column |
 |--------|-----------|-------------|-----------|
 | `Customer` | `Customers` | `Id` | — |
-| `Order` | `Orders` | `Id` | `CustomerId` (references `Customers.Id`) |
+| `Order` | `Orders` | `Id` | `CustomerId` (→ `Customers.Id`) |
 
 ## Assembly Scanning
 
@@ -154,45 +154,13 @@ This scans for public, non-abstract classes that have:
 
 ## Fluent Builder Overrides
 
-When conventions don't match your schema, you can use the fluent API to configure entities explicitly.
-
-### Inline Configuration
-
-You can configure entities directly on the options builder:
+When conventions don't match your schema, use the fluent API:
 
 ```csharp
 opts.Entity<Customer>()
     .ToTable("tbl_customers")                          // Custom table name
     .Property(c => c.Name, "customer_name")            // Custom column name
     .HasMany<Order>(c => c.Orders, "customer_id");     // Custom FK column
-```
-
-### `IEntityTypeConfiguration<TEntity>`
-
-For larger projects, configuring all entities inline becomes messy. Dapper now provides an EF Core-style `IEntityTypeConfiguration<TEntity>` interface to encapsulate mapping logic per entity.
-
-```csharp
-public class CustomerConfiguration : IEntityTypeConfiguration<Customer>
-{
-    public void Configure(EntityTypeBuilder<Customer> builder)
-    {
-        builder.ToTable("tbl_customers")
-               .HasKey(c => c.Id);
-               
-        builder.Property(c => c.Name, "customer_name");
-        builder.HasMany<Order>(c => c.Orders, "customer_id");
-    }
-}
-```
-
-You can then apply these configurations individually or scan an entire assembly:
-
-```csharp
-// Apply individually
-opts.ApplyConfiguration(new CustomerConfiguration());
-
-// Or scan an assembly to apply all IEntityTypeConfiguration classes automatically
-opts.ApplyConfigurationsFromAssembly(typeof(CustomerConfiguration).Assembly);
 ```
 
 Explicit configuration always takes precedence over conventions.

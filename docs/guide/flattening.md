@@ -42,7 +42,7 @@ The projection mode controls the **shape** of the JSON response:
 ### Default (Nested)
 
 ```
-GET /api/customers?select=id,name,address.city
+GET /api/users?select=id,name,profile.bio,address.city
 ```
 
 **Response:**
@@ -62,7 +62,7 @@ GET /api/customers?select=id,name,address.city
 ### Flat Mode
 
 ```
-GET /api/customers?select=id,name,address.city&mode=flat
+GET /api/users?select=id,name,profile.bio,address.city&mode=flat
 ```
 
 **Response:**
@@ -70,15 +70,15 @@ GET /api/customers?select=id,name,address.city&mode=flat
 {
   "id": 1,
   "name": "Alice",
-  "address.city": "Singapore",
-  "address.city": "London"
+  "profile.bio": "Software Engineer",
+  "address.city": "Singapore"
 }
 ```
 
 ### FlatMixed Mode
 
 ```
-GET /api/customers?select=id,name,address.city,orders&mode=flat-mixed
+GET /api/users?select=id,name,profile.bio,orders&mode=flat-mixed
 ```
 
 **Response:**
@@ -86,7 +86,7 @@ GET /api/customers?select=id,name,address.city,orders&mode=flat-mixed
 {
   "id": 1,
   "name": "Alice",
-  "address_city": "Singapore",
+  "profile_bio": "Software Engineer",
   "orders": [
     { "id": 101, "status": "shipped" }
   ]
@@ -106,7 +106,7 @@ var options = new QueryOptions
     ProjectionMode = ProjectionMode.Flat
 };
 
-var query = _context.Customers.AsQueryable();
+var query = _context.Users.AsQueryable();
 var projected = query.ApplySelect(options);
 var data = await projected.ToListAsync();
 ```
@@ -116,7 +116,7 @@ var data = await projected.ToListAsync();
 The `mode` query parameter is automatically parsed:
 
 ```
-GET /api/customers?select=id,name&mode=flat
+GET /api/users?select=id,name&mode=flat
 ```
 
 Valid values: `Nested`, `Flat`, `FlatMixed` (case-insensitive when parsing from URL).
@@ -128,7 +128,7 @@ Valid values: `Nested`, `Flat`, `FlatMixed` (case-insensitive when parsing from 
 ### ❌ Using flat mode with deeply nested paths
 
 ```
-GET /api/customers?select=a.b.c.d.e&mode=flat
+GET /api/users?select=a.b.c.d.e&mode=flat
 ```
 
 The key `a.b.c.d.e` becomes the flat key — hard to consume.

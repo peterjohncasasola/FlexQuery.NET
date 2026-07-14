@@ -24,7 +24,7 @@ public async Task<IActionResult> GetGridData([FromBody] KendoRequest request)
 {
     var options = request.ToQueryOptions();
 
-    var result = await _context.Products.FlexQueryAsync(options, opts =>
+    var result = await _context.Products.FlexQueryAsync<Product>(options, opts =>
     {
         opts.AllowedFields = new HashSet<string> { "Id", "Name", "Price", "Category" };
     });

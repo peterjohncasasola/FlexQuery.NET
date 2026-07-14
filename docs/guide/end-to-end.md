@@ -18,10 +18,10 @@ When introducing a new query engine to a team, developers often wonder "Where is
 
 A client wants to find all **Active** products in the **Electronics** category with a price greater than **$500**, sorted by the latest arrival. 
 
-Notice how the `AND` keyword combines multiple filter conditions without requiring URL encoding.
+Notice how the `&` symbol combining filters is URL-encoded as `%26` so it doesn't collide with the standard HTTP query parameter separator.
 
 ```http
-GET /api/products?filter=Status:eq:Active AND Category:eq:Electronics AND Price:gt:500&sort=CreatedAt:desc
+GET /api/products?filter=Status:eq:Active%26Category:eq:Electronics%26Price:gt:500&sort=CreatedAt:desc
 ```
 
 ---

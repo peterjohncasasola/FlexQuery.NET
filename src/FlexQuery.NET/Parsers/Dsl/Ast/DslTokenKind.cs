@@ -7,9 +7,9 @@ internal enum DslTokenKind
     Identifier,
     /// <summary>The ':' separator between condition parts.</summary>
     Colon,
-    /// <summary>The 'AND' logical AND operator.</summary>
+    /// <summary>The '&amp;' logical AND operator.</summary>
     And,
-    /// <summary>The 'OR' logical OR operator.</summary>
+    /// <summary>The '|' logical OR operator.</summary>
     Or,
     /// <summary>The unary '!' NOT operator.</summary>
     Not,

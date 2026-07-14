@@ -155,7 +155,7 @@ Or you can use `ToQueryString()` in the manual pipeline to inspect the SQL witho
 
 ```csharp
 var options = parameters.ToQueryOptions();
-var query = _context.Customers.AsQueryable();
+var query = _context.Users.AsQueryable();
 
 query = query.ApplyFilter(options);
 query = query.ApplySort(options);
@@ -180,13 +180,13 @@ ORDER BY [u].[Name]
 
 ### "My filter isn't working"
 
-1. Check `options.Filter` in the parsed AST — is it null? The format might not have been recognized, or a syntax issue occurred (e.g., using `AND`/`OR` keywords instead of the old `&`/`|` symbols).
+1. Check `options.Filter` in the parsed AST — is it null? The format might not have been recognized, or a URL decoding issue occurred (e.g., using `&` instead of `%26` for multiple filters).
 2. Check the operator — typos in operator strings are silently ignored during parsing but caught during validation. 
 
 ### "Results are empty but shouldn't be"
 
 1. Verify case sensitivity: `options.CaseInsensitive` is `true` by default, but if you turned it off, "Alice" and "alice" will not match.
-2. Check if a server-side pre-filter is excluding results before FlexQuery runs (e.g., `_context.Customers.Where(c => c.CustomerId == 1).FlexQueryAsync(...)`).
+2. Check if a server-side pre-filter is excluding results before FlexQuery runs (e.g., `_context.Users.Where(u => u.TenantId == 1).FlexQueryAsync(...)`).
 3. Use `query.ToQueryString()` or SQL Profiler to see the exact SQL generated.
 
 ### "Validation is rejecting a valid field"

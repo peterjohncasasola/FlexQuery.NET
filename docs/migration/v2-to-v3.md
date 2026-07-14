@@ -1,68 +1,68 @@
 # Migration Guide: v2 → v3
 
-FlexQuery.NET v3.0.0 introduces a **modular, provider-agnostic architecture** along with new first-party integrations. The query engine is decoupled from Entity Framework, and FQL parsing has been extracted into an install-on-demand package.
+FlexQuery.NET v3.0.0 introduces a **modular, provider-agnostic architecture** along with new first-party integrations. The query engine is decoupled from Entity Framework, and JQL parsing has been extracted into an install-on-demand package.
 
 ---
 
 ## 🔥 Breaking Changes Summary
 
-### 1. FQL Parser Extracted to Separate Package
+### 1. JQL Parser Extracted to Separate Package
 
-The FQL parser has been **removed from FlexQuery.NET Core** and is now available as `FlexQuery.NET.Parsers.FQL`.
+The JQL parser has been **removed from FlexQuery.NET Core** and is now available as `FlexQuery.NET.Parsers.Jql`.
 
 | Before (v2.x) | After (v3) |
 |:---|:---|
-| FQL parser bundled in `FlexQuery.NET` | Must install `dotnet add package FlexQuery.NET.Parsers.FQL` |
-| `QuerySyntax.FQL` enum value existed | Enum value removed — FQL is an external parser |
-| `FilteredIncludeParser` fell back to FQL for inline filters | Inline include filters require **DSL syntax** only (`field:op:value`) |
+| JQL parser bundled in `FlexQuery.NET` | Must install `dotnet add package FlexQuery.NET.Parsers.Jql` |
+| `QuerySyntax.Jql` enum value existed | Enum value removed — JQL is an external parser |
+| `FilteredIncludeParser` fell back to JQL for inline filters | Inline include filters require **DSL syntax** only (`field:op:value`) |
 
-#### FQL Migration Steps
+#### JQL Migration Steps
 
 ```bash
-# Install the FQL package if you use query=... parameters
-dotnet add package FlexQuery.NET.Parsers.FQL
+# Install the JQL package if you use query=... parameters
+dotnet add package FlexQuery.NET.Parsers.Jql
 ```
 
 **If you used `query=` parameter in v2:**
 
 ```csharp
-// Before (v2 — FQL bundled in Core)
+// Before (v2 — JQL bundled in Core)
 var options = QueryOptionsParser.Parse(new Dictionary<string, string>
 {
     ["query"] = "status = 'Active' AND amount > 1000"
 });
 
-// After (v3 — use FQLParser directly)
-using FlexQuery.NET.Parsers.FQL;
+// After (v3 — use JqlParser directly)
+using FlexQuery.NET.Parsers.Jql;
 
-var filter = new FQLParser().Parse("status = 'Active' AND amount > 1000");
+var filter = new JqlParser().Parse("status = 'Active' AND amount > 1000");
 var options = new QueryOptions { Filter = filter };
 ```
 
 **If you used inline include filters:**
 
 ```csharp
-// Before (v2 — FQL syntax was accepted)
+// Before (v2 — JQL syntax was accepted)
 var result = FilteredIncludeParser.Parse("orders(Status = 'Cancelled')");
 
 // After (v3 — DSL syntax required)
 var result = FilteredIncludeParser.Parse("orders(Status:eq:Cancelled)");
 ```
 
-### 2. FQL `Parse(string query)` → `Parse(string filter)`
+### 2. JQL `Parse(string query)` → `Parse(string filter)`
 
-The parameter name in `FQLParser.Parse()` and `IQueryParser.Parse()` has been renamed from `query` to `filter` to align with DSL and MiniOData conventions.
+The parameter name in `JqlParser.Parse()` and `IQueryParser.Parse()` has been renamed from `query` to `filter` to align with DSL and MiniOData conventions.
 
 ```csharp
 // Before
-new FQLParser().Parse(query: "status = 'Open'");
+new JqlParser().Parse(query: "status = 'Open'");
 
 // After
-new FQLParser().Parse(filter: "status = 'Open'");
+new JqlParser().Parse(filter: "status = 'Open'");
 ```
 
 > [!NOTE]
-> Callers using positional arguments (e.g., `new FQLParser().Parse("status = 'Open'")`) do not need any change.
+> Callers using positional arguments (e.g., `new JqlParser().Parse("status = 'Open'")`) do not need any change.
 
 ### 3. Package Rename: EFCore → EntityFrameworkCore
 
@@ -91,7 +91,7 @@ using FlexQuery.NET.EntityFrameworkCore;
 |:---|:---|:---|
 | `QueryRequest` | `FlexQueryParameters` | Deprecated in v2, removed in v3 |
 | `FlexQueryRequest` | `FlexQueryParameters` | Deprecated in v2, removed in v3 |
-| `QuerySyntax.FQL` | N/A | FQL is now an external parser |
+| `QuerySyntax.Jql` | N/A | JQL is now an external parser |
 | `ApplyValidatedQueryOptions` | `FlexQueryAsync` | Deprecated in v2 |
 | `ToQueryResultAsync` | `FlexQueryAsync` | Deprecated in v2 |
 | `ToProjectedQueryResultAsync` | `FlexQueryAsync` | Deprecated in v2 |
@@ -112,7 +112,7 @@ using FlexQuery.NET.EntityFrameworkCore;
 |:---|:---|
 | `FlexQuery.NET.Dapper` | Dapper and raw SQL provider with dialect support (SQL Server, SQLite, MySQL, PostgreSQL) |
 | `FlexQuery.NET.Parsers.MiniOData` | OData-style `$filter`, `$orderby`, `$select`, `$top`/`$skip` parser |
-| `FlexQuery.NET.Parsers.FQL` | Extracted FQL parser (install-on-demand) |
+| `FlexQuery.NET.Parsers.Jql` | Extracted JQL parser (install-on-demand) |
 | `FlexQuery.NET.Adapters.AgGrid` | AG Grid Enterprise Server-Side Row Model adapter |
 | `FlexQuery.NET.Adapters.Kendo` | Kendo UI DataSource adapter |
 
@@ -277,7 +277,7 @@ FlexQuery.NET (Core)
 ├── FlexQuery.NET.EntityFrameworkCore (renamed from FlexQuery.NET.EFCore)
 ├── FlexQuery.NET.AspNetCore      (unchanged)
 ├── FlexQuery.NET.Dapper          (new)
-├── FlexQuery.NET.Parsers.FQL     (extracted from Core)
+├── FlexQuery.NET.Parsers.Jql     (extracted from Core)
 ├── FlexQuery.NET.Parsers.MiniOData (new)
 ├── FlexQuery.NET.Adapters.AgGrid (new)
 └── FlexQuery.NET.Adapters.Kendo  (new)
@@ -301,7 +301,7 @@ dotnet add package FlexQuery.NET.AspNetCore
 
 # Optional: Install new packages as needed
 dotnet add package FlexQuery.NET.Dapper
-dotnet add package FlexQuery.NET.Parsers.FQL
+dotnet add package FlexQuery.NET.Parsers.Jql
 dotnet add package FlexQuery.NET.Parsers.MiniOData
 dotnet add package FlexQuery.NET.Adapters.AgGrid
 dotnet add package FlexQuery.NET.Adapters.Kendo
@@ -337,20 +337,20 @@ var projected = await query.ToProjectedQueryResultAsync(options);
 var result = await _context.Users.FlexQueryAsync<User>(parameters, exec => { ... });
 ```
 
-### Step 4: Install FQL Parser If Needed
+### Step 4: Install JQL Parser If Needed
 
-If your application uses `query=` parameters or FQL syntax, install the separate package:
+If your application uses `query=` parameters or JQL syntax, install the separate package:
 
 ```bash
-dotnet add package FlexQuery.NET.Parsers.FQL
+dotnet add package FlexQuery.NET.Parsers.Jql
 ```
 
 ### Step 5: Update Inline Include Filters
 
-If you use filtered includes with FQL-style syntax, update to DSL:
+If you use filtered includes with JQL-style syntax, update to DSL:
 
 ```csharp
-// Before (v2 — FQL fallback)
+// Before (v2 — JQL fallback)
 "orders(Status = 'Cancelled')"
 
 // After (v3 — DSL only)
@@ -361,15 +361,15 @@ If you use filtered includes with FQL-style syntax, update to DSL:
 
 ## 🛠️ Common Migration Pitfalls
 
-### ❌ Missing FQL Package
+### ❌ Missing JQL Package
 
 ```
-// ERROR: The type or namespace 'FQLParser' does not exist
+// ERROR: The type or namespace 'JqlParser' does not exist
 ```
 
-Install the package: `dotnet add package FlexQuery.NET.Parsers.FQL`
+Install the package: `dotnet add package FlexQuery.NET.Parsers.Jql`
 
-### ❌ Inline Include Filter Still Using FQL Syntax
+### ❌ Inline Include Filter Still Using JQL Syntax
 
 ```
 FilteredIncludeParser.Parse("orders(Status = 'Cancelled')")  // Returns null in v3

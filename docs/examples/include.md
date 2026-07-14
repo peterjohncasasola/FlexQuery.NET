@@ -42,8 +42,8 @@ Only customers named "Connelly", showing only their cancelled orders with a spec
 ### Request
 ```http
 GET /api/customers
-  ?filter=name CONTAINS "Connelly"
-  &include=orders(status = "cancelled").items(sku = "Tasty Metal Pants")
+  ?query=name CONTAINS "Connelly"
+  &include=orders(status = "cancelled").orderItems(productName = "Tasty Metal Pants")
 ```
 
 ---
@@ -82,12 +82,12 @@ GET /api/customers
 
 Customers who have shipped orders containing expensive items — shape the response to show only those child records.
 
-> 💡 The `filter` filters root entities (customers). The `include` pipeline independently shapes which child records appear. 
+> 💡 The `query` filters root entities (customers). The `include` pipeline independently shapes which child records appear. 
 
 ### Request
 ```http
 GET /api/customers
-  ?filter=orders.any(status = "Shipped" AND items.any(total > 100))
-  &include=orders(status = "Shipped").items(total > 100)
-  &select=id,name,orders.id,orders.total,orders.items.sku,orders.items.total
+  ?query=orders.any(status = "Shipped" AND orderItems.any(price > 100))
+  &include=orders(status = "Shipped").orderItems(price > 100)
+  &select=id,name,orders.id,orders.total,orders.orderItems.productName,orders.orderItems.price
 ```

@@ -2,136 +2,175 @@
 
 ## Overview
 
-FlexQuery.NET supports multiple query syntax dialects, allowing clients to express filters, sorts, and projections in the format most natural to their stack. All syntaxes are parsed into a canonical `QueryOptions` AST so downstream processing is format-independent.
+FlexQuery supports multiple query syntax dialects, allowing clients to express filters, sorts, and projections in the format most natural to their stack. Whether your frontend team prefers JSON payloads, your legacy clients speak OData, or your internal tools use a compact DSL — FlexQuery handles all of them through a unified parser pipeline.
 
 ### What It Is
 
-The `QuerySyntax` enum and parser registration system enable pluggable parsing. The active syntax is configured globally via `FlexQueryCore.Configure()` and is applied automatically when `FlexQueryParameters` is parsed via `ToQueryOptions()`.
+The `QuerySyntax` system is a pluggable parser architecture that accepts raw query input in any supported format and converts it into a canonical `QueryOptions` abstract syntax tree (AST). All downstream processing (validation, expression building, SQL generation) operates on the same `QueryOptions` regardless of the input format.
 
 ### Why It Exists
 
-Real-world APIs serve diverse clients. A React dashboard might use compact DSL strings, while a legacy enterprise client might speak OData-style `$filter` syntax. Without syntax abstraction, you would need separate endpoints or custom parsing logic for each client type.
+Real-world APIs serve diverse clients. A React dashboard might send JSON filter objects, a legacy .NET client might use OData-style `$filter` strings, and a mobile app might use a compact query language. Without syntax abstraction, you would need separate endpoints or custom parsing logic for each client type.
 
 ### When to Use It
 
 - You have clients that use different query formats
-- You are migrating from OData and need backwards compatibility
+- You are migrating from OData or another query framework and need backwards compatibility
 - You want to explicitly control which parser handles a request
 - You are building a custom parser for a proprietary format
 
 ### When NOT to Use It
 
-- If all your clients use the same format, the default DSL syntax works without any configuration
+- If all your clients use the same format, you can rely on `AutoDetect` (the default) and never think about it
 - If you are only passing pre-built `QueryOptions` objects programmatically (no string parsing needed)
-
----
 
 ## Architecture
 
 ```
-FlexQueryCore.Configure()  ← Sets global QuerySyntax
-         │
-         ▼
+HTTP Request
+     │
+     ▼
 FlexQueryParameters        ← Raw string properties (Filter, Sort, Select, etc.)
-         │
-         ▼
-   ToQueryOptions()        ← Uses the configured QuerySyntax parser
-         │
-         ▼
-     QueryOptions          ← Canonical AST used by all downstream processing
+     │
+     ▼
+QueryOptionsParser.Parse() ← Entry point
+     │
+     ├── QuerySyntax specified? ──Yes──► Use that parser directly
+     │
+     └── AutoDetect ──► Walk registered parsers
+              │
+              ├── Has indexed keys (filter[0].field)? ──► Generic/Indexed parser
+              ├── parser.CanParse() returns true?     ──► Use that parser
+              └── No match?                           ──► Fall back to last parser
+              │
+              ▼
+         QueryOptions         ← Canonical AST used by all downstream processing
 ```
 
 ### Parser Registration
 
-Syntax parsers are registered explicitly at startup. Built-in parsers are part of the Core package. Optional parsers (FQL, MiniOData) require separate packages:
+Parsers are registered in a prioritized list. New parsers registered via `RegisterParser()` are inserted at the **front** of the list, giving them first-match priority:
 
 ```csharp
-// Native DSL — built in, no registration needed (default)
-FlexQueryCore.Configure(options =>
-{
-    options.QuerySyntax = QuerySyntax.NativeDsl;
-});
+// Built-in parsers (registered by default):
+// 1. JqlQueryParser
+// 2. JsonQueryParser
+// 3. DslQueryParser
 
-// FQL — requires FlexQuery.NET.Parsers.Fql package
-Fql.Register();
-FlexQueryCore.Configure(options =>
-{
-    options.QuerySyntax = QuerySyntax.Fql;
-});
-
-// MiniOData — requires FlexQuery.NET.Parsers.MiniOData package
-MiniOData.Register();
-FlexQueryCore.Configure(options =>
-{
-    options.QuerySyntax = QuerySyntax.MiniOData;
-});
+// MiniODataQueryParser is auto-registered if the assembly is loaded
+// Custom parsers can be registered manually:
+QueryOptionsParser.RegisterParser(new MyCustomParser());
 ```
-
----
 
 ## Supported Syntax Types
 
-### NativeDsl — Colon-Separated Syntax (Default)
+### NativeDsl — Colon-Separated Syntax
 
 The most compact format. Fields, operators, and values are separated by colons:
 
 ```
-GET /api/customers?filter=City:eq:'New York' AND Status:eq:'Active'
-GET /api/customers?filter=LastName:startswith:Smi&select=Id,LastName,Email
+filter=name:eq:john
+filter=age:gt:18
+filter=status:in:active,inactive
 ```
 
 **Best for:** Internal tools, compact query strings, URL-friendly APIs.
 
-### FQL — SQL-Like Expression Strings
+### Json — Structured JSON Payloads
 
-Requires the `FlexQuery.NET.Parsers.Fql` package and `Fql.Register()` at startup. Human-readable expressions using standard operators:
+Sends complex, nested filter trees as JSON objects:
+
+```json
+{
+  "logic": "and",
+  "filters": [
+    { "field": "Age", "operator": "gt", "value": 18 },
+    { "field": "Status", "operator": "eq", "value": "Active" }
+  ]
+}
+```
+
+**Best for:** SPAs, complex multi-condition filters, programmatic query building.
+
+### Jql — JQL-like Expression Strings
+
+Human-readable expressions using standard operators:
 
 ```
-GET /api/customers?filter=Salary >= 50000 AND City = 'New York'
-GET /api/customers?filter=LastName CONTAINS 'Smi' OR Email ENDSWITH '@example.com'
+filter=Age > 18 AND Status = 'Active'
+filter=Name CONTAINS 'john' OR Email ENDSWITH '@acme.com'
 ```
 
 **Best for:** Developer tools, debugging, admin panels, human-written queries.
 
 ### MiniOData — OData Compatibility
 
-Requires the `FlexQuery.NET.Parsers.MiniOData` package and `MiniOData.Register()` at startup. Standard OData `$filter` and `$orderby` syntax:
+Standard OData `$filter` and `$orderby` syntax (requires `FlexQuery.NET.Parsers.MiniOData` package):
 
 ```
-GET /api/customers?$filter=Salary ge 50000 and City eq 'New York'
-GET /api/customers?$orderby=Name desc&$select=Id,Name,Salary&$expand=Orders
+$filter=Age gt 18 and Status eq 'Active'
+$orderby=Name desc
+$select=Id,Name,Email
+$expand=Orders
 ```
 
 **Best for:** Migrating from OData, enterprise clients that already speak OData.
 
----
+### Generic — Indexed Query Strings
+
+Array-style query parameters common in form-based UIs:
+
+```
+filter[0].field=name&filter[0].operator=eq&filter[0].value=john
+sort[0].field=age&sort[0].dir=desc
+```
+
+**Best for:** HTML forms, auto-generated query strings, framework integrations.
 
 ## Syntax Comparison Table
 
-| Feature | NativeDsl | FQL | MiniOData |
-|---------|-----------|-----|-----------|
-| **Format** | `field:op:value` | `Field OP Value` | `$filter=Field op Value` |
-| **Nested logic** | Limited | Full | Full |
-| **URL-friendly** | Very | Needs encoding | Good |
-| **Human-readable** | Medium | High | High |
-| **Package required** | Core | `FlexQuery.NET.Parsers.Fql` | `FlexQuery.NET.Parsers.MiniOData` |
-| **Registration** | None (default) | `Fql.Register()` | `MiniOData.Register()` |
+| Feature | NativeDsl | Json | Jql | MiniOData | Generic |
+|---------|-----------|------|-----|-----------|---------|
+| **Format** | `field:op:value` | JSON object | `Field OP Value` | `$filter=Field op Value` | `filter[0].field=X` |
+| **Nested logic** | Limited | ✅ Full | ✅ Full | ✅ Full | ❌ Flat only |
+| **URL-friendly** | ✅ Very | ❌ Needs body | ⚠️ Needs encoding | ✅ Good | ✅ Very |
+| **Human-readable** | ⚠️ Medium | ❌ Low | ✅ High | ✅ High | ❌ Low |
+| **Auto-detected by** | Colon separator | `{` prefix | Operator keywords | `$` key prefix | `[0]` index keys |
+| **Package required** | Core | Core | Core | MiniOData | Core |
 
----
+## Parser Selection Flow
 
-## Example: Single Endpoint with Explicit Syntax
+The `QueryOptionsParser` selects a parser in this order:
+
+1. **Explicit syntax** — If `QuerySyntax` is set to anything other than `AutoDetect`, that parser is used directly
+2. **Indexed detection** — If the raw parameters contain indexed keys like `filter[0].field`, the Generic parser handles it
+3. **CanParse probe** — Each registered parser's `CanParse()` method is called. The first one to return `true` wins
+4. **Fallback** — If no parser claims the input, the last registered parser handles it
+
+### Auto-Detection Rules
+
+| Parser | Detects When |
+|--------|-------------|
+| **MiniOData** | Any raw parameter key starts with `$`, or filter contains OData operators (`eq`, `ne`, `contains(`) |
+| **Json** | Filter string starts with `{` or `[` |
+| **Jql** | Filter contains comparison operators (`=`, `>`, `<`, `!=`, `CONTAINS`, `AND`, `OR`) |
+| **NativeDsl** | Filter contains colon-separated segments |
+| **Generic** | Raw parameters have indexed keys like `filter[0]` |
+
+## Real-World Example: Multi-Client API
+
+A single endpoint that accepts requests from different client types:
 
 ```csharp
-[HttpGet("customers")]
-public async Task<IActionResult> GetCustomers(
+[HttpGet("products")]
+public async Task<IActionResult> GetProducts(
     [FromQuery] FlexQueryParameters parameters)
 {
-    var result = await _context.Customers.FlexQueryAsync(parameters, opts =>
+    // No need to know which syntax the client used!
+    // AutoDetect handles JSON, JQL, DSL, and OData transparently.
+    var result = await _context.Products.FlexQueryAsync(parameters, opts =>
     {
-        opts.AllowedFields = new HashSet<string>
-        {
-            "Id", "Name", "Email", "City", "Salary"
-        };
+        opts.AllowedFields = new HashSet<string> { "Id", "Name", "Price", "Category" };
         opts.MaxPageSize = 100;
     });
 
@@ -139,63 +178,75 @@ public async Task<IActionResult> GetCustomers(
 }
 ```
 
-This endpoint handles the syntax configured at startup:
-
+This single endpoint handles all of these requests:
 ```
-# NativeDsl (default)
-GET /customers?filter=Salary:gte:50000&sort=Name:asc
+# JQL
+GET /products?filter=Price > 50 AND Category = 'Electronics'
 
-# FQL (if registered)
-GET /customers?filter=Salary >= 50000 AND City = 'New York'
+# NativeDsl
+GET /products?filter=Price:gt:50
 
-# MiniOData (if registered)
-GET /customers?$filter=Salary ge 50000 and City eq 'New York'
+# MiniOData
+GET /products?$filter=Price gt 50 and Category eq 'Electronics'
+
+# JSON (via POST or encoded)
+POST /products/query
+{ "logic": "and", "filters": [{ "field": "Price", "operator": "gt", "value": 50 }] }
 ```
 
----
+## Forcing a Specific Syntax
 
-## Forcing a Specific Syntax Per-Request
-
-To override the global syntax for a single request, pass `QueryOptions` directly instead of `FlexQueryParameters`:
+If you need to bypass auto-detection:
 
 ```csharp
-[HttpPost("customers/query")]
-public async Task<IActionResult> QueryCustomers(
-    [FromBody] MiniODataRequest request)
-{
-    var options = request.ToQueryOptions();
-    // options is now parsed using MiniOData syntax
-    var result = await _context.Customers.FlexQueryAsync(options, opts =>
-    {
-        opts.AllowedFields = new HashSet<string> { "Id", "Name", "Salary" };
-    });
-
-    return Ok(result);
-}
+var options = QueryOptionsParser.Parse(parameters, QuerySyntax.Json);
+// Forces JSON parsing regardless of input format
 ```
 
----
+## Building a Custom Parser
+
+Implement `IQueryParser` to add support for a proprietary format:
+
+```csharp
+public class GraphQLFilterParser : IQueryParser
+{
+    public QuerySyntax Syntax => QuerySyntax.AutoDetect; // or a custom enum value
+
+    public bool CanParse(FlexQueryParameters parameters)
+    {
+        return parameters.Filter?.Contains("{ query") == true;
+    }
+
+    public QueryOptions Parse(FlexQueryParameters parameters)
+    {
+        // Parse your custom format into QueryOptions
+        return new QueryOptions { /* ... */ };
+    }
+}
+
+// Register at startup
+QueryOptionsParser.RegisterParser(new GraphQLFilterParser());
+```
 
 ## Best Practices
 
-1. **Pick one syntax and standardize** — If all clients are under your control, pick DSL or FQL and document it.
-2. **Use MiniOData for migration only** — It exists for backwards compatibility. For new APIs, prefer DSL or FQL.
-3. **Validate the output, not the syntax** — Apply `AllowedFields`, `MaxFieldDepth`, and `StrictFieldValidation` on the parsed `QueryOptions`, not on the raw input.
-4. **Register parsers explicitly** — Even though some parsers auto-register on assembly load, explicit registration makes the configuration clear.
-
----
+1. **Use AutoDetect** unless you have a specific reason to force a syntax — it handles mixed-client scenarios gracefully
+2. **Validate the output, not the syntax** — Apply `AllowedFields`, `MaxFieldDepth`, and `StrictFieldValidation` on the parsed `QueryOptions`, not on the raw input
+3. **Standardize internally** — If all your clients are under your control, pick one syntax (typically JSON or JQL) and document it
+4. **Use MiniOData for migration only** — It exists for backwards compatibility. For new APIs, prefer JSON or JQL
+5. **Cache is syntax-aware** — The parser cache uses the syntax type as part of the cache key, so the same filter string parsed as JQL vs DSL produces different cache entries
 
 ## Common Pitfalls
 
 | Pitfall | Solution |
 |---------|----------|
-| Sending DSL filter with FQL syntax configured | The parser fails with a `QueryParseException`. Ensure `QuerySyntax` matches the expected input format. |
-| Mixing OData `$filter` with DSL `filter` parameter | Use MiniOData syntax exclusively when parsing OData-style requests. Don't mix `$filter` with `filter`. |
-| Forgetting to register a parser | FQL and MiniOData must be explicitly registered via `Fql.Register()` / `MiniOData.Register()` before use. |
-| Assuming case sensitivity | All operators are case-insensitive. `EQ`, `eq`, and `Eq` are all valid. |
+| Sending JSON in a query string without encoding | URL-encode the JSON, or use a POST body |
+| Mixing OData and FlexQuery parameters in the same request | The parser detects `$` prefix and routes to MiniOData. Don't mix `$filter` with `filter` |
+| Assuming case sensitivity | All operators are case-insensitive. `EQ`, `eq`, and `Eq` are all valid |
+| Registering a custom parser but it never gets selected | Check your `CanParse()` logic. Custom parsers are inserted first but must return `true` for their inputs |
 
 ## Related Features
 
 - [Filtering](/guide/filtering) — How parsed filters become LINQ expressions
-- [MiniOData Parser](/parsers/miniodata) — OData compatibility details
+- [MiniOData Adapter](/adapters/miniodata) — OData compatibility details
 - [AG Grid Adapter](/adapters/ag-grid) — Parsing AG Grid JSON payloads

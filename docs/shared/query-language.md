@@ -1,6 +1,6 @@
 # Query Language Reference
 
-FlexQuery.NET supports two query input formats. The parser is selected explicitly per request via `QuerySyntax` — no auto-detection.
+FlexQuery.NET supports four query input formats. The parser **auto-detects** the format — you do not need to specify which one you are using.
 
 ---
 
@@ -37,28 +37,28 @@ filter=status:eq:active,status:eq:pending&logic=or
 
 ---
 
-## Format 2: FQL (SQL-like)
+## Format 2: JQL (SQL-like)
 
-Natural language SQL-like syntax. FQL supports all query parameters, not just filters.
-
-```
-filter=expression
-```
-
-**Filter examples:**
+Natural language SQL-like syntax using the `query` parameter.
 
 ```
-filter=status = "active"
-filter=age >= 18
-filter=name = "alice" OR name = "bob"
-filter=(status = "active" OR status = "pending") AND age >= 18
-filter=Orders.any(Status = "shipped")
-filter=Orders.any(Status = "shipped" AND Amount > 100)
+query=expression
 ```
 
-**FQL supported operators:**
+**Examples:**
 
-| FQL | Meaning |
+```
+query=status = "active"
+query=age >= 18
+query=name = "alice" OR name = "bob"
+query=(status = "active" OR status = "pending") AND age >= 18
+query=Orders.any(Status = "shipped")
+query=Orders.any(Status = "shipped" AND Amount > 100)
+```
+
+**Supported operators:**
+
+| JQL | Meaning |
 | :--- | :--- |
 | `=` | eq |
 | `!=` | neq |
@@ -66,58 +66,73 @@ filter=Orders.any(Status = "shipped" AND Amount > 100)
 | `>=` | gte |
 | `<` | lt |
 | `<=` | lte |
-| `CONTAINS` | contains |
-| `STARTSWITH` | startswith |
-| `ENDSWITH` | endswith |
-| `IN (...)` | in |
-| `LIKE` | like |
-| `BETWEEN x AND y` | between |
-| `IS NULL` | isnull |
-| `IS NOT NULL` | isnotnull |
+| `contains(f, v)` | contains |
+| `startsWith(f, v)` | startswith |
 | `.any(...)` | any on collection |
 | `.all(...)` | all on collection |
-| `[...]` | bracket syntax for any |
-| `COUNT` | count on collection |
 
-**FQL sort:**
-```
-sort=Name ASC
-sort=CreatedDate DESC
-sort=Customer.Name ASC, CreatedDate DESC
-```
+---
 
-**FQL aggregates:**
+## Format 3: JSON
+
+Structured nested filter tree.
+
 ```
-aggregates=SUM(Amount)
-aggregates=SUM(Amount) AS TotalSales
-aggregates=COUNT(*)
-aggregates=AVG(Price), MIN(Date), MAX(Date)
+filter={"logic":"and","filters":[...]}
 ```
 
-**FQL having:**
-```
-having=COUNT(*) > 5
-having=SUM(Amount) > 1000
-having=AVG(Price) >= 500
+**Examples:**
+
+Simple:
+```json
+{"logic":"and","filters":[
+  {"field":"status","operator":"eq","value":"active"},
+  {"field":"age","operator":"gte","value":"18"}
+]}
 ```
 
-**FQL groupBy:**
+Nested OR:
+```json
+{
+  "logic": "and",
+  "filters": [
+    { "field": "status", "operator": "eq", "value": "active" },
+    {
+      "logic": "or",
+      "filters": [
+        { "field": "name", "operator": "contains", "value": "alice" },
+        { "field": "name", "operator": "contains", "value": "bob" }
+      ]
+    }
+  ]
+}
 ```
-groupBy=Department
-groupBy=Department,Category
-groupBy=Customer.Region
+
+---
+
+## Format 4: Indexed (Form-based)
+
+Array-indexed parameters for form submissions.
+
+```
+filter[0].field=status
+filter[0].operator=eq
+filter[0].value=active
+filter[1].field=age
+filter[1].operator=gte
+filter[1].value=18
+logic=and
 ```
 
 ---
 
 ## Sort Syntax
 
-**DSL (colon-delimited):**
 ```
 sort=field:direction,field:direction
 ```
 
-| DSL Example | Meaning |
+| Example | Meaning |
 | :--- | :--- |
 | `sort=name:asc` | Sort by name ascending |
 | `sort=createdAt:desc` | Sort by createdAt descending |
@@ -125,14 +140,6 @@ sort=field:direction,field:direction
 | `sort=name` | Ascending (direction optional) |
 | `sort=orders.count():desc` | Sort by collection count |
 | `sort=orders.sum(amount):desc` | Sort by collection sum |
-
-**FQL (SQL-inspired):**
-```
-sort=Name ASC
-sort=Name DESC
-sort=Customer.Name ASC, CreatedDate DESC
-sort=name          (defaults to ASC)
-```
 
 ---
 
@@ -144,45 +151,11 @@ select=field1,field2,nested.field
 
 | Example | Meaning |
 | :--- | :--- |
-| `select=Id,Name,Email` | Top-level fields |
-| `select=Id,Name,Profile.Bio` | Nested path |
+| `select=id,name,email` | Top-level fields |
+| `select=id,name,profile.bio` | Nested path |
 | `select=*` | All fields (wildcard) |
-
-Note: Aggregates are no longer specified in the `select` parameter. Use the dedicated `aggregates` parameter instead.
-
----
-
-## Aggregates Syntax
-
-**DSL:**
-```
-aggregates=Field:Function[:Alias]
-```
-
-| DSL Example | Generated Alias | Meaning |
-| :--- | :--- | :--- |
-| `Amount:sum` | `AmountSum` | Sum of Amount |
-| `Amount:sum:TotalSales` | `TotalSales` | Sum with explicit alias |
-| `Price:avg` | `PriceAvg` | Average of Price |
-| `*:count` | `Count` | Count all rows |
-| `Date:min,Date:max` | `DateMin`, `DateMax` | Min and max |
-
-**FQL:**
-```
-aggregates=FUNCTION(Field) [AS Alias]
-```
-
-| FQL Example | Generated Alias | Meaning |
-| :--- | :--- | :--- |
-| `SUM(Amount)` | `AmountSum` | Sum of Amount |
-| `SUM(Amount) AS TotalSales` | `TotalSales` | Sum with explicit alias |
-| `COUNT(*)` | `Count` | Count all rows |
-| `AVG(Price)` | `PriceAvg` | Average of Price |
-| `MIN(Date), MAX(Date)` | `DateMin`, `DateMax` | Min and max |
-
-Both DSL and FQL support: `SUM`, `COUNT`, `AVG`, `MIN`, `MAX`.
-
-Function names are case-insensitive. Auto-generated aliases follow PascalCase convention.
+| `select=status,count()` | Field + aggregate |
+| `select=status,sum(amount)` | Field + sum aggregate |
 
 ---
 
@@ -192,39 +165,19 @@ Function names are case-insensitive. Auto-generated aliases follow PascalCase co
 groupBy=field1,field2
 ```
 
-| Example | Meaning |
-| :--- | :--- |
-| `groupBy=Department` | Single field |
-| `groupBy=Department,Category` | Multiple fields |
-| `groupBy=Customer.Region` | Nested property |
-
 ---
 
 ## Having Syntax
 
-**DSL:**
 ```
 having=function(field):operator:value
 ```
 
-| DSL Example | Meaning |
+| Example | Meaning |
 | :--- | :--- |
-| `having=count:gt:5` | Groups with count > 5 |
-| `having=sum(total):gt:1000` | Groups with sum > 1000 |
+| `having=count():gt:5` | Groups with count > 5 |
+| `having=sum(amount):gte:1000` | Groups with sum >= 1000 |
 | `having=avg(amount):between:100,500` | Groups with avg in range |
-
-**FQL:**
-```
-having=FUNCTION(Field) OPERATOR value
-```
-
-| FQL Example | Meaning |
-| :--- | :--- |
-| `having=COUNT(*) > 5` | Groups with count > 5 |
-| `having=SUM(Amount) > 1000` | Groups with sum > 1000 |
-| `having=AVG(Price) >= 500` | Groups with avg >= 500 |
-
-Supported HAVING operators: `=`, `!=`, `>`, `>=`, `<`, `<=` (FQL); `eq`, `neq`, `gt`, `gte`, `lt`, `lte`, `between` (DSL).
 
 ---
 
@@ -261,4 +214,4 @@ include=Navigation(filter).NestedNavigation
 | :--- | :--- | :--- |
 | `mode` | `nested`, `flat`, `flat-mixed` | Projection output shape |
 | `distinct` | `true`, `false` | Apply DISTINCT |
-| `logic` | `and`, `or` | Top-level filter logic |
+| `logic` | `and`, `or` | Top-level filter logic (Indexed format) |

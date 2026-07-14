@@ -33,7 +33,7 @@ How does FlexQuery.NET perform as your dataset grows? These benchmarks vary reco
 The 10,000-record scenario (2.8 ms materialization) is still faster than a typical network round-trip. However, if you allow clients to request arbitrary large pages:
 
 ```
-GET /api/customers?filter=status:eq:active&pageSize=50000
+GET /api/users?filter=status:eq:active&pageSize=50000
 ```
 
 A single request could:
@@ -61,7 +61,7 @@ If your use case requires exporting all matching records (e.g., CSV download for
 [HttpGet("export")]
 public async IAsyncEnumerable<object> Export([FromQuery] FlexQueryParameters parameters)
 {
-    await foreach (var item in _context.Customers
+    await foreach (var item in _context.Users
         .FlexQueryStreaming(parameters))  // hypothetical streaming API
     {
         yield return item;

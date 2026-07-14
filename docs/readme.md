@@ -6,7 +6,7 @@ FlexQuery.NET is a lightweight library for `IQueryable` that enables dynamic fil
 
 ```csharp
 // Single unified call: Parse -> Validate -> Execute
-var result = await _context.Customers.FlexQueryAsync(parameters, options => 
+var result = await _context.Users.FlexQueryAsync(parameters, options => 
 {
     options.AllowedFields = ["Id", "Name", "Orders.Status"];
     options.MaxFieldDepth = 2;
@@ -30,7 +30,7 @@ var result = await _context.Customers.FlexQueryAsync(parameters, options =>
 FlexQuery.NET v2.1 introduces server-side **Execution Strategies**, including support for EF Core **Split Queries** and automatic **No-Tracking** execution to ensure maximum performance for complex data graphs.
 
 ```csharp
-var result = await _context.Customers.FlexQueryAsync(parameters, exec => 
+var result = await _context.Users.FlexQueryAsync(parameters, exec => 
 {
     exec.UseSplitQuery = true; // Avoid cartesian explosion
     exec.UseNoTracking = true; // Enabled by default
@@ -54,12 +54,12 @@ var result = await _context.Customers.FlexQueryAsync(parameters, exec =>
    [HttpGet]
    public async Task<IActionResult> Get([FromQuery] FlexQueryParameters parameters)
    {
-       return Ok(await _context.Customers.FlexQueryAsync(parameters));
+       return Ok(await _context.Users.FlexQueryAsync(parameters));
    }
    ```
 
 3. **Query**
-   `GET /api/customers?filter=Name:contains:John&sort=CreatedDate:desc&select=Id,Name`
+   `GET /api/users?filter=Name:contains:John&sort=CreatedAt:desc&select=Id,Name`
 
 ---
 

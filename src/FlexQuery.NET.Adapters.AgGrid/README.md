@@ -20,14 +20,13 @@ dotnet add package FlexQuery.NET.Adapters.AgGrid
 
 ```csharp
 using FlexQuery.NET.Adapters.AgGrid;
-using FlexQuery.NET.Adapters.AgGrid.Models;
 
 [HttpPost("grid-data")]
 public async Task<IActionResult> GetGridData([FromBody] AgGridRequest request)
 {
     var options = request.ToQueryOptions();
 
-    var result = await _context.Products.FlexQueryAsync(options, opts =>
+    var result = await _context.Products.FlexQueryAsync<Product>(options, opts =>
     {
         opts.AllowedFields = new HashSet<string> { "Id", "Name", "Price", "Category" };
     });

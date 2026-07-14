@@ -59,7 +59,7 @@ QueryResult<T>
 [HttpPost("grid-data")]
 public async Task<IActionResult> GetGridData([FromBody] JsonElement kendoPayload)
 {
-    var options = kendoPayload.ToQueryOptions();
+    var options = KendoQueryOptionsParser.Parse(kendoPayload);
 
     var result = await _context.Products.FlexQueryAsync<Product>(options, opts =>
     {
@@ -76,6 +76,9 @@ Using extension methods:
 ```csharp
 // From a KendoRequest object
 var options = kendoRequest.ToQueryOptions();
+
+// From a raw JSON string
+var options = jsonString.FromKendoJson();
 ```
 
 ## Advanced Example: Full Kendo Payload

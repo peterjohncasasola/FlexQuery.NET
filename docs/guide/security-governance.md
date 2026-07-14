@@ -106,12 +106,13 @@ opts.StrictFieldValidation = false; // Silently removes unauthorized fields
 ## FlexQueryOptions (Global Defaults)
 
 ```csharp
-FlexQueryCore.Configure(opts =>
+builder.Services.AddFlexQuery(opts =>
 {
     opts.MaxPageSize = 1000;
     opts.DefaultPageSize = 20;
     opts.MaxFieldDepth = 5;
     opts.StrictFieldValidation = true;
+    opts.UseNoTracking = true;
 });
 ```
 
