@@ -1,4 +1,5 @@
 using FlexQuery.NET.Builders;
+using FlexQuery.NET.Exceptions;
 using FlexQuery.NET.Models;
 using FlexQuery.NET.Parsers;
 using FlexQuery.NET.Parsers.Fql;
@@ -63,8 +64,6 @@ public class SecurityTests : IDisposable
         var maliciousSelect = "id,(SELECT * FROM Users) as bad_alias";
         var dict = new Dictionary<string, Microsoft.Extensions.Primitives.StringValues> { { "select", maliciousSelect } };
         var act = () => QueryOptionsParser.Parse(dict);
-        var options = act();
-        var actBuild = () => SelectTreeBuilder.Build(options);
-        actBuild.Should().NotThrow();
+        act.Should().Throw<QueryParseException>();
     }
 }

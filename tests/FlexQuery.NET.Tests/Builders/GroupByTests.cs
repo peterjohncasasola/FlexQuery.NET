@@ -31,7 +31,7 @@ public class GroupByTests : IDisposable
         {
             ["groupBy"] = "CustomerId",
             ["select"] = "CustomerId",
-            ["aggregate"] = "Total:sum,Id:count",
+            ["aggregate"] = "sum:Total,count:Id",
             ["having"] = "sum(Total):gt:100"
         });
 
@@ -51,7 +51,7 @@ public class GroupByTests : IDisposable
         {
             ["groupBy"] = "CustomerId",
             ["select"] = "CustomerId",
-            ["aggregate"] = "Total:sum,Id:count",
+            ["aggregate"] = "sum:Total,count:Id",
         });
 
         options.Aggregates.Should().HaveCount(2, "it should have parsed two aggregates from the aggregate parameter");

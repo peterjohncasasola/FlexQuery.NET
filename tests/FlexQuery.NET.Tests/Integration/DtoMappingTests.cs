@@ -75,7 +75,8 @@ public class DtoMappingTests : IDisposable
     {
         var parameters = new FlexQueryParameters
         {
-            Select = "count(dtoAge) as countAge",
+            Select = "City",
+            Aggregate = "count:dtoAge:countAge",
             GroupBy = "City",
             PageSize = 100
         };

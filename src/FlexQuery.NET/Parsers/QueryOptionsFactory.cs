@@ -23,9 +23,6 @@ internal static class QueryOptionsFactory
             Distinct = parameters.Distinct ?? false
         };
 
-        if (!string.IsNullOrWhiteSpace(parameters.Select))
-            SelectParser.Parse(options, parameters.Select);
-
         if (!string.IsNullOrWhiteSpace(parameters.GroupBy))
         {
             var groups = ParserUtilities.SplitCsv(parameters.GroupBy);

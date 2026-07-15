@@ -482,7 +482,7 @@ public class DslQueryParserTests
         {
             ["groupBy"] = "category,status",
             ["select"] = "category",
-            ["aggregate"] = "total:sum,id:count",
+            ["aggregate"] = "sum:total,count:id",
             ["having"] = "sum(total):gt:10000"
         });
 
@@ -525,7 +525,8 @@ public class DslQueryParserTests
         var opts = Parse(new()
         {
             ["groupBy"] = "status",
-            ["select"] = "status,count()",
+            ["select"] = "status",
+            ["aggregate"] = "count:*",
             ["having"] = "count:gt:20"
         });
 
@@ -542,7 +543,8 @@ public class DslQueryParserTests
         var opts = Parse(new()
         {
             ["groupBy"] = "status",
-            ["select"] = "status,sum(total)",
+            ["select"] = "status",
+            ["aggregate"] = "sum:total",
             ["having"] = "sum:total:gt:100"
         });
 
@@ -559,7 +561,8 @@ public class DslQueryParserTests
         var opts = Parse(new()
         {
             ["group"] = "status",
-            ["select"] = "status,sum(total)",
+            ["select"] = "status",
+            ["aggregate"] = "sum:total",
             ["having"] = "sum(total):gt:100"
         });
 
@@ -588,7 +591,7 @@ public class DslQueryParserTests
         {
             ["group"] = "status",
             ["select"] = "status",
-            ["aggregates"] = "Orders.Total:sum",
+            ["aggregates"] = "sum:Orders.Total",
             ["having"] = "sum(Orders.Total):gt:500"
         });
 
@@ -608,7 +611,7 @@ public class DslQueryParserTests
     {
         var opts = Parse(new()
         {
-            ["aggregate"] = "Amount:sum"
+            ["aggregate"] = "sum:Amount"
         });
 
         opts.Aggregates.Should().ContainSingle();
@@ -622,7 +625,7 @@ public class DslQueryParserTests
     {
         var opts = Parse(new()
         {
-            ["aggregate"] = "Amount:sum:TotalSales"
+            ["aggregate"] = "sum:Amount:TotalSales"
         });
 
         opts.Aggregates.Should().ContainSingle();
@@ -636,7 +639,7 @@ public class DslQueryParserTests
     {
         var opts = Parse(new()
         {
-            ["aggregate"] = "Amount:sum,Price:avg,Id:count"
+            ["aggregate"] = "sum:Amount,avg:Price,count:Id"
         });
 
         opts.Aggregates.Should().HaveCount(3);
@@ -653,7 +656,7 @@ public class DslQueryParserTests
     {
         var opts = Parse(new()
         {
-            ["aggregate"] = "Price:avg"
+            ["aggregate"] = "avg:Price"
         });
 
         opts.Aggregates.Should().ContainSingle();
@@ -667,7 +670,7 @@ public class DslQueryParserTests
     {
         var opts = Parse(new()
         {
-            ["aggregate"] = "Orders.Total:sum"
+            ["aggregate"] = "sum:Orders.Total"
         });
 
         opts.Aggregates.Should().ContainSingle();
@@ -681,7 +684,7 @@ public class DslQueryParserTests
     {
         var act = () => Parse(new()
         {
-            ["aggregate"] = "Amount:invalid,Price:sum"
+            ["aggregate"] = "invalid:Amount,sum:Price"
         });
 
         act.Should().Throw<QueryParseException>()
@@ -712,7 +715,7 @@ public class DslQueryParserTests
     {
         var opts = Parse(new()
         {
-            ["aggregate"] = "*:count"
+            ["aggregate"] = "count:*"
         });
 
         opts.Aggregates.Should().ContainSingle();
@@ -726,7 +729,7 @@ public class DslQueryParserTests
     {
         var opts = Parse(new()
         {
-            ["aggregate"] = "Amount:SUM,Price:Avg,Id:count"
+            ["aggregate"] = "SUM:Amount,Avg:Price,count:Id"
         });
 
         opts.Aggregates.Should().HaveCount(3);
@@ -740,7 +743,7 @@ public class DslQueryParserTests
     {
         var opts = Parse(new()
         {
-            ["aggregate"] = "Date:min,Date:max"
+            ["aggregate"] = "min:Date,max:Date"
         });
 
         opts.Aggregates.Should().HaveCount(2);
@@ -807,7 +810,7 @@ public class DslQueryParserTests
             ["select"] = "Id,Name,CustomerName",
             ["include"] = "Orders,Profile",
             ["groupBy"] = "customerId,category",
-            ["aggregate"] = "Amount:sum:TotalSales,Id:count,Price:avg",
+            ["aggregate"] = "sum:Amount:TotalSales,count:Id,avg:Price",
             ["having"] = "sum(Amount):gt:1000",
             ["distinct"] = "true",
             ["page"] = "2",

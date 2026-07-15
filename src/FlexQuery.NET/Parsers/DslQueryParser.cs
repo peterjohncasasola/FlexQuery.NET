@@ -32,6 +32,18 @@ internal sealed class DslQueryParser : IQueryParser
                 ex);
         }
 
+        if (!string.IsNullOrWhiteSpace(parameters.Select))
+        {
+            try
+            {
+                DslSelectParser.Parse(options, parameters.Select);
+            }
+            catch (DslParseException ex)
+            {
+                throw new QueryParseException(QueryOptionKeys.Select, QuerySyntax.NativeDsl, parameters.Select, ex);
+            }
+        }
+
         if (!string.IsNullOrWhiteSpace(parameters.Filter))
         {
             try
