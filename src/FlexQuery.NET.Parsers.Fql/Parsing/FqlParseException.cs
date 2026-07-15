@@ -1,3 +1,5 @@
+using FlexQuery.NET.Exceptions;
+
 namespace FlexQuery.NET.Parsers.Fql;
 
 /// <summary>
@@ -13,7 +15,7 @@ namespace FlexQuery.NET.Parsers.Fql;
 ///
 /// Consumers should catch <see cref="Exceptions.QueryParseException"/> rather than this type.
 /// </remarks>
-public sealed class FqlParseException : Exception
+public sealed class FqlParseException : FlexQueryException
 {
     /// <summary>Creates a <see cref="FqlParseException"/> with the specified error message.</summary>
     /// <param name="message">A description of the Fql grammar violation.</param>

@@ -1,3 +1,5 @@
+using FlexQuery.NET.Exceptions;
+
 namespace FlexQuery.NET.Parsers.Dsl;
 
 /// <summary>
@@ -10,7 +12,7 @@ namespace FlexQuery.NET.Parsers.Dsl;
 ///
 /// Consumers should catch <see cref="Exceptions.QueryParseException"/> rather than this type.
 /// </remarks>
-public sealed class DslParseException : Exception
+public sealed class DslParseException : FlexQueryException
 {
     /// <summary>Creates a <see cref="DslParseException"/> with the specified error message.</summary>
     /// <param name="message">A description of the DSL grammar violation.</param>
