@@ -39,6 +39,7 @@
 
   <ItemGroup>
     <InternalsVisibleTo Include="FlexQuery.NET.Tests" />
+    <InternalsVisibleTo Include="FlexQuery.NET.OpenApi.Tests" />
   </ItemGroup>
 
   <ItemGroup>

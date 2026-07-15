@@ -7,6 +7,13 @@ namespace FlexQuery.NET.Tests.DependencyInjection;
 
 public class FlexQueryNonDiSmokeTests
 {
+    public FlexQueryNonDiSmokeTests()
+    {
+        FlexQueryCore.Reset();
+        FlexQueryEFCore.Reset();
+        FlexQueryDapper.Reset();
+    }
+
     [Fact]
     public void Full_setup_pipeline_does_not_throw()
     {

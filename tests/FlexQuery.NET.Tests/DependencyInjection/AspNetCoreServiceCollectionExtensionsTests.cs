@@ -1,3 +1,4 @@
+using FlexQuery.NET.AspNetCore.Filters;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
@@ -16,8 +17,10 @@ public class AspNetCoreServiceCollectionExtensionsTests
         mvcBuilder.AddFlexQuerySecurity();
 
         var serviceProvider = services.BuildServiceProvider();
-        var filters = serviceProvider.GetRequiredService<IConfigureOptions<MvcOptions>>();
+        var mvcOptions = serviceProvider.GetRequiredService<IOptions<MvcOptions>>().Value;
 
-        filters.Should().NotBeNull();
+        mvcOptions.Filters
+            .Any(f => f is TypeFilterAttribute t && t.ImplementationType == typeof(FieldAccessFilter))
+            .Should().BeTrue();
     }
 }

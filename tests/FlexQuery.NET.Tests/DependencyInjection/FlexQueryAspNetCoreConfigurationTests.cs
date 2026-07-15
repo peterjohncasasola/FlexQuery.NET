@@ -4,6 +4,11 @@ namespace FlexQuery.NET.Tests.DependencyInjection;
 
 public class FlexQueryAspNetCoreConfigurationTests
 {
+    public FlexQueryAspNetCoreConfigurationTests()
+    {
+        FlexQueryCore.Reset();
+    }
+
     [Fact]
     public void Configure_returns_FlexQueryOptions()
     {

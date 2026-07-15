@@ -33,6 +33,18 @@ internal sealed class FqlQueryParser : IQueryParser
     {
         var options = QueryOptionsFactory.Create(parameters);
 
+        if (!string.IsNullOrWhiteSpace(parameters.Select))
+        {
+            try
+            {
+                FqlSelectParser.Parse(options, parameters.Select);
+            }
+            catch (FqlParseException ex)
+            {
+                throw new QueryParseException(QueryOptionKeys.Select, QuerySyntax.Fql, parameters.Select, ex);
+            }
+        }
+
         if (!string.IsNullOrWhiteSpace(parameters.Filter))
         {
             try

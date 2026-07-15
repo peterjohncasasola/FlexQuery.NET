@@ -1,12 +1,9 @@
 using FlexQuery.NET.Exceptions;
 using FlexQuery.NET.Models;
- 
 namespace FlexQuery.NET.Parsers;
 
 /// <summary>
 /// Tracks which query parsers are available, keyed by <see cref="QuerySyntax"/>.
-/// Optional parser packages self-register during DI; the active parser for a request is
-/// resolved through <see cref="Resolve"/>.
 /// </summary>
 /// <remarks>
 /// This component owns parser <em>availability</em> only. Parsing orchestration (request
@@ -20,24 +17,40 @@ internal static class QueryParserRegistry
         [QuerySyntax.NativeDsl] = new DslQueryParser()
     };
 
-    /// <summary>
-    /// Registers an available parser for the given syntax. Called by optional parser packages.
-    /// </summary>
-    public static void Register(QuerySyntax syntax, IQueryParser parser) => _available[syntax] = parser;
+    private static readonly object _lock = new();
 
     /// <summary>
-    /// Resolves the parser registered for <paramref name="syntax"/>.
+    /// Registers an available parser for the given syntax.
+    /// </summary>
+    public static void Register(QuerySyntax syntax, IQueryParser parser)
+    {
+        lock (_lock)
+        {
+            _available[syntax] = parser;
+        }
+    }
+
+    /// <summary>
+    /// Resolves the parser registered for the specified syntax.
     /// </summary>
     /// <exception cref="InvalidOperationException">
     /// Thrown when no parser has been registered for <paramref name="syntax"/>.
     /// </exception>
     public static IQueryParser Resolve(QuerySyntax syntax)
     {
-        _available.TryGetValue(syntax, out var parser);
-        
-        return parser ?? throw new ParserNotRegisteredException(syntax);
+        lock (_lock)
+        {
+            _available.TryGetValue(syntax, out var parser);
+            return parser ?? throw new ParserNotRegisteredException(syntax);
+        }
     }
 
     /// <summary>Returns true if a parser has been registered for the given syntax.</summary>
-    public static bool IsRegistered(QuerySyntax syntax) => _available.ContainsKey(syntax);
+    public static bool IsRegistered(QuerySyntax syntax)
+    {
+        lock (_lock)
+        {
+            return _available.ContainsKey(syntax);
+        }
+    }
 }

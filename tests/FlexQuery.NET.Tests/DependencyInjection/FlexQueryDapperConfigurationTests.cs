@@ -6,6 +6,11 @@ namespace FlexQuery.NET.Tests.DependencyInjection;
 
 public class FlexQueryDapperConfigurationTests
 {
+    public FlexQueryDapperConfigurationTests()
+    {
+        FlexQueryDapper.Reset();
+    }
+
     [Fact]
     public void Configure_stores_global_model()
     {

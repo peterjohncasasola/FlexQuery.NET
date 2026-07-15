@@ -1,9 +1,11 @@
+using FlexQuery.NET.Exceptions;
+
 namespace FlexQuery.NET.Parsers.MiniOData;
 
 /// <summary>
 /// Exception thrown when the Mini OData parser encounters invalid syntax.
 /// </summary>
-public sealed class MiniODataParseException : Exception
+public sealed class MiniODataParseException : FlexQueryException
 {
     /// <summary>Creates a new parse exception with the specified message.</summary>
     public MiniODataParseException(string message) : base(message) { }

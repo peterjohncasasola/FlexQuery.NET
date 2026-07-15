@@ -5,6 +5,11 @@ namespace FlexQuery.NET.Tests.DependencyInjection;
 
 public class FlexQueryEFCoreConfigurationTests
 {
+    public FlexQueryEFCoreConfigurationTests()
+    {
+        FlexQueryEFCore.Reset();
+    }
+
     [Fact]
     public void Setup_Does_Not_Throw()
     {
