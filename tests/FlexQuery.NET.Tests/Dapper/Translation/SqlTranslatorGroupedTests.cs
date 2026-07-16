@@ -156,9 +156,9 @@ public class SqlTranslatorGroupedTests
     [Fact]
     public void ExtractCountSql_LimitInsideSubquery_IsPreserved()
     {
-        var sql = "SELECT * FROM (SELECT * FROM Items LIMIT 5) AS topItems WHERE Active = 1 ORDER BY Name LIMIT 10";
+        var sql = "SELECT * FROM (SELECT * FROM OrderItems LIMIT 5) AS topItems WHERE Active = 1 ORDER BY Name LIMIT 10";
         var countSql = SqlCountBuilder.ExtractCountSql(sql);
-        countSql.Should().Be("SELECT COUNT(1) FROM (SELECT * FROM (SELECT * FROM Items LIMIT 5) AS topItems WHERE Active = 1) AS CountTable");
+        countSql.Should().Be("SELECT COUNT(1) FROM (SELECT * FROM (SELECT * FROM OrderItems LIMIT 5) AS topItems WHERE Active = 1) AS CountTable");
     }
 
     [Fact]
@@ -196,7 +196,7 @@ public class SqlTranslatorGroupedTests
 
     private SqlCommand Translate(QueryOptions options)
     {
-        options.Items[ContextKeys.EntityType] = typeof(SqlOrder);
+        options.Items[ContextKeys.EntityType] = typeof(Order);
         return new SqlTranslator(_registry, new SqliteDialect()).Translate(options);
     }
 
@@ -241,10 +241,10 @@ public class SqlTranslatorGroupedTests
     private static MappingRegistry CreateRegistry()
     {
         var registry = new MappingRegistry();
-        registry.Entity<SqlOrder>()
+        registry.Entity<Order>()
             .ToTable("Orders")
-            .HasMany(o => o.Items).WithForeignKey("OrderId");
-        registry.Entity<SqlOrderItem>().ToTable("OrderItems");
+            .HasMany(o => o.OrderItems).WithForeignKey("OrderId");
+        registry.Entity<OrderItem>().ToTable("OrderItems");
         return registry;
     }
 }
