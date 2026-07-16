@@ -1,7 +1,6 @@
-using FlexQuery.NET.Configuration;
 using FlexQuery.NET.Parsers;
 
-namespace FlexQuery.NET.Tests;
+namespace FlexQuery.NET.Tests.DependencyInjection;
 
 public class FlexQueryCoreTests
 {
