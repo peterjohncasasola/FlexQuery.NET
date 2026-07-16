@@ -184,6 +184,36 @@ internal static class DslSelectParser
                 throw new DslParseException(
                     "Root wildcard cannot be combined with other selections.");
 
+            string alias = null;
+
+            while (i < span.Length && char.IsWhiteSpace(span[i]))
+                i++;
+
+            if (i < span.Length && span[i] == ':')
+            {
+                i++;
+
+                int aliasStart = i;
+                while (i < span.Length && (char.IsLetterOrDigit(span[i]) || span[i] == '_'))
+                    i++;
+
+                if (i == aliasStart)
+                    throw new DslParseException(
+                        "Empty alias in 'select' parameter. Alias must not be empty (e.g. 'Name:FullName').");
+
+                alias = span.Slice(aliasStart, i - aliasStart).ToString();
+
+                if (string.Equals(alias, "AS", StringComparison.OrdinalIgnoreCase))
+                    throw new DslParseException(
+                        "Invalid alias in 'select' parameter. " +
+                        "The identifier 'AS' is a reserved keyword and cannot be used as an alias.");
+
+                if (!ParserUtilities.IsValidIdentifier(alias.AsSpan()))
+                    throw new DslParseException(
+                        $"Invalid alias '{alias}' in 'select' parameter. " +
+                        "Aliases must be valid identifiers (e.g. 'FullName').");
+            }
+
             while (i < span.Length && char.IsWhiteSpace(span[i]))
                 i++;
 
@@ -193,6 +223,11 @@ internal static class DslSelectParser
 
             if (i < span.Length && span[i] == '(')
             {
+                if (alias != null)
+                    throw new DslParseException(
+                        "Navigation alias is not supported. " +
+                        "Navigation nodes represent traversal and cannot be aliased.");
+
                 i++;
 
                 int parenStart = i;
@@ -229,7 +264,9 @@ internal static class DslSelectParser
             }
             else
             {
-                parent.GetOrAddChild(identifier);
+                var childNode = parent.GetOrAddChild(identifier);
+                if (alias != null)
+                    childNode.Alias = alias;
             }
 
             hasSelection = true;
