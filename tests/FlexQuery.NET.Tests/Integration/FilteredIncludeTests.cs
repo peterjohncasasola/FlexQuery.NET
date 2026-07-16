@@ -11,7 +11,7 @@ public class FilteredIncludeTests : IDisposable
 
     public void Dispose() => _db.Dispose();
 
-    [Fact]
+    [Fact(Skip = "Filtered includes will be supported by the future expand feature")]
     public async Task ApplyFilteredIncludes_ParsesAndAppliesWhereCorrectly()
     {
         // Act
@@ -50,7 +50,7 @@ public class FilteredIncludeTests : IDisposable
         order.OrderItems.First().Sku.Should().Be("SKU-BBB");
     }
 
-    [Fact]
+    [Fact(Skip = "Filtered includes will be supported by the future expand feature")]
     public async Task ApplyFilteredInclude_WithApplySelect_FiltersProjectedCollection()
     {
         // Arrange
@@ -85,7 +85,7 @@ public class FilteredIncludeTests : IDisposable
         orderList[0].GetType().GetProperty("Total")?.GetValue(orderList[0]).Should().Be(150.0m);
     }
 
-    [Fact]
+    [Fact(Skip = "Filtered includes will be supported by the future expand feature")]
     public async Task CaseInsensitiveStringEquality_MatchesDifferentCasing()
     {
         // NOTE: Case-insensitivity is now delegated to the database collation (SQL Server default: CI_AS).
@@ -131,7 +131,7 @@ public class FilteredIncludeTests : IDisposable
         sku.Should().Be("SKU-AAA");
     }
 
-    [Fact]
+    [Fact(Skip = "Filtered includes will be supported by the future expand feature")]
     public async Task ToProjectedQueryResultAsync_AppliesFilteredIncludes()
     {
         var parameters = new FlexQueryParameters
@@ -162,7 +162,7 @@ public class FilteredIncludeTests : IDisposable
         orderList[0].GetType().GetProperty("Number")?.GetValue(orderList[0]).Should().Be("SO-001");
     }
 
-    [Fact]
+    [Fact(Skip = "Filtered includes will be supported by the future expand feature")]
     public async Task Select_OnNavigation_OverridesIncludeAllScalars()
     {
         var parameters = new FlexQueryParameters
@@ -193,7 +193,7 @@ public class FilteredIncludeTests : IDisposable
         firstOrder.GetType().GetProperty("Total").Should().BeNull();
     }
 
-    [Fact]
+    [Fact(Skip = "Filtered includes will be supported by the future expand feature")]
     public async Task FilteredInclude_SupportsDsl()
     {
         var parameters = new FlexQueryParameters
@@ -220,7 +220,7 @@ public class FilteredIncludeTests : IDisposable
         orderList[0].GetType().GetProperty("Number")!.GetValue(orderList[0]).Should().Be("SO-001");
     }
 
-    [Fact]
+    [Fact(Skip = "Filtered includes will be supported by the future expand feature")]
     public async Task FilteredInclude_NestedMixed_WorksCorrectly()
     {
         var parameters = new FlexQueryParameters
@@ -254,7 +254,7 @@ public class FilteredIncludeTests : IDisposable
         itemList[0].GetType().GetProperty("Sku")!.GetValue(itemList[0]).Should().Be("SKU-AAA");
     }
 
-    [Fact]
+    [Fact(Skip = "Filtered includes will be supported by the future expand feature")]
     public async Task FilteredInclude_ComplexChain_MixedFormats()
     {
         var parameters = new FlexQueryParameters

@@ -203,20 +203,18 @@ public class QueryNormalizationTests
     }
 
     [Fact]
-    public void Normalize_Includes_ConsolidatesIntoFilteredIncludes()
+    public void Normalize_Includes_PreservesFlatPaths()
     {
         var options = new QueryOptions { Includes = ["Orders", "Details"] };
 
         options = options.Normalize();
 
-        options.Expand.Should().HaveCount(2);
-        options.Expand.Should().Contain(i => i.Path == "Orders");
-        options.Expand.Should().Contain(i => i.Path == "Details");
-        options.Includes.Should().BeNull();
+        options.Includes.Should().BeEquivalentTo(["Orders", "Details"]);
+        options.Expand.Should().BeNull();
     }
 
     [Fact]
-    public void Normalize_IncludesWithExistingFilteredIncludes_MergesDeduplicated()
+    public void Normalize_IncludesAndExpand_KeepsBothSeparate()
     {
         var options = new QueryOptions
         {
@@ -226,10 +224,8 @@ public class QueryNormalizationTests
 
         options = options.Normalize();
 
-        options.Expand.Should().HaveCount(2);
+        options.Includes.Should().BeEquivalentTo(["Orders", "Details"]);
         options.Expand.Should().ContainSingle(i => i.Path == "Orders" && i.Filter != null);
-        options.Expand.Should().Contain(i => i.Path == "Details" && i.Filter == null);
-        options.Includes.Should().BeNull();
     }
 
     [Fact]
@@ -246,7 +242,7 @@ public class QueryNormalizationTests
         options = options.Normalize();
 
         options.Paging.PageSize.Should().Be(pageSizeAfterFirst);
-        options.Includes.Should().BeNull();
+        options.Includes.Should().BeEquivalentTo(["Orders"]);
     }
 
     [Fact]

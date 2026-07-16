@@ -40,7 +40,7 @@ public static class QueryableEfCoreExtensions
         QueryOptions options)
         where T : class
     {
-        if (options?.Expand == null || options.Expand.Count == 0) return query;
+        if (options?.Includes == null || options.Includes.Count == 0) return query;
         return IncludeBuilder.Apply(query, options);
     }
 

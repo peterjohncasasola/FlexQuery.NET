@@ -1,18 +1,16 @@
 using FlexQuery.NET.Constants;
 using FlexQuery.NET.Execution;
+using FlexQuery.NET.Helpers;
 using FlexQuery.NET.Models;
 using FlexQuery.NET.Models.Projection;
 using FlexQuery.NET.Security;
 
 namespace FlexQuery.NET.Validation.Rules;
 
-/// <summary>
-/// Validates that every path in <c>Includes</c> and <c>FilteredIncludes</c>
-/// corresponds to a reachable navigation property on the target entity type.
-/// Walks the <see cref="IncludeNode"/> tree recursively so that deeply nested
-/// expand paths (e.g. <c>Orders.Items.Product</c>) are validated at every level.
-/// A typo in any segment is caught before the query reaches a provider.
-/// </summary>
+// TODO: Once the dedicated expand feature is implemented, extract the common
+// navigation-path validation into a provider-agnostic NavigationPathValidationRule.
+// Include and expand will both consume it. Expand will additionally require its own
+// ExpandQueryValidationRule for filtering, sorting, paging, and projection rules.
 internal sealed class ExpandPathValidationRule : IValidationRule
 {
     /// <inheritdoc />
@@ -25,11 +23,14 @@ internal sealed class ExpandPathValidationRule : IValidationRule
         {
             foreach (var include in options.Includes)
             {
-                if (!NavigationPathExists(type, include))
+                if (!IsValidNavigationPath(type, include, out var pathNotFound))
                 {
+                    var code = pathNotFound ? ValidationErrorCodes.IncludePathNotFound : ValidationErrorCodes.NavigationPropertyRequired;
                     result.Errors.Add(new ValidationError(
-                        $"Include path '{include}' does not exist on type '{type.Name}'.",
-                        ValidationErrorCodes.IncludePathNotFound, include));
+                        pathNotFound
+                            ? $"Include path '{include}' does not exist on type '{type.Name}'."
+                            : $"Include path '{include}' contains one or more scalar properties. Only navigation properties are allowed.",
+                        code, include));
                 }
             }
         }
@@ -47,11 +48,14 @@ internal sealed class ExpandPathValidationRule : IValidationRule
     {
         var fullPath = string.IsNullOrEmpty(parentPath) ? node.Path : $"{parentPath}.{node.Path}";
 
-        if (!NavigationPathExists(type, node.Path))
+        if (!IsValidNavigationPath(type, node.Path, out var pathNotFound))
         {
+            var code = pathNotFound ? ValidationErrorCodes.IncludePathNotFound : ValidationErrorCodes.NavigationPropertyRequired;
             result.Errors.Add(new ValidationError(
-                $"Expand path '{fullPath}' does not exist on type '{type.Name}'.",
-                ValidationErrorCodes.IncludePathNotFound, fullPath));
+                pathNotFound
+                    ? $"Expand path '{fullPath}' does not exist on type '{type.Name}'."
+                    : $"Expand path '{fullPath}' contains one or more scalar properties. Only navigation properties are allowed.",
+                code, fullPath));
             return;
         }
 
@@ -72,10 +76,29 @@ internal sealed class ExpandPathValidationRule : IValidationRule
         }
     }
 
-    private static bool NavigationPathExists(Type type, string path)
+    private static bool IsValidNavigationPath(Type type, string path, out bool pathNotFound)
     {
         if (!SafePropertyResolver.TryResolveChain(type, path, out var chain))
+        {
+            pathNotFound = true;
             return false;
-        return chain.Count > 0;
+        }
+
+        pathNotFound = false;
+        foreach (var prop in chain)
+        {
+            if (!IsNavigationProperty(prop.PropertyType))
+                return false;
+        }
+
+        return true;
+    }
+
+    // TODO: Replace this heuristic with metadata-based navigation detection once
+    // QueryContext (or a future IncludeValidationContext) exposes the EF Core IModel
+    // or equivalent provider-agnostic navigation metadata.
+    private static bool IsNavigationProperty(Type type)
+    {
+        return TypeHelper.IsNavigationProperty(type);
     }
 }

@@ -36,19 +36,6 @@ internal static class QueryOptionsFactory
             options.GroupBy = groups;
         }
 
-        if (!string.IsNullOrWhiteSpace(parameters.Include))
-        {
-            var includePaths = ParserUtilities.SplitCsv(parameters.Include.Split('(')[0]);
-            foreach (var inc in includePaths)
-            {
-                if (!ParserUtilities.IsValidPropertyPath(inc.AsSpan()))
-                    throw new DslParseException(
-                        $"Invalid navigation property path '{inc}' in include expression. " +
-                        "Property paths must be dot-separated identifiers (e.g. 'Orders' or 'Orders.Items').");
-            }
-            options.Includes = includePaths;
-        }
-
         options.IsKeysetMode = isKeyset;
         options.OffsetExplicitlyRequested = parameters.Page != null;
         if (parameters.Cursor != null)

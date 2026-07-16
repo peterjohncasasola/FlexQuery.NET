@@ -174,37 +174,8 @@ public static class QueryOptionsExtensions
 
         var result = CopyQueryOptions(options);
 
-        // 1. Filter AST normalization
+        // 2. Filter AST normalization
         result.Filter = FilterNormalizer.Normalize(result.Filter);
-
-        // 2. Includes → FilteredIncludes consolidation
-        if (result.Includes?.Count > 0)
-        {
-            if (result.Expand == null)
-            {
-                result.Expand = result.Includes
-                    .Select(path => new IncludeNode { Path = path })
-                    .ToList();
-            }
-            else
-            {
-                if (result.Expand != null)
-                {
-                    var existingPathSet = new HashSet<string>(
-                        result.Expand.Select(i => i.Path),
-                        StringComparer.OrdinalIgnoreCase);
-                    foreach (var inc in result.Includes)
-                    {
-                        if (!existingPathSet.Contains(inc))
-                        {
-                            result.Expand.Add(new IncludeNode { Path = inc });
-                            existingPathSet.Add(inc);
-                        }
-                    }
-                }
-            }
-            result.Includes = null;
-        }
 
         return result;
     }

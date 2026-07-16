@@ -63,7 +63,7 @@ internal sealed class DslQueryParser : IQueryParser
         {
             try
             {
-                options.Expand = DslIncludeParser.Parse(parameters.Include);
+                options.Includes = DslIncludeParser.Parse(parameters.Include);
             }
             catch (DslParseException ex)
             {

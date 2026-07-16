@@ -1,7 +1,6 @@
 using FlexQuery.NET.Exceptions;
 using FlexQuery.NET.Execution;
 using FlexQuery.NET.Models;
-using FlexQuery.NET.Models.Projection;
 using FlexQuery.NET.Options;
 using FlexQuery.NET.Validation;
 using FlexQuery.NET.Validation.Rules;
@@ -92,61 +91,6 @@ public class IncludeAccessValidationRuleTests
         rule.Validate(options, Context(execOptions: execOptions), result);
 
         options.Includes.Should().BeEquivalentTo(["Children"]);
-        result.Errors.Should().ContainSingle(e => e.Code == ValidationErrorCodes.IncludeAccessDenied);
-    }
-
-    [Fact]
-    public void DisallowedExpandNodeStrict_Throws()
-    {
-        var execOptions = new TestGovernanceOptions { StrictFieldValidation = true, AllowedIncludes = ["Children"] };
-        var options = new QueryOptions { Expand = [new IncludeNode { Path = "NonExistentNav" }] };
-        var rule = new IncludeAccessValidationRule();
-
-        var act = () => rule.Validate(options, Context(execOptions: execOptions), ValidationResult.Success());
-
-        act.Should().Throw<QueryValidationException>();
-    }
-
-    [Fact]
-    public void DisallowedExpandNodeNonStrict_Removes()
-    {
-        var execOptions = new TestGovernanceOptions { StrictFieldValidation = false, AllowedIncludes = ["Children"] };
-        var options = new QueryOptions { Expand = [new IncludeNode { Path = "NonExistentNav" }] };
-        var rule = new IncludeAccessValidationRule();
-        var result = ValidationResult.Success();
-
-        rule.Validate(options, Context(execOptions: execOptions), result);
-
-        options.Expand.Should().BeNullOrEmpty();
-        result.Errors.Should().ContainSingle(e => e.Code == ValidationErrorCodes.IncludeAccessDenied);
-    }
-
-    [Fact]
-    public void NestedExpandNode_DisallowedChildRemoved()
-    {
-        var execOptions = new TestGovernanceOptions
-        {
-            StrictFieldValidation = false,
-            AllowedIncludes = ["Children"]
-        };
-        var options = new QueryOptions
-        {
-            Expand =
-            [
-                new IncludeNode
-                {
-                    Path = "Children",
-                    Children = [new IncludeNode { Path = "NonExistentChild" }]
-                }
-            ]
-        };
-        var rule = new IncludeAccessValidationRule();
-        var result = ValidationResult.Success();
-
-        rule.Validate(options, Context(execOptions: execOptions), result);
-
-        options.Expand.Should().ContainSingle();
-        options.Expand[0].Children.Should().BeEmpty();
         result.Errors.Should().ContainSingle(e => e.Code == ValidationErrorCodes.IncludeAccessDenied);
     }
 }

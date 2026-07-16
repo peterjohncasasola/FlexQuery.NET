@@ -112,7 +112,7 @@ internal sealed class FqlQueryParser : IQueryParser
         {
             try
             {
-                options.Expand = FqlIncludeParser.Parse(parameters.Include);
+                options.Includes = FqlIncludeParser.Parse(parameters.Include);
             }
             catch (FqlParseException ex)
             {
