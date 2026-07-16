@@ -10,7 +10,7 @@ public class FlatProjectionTests : DapperApiTestBase
     [Fact]
     public async Task FlatMode_WithSingleSelect_ProjectsLeafFieldsOnly()
     {
-        var response = await Client.GetAsync("/api/users?mode=flat&select=Orders.Total,Orders.Number as OrderNumber");
+        var response = await Client.GetAsync("/api/users?mode=flat&select=Orders.Total,Orders.Number:OrderNumber");
 
         response.EnsureSuccessStatusCode();
         var json = await response.Content.ReadFromJsonAsync<JsonElement>();
@@ -28,7 +28,7 @@ public class FlatProjectionTests : DapperApiTestBase
     [Fact]
     public async Task FlatMixedMode_WithRootAndNestedFields_ProjectsAllFieldsInSingleRow()
     {
-        var response = await Client.GetAsync("/api/users?mode=flat-mixed&select=Name as customerName,Orders.Total,Orders.Number as orderNumber");
+        var response = await Client.GetAsync("/api/users?mode=flat-mixed&select=Name:customerName,Orders.Total,Orders.Number:orderNumber");
 
         response.EnsureSuccessStatusCode();
         var json = await response.Content.ReadFromJsonAsync<JsonElement>();
