@@ -418,5 +418,85 @@ public class DslSelectParserTests
         options.SelectTree!.IncludeAllScalars.Should().BeTrue();
     }
 
+    #region Nested Alias
+
+    [Fact]
+    public void ParseToSelectionTree_NestedAlias_SetsAliasOnChild()
+    {
+        var tree = DslSelectParser.ParseToSelectionTree("Customer(Name:CustomerName)");
+
+        tree.Should().NotBeNull();
+        tree!.TryGetChild("Customer", out var customer).Should().BeTrue();
+        customer!.TryGetChild("Name", out var name).Should().BeTrue();
+        name!.Alias.Should().Be("CustomerName");
+    }
+
+    [Fact]
+    public void ParseToSelectionTree_NestedAlias_MultipleAliases()
+    {
+        var tree = DslSelectParser.ParseToSelectionTree("Customer(Name:CustomerName,Email:CustomerEmail)");
+
+        tree.Should().NotBeNull();
+        tree!.TryGetChild("Customer", out var customer).Should().BeTrue();
+        customer!.TryGetChild("Name", out var name).Should().BeTrue();
+        name!.Alias.Should().Be("CustomerName");
+        customer.TryGetChild("Email", out var email).Should().BeTrue();
+        email!.Alias.Should().Be("CustomerEmail");
+    }
+
+    [Fact]
+    public void ParseToSelectionTree_NestedAlias_DeeplyNested()
+    {
+        var tree = DslSelectParser.ParseToSelectionTree("Customer(Address(City:CustomerCity))");
+
+        tree.Should().NotBeNull();
+        tree!.TryGetChild("Customer", out var customer).Should().BeTrue();
+        customer!.TryGetChild("Address", out var address).Should().BeTrue();
+        address!.TryGetChild("City", out var city).Should().BeTrue();
+        city!.Alias.Should().Be("CustomerCity");
+    }
+
+    [Fact]
+    public void ParseToSelectionTree_NestedAlias_Invalid_EmptyAlias_Throws()
+    {
+        var act = () => DslSelectParser.ParseToSelectionTree("Customer(Name:)");
+
+        act.Should().Throw<DslParseException>()
+            .WithMessage("*Empty alias*");
+    }
+
+    [Fact]
+    public void ParseToSelectionTree_NestedAlias_Invalid_ReservedAs_Throws()
+    {
+        var act = () => DslSelectParser.ParseToSelectionTree("Customer(Name:AS)");
+
+        act.Should().Throw<DslParseException>()
+            .WithMessage("*reserved keyword*");
+    }
+
+    [Fact]
+    public void ParseToSelectionTree_NestedAlias_Invalid_NavigationAlias_Throws()
+    {
+        var act = () => DslSelectParser.ParseToSelectionTree("Customer:Client(Name)");
+
+        act.Should().Throw<DslParseException>()
+            .WithMessage("*Navigation alias is not supported*");
+    }
+
+    [Fact]
+    public void Parse_NestedAlias_RoutesToSelectTree()
+    {
+        var options = new QueryOptions();
+        DslSelectParser.Parse(options, "Customer(Name:CustomerName)");
+
+        options.Select.Should().BeNull();
+        options.SelectTree.Should().NotBeNull();
+        options.SelectTree!.TryGetChild("Customer", out var customer).Should().BeTrue();
+        customer!.TryGetChild("Name", out var name).Should().BeTrue();
+        name!.Alias.Should().Be("CustomerName");
+    }
+
+    #endregion
+
     #endregion
 }
