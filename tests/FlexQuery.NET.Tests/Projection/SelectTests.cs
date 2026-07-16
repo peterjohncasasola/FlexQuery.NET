@@ -4,6 +4,9 @@ using FlexQuery.NET.Models;
 using Microsoft.EntityFrameworkCore;
 using System.Text.RegularExpressions;
 using FlexQuery.NET.Builders;
+using FlexQuery.NET.Exceptions;
+using FlexQuery.NET.EntityFrameworkCore.Options;
+using FlexQuery.NET.EntityFrameworkCore;
 
 namespace FlexQuery.NET.Tests.Projection;
 
@@ -229,5 +232,215 @@ public class SelectTests : IDisposable
 
         var rows = await projected.ToListAsync();
         rows.Should().HaveCount(8);
+    }
+
+    // ──────────────────────────────────────────────────────────────
+    //  Nested Select Integration Tests
+    // ──────────────────────────────────────────────────────────────
+
+    [Fact]
+    public async Task Select_NestedTree_ProjectsCorrectShape()
+    {
+        var options = new QueryOptions();
+        options.SelectTree = new SelectionNode();
+        options.SelectTree.GetOrAddChild("Id");
+        options.SelectTree.GetOrAddChild("Name");
+        var profile = options.SelectTree.GetOrAddChild("Profile");
+        profile.GetOrAddChild("Id");
+        profile.GetOrAddChild("Bio");
+
+        var result = await _db.Customers.FlexQueryAsync(options);
+        result.Data.Should().NotBeEmpty();
+
+        var first = result.Data.First();
+        var type = first.GetType();
+
+        type.GetProperty("Id").Should().NotBeNull();
+        type.GetProperty("Name").Should().NotBeNull();
+        type.GetProperty("Age").Should().BeNull();
+
+        var profileProp = type.GetProperty("Profile");
+        profileProp.Should().NotBeNull();
+        var profileObj = profileProp!.GetValue(first);
+        profileObj.Should().NotBeNull();
+        profileObj!.GetType().GetProperty("Id").Should().NotBeNull();
+        profileObj.GetType().GetProperty("Bio").Should().NotBeNull();
+        profileObj.GetType().GetProperty("Customer").Should().BeNull();
+    }
+
+    [Fact]
+    public async Task Select_NestedCollection_ProjectsCorrectShape()
+    {
+        var options = new QueryOptions();
+        options.SelectTree = new SelectionNode();
+        var orders = options.SelectTree.GetOrAddChild("Orders");
+        orders.GetOrAddChild("Id");
+        orders.GetOrAddChild("Total");
+
+        var result = await _db.Customers.FlexQueryAsync(options);
+        result.Data.Should().NotBeEmpty();
+
+        var first = result.Data.First();
+        var type = first.GetType();
+
+        var ordersProp = type.GetProperty("Orders");
+        ordersProp.Should().NotBeNull();
+        var ordersObj = ordersProp!.GetValue(first) as System.Collections.IEnumerable;
+        ordersObj.Should().NotBeNull();
+
+        var orderList = ordersObj.Cast<object>().ToList();
+        orderList.Should().NotBeEmpty();
+        orderList[0].GetType().GetProperty("Id").Should().NotBeNull();
+        orderList[0].GetType().GetProperty("Total").Should().NotBeNull();
+        orderList[0].GetType().GetProperty("Status").Should().BeNull();
+    }
+
+    [Fact]
+    public async Task Select_RootWildcard_ProjectsAllowedScalars()
+    {
+        var options = new QueryOptions();
+        options.SelectTree = new SelectionNode();
+        options.SelectTree.MarkIncludeAllScalars();
+
+        var execOptions = new EfCoreQueryOptions
+        {
+            AllowedFields = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "Id", "Name" },
+            StrictFieldValidation = false
+        };
+
+        var result = await _db.Customers.FlexQueryAsync(options, execOptions);
+        result.Data.Should().NotBeEmpty();
+
+        var first = result.Data.First();
+        var type = first.GetType();
+
+        type.GetProperty("Id").Should().NotBeNull();
+        type.GetProperty("Name").Should().NotBeNull();
+        type.GetProperty("Email").Should().BeNull();
+        type.GetProperty("SSN").Should().BeNull();
+    }
+
+    [Fact]
+    public async Task SelectTree_Governance_BlocksNestedField_Strict()
+    {
+        var options = new QueryOptions();
+        options.SelectTree = new SelectionNode();
+        var orders = options.SelectTree.GetOrAddChild("Orders");
+        orders.GetOrAddChild("Total");
+
+        var execOptions = new EfCoreQueryOptions
+        {
+            BlockedFields = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "Orders.Total" },
+            StrictFieldValidation = true
+        };
+
+        var act = async () => await _db.Customers.FlexQueryAsync(options, execOptions);
+
+        (await act.Should().ThrowAsync<QueryValidationException>())
+            .Which.Message.Should().Contain("Orders.Total");
+    }
+
+    [Fact]
+    public async Task SelectTree_Governance_RemovesNestedField_NonStrict()
+    {
+        var options = new QueryOptions();
+        options.SelectTree = new SelectionNode();
+        var orders = options.SelectTree.GetOrAddChild("Orders");
+        orders.GetOrAddChild("Total");
+        orders.GetOrAddChild("Status");
+
+        var execOptions = new EfCoreQueryOptions
+        {
+            BlockedFields = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "Orders.Total" },
+            StrictFieldValidation = false
+        };
+
+        options.ValidateSafe<Customer>(execOptions);
+
+        orders.TryGetChild("Total", out _).Should().BeFalse();
+        orders.TryGetChild("Status", out _).Should().BeTrue();
+
+        var query = _db.Customers.ApplySelect(options);
+        var list = await query.ToListAsync();
+        list.Should().NotBeEmpty();
+
+        var first = list.First();
+        var type = first.GetType();
+
+        var ordersProp = type.GetProperty("Orders");
+        ordersProp.Should().NotBeNull();
+        var ordersObj = ordersProp!.GetValue(first) as System.Collections.IEnumerable;
+        ordersObj.Should().NotBeNull();
+
+        var orderList = ordersObj.Cast<object>().ToList();
+        orderList.Should().NotBeEmpty();
+        orderList[0].GetType().GetProperty("Total").Should().BeNull();
+        orderList[0].GetType().GetProperty("Status").Should().NotBeNull();
+    }
+
+    [Fact]
+    public async Task Select_NestedField_AllowedByAllowedFields_Succeeds()
+    {
+        var options = new QueryOptions();
+        options.SelectTree = new SelectionNode();
+        var profile = options.SelectTree.GetOrAddChild("Profile");
+        profile.GetOrAddChild("Bio");
+
+        var execOptions = new EfCoreQueryOptions
+        {
+            AllowedFields = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "Profile.Bio" }
+        };
+
+        var result = await _db.Customers.FlexQueryAsync(options, execOptions);
+        result.Data.Should().NotBeEmpty();
+    }
+
+    [Fact]
+    public async Task Select_NestedField_BlockedByBlockedFields_Strict()
+    {
+        var options = new QueryOptions();
+        options.SelectTree = new SelectionNode();
+        var profile = options.SelectTree.GetOrAddChild("Profile");
+        profile.GetOrAddChild("Bio");
+
+        var execOptions = new EfCoreQueryOptions
+        {
+            BlockedFields = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "Profile.Bio" },
+            StrictFieldValidation = true
+        };
+
+        var act = async () => await _db.Customers.FlexQueryAsync(options, execOptions);
+
+        (await act.Should().ThrowAsync<QueryValidationException>())
+            .Which.Message.Should().Contain("Profile.Bio");
+    }
+
+    [Fact]
+    public async Task Select_NestedField_RemovedByBlockedFields_NonStrict()
+    {
+        var options = new QueryOptions();
+        options.SelectTree = new SelectionNode();
+        var profile = options.SelectTree.GetOrAddChild("Profile");
+        profile.GetOrAddChild("Bio");
+        profile.GetOrAddChild("PreferredLanguage");
+
+        var execOptions = new EfCoreQueryOptions
+        {
+            BlockedFields = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "Profile.Bio" },
+            StrictFieldValidation = false
+        };
+
+        var result = await _db.Customers.FlexQueryAsync(options, execOptions);
+        result.Data.Should().NotBeEmpty();
+
+        var first = result.Data.First();
+        var type = first.GetType();
+
+        var profileProp = type.GetProperty("Profile");
+        profileProp.Should().NotBeNull();
+        var profileObj = profileProp!.GetValue(first);
+        profileObj.Should().NotBeNull();
+        profileObj!.GetType().GetProperty("Bio").Should().BeNull();
+        profileObj.GetType().GetProperty("PreferredLanguage").Should().NotBeNull();
     }
 }
