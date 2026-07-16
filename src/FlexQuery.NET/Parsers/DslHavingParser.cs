@@ -9,7 +9,7 @@ namespace FlexQuery.NET.Parsers;
 /// Parses HAVING clause expressions for grouped queries.
 /// Format: sum(field):gt:value or count():eq:value
 /// </summary>
-internal static class HavingParser
+internal static class DslHavingParser
 {
     private static readonly Regex HavingPattern = new(
         @"^(?<fn>sum|count|avg|average|min|max)(?:\((?<field>[A-Za-z_][A-Za-z0-9_\.]*)?\)|:(?<field2>[A-Za-z_][A-Za-z0-9_\.]+))?:(?<op>[A-Za-z_][A-Za-z0-9_]*):(?<value>.+)$",

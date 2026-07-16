@@ -101,7 +101,7 @@ internal sealed class DslQueryParser : IQueryParser
         {
             try
             {
-                options.Having = HavingParser.Parse(parameters.Having);
+                options.Having = DslHavingParser.Parse(parameters.Having);
             }
             catch (DslParseException ex)
             {
