@@ -1,3 +1,4 @@
+using FlexQuery.NET.Internal;
 using FlexQuery.NET.Models;
 using FlexQuery.NET.Parsers.Fql;
 using Xunit;
@@ -165,4 +166,227 @@ public class FqlSelectParserTests
 
         options.Select.Should().BeEquivalentTo(new[] { "Name AS Name" });
     }
+
+    #region Nested Select
+
+    [Fact]
+    public void ParseToSelectionTree_SimpleFields_ReturnsFlatTree()
+    {
+        var tree = FqlSelectParser.ParseToSelectionTree("Id,Name");
+
+        tree.Should().NotBeNull();
+        tree!.TryGetChild("Id", out _).Should().BeTrue();
+        tree.TryGetChild("Name", out _).Should().BeTrue();
+        tree.HasChildren.Should().BeTrue();
+    }
+
+    [Fact]
+    public void ParseToSelectionTree_NestedReference_ReturnsNestedTree()
+    {
+        var tree = FqlSelectParser.ParseToSelectionTree("Customer(Id,Name)");
+
+        tree.Should().NotBeNull();
+        tree!.TryGetChild("Customer", out var customer).Should().BeTrue();
+        customer!.TryGetChild("Id", out _).Should().BeTrue();
+        customer.TryGetChild("Name", out _).Should().BeTrue();
+    }
+
+    [Fact]
+    public void ParseToSelectionTree_CollectionNavigation_ReturnsNestedTree()
+    {
+        var tree = FqlSelectParser.ParseToSelectionTree("Orders(Id,Total)");
+
+        tree.Should().NotBeNull();
+        tree!.TryGetChild("Orders", out var orders).Should().BeTrue();
+        orders!.TryGetChild("Id", out _).Should().BeTrue();
+        orders.TryGetChild("Total", out _).Should().BeTrue();
+    }
+
+    [Fact]
+    public void ParseToSelectionTree_DeeplyNested_ReturnsRecursiveTree()
+    {
+        var tree = FqlSelectParser.ParseToSelectionTree("Customer(Address(City,Country))");
+
+        tree.Should().NotBeNull();
+        tree!.TryGetChild("Customer", out var customer).Should().BeTrue();
+        customer!.TryGetChild("Address", out var address).Should().BeTrue();
+        address!.TryGetChild("City", out _).Should().BeTrue();
+        address.TryGetChild("Country", out _).Should().BeTrue();
+    }
+
+    [Fact]
+    public void ParseToSelectionTree_RootWildcard_SetsIncludeAllScalars()
+    {
+        var tree = FqlSelectParser.ParseToSelectionTree("*");
+
+        tree.Should().NotBeNull();
+        tree!.IncludeAllScalars.Should().BeTrue();
+        tree.HasChildren.Should().BeFalse();
+    }
+
+    [Fact]
+    public void ParseToSelectionTree_DuplicateNodes_Merges()
+    {
+        var tree = FqlSelectParser.ParseToSelectionTree("Customer(Id),Customer(Name)");
+
+        tree.Should().NotBeNull();
+        tree!.TryGetChild("Customer", out var customer).Should().BeTrue();
+        customer!.TryGetChild("Id", out _).Should().BeTrue();
+        customer.TryGetChild("Name", out _).Should().BeTrue();
+    }
+
+    [Fact]
+    public void ParseToSelectionTree_WhitespaceVariations_ParsesCorrectly()
+    {
+        var tree = FqlSelectParser.ParseToSelectionTree("Customer ( Id , Name )");
+
+        tree.Should().NotBeNull();
+        tree!.TryGetChild("Customer", out var customer).Should().BeTrue();
+        customer!.TryGetChild("Id", out _).Should().BeTrue();
+        customer.TryGetChild("Name", out _).Should().BeTrue();
+    }
+
+    [Fact]
+    public void ParseToSelectionTree_Newlines_ParsesCorrectly()
+    {
+        var tree = FqlSelectParser.ParseToSelectionTree("Customer(\n  Id,\n  Name\n)");
+
+        tree.Should().NotBeNull();
+        tree!.TryGetChild("Customer", out var customer).Should().BeTrue();
+        customer!.TryGetChild("Id", out _).Should().BeTrue();
+        customer.TryGetChild("Name", out _).Should().BeTrue();
+    }
+
+    [Fact]
+    public void ParseToSelectionTree_EmptyInput_Throws()
+    {
+        var act = () => FqlSelectParser.ParseToSelectionTree("   ");
+
+        act.Should().Throw<FqlParseException>()
+            .WithMessage("*empty*");
+    }
+
+    [Fact]
+    public void ParseToSelectionTree_NestedWildcard_Throws()
+    {
+        var act = () => FqlSelectParser.ParseToSelectionTree("Customer(*)");
+
+        act.Should().Throw<FqlParseException>()
+            .WithMessage("*Wildcard selection is only supported at the root level*");
+    }
+
+    [Fact]
+    public void ParseToSelectionTree_MixedWildcard_Throws()
+    {
+        var act = () => FqlSelectParser.ParseToSelectionTree("*,Id");
+
+        act.Should().Throw<FqlParseException>()
+            .WithMessage("*Root wildcard cannot be combined with other selections*");
+    }
+
+    [Fact]
+    public void ParseToSelectionTree_MultipleRootWildcards_Throws()
+    {
+        var act = () => FqlSelectParser.ParseToSelectionTree("*,*");
+
+        act.Should().Throw<FqlParseException>()
+            .WithMessage("*Root wildcard cannot be combined with other selections*");
+    }
+
+    [Fact]
+    public void ParseToSelectionTree_PropertyWildcard_Throws()
+    {
+        var act = () => FqlSelectParser.ParseToSelectionTree("Customer.*");
+
+        act.Should().Throw<FqlParseException>()
+            .WithMessage("*Property wildcard syntax is not supported*");
+    }
+
+    [Fact]
+    public void ParseToSelectionTree_EmptyChildList_Throws()
+    {
+        var act = () => FqlSelectParser.ParseToSelectionTree("Customer()");
+
+        act.Should().Throw<FqlParseException>()
+            .WithMessage("*Empty selection list for 'Customer'*");
+    }
+
+    [Fact]
+    public void ParseToSelectionTree_MismatchedParens_Throws()
+    {
+        var act = () => FqlSelectParser.ParseToSelectionTree("Customer(Name))");
+
+        act.Should().Throw<FqlParseException>()
+            .WithMessage("*Unexpected closing parenthesis*");
+    }
+
+    [Fact]
+    public void ParseToSelectionTree_MissingClosingParen_Throws()
+    {
+        var act = () => FqlSelectParser.ParseToSelectionTree("Customer(Name");
+
+        act.Should().Throw<FqlParseException>()
+            .WithMessage("*Missing closing parenthesis*");
+    }
+
+    [Fact]
+    public void ParseToSelectionTree_LeadingComma_Throws()
+    {
+        var act = () => FqlSelectParser.ParseToSelectionTree(",Id,Name");
+
+        act.Should().Throw<FqlParseException>()
+            .WithMessage("*Expected identifier before comma*");
+    }
+
+    [Fact]
+    public void ParseToSelectionTree_TrailingComma_Throws()
+    {
+        var act = () => FqlSelectParser.ParseToSelectionTree("Id,Name,");
+
+        act.Should().Throw<FqlParseException>()
+            .WithMessage("*Trailing comma is not allowed*");
+    }
+
+    [Fact]
+    public void ParseToSelectionTree_ExtraClosingParen_Throws()
+    {
+        var act = () => FqlSelectParser.ParseToSelectionTree("Customer(Name))");
+
+        act.Should().Throw<FqlParseException>()
+            .WithMessage("*Unexpected closing parenthesis*");
+    }
+
+    [Fact]
+    public void ParseToSelectionTree_InvalidIdentifier_Throws()
+    {
+        var act = () => FqlSelectParser.ParseToSelectionTree("Customer(Id-Name)");
+
+        act.Should().Throw<FqlParseException>();
+    }
+
+    [Fact]
+    public void Parse_NestedSyntax_PopulatesSelectTree()
+    {
+        var options = new QueryOptions();
+        FqlSelectParser.Parse(options, "Customer(Id,Name)");
+
+        options.Select.Should().BeNull();
+        options.SelectTree.Should().NotBeNull();
+        options.SelectTree!.TryGetChild("Customer", out var customer).Should().BeTrue();
+        customer!.TryGetChild("Id", out _).Should().BeTrue();
+        customer.TryGetChild("Name", out _).Should().BeTrue();
+    }
+
+    [Fact]
+    public void Parse_RootWildcard_PopulatesSelectTree()
+    {
+        var options = new QueryOptions();
+        FqlSelectParser.Parse(options, "*");
+
+        options.Select.Should().BeNull();
+        options.SelectTree.Should().NotBeNull();
+        options.SelectTree!.IncludeAllScalars.Should().BeTrue();
+    }
+
+    #endregion
 }
