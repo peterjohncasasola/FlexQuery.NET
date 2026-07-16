@@ -20,12 +20,30 @@ internal static class DslAggregateParser
                 throw new DslParseException(
                     $"Unable to parse aggregate expression '{rawAggregates}'. Empty aggregate item found.");
 
-            var parts = trimmed.Split(':', StringSplitOptions.TrimEntries);
+            var parts = trimmed.Split(':');
 
             if (parts.Length < 2)
                 throw new DslParseException(
                     $"Unable to parse aggregate expression '{rawAggregates}'. " +
                     $"Expected format: Function:Field[:Alias]. Invalid item '{trimmed}'.");
+
+            for (var i = 0; i < parts.Length; i++)
+                parts[i] = parts[i].Trim();
+
+            if (parts[0].Length == 0)
+                throw new DslParseException(
+                    $"Unable to parse aggregate expression '{rawAggregates}'. " +
+                    $"Expected format: Function:Field[:Alias]. Missing function in '{trimmed}'.");
+
+            if (parts[1].Length == 0)
+                throw new DslParseException(
+                    $"Unable to parse aggregate expression '{rawAggregates}'. " +
+                    $"Expected format: Function:Field[:Alias]. Missing field in '{trimmed}'.");
+
+            if (parts.Length > 3)
+                throw new DslParseException(
+                    $"Unable to parse aggregate expression '{rawAggregates}'. " +
+                    $"Expected format: Function:Field[:Alias]. Too many parts in '{trimmed}'.");
 
             string? aggregateField;
             AggregateFunction function;
@@ -51,14 +69,31 @@ internal static class DslAggregateParser
                     "Field must be a valid property path.");
 
             aggregateField = field == "*" ? null : field;
-            string? alias = parts.Length >= 3 ? parts[2] : null;
 
-            result.Add(new AggregateModel
+            if (parts.Length == 3)
             {
-                Function = function,
-                Field = aggregateField,
-                Alias = alias ?? ParserUtilities.BuildAggregateAlias(functionName, aggregateField)
-            });
+                var aliasPart = parts[2];
+                if (string.IsNullOrWhiteSpace(aliasPart))
+                    throw new DslParseException(
+                        $"Unable to parse aggregate expression '{rawAggregates}'. " +
+                        $"Expected format: Function:Field[:Alias]. Empty alias in '{trimmed}'.");
+
+                result.Add(new AggregateModel
+                {
+                    Function = function,
+                    Field = aggregateField,
+                    Alias = aliasPart
+                });
+            }
+            else
+            {
+                result.Add(new AggregateModel
+                {
+                    Function = function,
+                    Field = aggregateField,
+                    Alias = ParserUtilities.BuildAggregateAlias(functionName, aggregateField)
+                });
+            }
         }
 
         if (result.Count == 0)
