@@ -1,6 +1,7 @@
     using FlexQuery.NET.Internal;
     using FlexQuery.NET.Models;
 using FlexQuery.NET.Models.Projection;
+using FlexQuery.NET.Exceptions;
 
 namespace FlexQuery.NET.Builders;
 
@@ -84,6 +85,13 @@ internal static class SelectTreeBuilder
             node = node.GetOrAddChild(part);
             if (i == parts.Length - 1 && alias != null)
             {
+                if (!string.IsNullOrWhiteSpace(node.Alias) &&
+                    !string.Equals(node.Alias, alias, StringComparison.Ordinal))
+                {
+                    throw new QueryValidationException(
+                        $"Conflicting aliases for field '{path}': '{node.Alias}' and '{alias}'. " +
+                        "Use identical aliases for the same field or omit the alias.");
+                }
                 node.Alias = alias;
             }
         }
@@ -111,6 +119,19 @@ internal static class SelectTreeBuilder
         foreach (var kvp in source.EnumerateChildren())
         {
             var targetChild = target.GetOrAddChild(kvp.Key);
+
+            if (!string.IsNullOrWhiteSpace(kvp.Value.Alias))
+            {
+                if (!string.IsNullOrWhiteSpace(targetChild.Alias) &&
+                    !string.Equals(targetChild.Alias, kvp.Value.Alias, StringComparison.Ordinal))
+                {
+                    throw new QueryValidationException(
+                        $"Conflicting aliases for field '{kvp.Key}': '{targetChild.Alias}' and '{kvp.Value.Alias}'. " +
+                        "Use identical aliases for the same field or omit the alias.");
+                }
+                targetChild.Alias = kvp.Value.Alias;
+            }
+
             MergeTree(targetChild, kvp.Value);
         }
     }
