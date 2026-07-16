@@ -4,6 +4,7 @@ using FlexQuery.NET.Models;
 using Microsoft.EntityFrameworkCore;
 using System.Text.RegularExpressions;
 using FlexQuery.NET.Builders;
+using FlexQuery.NET.Caching;
 using FlexQuery.NET.Exceptions;
 using FlexQuery.NET.EntityFrameworkCore.Options;
 using FlexQuery.NET.EntityFrameworkCore;
@@ -443,4 +444,201 @@ public class SelectTests : IDisposable
         profileObj!.GetType().GetProperty("Bio").Should().BeNull();
         profileObj.GetType().GetProperty("PreferredLanguage").Should().NotBeNull();
     }
+
+    #region Nested Alias Integration
+
+    [Fact]
+    public async Task Select_NestedAlias_ProjectsWithAliasedFieldNames()
+    {
+        var options = new QueryOptions();
+        options.SelectTree = new SelectionNode();
+        var profile = options.SelectTree.GetOrAddChild("Profile");
+        var bio = profile.GetOrAddChild("Bio");
+        bio.Alias = "ProfileBio";
+
+        var result = await _db.Customers.FlexQueryAsync(options);
+        result.Data.Should().NotBeEmpty();
+
+        var first = result.Data.First();
+        var type = first.GetType();
+
+        var profileProp = type.GetProperty("Profile");
+        profileProp.Should().NotBeNull();
+        var profileObj = profileProp!.GetValue(first);
+        profileObj.Should().NotBeNull();
+        profileObj?.GetType().GetProperty("ProfileBio").Should().NotBeNull();
+        profileObj.GetType().GetProperty("Bio").Should().BeNull();
+    }
+
+    [Fact]
+    public async Task Select_NestedAlias_DeepNesting_PropagatesCorrectly()
+    {
+        var options = new QueryOptions();
+        options.SelectTree = new SelectionNode();
+        var profile = options.SelectTree.GetOrAddChild("Profile");
+        var bio = profile.GetOrAddChild("Bio");
+        bio.Alias = "ProfileBio";
+
+        var result = await _db.Customers.FlexQueryAsync(options);
+        result.Data.Should().NotBeEmpty();
+
+        var first = result.Data.First();
+        var type = first.GetType();
+
+        var profileProp = type.GetProperty("Profile");
+        profileProp.Should().NotBeNull();
+        var profileObj = profileProp!.GetValue(first);
+        profileObj.Should().NotBeNull();
+        profileObj.GetType().GetProperty("ProfileBio").Should().NotBeNull();
+        profileObj.GetType().GetProperty("Bio").Should().BeNull();
+    }
+
+    [Fact]
+    public void Select_MergeTree_PropagatesAliases()
+    {
+        var tree = new SelectionNode();
+        var profile = tree.GetOrAddChild("Profile");
+        profile.GetOrAddChild("Bio").Alias = "ProfileBio";
+        profile.GetOrAddChild("Email").Alias = "ProfileEmail";
+
+        tree.TryGetChild("Profile", out var sourceProfile).Should().BeTrue();
+        sourceProfile!.TryGetChild("Bio", out var sourceBio).Should().BeTrue();
+        sourceBio!.Alias.Should().Be("ProfileBio");
+        sourceProfile.TryGetChild("Email", out var sourceEmail).Should().BeTrue();
+        sourceEmail!.Alias.Should().Be("ProfileEmail");
+
+        var result = SelectTreeBuilder.Build(new QueryOptions { SelectTree = tree });
+
+        result.HasChildren.Should().BeTrue();
+        result.TryGetChild("Profile", out var p).Should().BeTrue();
+        p!.HasChildren.Should().BeTrue();
+        p.TryGetChild("Bio", out var bio).Should().BeTrue();
+        bio!.Alias.Should().Be("ProfileBio");
+        p.TryGetChild("Email", out var email).Should().BeTrue();
+        email!.Alias.Should().Be("ProfileEmail");
+    }
+
+    [Fact]
+    public async Task Select_Alias_IgnoresValidation()
+    {
+        var options = new QueryOptions();
+        options.SelectTree = new SelectionNode();
+        var profile = options.SelectTree.GetOrAddChild("Profile");
+        var bio = profile.GetOrAddChild("Bio");
+        bio.Alias = "CustomerBio";
+
+        var execOptions = new EfCoreQueryOptions
+        {
+            AllowedFields = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "Profile.Bio" }
+        };
+
+        var result = await _db.Customers.FlexQueryAsync(options, execOptions);
+        result.Data.Should().NotBeEmpty();
+    }
+
+    [Fact]
+    public void Select_Alias_DuplicateIdentical_Merges()
+    {
+        var tree = new SelectionNode();
+        var profile = tree.GetOrAddChild("Profile");
+        profile.GetOrAddChild("Bio").Alias = "ProfileBio";
+
+        var options = new QueryOptions
+        {
+            SelectTree = tree,
+            Select = new List<string> { "Profile.Bio AS ProfileBio" }
+        };
+
+        var result = SelectTreeBuilder.Build(options);
+        result.TryGetChild("Profile", out var p).Should().BeTrue();
+        p!.TryGetChild("Bio", out var bio).Should().BeTrue();
+        bio!.Alias.Should().Be("ProfileBio");
+    }
+
+    [Fact]
+    public void Select_Alias_Conflicting_Throws()
+    {
+        var tree = new SelectionNode();
+        var profile = tree.GetOrAddChild("Profile");
+        profile.GetOrAddChild("Bio").Alias = "FirstBio";
+
+        var options = new QueryOptions
+        {
+            SelectTree = tree,
+            Select = new List<string> { "Profile.Bio AS LastBio" }
+        };
+
+        var act = () => SelectTreeBuilder.Build(options);
+
+        act.Should().Throw<QueryValidationException>()
+            .WithMessage("*Conflicting aliases*");
+    }
+
+    [Fact]
+    public void Select_Alias_MultipleDuplicateNestedBranches_Merges()
+    {
+        var options = new QueryOptions
+        {
+            Select = new List<string>
+            {
+                "Customer.Name AS CustomerName",
+                "Customer.Email AS CustomerEmail",
+                "Customer.Name AS CustomerName",
+                "Customer.Email AS CustomerEmail"
+            }
+        };
+
+        var result = SelectTreeBuilder.Build(options);
+        result.TryGetChild("Customer", out var customer).Should().BeTrue();
+        customer!.TryGetChild("Name", out var name).Should().BeTrue();
+        name!.Alias.Should().Be("CustomerName");
+        customer.TryGetChild("Email", out var email).Should().BeTrue();
+        email!.Alias.Should().Be("CustomerEmail");
+    }
+
+    [Fact]
+    public void Select_Alias_DeepRecursiveMerge_PropagatesAliases()
+    {
+        var options = new QueryOptions
+        {
+            Select = new List<string>
+            {
+                "Profile.Bio AS ProfileBio",
+                "Profile.Id"
+            }
+        };
+
+        var result = SelectTreeBuilder.Build(options);
+        result.TryGetChild("Profile", out var profile).Should().BeTrue();
+        profile!.TryGetChild("Bio", out var bio).Should().BeTrue();
+        bio!.Alias.Should().Be("ProfileBio");
+        profile.TryGetChild("Id", out _).Should().BeTrue();
+    }
+
+    [Fact]
+    public void Select_Alias_CacheKey_DifferentFromBareField()
+    {
+        var optionsWithAlias = new QueryOptions { Select = new List<string> { "Profile.Bio AS ProfileBio" } };
+        var optionsWithoutAlias = new QueryOptions { Select = new List<string> { "Profile.Bio" } };
+
+        var keyWithAlias = QueryCacheKeyBuilder.Build(optionsWithAlias, typeof(Customer), "query");
+        var keyWithoutAlias = QueryCacheKeyBuilder.Build(optionsWithoutAlias, typeof(Customer), "query");
+
+        keyWithAlias.Should().NotBe(keyWithoutAlias);
+    }
+
+    [Fact]
+    public void Select_Alias_CacheKey_SameAlias_IdenticalKeys()
+    {
+        var options1 = new QueryOptions { Select = new List<string> { "Profile.Bio AS ProfileBio" } };
+        var options2 = new QueryOptions { Select = new List<string> { "Profile.Bio AS ProfileBio" } };
+
+        var key1 = QueryCacheKeyBuilder.Build(options1, typeof(Customer), "query");
+        var key2 = QueryCacheKeyBuilder.Build(options2, typeof(Customer), "query");
+
+        key1.Should().Be(key2);
+    }
+
+    #endregion
+
 }
