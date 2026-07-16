@@ -9,7 +9,7 @@ namespace FlexQuery.NET.Parsers;
 /// Parses sort expressions including aggregate sorts.
 /// Supports string format (field:asc,field:desc).
 /// </summary>
-internal static class SortParser
+internal static class DslSortParser
 {
     private static readonly Regex AggregateSortPattern = new(
         @"^(?<collection>[A-Za-z_][A-Za-z0-9_\.]*)\.(?<fn>sum|count|max|min|avg)\((?<field>[A-Za-z_][A-Za-z0-9_\.]*)?\)$",

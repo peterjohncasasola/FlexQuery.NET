@@ -5,12 +5,12 @@ using Xunit;
 
 namespace FlexQuery.NET.Tests.Parsers;
 
-public class SortParserTests
+public class DslSortParserTests
 {
     [Fact]
     public void Parse_SingleFieldAsc_DefaultsToAscending()
     {
-        var result = SortParser.Parse("LastName");
+        var result = DslSortParser.Parse("LastName");
 
         result.Should().ContainSingle();
         result[0].Field.Should().Be("LastName");
@@ -20,8 +20,8 @@ public class SortParserTests
     [Fact]
     public void Parse_FieldWithDirection()
     {
-        var asc = SortParser.Parse("LastName:asc");
-        var desc = SortParser.Parse("LastName:desc");
+        var asc = DslSortParser.Parse("LastName:asc");
+        var desc = DslSortParser.Parse("LastName:desc");
 
         asc[0].Descending.Should().BeFalse();
         desc[0].Descending.Should().BeTrue();
@@ -30,7 +30,7 @@ public class SortParserTests
     [Fact]
     public void Parse_MultipleFields()
     {
-        var result = SortParser.Parse("LastName:asc,FirstName:desc");
+        var result = DslSortParser.Parse("LastName:asc,FirstName:desc");
 
         result.Should().HaveCount(2);
         result[0].Field.Should().Be("LastName");
@@ -42,7 +42,7 @@ public class SortParserTests
     [Fact]
     public void Parse_InvalidDirection_Throws()
     {
-        var act = () => SortParser.Parse("LastName:sideways");
+        var act = () => DslSortParser.Parse("LastName:sideways");
 
         act.Should().Throw<DslParseException>();
     }
@@ -50,7 +50,7 @@ public class SortParserTests
     [Fact]
     public void Parse_EmptyItem_Throws()
     {
-        var act = () => SortParser.Parse("LastName:asc,,");
+        var act = () => DslSortParser.Parse("LastName:asc,,");
 
         act.Should().Throw<DslParseException>();
     }
@@ -58,7 +58,7 @@ public class SortParserTests
     [Fact]
     public void Parse_InvalidFieldPath_Throws()
     {
-        var act = () => SortParser.Parse("Name.:asc");
+        var act = () => DslSortParser.Parse("Name.:asc");
 
         act.Should().Throw<DslParseException>();
     }
@@ -66,7 +66,7 @@ public class SortParserTests
     [Fact]
     public void Parse_AggregateSort_SetsAggregateFields()
     {
-        var result = SortParser.Parse("Orders.sum(total):desc");
+        var result = DslSortParser.Parse("Orders.sum(total):desc");
 
         result.Should().ContainSingle();
         result[0].Field.Should().Be("Orders");
@@ -78,7 +78,7 @@ public class SortParserTests
     [Fact]
     public void Parse_AggregateSort_WithoutField()
     {
-        var result = SortParser.Parse("Orders.count():asc");
+        var result = DslSortParser.Parse("Orders.count():asc");
 
         result[0].Aggregate.Should().Be("count");
         result[0].AggregateField.Should().BeNull();

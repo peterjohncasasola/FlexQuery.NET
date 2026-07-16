@@ -76,7 +76,7 @@ internal sealed class DslQueryParser : IQueryParser
             try
             {
                 options.Sort.Clear();
-                options.Sort.AddRange(SortParser.Parse(parameters.Sort));
+                options.Sort.AddRange(DslSortParser.Parse(parameters.Sort));
             }
             catch (DslParseException ex)
             {
