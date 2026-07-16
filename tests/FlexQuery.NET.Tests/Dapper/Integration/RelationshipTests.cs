@@ -17,25 +17,23 @@ public class RelationshipTests : DapperApiTestBase
         response.EnsureSuccessStatusCode();
         var json = await response.Content.ReadFromJsonAsync<JsonElement>();
         var items = json.GetProperty("Data").EnumerateArray().ToList();
-        items.Should().HaveCount(1);
-        items[0].GetProperty("Name").GetString().Should().Be("Alice");
+        items.Should().HaveCount(3); // Alice, Bob, Carol all have orders > 100
+        items.Select(x => x.GetProperty("Name").GetString()).Should().BeEquivalentTo("Alice Johnson", "Bob Smith", "Carol White");
     }
 
     [Fact]
     public async Task Should_Use_NotExists_For_All_Filter()
     {
         // Act - Users where all orders have total > 10
-        // (Bob has one order with total 99, so he matches. 
-        // Alice has one order with 125 and one with 45, so she matches.
-        // Carol has no orders, so she technically matches (vacuously true)
-        var response = await Client.GetAsync("/api/users?filter=orders.all(total:gt:5)");
+        var response = await Client.GetAsync("/api/users?filter=orders.all(total:gt:10)");
 
         // Assert
         response.EnsureSuccessStatusCode();
         var json = await response.Content.ReadFromJsonAsync<JsonElement>();
         var items = json.GetProperty("Data").EnumerateArray().ToList();
-        items.Should().Contain(x => x.GetProperty("Name").GetString() == "Alice");
-        items.Should().Contain(x => x.GetProperty("Name").GetString() == "Bob");
+        items.Should().Contain(x => x.GetProperty("Name").GetString() == "Alice Johnson");
+        items.Should().Contain(x => x.GetProperty("Name").GetString() == "Bob Smith");
+        items.Should().Contain(x => x.GetProperty("Name").GetString() == "Carol White");
     }
 
     [Fact]
@@ -49,6 +47,6 @@ public class RelationshipTests : DapperApiTestBase
         var json = await response.Content.ReadFromJsonAsync<JsonElement>();
         var items = json.GetProperty("Data").EnumerateArray().ToList();
         items.Should().HaveCount(1);
-        items[0].GetProperty("Name").GetString().Should().Be("Alice");
+        items[0].GetProperty("Name").GetString().Should().Be("Alice Johnson");
     }
 }

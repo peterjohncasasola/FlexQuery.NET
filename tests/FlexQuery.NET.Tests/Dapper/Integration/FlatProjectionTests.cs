@@ -49,7 +49,7 @@ public class FlatProjectionTests : DapperApiTestBase
     [Fact]
     public async Task FlatMode_MultiLevelNestedCollection_ProjectsCorrectly()
     {
-        var response = await Client.GetAsync("/api/users?mode=flat&select=Orders.Items.Sku,Orders.Items.Id");
+        var response = await Client.GetAsync("/api/users?mode=flat&select=Orders.OrderItems.Sku,Orders.OrderItems.Id");
 
         response.EnsureSuccessStatusCode();
         var json = await response.Content.ReadFromJsonAsync<JsonElement>();
@@ -62,6 +62,6 @@ public class FlatProjectionTests : DapperApiTestBase
         firstItem.TryGetProperty("Sku", out _).Should().BeTrue();
         firstItem.TryGetProperty("Id", out _).Should().BeTrue();
         firstItem.TryGetProperty("Orders", out _).Should().BeFalse();
-        firstItem.TryGetProperty("Items", out _).Should().BeFalse();
+        firstItem.TryGetProperty("OrderItems", out _).Should().BeFalse();
     }
 }

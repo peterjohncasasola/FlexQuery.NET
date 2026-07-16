@@ -436,7 +436,7 @@ public class SecurityGovernanceDapperIntegrationTests
             AllowedFields = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "Id", "Name" }
         };
         CreateOrderRegistry(dapperOptions);
-        var result = await connection.FlexQueryAsync<SqlCustomer>(options, dapperOptions);
+        var result = await connection.FlexQueryAsync<Customer>(options, dapperOptions);
 
         result.Data.Should().NotBeEmpty();
         foreach (var row in result.Data)
@@ -445,7 +445,7 @@ public class SecurityGovernanceDapperIntegrationTests
             dict.Keys.Should().Contain("Id");
             dict.Keys.Should().Contain("Name");
             dict.Keys.Should().NotContain("Email");
-            // Note: SqlCustomer has Id, Name, Email, Orders — only Id/Name are allowed
+            // Note: Customer has Id, Name, Email, Orders — only Id/Name are allowed
             dict.Keys.Count.Should().Be(2);
         }
     }
@@ -454,7 +454,7 @@ public class SecurityGovernanceDapperIntegrationTests
     public void Validate_BlockedField_RemovedInNonStrictMode()
     {
         var options = NoPaging(new QueryOptions());
-        options.Items[ContextKeys.EntityType] = typeof(SqlCustomer);
+        options.Items[ContextKeys.EntityType] = typeof(Customer);
 
         var execOptions = new QueryExecutionOptions
         {
@@ -463,7 +463,7 @@ public class SecurityGovernanceDapperIntegrationTests
             StrictFieldValidation = false
         };
 
-        options.Validate(typeof(SqlCustomer), execOptions);
+        options.Validate(typeof(Customer), execOptions);
 
         options.Select.Should().Contain("Name");
         options.Select.Should().NotContain("Id");
@@ -490,7 +490,7 @@ public class SecurityGovernanceDapperIntegrationTests
             AggregatableFields = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "Total" }
         };
         CreateOrderRegistry(dapperOptions);
-        var result = await connection.FlexQueryAsync<SqlOrder>(options, dapperOptions);
+        var result = await connection.FlexQueryAsync<Order>(options, dapperOptions);
 
         result.Data.Should().NotBeEmpty();
         var first = AssertDictionary(result.Data[0]);
@@ -547,7 +547,7 @@ public class SecurityGovernanceDapperIntegrationTests
             AggregatableFields = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "Id" }
         };
         CreateOrderRegistry(dapperOptions);
-        var act = async () => await connection.FlexQueryAsync<SqlCustomer>(options, dapperOptions);
+        var act = async () => await connection.FlexQueryAsync<Customer>(options, dapperOptions);
 
         await act.Should().ThrowAsync<QueryValidationException>();
     }
@@ -572,7 +572,7 @@ public class SecurityGovernanceDapperIntegrationTests
             AggregatableFields = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "Id" }
         };
         CreateOrderRegistry(dapperOptions);
-        var act = async () => await connection.FlexQueryAsync<SqlCustomer>(options, dapperOptions);
+        var act = async () => await connection.FlexQueryAsync<Customer>(options, dapperOptions);
 
         await act.Should().ThrowAsync<QueryValidationException>();
     }
@@ -598,7 +598,7 @@ public class SecurityGovernanceDapperIntegrationTests
             FilterableFields = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "Id" }
         };
         CreateOrderRegistry(dapperOptions);
-        var act = async () => await connection.FlexQueryAsync<SqlCustomer>(options, dapperOptions);
+        var act = async () => await connection.FlexQueryAsync<Customer>(options, dapperOptions);
 
         await act.Should().ThrowAsync<QueryValidationException>();
     }
@@ -626,7 +626,7 @@ public class SecurityGovernanceDapperIntegrationTests
             }
         };
         CreateOrderRegistry(dapperOptions);
-        var result = await connection.FlexQueryAsync<SqlCustomer>(options, dapperOptions);
+        var result = await connection.FlexQueryAsync<Customer>(options, dapperOptions);
 
         result.Data.Should().NotBeEmpty();
         foreach (var row in result.Data)
@@ -697,22 +697,21 @@ public class SecurityGovernanceDapperIntegrationTests
 
     private static IMappingRegistry CreateValidationRegistry()
     {
-        var reg = new MappingRegistry();
-        reg.Entity<GovEntity>().ToTable("Entities").HasKey(e => e.Id).HasMany(e => e.Orders).WithForeignKey("EntityId");
-        reg.Entity<GovOrder>().ToTable("Orders");
-        return reg;
+        var model = SharedFlexQueryModel.Instance;
+
+        return model.Registry;
     }
 
     private static void CreateOrderRegistry(DapperQueryOptions options)
     {
         var builder = new DapperModelBuilder();
-        builder.Entity<SqlCustomer>()
+        builder.Entity<Customer>()
             .ToTable("Customers")
             .HasMany(c => c.Orders).WithForeignKey("CustomerId");
-        builder.Entity<SqlOrder>()
+        builder.Entity<Order>()
             .ToTable("Orders")
-            .HasMany(o => o.Items).WithForeignKey("OrderId");
-        builder.Entity<SqlOrderItem>().ToTable("OrderItems");
+            .HasMany(o => o.OrderItems).WithForeignKey("OrderId");
+        builder.Entity<OrderItem>().ToTable("OrderItems");
         options.UseModel(builder.Build());
     }
 

@@ -20,14 +20,14 @@ public class UsersTests : DapperApiTestBase
     public async Task Should_Filter_Users_By_Name()
     {
         // Act
-        var response = await Client.GetAsync("/api/users?filter=name:eq:Alice");
+        var response = await Client.GetAsync("/api/users?filter=name:eq:Alice Johnson");
 
         // Assert
         response.EnsureSuccessStatusCode();
         var json = await response.Content.ReadFromJsonAsync<JsonElement>();
         var items = json.GetProperty("Data").EnumerateArray();
         items.Should().HaveCount(1);
-        items.First().GetProperty("Name").GetString().Should().Be("Alice");
+        items.First().GetProperty("Name").GetString().Should().Be("Alice Johnson");
     }
 
     [Fact]
@@ -41,7 +41,7 @@ public class UsersTests : DapperApiTestBase
         var json = await response.Content.ReadFromJsonAsync<JsonElement>();
         var items = json.GetProperty("Data").EnumerateArray().ToList();
         items.Should().HaveCountGreaterThan(1);
-        items[0].GetProperty("Name").GetString().Should().Be("Bob"); // "Bob" comes after "Alice"
+        items[0].GetProperty("Name").GetString().Should().Be("Jack Anderson"); // "Jack Anderson" is first in descending order
     }
 
     [Fact]

@@ -40,7 +40,7 @@ public class DapperQueryOptionsTests
             CurrentRole = "admin",
             AllowedFieldsResolver = _ => ["Id"]
         };
-        options.MapField<TestEntity, string>("displayName", x => x.Name);
+        options.MapField<Customer, string>("displayName", x => x.Name);
 
         options.AllowedFields.Should().BeEquivalentTo(new[] { "Id" });
         options.BlockedFields.Should().BeEquivalentTo(new[] { "Secret" });
@@ -73,7 +73,7 @@ public class DapperQueryOptionsTests
     public void UseModel_WhenSet_AppliesConfiguredMappings()
     {
         var builder = new ModelBuilder();
-        builder.Entity<TestEntity>()
+        builder.Entity<Customer>()
             .ToTable("custom_entities")
             .HasKey(e => e.Id);
         var model = builder.Build();
@@ -107,10 +107,5 @@ public class DapperQueryOptionsTests
     {
         public bool IsAllowed(string field, QueryOperation operation, QueryContext context) => true;
     }
-
-    private sealed class TestEntity
-    {
-        public int Id { get; set; }
-        public string Name { get; set; } = string.Empty;
-    }
+    
 }

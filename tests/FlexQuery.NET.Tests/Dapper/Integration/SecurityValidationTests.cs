@@ -39,8 +39,8 @@ public class ValidationTests : DapperApiTestBase
     [Fact]
     public async Task Should_Reject_Disallowed_Field()
     {
-        // Act - Assume "SecretField" is not in the model or blocked
-        var response = await Client.GetAsync("/api/users?filter=secretField:eq:value");
+        // Act - Assume "NonExistentField" is not in the model or blocked
+        var response = await Client.GetAsync("/api/users?filter=nonExistentField:eq:value");
 
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);

@@ -1,6 +1,6 @@
 using FlexQuery.NET.Dapper.Configuration;
 using FlexQuery.NET.Dapper.Metadata;
-using FlexQuery.NET.Tests.Models;
+using FlexQuery.NET.Tests.Shared.Models;
 
 namespace FlexQuery.NET.Tests.DependencyInjection;
 
@@ -14,7 +14,7 @@ public class FlexQueryDapperConfigurationTests
     [Fact]
     public void Configure_stores_global_model()
     {
-        FlexQueryDapper.Configure(o => o.Model.Entity<TestEntity>());
+        FlexQueryDapper.Configure(o => o.Model.Entity<Customer>());
 
         FlexQueryDapper.DefaultModel.Should().NotBeNull();
         FlexQueryDapper.DefaultModel.Should().BeOfType<FlexQueryModel>();
@@ -25,7 +25,7 @@ public class FlexQueryDapperConfigurationTests
     {
         FlexQueryDapper.Configure(o =>
         {
-            o.Model.Entity<TestEntity>().ToTable("TestEntities");
+            o.Model.Entity<Customer>().ToTable("Customers");
         });
 
         FlexQueryDapper.DefaultModel.Should().NotBeNull();
