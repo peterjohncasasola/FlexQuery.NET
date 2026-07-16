@@ -45,7 +45,7 @@ public class ConsoleExecutionListenerTests
     }
 
     [Fact]
-    public void ExecutedWithException_WritesErrorMessage()
+    public async Task ExecutedWithException_WritesErrorMessage()
     {
         var listener = new ConsoleExecutionListener();
         var original = Console.Out;
@@ -54,9 +54,10 @@ public class ConsoleExecutionListenerTests
         try
         {
             var id = Guid.NewGuid();
-            listener.QueryExecutedAsync(
-                new QueryExecutedEvent(id, null, new InvalidOperationException("kaboom"), TimeSpan.FromMilliseconds(1), DateTimeOffset.UtcNow),
-                CancellationToken.None).GetAwaiter().GetResult();
+            await listener.QueryExecutedAsync(
+                new QueryExecutedEvent(id, null, new InvalidOperationException("kaboom"), TimeSpan.FromMilliseconds(1),
+                    DateTimeOffset.UtcNow),
+                CancellationToken.None);
         }
         finally
         {
@@ -67,7 +68,7 @@ public class ConsoleExecutionListenerTests
     }
 
     [Fact]
-    public void MaterializedWithException_WritesErrorMessage()
+    public async Task MaterializedWithException_WritesErrorMessage()
     {
         var listener = new ConsoleExecutionListener();
         var original = Console.Out;
@@ -76,9 +77,10 @@ public class ConsoleExecutionListenerTests
         try
         {
             var id = Guid.NewGuid();
-            listener.QueryMaterializedAsync(
-                new QueryMaterializedEvent(id, null, new Exception("materialize-fail"), TimeSpan.FromMilliseconds(1), DateTimeOffset.UtcNow),
-                CancellationToken.None).GetAwaiter().GetResult();
+            await listener.QueryMaterializedAsync(
+                new QueryMaterializedEvent(id, null, new Exception("materialize-fail"), TimeSpan.FromMilliseconds(1),
+                    DateTimeOffset.UtcNow),
+                CancellationToken.None);
         }
         finally
         {

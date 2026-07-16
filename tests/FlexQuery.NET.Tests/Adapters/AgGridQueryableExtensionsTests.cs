@@ -33,9 +33,9 @@ public class AgGridQueryableExtensionsTests
         var options = AgGridQueryOptionsParser.Parse(request);
 
         // Step 2: Execute via EF Core
-        var result = await db.Entities.AsQueryable().FlexQueryAsync(options);
+        var result = await db.Customers.AsQueryable().FlexQueryAsync(options);
 
-        var data = result.Data.Cast<TestEntity>().ToList();
+        var data = result.Data.Cast<Customer>().ToList();
         data.Select(x => x.Id).Should().Equal(8, 3, 1);
         data.Select(x => x.Age).Should().Equal(45, 35, 30);
     }
@@ -61,7 +61,7 @@ public class AgGridQueryableExtensionsTests
         var options = AgGridQueryOptionsParser.Parse(request);
 
         // Step 2: Execute via EF Core — should throw validation error
-        var act = async () => await db.Entities.AsQueryable().FlexQueryAsync(options);
+        var act = async () => await db.Customers.AsQueryable().FlexQueryAsync(options);
 
         await act.Should().ThrowAsync<QueryValidationException>();
     }
