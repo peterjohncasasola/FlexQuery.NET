@@ -38,13 +38,13 @@ public class WildcardProjectionTests : IDisposable
         orderList.Should().NotBeEmpty();
         var order = orderList[0];
         
-        // Should have all scalars of SqlOrder
+        // Should have all scalars of Order
         order.GetType().GetProperty("Number").Should().NotBeNull();
         order.GetType().GetProperty("Total").Should().NotBeNull();
         order.GetType().GetProperty("OrderDate").Should().NotBeNull();
         
         // Should NOT have navigations (unless specified)
-        order.GetType().GetProperty("Items").Should().BeNull();
+        order.GetType().GetProperty("OrderItems").Should().BeNull();
         order.GetType().GetProperty("Customer").Should().BeNull();
     }
 
@@ -53,8 +53,8 @@ public class WildcardProjectionTests : IDisposable
     {
         // Arrange
         var options = new QueryOptions();
-        // Alice -> Orders -> Items (all scalars)
-        options.Select = new List<string> { "Id", "Orders.Number", "Orders.Items.*" };
+        // Alice -> Orders -> OrderItems (all scalars)
+        options.Select = new List<string> { "Id", "Orders.Number", "Orders.OrderItems.*" };
 
         // Act
         var result = await _db.Customers
@@ -70,7 +70,7 @@ public class WildcardProjectionTests : IDisposable
         var orders = alice.GetType().GetProperty("Orders")?.GetValue(alice) as System.Collections.IEnumerable;
         var order = orders!.Cast<object>().First(o => (string)o.GetType().GetProperty("Number")?.GetValue(o)! == "SO-001");
         
-        var items = order.GetType().GetProperty("Items")?.GetValue(order) as System.Collections.IEnumerable;
+        var items = order.GetType().GetProperty("OrderItems")?.GetValue(order) as System.Collections.IEnumerable;
         var itemList = items!.Cast<object>().ToList();
         
         itemList.Should().NotBeEmpty();
@@ -94,7 +94,7 @@ public class WildcardProjectionTests : IDisposable
         };
 
         // Act
-        options.ValidateOrThrow<SqlCustomer>(execOptions);
+        options.ValidateOrThrow<Customer>(execOptions);
         var result = await _db.Customers
             .AsNoTracking()
             .Apply(options)
@@ -126,7 +126,7 @@ public class WildcardProjectionTests : IDisposable
         options.Select = new List<string> { "Id", "Name" }; // Name is forbidden
 
         // Act
-        var act = () => options.ValidateOrThrow<SqlCustomer>(execOptions);
+        var act = () => options.ValidateOrThrow<Customer>(execOptions);
 
         // Assert
         act.Should().Throw<QueryValidationException>()
@@ -152,7 +152,7 @@ public class WildcardProjectionTests : IDisposable
         };
 
         // Act
-        var act = () => options.ValidateOrThrow<SqlCustomer>(execOptions);
+        var act = () => options.ValidateOrThrow<Customer>(execOptions);
 
         // Assert
         act.Should().NotThrow();
@@ -171,7 +171,7 @@ public class WildcardProjectionTests : IDisposable
         options.Sort.Add(new SortNode { Field = "Name" }); // Name not in whitelist
 
         // Act
-        var act = () => options.ValidateOrThrow<SqlCustomer>(execOptions);
+        var act = () => options.ValidateOrThrow<Customer>(execOptions);
 
         // Assert
         act.Should().Throw<QueryValidationException>()

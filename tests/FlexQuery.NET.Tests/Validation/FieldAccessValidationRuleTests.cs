@@ -14,7 +14,7 @@ namespace FlexQuery.NET.Tests.Validation;
 
 public class FieldAccessValidationRuleTests
 {
-    private sealed class TestEntity
+    private sealed class Customer
     {
         public int Id { get; set; }
         public string Name { get; set; } = string.Empty;
@@ -32,7 +32,7 @@ public class FieldAccessValidationRuleTests
     private sealed class TestGovernanceOptions : QueryGovernanceOptions { }
 
     private static QueryContext Context(Type? targetType = null, QueryGovernanceOptions? execOptions = null) =>
-        new() { TargetType = targetType ?? typeof(TestEntity), ExecutionOptions = execOptions };
+        new() { TargetType = targetType ?? typeof(Customer), ExecutionOptions = execOptions };
 
     private sealed class DenyAllResolver : IFieldAccessResolver
     {

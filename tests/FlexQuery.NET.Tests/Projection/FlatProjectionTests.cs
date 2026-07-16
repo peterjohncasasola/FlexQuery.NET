@@ -20,7 +20,7 @@ public class FlatProjectionTests : IDisposable
             Select = ["Orders.Total", "Orders.Status as OrderStatus"]
         };
 
-        var list = await _db.Entities.Where(x => x.Id == 1).ApplySelect(options).ToListAsync();
+        var list = await _db.Customers.Where(x => x.Id == 1).ApplySelect(options).ToListAsync();
 
         // Entity Id=1 has 2 orders
         list.Should().HaveCount(2);
@@ -35,7 +35,7 @@ public class FlatProjectionTests : IDisposable
         type.GetProperty("Status").Should().BeNull("original name should be hidden by alias");
 
         var total = (decimal)type.GetProperty("Total")!.GetValue(first)!;
-        total.Should().Be(50.0m);
+        total.Should().Be(150.0m);
 
         var status = (string)type.GetProperty("OrderStatus")!.GetValue(first)!;
         status.Should().Be("Shipped");
@@ -50,7 +50,7 @@ public class FlatProjectionTests : IDisposable
             Select = ["Orders.OrderItems.Quantity as Qty", "Orders.OrderItems.Price"]
         };
 
-        var list = await _db.Entities.Where(x => x.Id == 1).ApplySelect(options).ToListAsync();
+        var list = await _db.Customers.Where(x => x.Id == 1).ApplySelect(options).ToListAsync();
 
         // Order 101 has 2 items, Order 102 has 1 item → 3 total
         list.Should().HaveCount(3);
@@ -78,7 +78,7 @@ public class FlatProjectionTests : IDisposable
             Select = ["Orders.Total", "Profile.Bio"]
         };
 
-        Action action = () => _db.Entities.ApplySelect(options);
+        Action action = () => _db.Customers.ApplySelect(options);
 
         action.Should().Throw<InvalidOperationException>()
             .WithMessage("Flat mode does not support branching multiple navigation paths*");
@@ -93,7 +93,7 @@ public class FlatProjectionTests : IDisposable
             Select = ["Name", "Orders.Total"]
         };
 
-        Action action = () => _db.Entities.ApplySelect(options);
+        Action action = () => _db.Customers.ApplySelect(options);
 
         action.Should().Throw<InvalidOperationException>()
             .WithMessage("Flat mode does not support mixing scalar properties*");
@@ -114,7 +114,7 @@ public class FlatProjectionTests : IDisposable
             ]
         };
 
-        var list = await _db.Entities.Where(x => x.Id == 1).ApplySelect(options).ToListAsync();
+        var list = await _db.Customers.Where(x => x.Id == 1).ApplySelect(options).ToListAsync();
 
         // Entity Id=1 has 2 orders → 2 flat rows
         list.Should().HaveCount(2);
@@ -148,7 +148,7 @@ public class FlatProjectionTests : IDisposable
             ]
         };
 
-        var list = await _db.Entities.Where(x => x.Id == 1).ApplySelect(options).ToListAsync();
+        var list = await _db.Customers.Where(x => x.Id == 1).ApplySelect(options).ToListAsync();
 
         // Entity Id=1: Order 101 (Shipped) has 2 items, Order 102 (Pending) has 1 item
         // → 3 flat rows total
@@ -184,7 +184,7 @@ public class FlatProjectionTests : IDisposable
             Select = ["Id as customerId", "Name"]
         };
 
-        var list = await _db.Entities.Where(x => x.Id == 1).ApplySelect(options).ToListAsync();
+        var list = await _db.Customers.Where(x => x.Id == 1).ApplySelect(options).ToListAsync();
 
         list.Should().HaveCount(1);
         var first = list.First();
@@ -206,7 +206,7 @@ public class FlatProjectionTests : IDisposable
             Select = ["Id", "Orders.Status as OrderStatus", "Orders.Total"]
         };
 
-        var list = await _db.Entities.Where(x => x.Id == 1).ApplySelect(options).ToListAsync();
+        var list = await _db.Customers.Where(x => x.Id == 1).ApplySelect(options).ToListAsync();
 
         list.Should().HaveCount(1);
         var first = list.First();

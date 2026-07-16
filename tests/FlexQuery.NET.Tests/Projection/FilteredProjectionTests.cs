@@ -138,7 +138,7 @@ public sealed class FilteredProjectionTests : IDisposable
         rows.Should().HaveCount(1);
 
         // Without a projection, we shouldn't attempt to filter child collections.
-        var customer = (SqlCustomer)rows[0];
+        var customer = (Customer)rows[0];
         customer.Orders.Should().HaveCount(2);
     }
 
@@ -146,17 +146,17 @@ public sealed class FilteredProjectionTests : IDisposable
     public async Task Projection_FilteredChildCollection_DeepNestedCollection_IsHandledRecursively()
     {
         // Filters orders that have any item with SKU-AAA; and if orders/items are selected,
-        // the projected Orders should be filtered to only matching orders, and Items should be filtered too.
+        // the projected Orders should be filtered to only matching orders, and OrderItems should be filtered too.
         var options = new QueryOptions
         {
             Filter = new FilterGroup
             {
                 Filters =
                 [
-                    new FilterCondition { Field = "Orders.Items.Sku", Operator = FilterOperators.Equal, Value = "SKU-AAA" }
+                    new FilterCondition { Field = "Orders.OrderItems.Sku", Operator = FilterOperators.Equal, Value = "SKU-AAA" }
                 ]
             },
-            Select = ["Id", "Orders.Number", "Orders.Items.Sku"]
+            Select = ["Id", "Orders.Number", "Orders.OrderItems.Sku"]
         };
 
         var rows = await _db.Customers
@@ -174,7 +174,7 @@ public sealed class FilteredProjectionTests : IDisposable
         orders.Should().ContainSingle();
 
         var order = orders[0];
-        var items = ((System.Collections.IEnumerable)order.GetType().GetProperty("Items")!.GetValue(order)!)
+        var items = ((System.Collections.IEnumerable)order.GetType().GetProperty("OrderItems")!.GetValue(order)!)
             .Cast<object>()
             .ToList();
 

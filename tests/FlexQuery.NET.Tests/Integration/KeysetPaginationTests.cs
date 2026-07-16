@@ -52,12 +52,12 @@ public class KeysetPaginationTests : IDisposable
     [Fact]
     public void BuildSeekPredicate_SingleAscending_FiltersCorrectly()
     {
-        var data = _db.Entities.OrderBy(e => e.Id).ToList();
+        var data = _db.Customers.OrderBy(e => e.Id).ToList();
         var cursor = new KeysetCursor(3);
-        var orderings = KeysetPaginationBuilder.BuildOrderingInfos<TestEntity>(
+        var orderings = KeysetPaginationBuilder.BuildOrderingInfos<Customer>(
             [new SortNode { Field = "Id" }]);
 
-        var predicate = KeysetPaginationBuilder.BuildSeekPredicate<TestEntity>(orderings, cursor.Values);
+        var predicate = KeysetPaginationBuilder.BuildSeekPredicate<Customer>(orderings, cursor.Values);
         var result = data.AsQueryable().Where(predicate).ToList();
 
         result.Should().HaveCount(7);
@@ -67,12 +67,12 @@ public class KeysetPaginationTests : IDisposable
     [Fact]
     public void BuildSeekPredicate_SingleDescending_FiltersCorrectly()
     {
-        var data = _db.Entities.OrderByDescending(e => e.Id).ToList();
+        var data = _db.Customers.OrderByDescending(e => e.Id).ToList();
         var cursor = new KeysetCursor(7);
-        var orderings = KeysetPaginationBuilder.BuildOrderingInfos<TestEntity>(
+        var orderings = KeysetPaginationBuilder.BuildOrderingInfos<Customer>(
             [new SortNode { Field = "Id", Descending = true }]);
 
-        var predicate = KeysetPaginationBuilder.BuildSeekPredicate<TestEntity>(orderings, cursor.Values);
+        var predicate = KeysetPaginationBuilder.BuildSeekPredicate<Customer>(orderings, cursor.Values);
         var result = data.AsQueryable().Where(predicate).ToList();
 
         result.Should().HaveCount(6);
@@ -83,13 +83,13 @@ public class KeysetPaginationTests : IDisposable
     public void BuildSeekPredicate_CompositeKey_GeneratesCorrectPredicate()
     {
         var cursor = new KeysetCursor("New York", 3);
-        var orderings = KeysetPaginationBuilder.BuildOrderingInfos<TestEntity>([
+        var orderings = KeysetPaginationBuilder.BuildOrderingInfos<Customer>([
             new SortNode { Field = "City" },
             new SortNode { Field = "Id" }
         ]);
 
-        var predicate = KeysetPaginationBuilder.BuildSeekPredicate<TestEntity>(orderings, cursor.Values);
-        var allEntities = _db.Entities.ToList();
+        var predicate = KeysetPaginationBuilder.BuildSeekPredicate<Customer>(orderings, cursor.Values);
+        var allEntities = _db.Customers.ToList();
         var result = allEntities.AsQueryable()
             .OrderBy(e => e.City).ThenBy(e => e.Id)
             .Where(predicate).ToList();
@@ -105,7 +105,7 @@ public class KeysetPaginationTests : IDisposable
     public void SeekAfter_FirstPage_ReturnsCorrectBatch()
     {
         // Simulate "first page" using SeekAfter(0) which means all Id > 0
-        var page = _db.Entities
+        var page = _db.Customers
             .OrderBy(e => e.Id)
             .SeekAfter(0)
             .Take(3)
@@ -118,7 +118,7 @@ public class KeysetPaginationTests : IDisposable
     [Fact]
     public void SeekAfter_SecondPage_ReturnsNextBatch()
     {
-        var page = _db.Entities
+        var page = _db.Customers
             .OrderBy(e => e.Id)
             .SeekAfter(3)
             .Take(3)
@@ -131,7 +131,7 @@ public class KeysetPaginationTests : IDisposable
     [Fact]
     public void SeekAfter_LastPage_ReturnsRemaining()
     {
-        var page = _db.Entities
+        var page = _db.Customers
             .OrderBy(e => e.Id)
             .SeekAfter(6)
             .Take(5)
@@ -144,7 +144,7 @@ public class KeysetPaginationTests : IDisposable
     [Fact]
     public void SeekAfter_NoMoreResults_ReturnsEmpty()
     {
-        var page = _db.Entities
+        var page = _db.Customers
             .OrderBy(e => e.Id)
             .SeekAfter(10)
             .Take(3)
@@ -156,7 +156,7 @@ public class KeysetPaginationTests : IDisposable
     [Fact]
     public void SeekAfter_Descending_PagesCorrectly()
     {
-        var page = _db.Entities
+        var page = _db.Customers
             .OrderByDescending(e => e.Id)
             .SeekAfter(10)
             .Take(3)
@@ -169,7 +169,7 @@ public class KeysetPaginationTests : IDisposable
     [Fact]
     public void SeekAfter_WithOrderBy_DoesNotThrow()
     {
-        var act = () => _db.Entities
+        var act = () => _db.Customers
             .OrderBy(e => e.Id)     // becomes IOrderedQueryable
             .SeekAfter(1)
             .Take(3)
@@ -182,8 +182,8 @@ public class KeysetPaginationTests : IDisposable
     [Fact]
     public void SeekAfter_WithoutOrderBy_Throws()
     {
-        IQueryable<TestEntity> unordered = new List<TestEntity>().AsQueryable();
-        var act = () => ((IOrderedQueryable<TestEntity>)unordered)
+        IQueryable<Customer> unordered = new List<Customer>().AsQueryable();
+        var act = () => ((IOrderedQueryable<Customer>)unordered)
             .SeekAfter(1)
             .Take(3)
             .ToList();
@@ -195,9 +195,9 @@ public class KeysetPaginationTests : IDisposable
     [Fact]
     public void SeekAfter_NullCursor_Throws()
     {
-        var act = () => _db.Entities
+        var act = () => _db.Customers
             .OrderBy(e => e.Id)
-            .SeekAfter<TestEntity, int?>(null);
+            .SeekAfter<Customer, int?>(null);
 
         act.Should().Throw<QueryValidationException>();
     }
@@ -208,7 +208,7 @@ public class KeysetPaginationTests : IDisposable
     public void BuildSeekPredicate_NoOrderings_Throws()
     {
         var cursor = new KeysetCursor(1);
-        var act = () => KeysetPaginationBuilder.BuildSeekPredicate<TestEntity>(
+        var act = () => KeysetPaginationBuilder.BuildSeekPredicate<Customer>(
             [], cursor.Values);
 
         act.Should().Throw<InvalidOperationException>()
@@ -219,10 +219,10 @@ public class KeysetPaginationTests : IDisposable
     public void BuildSeekPredicate_CursorCountMismatch_Throws()
     {
         var cursor = new KeysetCursor(1, 2);
-        var orderings = KeysetPaginationBuilder.BuildOrderingInfos<TestEntity>(
+        var orderings = KeysetPaginationBuilder.BuildOrderingInfos<Customer>(
             [new SortNode { Field = "Id" }]);
 
-        var act = () => KeysetPaginationBuilder.BuildSeekPredicate<TestEntity>(
+        var act = () => KeysetPaginationBuilder.BuildSeekPredicate<Customer>(
             orderings, cursor.Values);
 
         act.Should().Throw<QueryValidationException>()
@@ -241,10 +241,10 @@ public class KeysetPaginationTests : IDisposable
             PageSize = 3
         };
 
-        var result = _db.Entities.AsQueryable().FlexQuery(parameters);
+        var result = _db.Customers.AsQueryable().FlexQuery(parameters);
 
         result.Data.Should().HaveCount(3);
-        result.Data.Cast<TestEntity>().Select(e => e.Id).Should().BeEquivalentTo([1, 2, 3]);
+        result.Data.Cast<Customer>().Select(e => e.Id).Should().BeEquivalentTo([1, 2, 3]);
         result.TotalCount.Should().BeNull();
         result.NextCursorToken.Should().NotBeNull();
     }
@@ -252,7 +252,7 @@ public class KeysetPaginationTests : IDisposable
     [Fact]
     public void FlexQuery_WithKeysetCursor_ReturnsNextPage()
     {
-        var page1 = _db.Entities.AsQueryable().FlexQuery(
+        var page1 = _db.Customers.AsQueryable().FlexQuery(
             new FlexQueryParameters
             {
                 UseKeysetPagination = true,
@@ -260,7 +260,7 @@ public class KeysetPaginationTests : IDisposable
                 PageSize = 3
             });
 
-        var page2 = _db.Entities.AsQueryable().FlexQuery(
+        var page2 = _db.Customers.AsQueryable().FlexQuery(
             new FlexQueryParameters
             {
                 Cursor = page1.NextCursorToken,
@@ -269,7 +269,7 @@ public class KeysetPaginationTests : IDisposable
             });
 
         page2.Data.Should().HaveCount(3);
-        page2.Data.Cast<TestEntity>().Select(e => e.Id).Should().BeEquivalentTo([4, 5, 6]);
+        page2.Data.Cast<Customer>().Select(e => e.Id).Should().BeEquivalentTo([4, 5, 6]);
     }
 
     [Fact]
@@ -283,7 +283,7 @@ public class KeysetPaginationTests : IDisposable
             IncludeCount = true
         };
 
-        var result = _db.Entities.AsQueryable().FlexQuery(parameters);
+        var result = _db.Customers.AsQueryable().FlexQuery(parameters);
 
         result.TotalCount.Should().Be(10);
         result.NextCursorToken.Should().NotBeNull();
@@ -300,7 +300,7 @@ public class KeysetPaginationTests : IDisposable
             PageSize = 3
         };
 
-        var act = () => _db.Entities.AsQueryable().FlexQuery(parameters);
+        var act = () => _db.Customers.AsQueryable().FlexQuery(parameters);
 
         act.Should().Throw<QueryValidationException>()
             .WithMessage("*Offset pagination parameters*Keyset Pagination*");
@@ -317,7 +317,7 @@ public class KeysetPaginationTests : IDisposable
             PageSize = 3
         };
 
-        var act = () => _db.Entities.AsQueryable().FlexQuery(parameters);
+        var act = () => _db.Customers.AsQueryable().FlexQuery(parameters);
 
         act.Should().Throw<QueryValidationException>()
             .WithMessage("*Offset pagination parameters*Keyset Pagination*");
@@ -333,7 +333,7 @@ public class KeysetPaginationTests : IDisposable
             PageSize = 3
         };
 
-        var act = () => _db.Entities.AsQueryable().FlexQuery(parameters);
+        var act = () => _db.Customers.AsQueryable().FlexQuery(parameters);
 
         act.Should().NotThrow();
     }
@@ -351,10 +351,10 @@ public class KeysetPaginationTests : IDisposable
             Cursor = new KeysetCursor(3)
         };
 
-        var result = _db.Entities.AsQueryable().FlexQuery(options);
+        var result = _db.Customers.AsQueryable().FlexQuery(options);
 
         result.Data.Should().HaveCount(3);
-        result.Data.Cast<TestEntity>().Select(e => e.Id).Should().BeEquivalentTo([4, 5, 6]);
+        result.Data.Cast<Customer>().Select(e => e.Id).Should().BeEquivalentTo([4, 5, 6]);
     }
 
     [Fact]
@@ -369,7 +369,7 @@ public class KeysetPaginationTests : IDisposable
         };
 
         var result = QueryBuilder.ApplyKeysetPaging(
-            _db.Entities.AsQueryable().ApplySort(options),
+            _db.Customers.AsQueryable().ApplySort(options),
             options)
             .ToList();
 
@@ -382,7 +382,7 @@ public class KeysetPaginationTests : IDisposable
     [Fact]
     public void SeekAfter_WithFilter_Composes()
     {
-        var page = _db.Entities
+        var page = _db.Customers
             .Where(e => e.City == "New York")
             .OrderBy(e => e.Id)
             .SeekAfter(0)
@@ -399,7 +399,7 @@ public class KeysetPaginationTests : IDisposable
         var token = KeysetCursorSerializer.Serialize(new KeysetCursor(3));
         KeysetCursorSerializer.Deserialize(token);
 
-        var page = _db.Entities
+        var page = _db.Customers
             .OrderBy(e => e.Id)
             .SeekAfter(3)
             .Take(3)
@@ -419,7 +419,7 @@ public class KeysetPaginationTests : IDisposable
             PageSize = 3
         };
 
-        var result = _db.Entities.AsQueryable().FlexQuery(parameters);
+        var result = _db.Customers.AsQueryable().FlexQuery(parameters);
 
         result.NextCursorToken.Should().NotBeNull();
 

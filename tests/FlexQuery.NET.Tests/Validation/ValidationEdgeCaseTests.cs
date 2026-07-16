@@ -12,23 +12,8 @@ namespace FlexQuery.NET.Tests.Validation;
 
 public class ValidationEdgeCaseTests
 {
-    private sealed class TestEntity
-    {
-        public int Id { get; set; }
-        public string Name { get; set; } = string.Empty;
-        public int Age { get; set; }
-        public string? Description { get; set; }
-        public List<Child> Children { get; set; } = [];
-    }
-
-    private sealed class Child
-    {
-        public int Id { get; set; }
-        public string Label { get; set; } = string.Empty;
-    }
-
     private static QueryContext Context(Type? targetType = null, QueryGovernanceOptions? execOptions = null) =>
-        new() { TargetType = targetType ?? typeof(TestEntity), ExecutionOptions = execOptions };
+        new() { TargetType = targetType ?? typeof(Customer), ExecutionOptions = execOptions };
 
     [Fact]
     public void PaginationModeValidation_RejectsKeysetWithOffset()
@@ -166,7 +151,7 @@ public class ValidationEdgeCaseTests
                 [
                     new FilterCondition
                     {
-                        Field = "Children",
+                        Field = "Addresses",
                         Operator = "any",
                         ScopedFilter = new FilterGroup
                         {
@@ -268,7 +253,7 @@ public class ValidationEdgeCaseTests
         {
             Filter = new FilterGroup
             {
-                Filters = [new FilterCondition { Field = "Children", Operator = "any", Value = null }]
+                Filters = [new FilterCondition { Field = "Addresses", Operator = "any", Value = null }]
             }
         };
         var rule = new TypeCompatibilityRule();
@@ -456,7 +441,7 @@ public class ValidationEdgeCaseTests
     {
         var options = new QueryOptions
         {
-            Includes = ["Children"]
+            Includes = ["Addresses"]
         };
         var rule = new ExpandPathValidationRule();
         var result = ValidationResult.Success();
@@ -475,7 +460,7 @@ public class ValidationEdgeCaseTests
             [
                 new IncludeNode
                 {
-                    Path = "Children",
+                    Path = "Addresses",
                     Children = [new IncludeNode { Path = "NonExistentChild" }]
                 }
             ]
@@ -489,5 +474,5 @@ public class ValidationEdgeCaseTests
         result.Errors.Should().Contain(e => e.Code == ValidationErrorCodes.IncludePathNotFound);
     }
 
-    private sealed class TestGovernanceOptions : QueryGovernanceOptions { }
+    private sealed class TestGovernanceOptions : QueryGovernanceOptions;
 }

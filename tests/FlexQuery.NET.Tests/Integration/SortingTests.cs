@@ -20,7 +20,7 @@ public class SortingTests : IDisposable
             Paging = { Disabled = true }
         };
 
-        var result = _db.Entities.AsQueryable().Apply(opts).ToList();
+        var result = _db.Customers.AsQueryable().Apply(opts).ToList();
 
         result.Should().BeInAscendingOrder(e => e.Age);
     }
@@ -34,7 +34,7 @@ public class SortingTests : IDisposable
             Paging = { Disabled = true }
         };
 
-        var result = _db.Entities.AsQueryable().Apply(opts).ToList();
+        var result = _db.Customers.AsQueryable().Apply(opts).ToList();
 
         result.Should().BeInDescendingOrder(e => e.Age);
     }
@@ -48,7 +48,7 @@ public class SortingTests : IDisposable
             Paging = { Disabled = true }
         };
 
-        var result = _db.Entities.AsQueryable().Apply(opts).ToList();
+        var result = _db.Customers.AsQueryable().Apply(opts).ToList();
 
         result.Should().BeInAscendingOrder(e => e.Name);
     }
@@ -62,7 +62,7 @@ public class SortingTests : IDisposable
             Paging = { Disabled = true }
         };
 
-        var result = _db.Entities.AsQueryable().Apply(opts).ToList();
+        var result = _db.Customers.AsQueryable().Apply(opts).ToList();
 
         result.Should().BeInDescendingOrder(e => e.CreatedAt);
     }
@@ -82,7 +82,7 @@ public class SortingTests : IDisposable
             Paging = { Disabled = true }
         };
 
-        var result = _db.Entities.AsQueryable().Apply(opts).ToList();
+        var result = _db.Customers.AsQueryable().Apply(opts).ToList();
 
         // Verify primary sort: cities are in ascending order
         var cities = result.Select(e => e.City).ToList();
@@ -106,7 +106,7 @@ public class SortingTests : IDisposable
             Paging = { Disabled = true }
         };
 
-        var result = _db.Entities.AsQueryable().Apply(opts).ToList();
+        var result = _db.Customers.AsQueryable().Apply(opts).ToList();
 
         result.Should().HaveCount(10);
 
@@ -125,7 +125,7 @@ public class SortingTests : IDisposable
             Paging = { Disabled = true }
         };
 
-        var result = _db.Entities.AsQueryable().Apply(opts).ToList();
+        var result = _db.Customers.AsQueryable().Apply(opts).ToList();
 
         result.Where(e => e.Profile is not null)
             .Select(e => e.Profile!.Bio)
@@ -139,7 +139,7 @@ public class SortingTests : IDisposable
     {
         var opts = new QueryOptions { Paging = { Disabled = true } };
 
-        var result = _db.Entities.AsQueryable().Apply(opts).ToList();
+        var result = _db.Customers.AsQueryable().Apply(opts).ToList();
 
         result.Should().HaveCount(10);
         result.Select(e => e.Id).Should().BeEquivalentTo(Enumerable.Range(1, 10));
@@ -155,7 +155,7 @@ public class SortingTests : IDisposable
         };
 
         // Should not throw — empty field is skipped
-        var act = () => _db.Entities.AsQueryable().Apply(opts).ToList();
+        var act = () => _db.Customers.AsQueryable().Apply(opts).ToList();
         act.Should().NotThrow();
     }
 
@@ -172,7 +172,7 @@ public class SortingTests : IDisposable
             Paging = { Disabled = true }
         };
 
-        var result = _db.Entities.AsQueryable().Apply(opts).ToList();
+        var result = _db.Customers.AsQueryable().Apply(opts).ToList();
 
         result.Should().BeInAscendingOrder(e => e.Age);
     }
@@ -190,7 +190,7 @@ public class SortingTests : IDisposable
             Paging = { Disabled = true }
         };
 
-        var result = _db.Entities.AsQueryable().Apply(opts).ToList();
+        var result = _db.Customers.AsQueryable().Apply(opts).ToList();
 
         result.Select(e => e.Id).Should().BeInAscendingOrder();
     }

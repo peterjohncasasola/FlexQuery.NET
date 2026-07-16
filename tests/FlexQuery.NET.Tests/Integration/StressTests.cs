@@ -19,41 +19,44 @@ public class StressTests : IDisposable
 
     private void SeedLargeDataset(TestDbContext context)
     {
-        if (context.Entities.Any()) return;
+        if (context.Customers.Any()) return;
 
-        var entities = new List<Models.TestEntity>();
+        var entities = new List<Customer>();
         var random = new Random(42);
 
+        
         for (int i = 1; i <= 1000; i++) // 1000 entities for reasonable test time, increase if needed
         {
-            var entity = new Models.TestEntity
+            var status = (Status)random.Next(0, 3);
+            var entity = new Customer
             {
                 Id = i,
                 Name = $"User {i}",
                 Age = random.Next(18, 80),
                 City = i % 2 == 0 ? "New York" : "London",
                 CreatedAt = DateTime.UtcNow.AddDays(-random.Next(1, 1000)),
-                Status = (Models.Status)random.Next(0, 3),
-                Orders = new List<Models.Order>()
+                Status = status.ToString(),
+                Orders = []
             };
 
             for (int j = 1; j <= 5; j++)
             {
-                var order = new Models.Order
+                var order = new Order
                 {
                     Id = (i * 10) + j,
                     Total = (decimal)(random.NextDouble() * 1000),
                     Status = j % 2 == 0 ? "Shipped" : "Pending",
-                    OrderItems = new List<Models.OrderItem>()
+                    OrderItems = []
                 };
 
                 for (int k = 1; k <= 3; k++)
                 {
-                    order.OrderItems.Add(new Models.OrderItem
+                    order.OrderItems.Add(new OrderItem
                     {
                         Id = (order.Id * 10) + k,
                         Quantity = random.Next(1, 10),
-                        Price = (decimal)(random.NextDouble() * 100)
+                        Price = (decimal)(random.NextDouble() * 100),
+                        Sku = $"SKU-STRESS-{i}-{j}-{k}"
                     });
                 }
                 entity.Orders.Add(order);
@@ -61,7 +64,7 @@ public class StressTests : IDisposable
             entities.Add(entity);
         }
 
-        context.Entities.AddRange(entities);
+        context.Customers.AddRange(entities);
         context.SaveChanges();
     }
 
@@ -87,8 +90,8 @@ public class StressTests : IDisposable
             {
                 // Each request uses a new context or the same?
                 // In a real app, it's a new scoped DbContext. Let's simulate that safely
-                using var scopeDb = TestDbContext.Create("StressTestDb"); // Use same in-memory DB name
-                var result = await scopeDb.Entities
+                await using var scopeDb = TestDbContext.Create("StressTestDb"); // Use same in-memory DB name
+                var result = await scopeDb.Customers
                     .ApplyFilter(options)
                     .ApplySelect(options)
                     .ToListAsync();
