@@ -117,7 +117,7 @@ public class TypeHelperTests
     [Fact]
     public void IsNavigationProperty_ReferenceType_ReturnsTrue()
     {
-        TypeHelper.IsNavigationProperty(typeof(TestEntity)).Should().BeTrue();
+        TypeHelper.IsNavigationProperty(typeof(Customer)).Should().BeTrue();
     }
 
     [Fact]
@@ -131,9 +131,9 @@ public class TypeHelperTests
     [Fact]
     public void TryGetCollectionElementType_List_ReturnsElement()
     {
-        TypeHelper.TryGetCollectionElementType(typeof(List<TestEntity>), out var element)
+        TypeHelper.TryGetCollectionElementType(typeof(List<Customer>), out var element)
             .Should().BeTrue();
-        element.Should().Be(typeof(TestEntity));
+        element.Should().Be(typeof(Customer));
     }
 
     [Fact]

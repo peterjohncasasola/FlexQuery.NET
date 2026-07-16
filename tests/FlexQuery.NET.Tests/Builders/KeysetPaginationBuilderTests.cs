@@ -7,19 +7,13 @@ namespace FlexQuery.NET.Tests.Builders;
 
 public class KeysetPaginationBuilderTests
 {
-    private sealed class TestEntity
-    {
-        public int Id { get; set; }
-        public string Name { get; set; } = string.Empty;
-        public DateTime CreatedAt { get; set; }
-    }
 
     [Fact]
     public void BuildOrderingInfos_EmptySorts_Throws()
     {
         var sorts = new List<SortNode>();
 
-        Action act = () => KeysetPaginationBuilder.BuildOrderingInfos<TestEntity>(sorts);
+        Action act = () => KeysetPaginationBuilder.BuildOrderingInfos<Customer>(sorts);
 
         act.Should().Throw<InvalidOperationException>()
            .WithMessage("*Keyset pagination requires at least one sort field*");
@@ -34,7 +28,7 @@ public class KeysetPaginationBuilderTests
             new() { Field = "Name", Descending = true }
         };
 
-        var orderings = KeysetPaginationBuilder.BuildOrderingInfos<TestEntity>(sorts);
+        var orderings = KeysetPaginationBuilder.BuildOrderingInfos<Customer>(sorts);
 
         orderings.Should().HaveCount(2);
         orderings[0].Descending.Should().BeFalse();
@@ -45,13 +39,13 @@ public class KeysetPaginationBuilderTests
     public void BuildSeekPredicate_WithValues_ProducesValidExpression()
     {
         var sorts = new List<SortNode> { new() { Field = "Id", Descending = false } };
-        var orderings = KeysetPaginationBuilder.BuildOrderingInfos<TestEntity>(sorts);
+        var orderings = KeysetPaginationBuilder.BuildOrderingInfos<Customer>(sorts);
         var cursor = new KeysetCursor(5);
 
-        var predicate = KeysetPaginationBuilder.BuildSeekPredicate<TestEntity>(orderings, cursor.Values);
+        var predicate = KeysetPaginationBuilder.BuildSeekPredicate<Customer>(orderings, cursor.Values);
 
         predicate.Should().NotBeNull();
-        predicate.Parameters.Should().ContainSingle(p => p.Type == typeof(TestEntity));
+        predicate.Parameters.Should().ContainSingle(p => p.Type == typeof(Customer));
     }
 
     [Fact]
@@ -60,7 +54,7 @@ public class KeysetPaginationBuilderTests
         var orderings = new List<(LambdaExpression, bool)>();
         var cursor = new KeysetCursor(1);
 
-        Action act = () => KeysetPaginationBuilder.BuildSeekPredicate<TestEntity>(orderings, cursor.Values);
+        Action act = () => KeysetPaginationBuilder.BuildSeekPredicate<Customer>(orderings, cursor.Values);
 
         act.Should().Throw<InvalidOperationException>()
            .WithMessage("*Keyset pagination requires at least one sort field*");

@@ -190,13 +190,13 @@ public class FluentQueryBuilderTests
     {
         var options = Query.Create()
             .Expand(e => e.Path("Orders", configureChildren: c =>
-                c.Path("Items")))
+                c.Path("OrderItems")))
             .Build();
 
         options.Expand.Should().HaveCount(1);
         options.Expand![0].Path.Should().Be("Orders");
         options.Expand[0].Children.Should().HaveCount(1);
-        options.Expand[0].Children[0].Path.Should().Be("Items");
+        options.Expand[0].Children[0].Path.Should().Be("OrderItems");
     }
 
     [Fact]

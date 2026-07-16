@@ -5,12 +5,6 @@ namespace FlexQuery.NET.Tests.Caching;
 
 public class CacheIsolationTests
 {
-    private class Customer
-    {
-        public int Id { get; set; }
-        public string Name { get; set; } = string.Empty;
-        public string SSN { get; set; } = string.Empty;
-    }
 
     [Fact]
     public void ParserCache_ReturnsIsolatedClone_MutationsDoNotAffectCache()

@@ -9,21 +9,16 @@ namespace FlexQuery.NET.Tests.Caching;
 
 public class QueryCacheKeyBuilderTests
 {
-    private sealed class TestEntity
-    {
-        public int Id { get; set; }
-        public string Name { get; set; } = string.Empty;
-    }
 
     [Fact]
     public void Build_EmptyOptions_ReturnsKey()
     {
         var options = new QueryOptions();
-        var key = QueryCacheKeyBuilder.Build(options, typeof(TestEntity), "query");
+        var key = QueryCacheKeyBuilder.Build(options, typeof(Customer), "query");
 
         key.Should().NotBeNullOrEmpty();
         key.Should().Contain("query");
-        key.Should().Contain(typeof(TestEntity).FullName);
+        key.Should().Contain(typeof(Customer).FullName);
     }
 
     [Fact]
@@ -38,8 +33,8 @@ public class QueryCacheKeyBuilderTests
             Filter = new FilterGroup { Filters = [new FilterCondition { Field = "Name", Operator = "eq", Value = "Bob" }] }
         };
 
-        var key1 = QueryCacheKeyBuilder.Build(opts1, typeof(TestEntity), "query");
-        var key2 = QueryCacheKeyBuilder.Build(opts2, typeof(TestEntity), "query");
+        var key1 = QueryCacheKeyBuilder.Build(opts1, typeof(Customer), "query");
+        var key2 = QueryCacheKeyBuilder.Build(opts2, typeof(Customer), "query");
 
         key1.Should().NotBe(key2);
     }
@@ -56,8 +51,8 @@ public class QueryCacheKeyBuilderTests
             Filter = new FilterGroup { Filters = [new FilterCondition { Field = "Name", Operator = "eq", Value = "Alice" }] }
         };
 
-        var key1 = QueryCacheKeyBuilder.Build(opts1, typeof(TestEntity), "query");
-        var key2 = QueryCacheKeyBuilder.Build(opts2, typeof(TestEntity), "query");
+        var key1 = QueryCacheKeyBuilder.Build(opts1, typeof(Customer), "query");
+        var key2 = QueryCacheKeyBuilder.Build(opts2, typeof(Customer), "query");
 
         key1.Should().Be(key2);
     }
@@ -67,7 +62,7 @@ public class QueryCacheKeyBuilderTests
     {
         var opts = new QueryOptions();
 
-        var key1 = QueryCacheKeyBuilder.Build(opts, typeof(TestEntity), "query");
+        var key1 = QueryCacheKeyBuilder.Build(opts, typeof(Customer), "query");
         var key2 = QueryCacheKeyBuilder.Build(opts, typeof(string), "query");
 
         key1.Should().NotBe(key2);
@@ -81,7 +76,7 @@ public class QueryCacheKeyBuilderTests
             Sort = [new SortNode { Field = "Name", Descending = false }]
         };
 
-        var key = QueryCacheKeyBuilder.Build(options, typeof(TestEntity), "query");
+        var key = QueryCacheKeyBuilder.Build(options, typeof(Customer), "query");
 
         key.Should().Contain("sort=");
     }
@@ -94,7 +89,7 @@ public class QueryCacheKeyBuilderTests
             Select = ["Id", "Name"]
         };
 
-        var key = QueryCacheKeyBuilder.Build(options, typeof(TestEntity), "query");
+        var key = QueryCacheKeyBuilder.Build(options, typeof(Customer), "query");
 
         key.Should().Contain("select=");
     }
@@ -107,7 +102,7 @@ public class QueryCacheKeyBuilderTests
             Includes = ["Orders"]
         };
 
-        var key = QueryCacheKeyBuilder.Build(options, typeof(TestEntity), "query");
+        var key = QueryCacheKeyBuilder.Build(options, typeof(Customer), "query");
 
         key.Should().Contain("includes=");
     }
@@ -121,7 +116,7 @@ public class QueryCacheKeyBuilderTests
             Aggregates = [new AggregateModel { Function = AggregateFunction.Count, Field = "Id", Alias = "cnt" }]
         };
 
-        var key = QueryCacheKeyBuilder.Build(options, typeof(TestEntity), "query");
+        var key = QueryCacheKeyBuilder.Build(options, typeof(Customer), "query");
 
         key.Should().Contain("groupBy=");
         key.Should().Contain("aggregates=");
@@ -132,7 +127,7 @@ public class QueryCacheKeyBuilderTests
     {
         var options = new QueryOptions { Distinct = true };
 
-        var key = QueryCacheKeyBuilder.Build(options, typeof(TestEntity), "query");
+        var key = QueryCacheKeyBuilder.Build(options, typeof(Customer), "query");
 
         key.Should().Contain("distinct=True");
     }
@@ -151,7 +146,7 @@ public class QueryCacheKeyBuilderTests
             Expand = [new IncludeNode { Path = "Orders" }]
         };
 
-        var key = QueryCacheKeyBuilder.Build(options, typeof(TestEntity), "query");
+        var key = QueryCacheKeyBuilder.Build(options, typeof(Customer), "query");
 
         key.Should().Contain("filteredIncludes=");
     }

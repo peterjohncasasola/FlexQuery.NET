@@ -5,11 +5,6 @@ namespace FlexQuery.NET.Tests.Expressions;
 
 public class ExpressionMethodCacheTests
 {
-    private sealed class TestItem
-    {
-        public int Id { get; set; }
-        public string Name { get; set; } = string.Empty;
-    }
 
     [Fact]
     public void QueryableGroupBy_ReturnsMethodInfo()
@@ -78,31 +73,31 @@ public class ExpressionMethodCacheTests
     [Fact]
     public void EnumerableAnyWithPredicate_BindsCorrectType()
     {
-        var method = ExpressionMethodCache.EnumerableAnyWithPredicate(typeof(TestItem));
+        var method = ExpressionMethodCache.EnumerableAnyWithPredicate(typeof(Product));
 
         method.Should().NotBeNull();
         method.Name.Should().Be(nameof(Enumerable.Any));
-        method.GetGenericArguments().Should().ContainSingle().Which.Should().Be(typeof(TestItem));
+        method.GetGenericArguments().Should().ContainSingle().Which.Should().Be(typeof(Product));
     }
 
     [Fact]
     public void EnumerableAll_BindsCorrectType()
     {
-        var method = ExpressionMethodCache.EnumerableAll(typeof(TestItem));
+        var method = ExpressionMethodCache.EnumerableAll(typeof(Product));
 
         method.Should().NotBeNull();
         method.Name.Should().Be(nameof(Enumerable.All));
-        method.GetGenericArguments().Should().ContainSingle().Which.Should().Be(typeof(TestItem));
+        method.GetGenericArguments().Should().ContainSingle().Which.Should().Be(typeof(Product));
     }
 
     [Fact]
     public void EnumerableCount_BindsCorrectType()
     {
-        var method = ExpressionMethodCache.EnumerableCount(typeof(TestItem));
+        var method = ExpressionMethodCache.EnumerableCount(typeof(Product));
 
         method.Should().NotBeNull();
         method.Name.Should().Be(nameof(Enumerable.Count));
-        method.GetGenericArguments().Should().ContainSingle().Which.Should().Be(typeof(TestItem));
+        method.GetGenericArguments().Should().ContainSingle().Which.Should().Be(typeof(Product));
     }
 
     [Fact]
@@ -118,7 +113,7 @@ public class ExpressionMethodCacheTests
     [Fact]
     public void EnumerableMinWithSelector_BindsCorrectTypes()
     {
-        var method = ExpressionMethodCache.EnumerableMinWithSelector(typeof(TestItem), typeof(int));
+        var method = ExpressionMethodCache.EnumerableMinWithSelector(typeof(Product), typeof(int));
 
         method.Should().NotBeNull();
         method.Name.Should().Be(nameof(Enumerable.Min));
@@ -127,7 +122,7 @@ public class ExpressionMethodCacheTests
     [Fact]
     public void EnumerableMaxWithSelector_BindsCorrectTypes()
     {
-        var method = ExpressionMethodCache.EnumerableMaxWithSelector(typeof(TestItem), typeof(string));
+        var method = ExpressionMethodCache.EnumerableMaxWithSelector(typeof(Product), typeof(string));
 
         method.Should().NotBeNull();
         method.Name.Should().Be(nameof(Enumerable.Max));
@@ -136,7 +131,7 @@ public class ExpressionMethodCacheTests
     [Fact]
     public void EnumerableSumWithSelector_BindsCorrectTypes()
     {
-        var method = ExpressionMethodCache.EnumerableSumWithSelector(typeof(TestItem), typeof(decimal));
+        var method = ExpressionMethodCache.EnumerableSumWithSelector(typeof(Product), typeof(decimal));
 
         method.Should().NotBeNull();
         method.Name.Should().Be(nameof(Enumerable.Sum));
@@ -145,7 +140,7 @@ public class ExpressionMethodCacheTests
     [Fact]
     public void EnumerableAverageWithSelector_BindsCorrectTypes()
     {
-        var method = ExpressionMethodCache.EnumerableAverageWithSelector(typeof(TestItem), typeof(decimal));
+        var method = ExpressionMethodCache.EnumerableAverageWithSelector(typeof(Product), typeof(decimal));
 
         method.Should().NotBeNull();
         method.Name.Should().Be(nameof(Enumerable.Average));
@@ -189,8 +184,8 @@ public class ExpressionMethodCacheTests
     [Fact]
     public void EnumerableAnyWithPredicate_CachesPerType()
     {
-        var method1 = ExpressionMethodCache.EnumerableAnyWithPredicate(typeof(TestItem));
-        var method2 = ExpressionMethodCache.EnumerableAnyWithPredicate(typeof(TestItem));
+        var method1 = ExpressionMethodCache.EnumerableAnyWithPredicate(typeof(Product));
+        var method2 = ExpressionMethodCache.EnumerableAnyWithPredicate(typeof(Product));
 
         method1.Should().BeSameAs(method2);
     }
@@ -198,7 +193,7 @@ public class ExpressionMethodCacheTests
     [Fact]
     public void EnumerableAnyWithPredicate_DifferentTypes_DifferentMethods()
     {
-        var method1 = ExpressionMethodCache.EnumerableAnyWithPredicate(typeof(TestItem));
+        var method1 = ExpressionMethodCache.EnumerableAnyWithPredicate(typeof(Product));
         var method2 = ExpressionMethodCache.EnumerableAnyWithPredicate(typeof(string));
 
         method1.Should().NotBeSameAs(method2);
