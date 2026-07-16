@@ -18,7 +18,13 @@ internal static class FqlAggregateParser
 
             var trimmed = segment.Trim();
             var parenIndex = trimmed.IndexOf('(');
-            if (parenIndex <= 0) continue;
+            if (parenIndex <= 0)
+            {
+                throw new FqlParseException(
+                    $"Unable to parse aggregate expression '{rawSelect}'. " +
+                    $"Expected format: FUNCTION(Field) [AS Alias]. " +
+                    $"Missing opening parenthesis in '{trimmed}'.");
+            }
 
             var functionName = trimmed[..parenIndex].Trim();
             AggregateFunction function;
@@ -39,27 +45,59 @@ internal static class FqlAggregateParser
             {
                 throw new FqlParseException(
                     $"Unable to parse aggregate expression '{rawSelect}'. " +
-                    $"Missing closing parenthesis in '{trimmed}'. " +
-                    $"Expected format: FUNCTION(Field) [AS Alias].");
+                    $"Expected format: FUNCTION(Field) [AS Alias]. " +
+                    $"Missing closing parenthesis in '{trimmed}'.");
             }
 
             var fieldRaw = trimmed[(parenIndex + 1)..closeParen].Trim();
-            var remaining = trimmed[(closeParen + 1)..].Trim();
+            if (fieldRaw.Length == 0)
+            {
+                throw new FqlParseException(
+                    $"Unable to parse aggregate expression '{rawSelect}'. " +
+                    $"Expected format: FUNCTION(Field) [AS Alias]. " +
+                    $"Missing field in '{trimmed}'.");
+            }
 
-            if (fieldRaw.Length > 0 && fieldRaw != "*" && !ParserUtilities.IsValidPropertyPath(fieldRaw.AsSpan()))
+            if (fieldRaw != "*" && !ParserUtilities.IsValidPropertyPath(fieldRaw.AsSpan()))
                 throw new FqlParseException(
                     $"Invalid field '{fieldRaw}' in aggregate expression '{rawSelect}'. " +
                     "Field must be a valid property path.");
 
-            string? field = fieldRaw.Length == 0 || fieldRaw == "*"
-                ? null
-                : fieldRaw;
+            string? field = fieldRaw == "*" ? null : fieldRaw;
+            var remaining = trimmed[(closeParen + 1)..].Trim();
 
             string? alias = null;
-            if (remaining.StartsWith("AS ", StringComparison.OrdinalIgnoreCase))
+
+            if (remaining.Length >= 2 && remaining.StartsWith("AS", StringComparison.OrdinalIgnoreCase))
             {
-                alias = remaining[3..].Trim();
-                if (alias.Length == 0) alias = null;
+                if (remaining.Length == 2)
+                {
+                    throw new FqlParseException(
+                        $"Unable to parse aggregate expression '{rawSelect}'. " +
+                        $"Expected format: FUNCTION(Field) [AS Alias]. " +
+                        $"Missing alias after AS in '{trimmed}'.");
+                }
+
+                var afterAs = remaining[2..];
+                if (char.IsWhiteSpace(afterAs[0]))
+                {
+                    alias = afterAs.Trim();
+                    if (alias.Length == 0)
+                    {
+                        throw new FqlParseException(
+                            $"Unable to parse aggregate expression '{rawSelect}'. " +
+                            $"Expected format: FUNCTION(Field) [AS Alias]. " +
+                            $"Missing alias after AS in '{trimmed}'.");
+                    }
+                }
+            }
+
+            if (string.IsNullOrEmpty(alias) && remaining.Length > 0)
+            {
+                throw new FqlParseException(
+                    $"Unable to parse aggregate expression '{rawSelect}'. " +
+                    $"Expected format: FUNCTION(Field) [AS Alias]. " +
+                    $"Unexpected content after field in '{trimmed}'.");
             }
 
             result.Add(new AggregateModel
