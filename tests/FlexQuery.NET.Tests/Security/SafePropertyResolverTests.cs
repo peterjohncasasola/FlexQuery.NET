@@ -4,28 +4,11 @@ namespace FlexQuery.NET.Tests.Security;
 
 public class SafePropertyResolverTests
 {
-    private sealed class TestEntity
-    {
-        public int Id { get; set; }
-        public string Name { get; set; } = string.Empty;
-        public Address? Address { get; set; }
-        public List<Order> Orders { get; set; } = [];
-    }
-
-    private sealed class Address
-    {
-        public string City { get; set; } = string.Empty;
-    }
-
-    private sealed class Order
-    {
-        public int Number { get; set; }
-    }
 
     [Fact]
     public void TryResolveChain_SimplePath_ReturnsChain()
     {
-        var found = SafePropertyResolver.TryResolveChain(typeof(TestEntity), "Name", out var chain);
+        var found = SafePropertyResolver.TryResolveChain(typeof(Customer), "Name", out var chain);
 
         found.Should().BeTrue();
         chain.Should().HaveCount(1);
@@ -35,7 +18,7 @@ public class SafePropertyResolverTests
     [Fact]
     public void TryResolveChain_NestedPath_ReturnsChain()
     {
-        var found = SafePropertyResolver.TryResolveChain(typeof(TestEntity), "Address.City", out var chain);
+        var found = SafePropertyResolver.TryResolveChain(typeof(Customer), "Address.City", out var chain);
 
         found.Should().BeTrue();
         chain.Should().HaveCount(2);
@@ -46,7 +29,7 @@ public class SafePropertyResolverTests
     [Fact]
     public void TryResolveChain_NonExistentPath_ReturnsFalse()
     {
-        var found = SafePropertyResolver.TryResolveChain(typeof(TestEntity), "NonExistent", out _);
+        var found = SafePropertyResolver.TryResolveChain(typeof(Customer), "NonExistent", out _);
 
         found.Should().BeFalse();
     }
@@ -54,7 +37,7 @@ public class SafePropertyResolverTests
     [Fact]
     public void TryResolveChain_EmptyPath_ReturnsFalse()
     {
-        var found = SafePropertyResolver.TryResolveChain(typeof(TestEntity), "", out _);
+        var found = SafePropertyResolver.TryResolveChain(typeof(Customer), "", out _);
 
         found.Should().BeFalse();
     }

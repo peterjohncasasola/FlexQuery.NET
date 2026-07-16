@@ -8,18 +8,18 @@ namespace FlexQuery.NET.Tests.Dapper.Translation;
 
 public class SqlHavingBuilderTests
 {
-    private readonly IMappingRegistry _registry = new MappingRegistry();
+    private readonly IMappingRegistry _registry = SharedFlexQueryModel.Instance.Registry;
     private static readonly ISqlDialect Dialect = new SqlServerDialect();
 
     public SqlHavingBuilderTests()
     {
-        _registry.Entity<HavingTestEntity>().ToTable("entities");
+        _registry.Entity<Employee>().ToTable("Employees");
     }
 
     [Fact]
     public void Build_NullHaving_ReturnsEmpty()
     {
-        var mapping = _registry.GetMapping(typeof(HavingTestEntity));
+        var mapping = _registry.GetMapping(typeof(Employee));
         var parameters = new SqlParameterContext(Dialect);
         var result = SqlHavingBuilder.Build(Dialect, null, mapping, parameters);
         result.Should().BeEmpty();
@@ -28,7 +28,7 @@ public class SqlHavingBuilderTests
     [Fact]
     public void Build_CountStarWithGt_GeneratesHavingCountGt()
     {
-        var mapping = _registry.GetMapping(typeof(HavingTestEntity));
+        var mapping = _registry.GetMapping(typeof(Employee));
         var parameters = new SqlParameterContext(Dialect);
         var having = new HavingCondition
         {
@@ -48,7 +48,7 @@ public class SqlHavingBuilderTests
     [Fact]
     public void Build_CountStarWithEq_GeneratesHavingCountEq()
     {
-        var mapping = _registry.GetMapping(typeof(HavingTestEntity));
+        var mapping = _registry.GetMapping(typeof(Employee));
         var parameters = new SqlParameterContext(Dialect);
         var having = new HavingCondition
         {
@@ -67,7 +67,7 @@ public class SqlHavingBuilderTests
     [Fact]
     public void Build_CountStarWithLt_GeneratesHavingCountLt()
     {
-        var mapping = _registry.GetMapping(typeof(HavingTestEntity));
+        var mapping = _registry.GetMapping(typeof(Employee));
         var parameters = new SqlParameterContext(Dialect);
         var having = new HavingCondition
         {
@@ -86,7 +86,7 @@ public class SqlHavingBuilderTests
     [Fact]
     public void Build_CountStarWithGte_GeneratesHavingCountGte()
     {
-        var mapping = _registry.GetMapping(typeof(HavingTestEntity));
+        var mapping = _registry.GetMapping(typeof(Employee));
         var parameters = new SqlParameterContext(Dialect);
         var having = new HavingCondition
         {
@@ -105,7 +105,7 @@ public class SqlHavingBuilderTests
     [Fact]
     public void Build_CountStarWithLte_GeneratesHavingCountLte()
     {
-        var mapping = _registry.GetMapping(typeof(HavingTestEntity));
+        var mapping = _registry.GetMapping(typeof(Employee));
         var parameters = new SqlParameterContext(Dialect);
         var having = new HavingCondition
         {
@@ -124,7 +124,7 @@ public class SqlHavingBuilderTests
     [Fact]
     public void Build_CountStarWithNeq_GeneratesHavingCountNeq()
     {
-        var mapping = _registry.GetMapping(typeof(HavingTestEntity));
+        var mapping = _registry.GetMapping(typeof(Employee));
         var parameters = new SqlParameterContext(Dialect);
         var having = new HavingCondition
         {
@@ -143,7 +143,7 @@ public class SqlHavingBuilderTests
     [Fact]
     public void Build_CountField_GeneratesHavingCountField()
     {
-        var mapping = _registry.GetMapping(typeof(HavingTestEntity));
+        var mapping = _registry.GetMapping(typeof(Employee));
         var parameters = new SqlParameterContext(Dialect);
         var having = new HavingCondition
         {
@@ -162,7 +162,7 @@ public class SqlHavingBuilderTests
     [Fact]
     public void Build_SumField_GeneratesHavingSum()
     {
-        var mapping = _registry.GetMapping(typeof(HavingTestEntity));
+        var mapping = _registry.GetMapping(typeof(Employee));
         var parameters = new SqlParameterContext(Dialect);
         var having = new HavingCondition
         {
@@ -181,7 +181,7 @@ public class SqlHavingBuilderTests
     [Fact]
     public void Build_AvgField_GeneratesHavingAvg()
     {
-        var mapping = _registry.GetMapping(typeof(HavingTestEntity));
+        var mapping = _registry.GetMapping(typeof(Employee));
         var parameters = new SqlParameterContext(Dialect);
         var having = new HavingCondition
         {
@@ -200,7 +200,7 @@ public class SqlHavingBuilderTests
     [Fact]
     public void Build_MinField_GeneratesHavingMin()
     {
-        var mapping = _registry.GetMapping(typeof(HavingTestEntity));
+        var mapping = _registry.GetMapping(typeof(Employee));
         var parameters = new SqlParameterContext(Dialect);
         var having = new HavingCondition
         {
@@ -219,7 +219,7 @@ public class SqlHavingBuilderTests
     [Fact]
     public void Build_MaxField_GeneratesHavingMax()
     {
-        var mapping = _registry.GetMapping(typeof(HavingTestEntity));
+        var mapping = _registry.GetMapping(typeof(Employee));
         var parameters = new SqlParameterContext(Dialect);
         var having = new HavingCondition
         {
@@ -238,7 +238,7 @@ public class SqlHavingBuilderTests
     [Fact]
     public void Build_OperatorAliases_NormalizeCorrectly()
     {
-        var mapping = _registry.GetMapping(typeof(HavingTestEntity));
+        var mapping = _registry.GetMapping(typeof(Employee));
         var parameters = new SqlParameterContext(Dialect);
 
         var having = new HavingCondition
@@ -256,7 +256,7 @@ public class SqlHavingBuilderTests
     [Fact]
     public void Build_OperatorNeqAliases_NormalizeCorrectly()
     {
-        var mapping = _registry.GetMapping(typeof(HavingTestEntity));
+        var mapping = _registry.GetMapping(typeof(Employee));
         var parameters = new SqlParameterContext(Dialect);
 
         var having = new HavingCondition
@@ -274,7 +274,7 @@ public class SqlHavingBuilderTests
     [Fact]
     public void Build_OperatorGtAliases_NormalizeCorrectly()
     {
-        var mapping = _registry.GetMapping(typeof(HavingTestEntity));
+        var mapping = _registry.GetMapping(typeof(Employee));
         var parameters = new SqlParameterContext(Dialect);
 
         var having = new HavingCondition
@@ -292,7 +292,7 @@ public class SqlHavingBuilderTests
     [Fact]
     public void Build_OperatorLtAliases_NormalizeCorrectly()
     {
-        var mapping = _registry.GetMapping(typeof(HavingTestEntity));
+        var mapping = _registry.GetMapping(typeof(Employee));
         var parameters = new SqlParameterContext(Dialect);
 
         var having = new HavingCondition
@@ -310,7 +310,7 @@ public class SqlHavingBuilderTests
     [Fact]
     public void Build_OperatorGteAliases_NormalizeCorrectly()
     {
-        var mapping = _registry.GetMapping(typeof(HavingTestEntity));
+        var mapping = _registry.GetMapping(typeof(Employee));
         var parameters = new SqlParameterContext(Dialect);
 
         var having = new HavingCondition
@@ -328,7 +328,7 @@ public class SqlHavingBuilderTests
     [Fact]
     public void Build_OperatorLteAliases_NormalizeCorrectly()
     {
-        var mapping = _registry.GetMapping(typeof(HavingTestEntity));
+        var mapping = _registry.GetMapping(typeof(Employee));
         var parameters = new SqlParameterContext(Dialect);
 
         var having = new HavingCondition
@@ -346,7 +346,7 @@ public class SqlHavingBuilderTests
     [Fact]
     public void Build_SumWithDecimalValue_ConvertsCorrectly()
     {
-        var mapping = _registry.GetMapping(typeof(HavingTestEntity));
+        var mapping = _registry.GetMapping(typeof(Employee));
         var parameters = new SqlParameterContext(Dialect);
         var having = new HavingCondition
         {
@@ -365,7 +365,7 @@ public class SqlHavingBuilderTests
     [Fact]
     public void Build_CountStarWithSqlite_ConvertsDecimalToDouble()
     {
-        var mapping = _registry.GetMapping(typeof(HavingTestEntity));
+        var mapping = _registry.GetMapping(typeof(Employee));
         var parameters = new SqlParameterContext(new SqliteDialect());
         var having = new HavingCondition
         {
@@ -384,7 +384,7 @@ public class SqlHavingBuilderTests
     [Fact]
     public void Build_SumWithSqlite_ConvertsDecimalToDouble()
     {
-        var mapping = _registry.GetMapping(typeof(HavingTestEntity));
+        var mapping = _registry.GetMapping(typeof(Employee));
         var parameters = new SqlParameterContext(new SqliteDialect());
         var having = new HavingCondition
         {
@@ -403,7 +403,7 @@ public class SqlHavingBuilderTests
     [Fact]
     public void Build_WithPostgreSql_UsesCorrectQuoting()
     {
-        var mapping = _registry.GetMapping(typeof(HavingTestEntity));
+        var mapping = _registry.GetMapping(typeof(Employee));
         var parameters = new SqlParameterContext(new PostgreSqlDialect());
         var having = new HavingCondition
         {
@@ -421,7 +421,7 @@ public class SqlHavingBuilderTests
     [Fact]
     public void Build_WithMySql_UsesCorrectQuoting()
     {
-        var mapping = _registry.GetMapping(typeof(HavingTestEntity));
+        var mapping = _registry.GetMapping(typeof(Employee));
         var parameters = new SqlParameterContext(new MySqlDialect());
         var having = new HavingCondition
         {
@@ -440,8 +440,8 @@ public class SqlHavingBuilderTests
     public void Build_WithTableAlias_UsesAliasInColumn()
     {
         var registry = new MappingRegistry();
-        registry.Entity<HavingTestEntity>().ToTable("entities").HasAlias("e");
-        var mapping = registry.GetMapping(typeof(HavingTestEntity));
+        registry.Entity<Employee>().ToTable("Employees").HasAlias("e");
+        var mapping = registry.GetMapping(typeof(Employee));
         var parameters = new SqlParameterContext(Dialect);
         var having = new HavingCondition
         {
@@ -459,7 +459,7 @@ public class SqlHavingBuilderTests
     [Fact]
     public void Build_UnknownOperator_ReturnsRawOperator()
     {
-        var mapping = _registry.GetMapping(typeof(HavingTestEntity));
+        var mapping = _registry.GetMapping(typeof(Employee));
         var parameters = new SqlParameterContext(Dialect);
         var having = new HavingCondition
         {
@@ -473,13 +473,6 @@ public class SqlHavingBuilderTests
 
         result.Should().Be("HAVING COUNT(*) custom_op @p0");
     }
-
-    private sealed class HavingTestEntity
-    {
-        public int Id { get; set; }
-        public string Name { get; set; } = string.Empty;
-        public string Status { get; set; } = string.Empty;
-        public decimal Score { get; set; }
-    }
+    
 }
 

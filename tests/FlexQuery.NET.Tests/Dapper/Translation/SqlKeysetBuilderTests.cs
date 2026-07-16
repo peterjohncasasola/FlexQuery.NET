@@ -11,19 +11,15 @@ namespace FlexQuery.NET.Tests.Dapper.Translation;
 
 public class SqlKeysetBuilderTests
 {
-    private readonly IMappingRegistry _registry = new MappingRegistry();
+    private readonly IMappingRegistry _registry = SharedFlexQueryModel.Instance.Registry;
     private static readonly ISqlDialect Dialect = new SqlServerDialect();
-
-    public SqlKeysetBuilderTests()
-    {
-        _registry.Entity<KeysetTestEntity>().ToTable("entities");
-    }
+    
 
     private static QueryOptions Options(Action<QueryOptions> configure)
     {
         var options = new QueryOptions();
         configure(options);
-        options.Items[ContextKeys.EntityType] = typeof(KeysetTestEntity);
+        options.Items[ContextKeys.EntityType] = typeof(Customer);
         return options;
     }
 
@@ -351,12 +347,5 @@ public class SqlKeysetBuilderTests
     }
 
     // ── Test entity ─────────────────────────────────────────────────────
-
-    private sealed class KeysetTestEntity
-    {
-        public int Id { get; set; }
-        public string? Name { get; set; }
-        public string City { get; set; } = string.Empty;
-        public string Status { get; set; } = string.Empty;
-    }
+    
 }

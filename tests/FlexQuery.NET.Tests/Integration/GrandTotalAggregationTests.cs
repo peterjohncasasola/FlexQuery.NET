@@ -46,10 +46,10 @@ public class GrandTotalAggregationTests : IDisposable
         idAggs.Should().ContainKey("count");
 
         // Double check conversion to double in SQLite translation
-        Convert.ToDouble(totalAggs["sum"]).Should().Be(279.5);
-        Convert.ToDouble(totalAggs["min"]).Should().Be(10.0);
-        Convert.ToDouble(totalAggs["max"]).Should().Be(125.5);
-        Convert.ToDouble(totalAggs["avg"]).Should().Be(69.875);
+        Convert.ToDouble(totalAggs["sum"]).Should().Be(675.0);
+        Convert.ToDouble(totalAggs["min"]).Should().Be(25.0);
+        Convert.ToDouble(totalAggs["max"]).Should().Be(300.0);
+        Convert.ToDouble(totalAggs["avg"]).Should().Be(168.75);
         Convert.ToInt32(idAggs["count"]).Should().Be(4);
     }
 
@@ -74,10 +74,10 @@ public class GrandTotalAggregationTests : IDisposable
         result.Aggregates!.Should().ContainKey("Id");
         var idAggs = result.Aggregates["Id"];
 
-        Convert.ToDouble(totalAggs["sum"]).Should().Be(279.5);
-        Convert.ToDouble(totalAggs["min"]).Should().Be(10.0);
-        Convert.ToDouble(totalAggs["max"]).Should().Be(125.5);
-        Convert.ToDouble(totalAggs["avg"]).Should().Be(69.875);
+        Convert.ToDouble(totalAggs["sum"]).Should().Be(675.0);
+        Convert.ToDouble(totalAggs["min"]).Should().Be(25.0);
+        Convert.ToDouble(totalAggs["max"]).Should().Be(300.0);
+        Convert.ToDouble(totalAggs["avg"]).Should().Be(168.75);
         Convert.ToInt32(idAggs["count"]).Should().Be(4);
     }
 }

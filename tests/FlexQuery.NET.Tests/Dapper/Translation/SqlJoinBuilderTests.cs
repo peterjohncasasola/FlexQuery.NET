@@ -12,20 +12,9 @@ namespace FlexQuery.NET.Tests.Dapper.Translation;
 
 public class SqlJoinBuilderTests
 {
-    private readonly IMappingRegistry _registry = new MappingRegistry();
+    private readonly IMappingRegistry _registry = SharedFlexQueryModel.Instance.Registry;
     private static readonly ISqlDialect Dialect = new SqlServerDialect();
-
-    public SqlJoinBuilderTests()
-    {
-        _registry.Entity<SqlCustomer>()
-            .ToTable("Customers")
-            .HasMany(c => c.Orders).WithForeignKey("CustomerId");
-        _registry.Entity<SqlOrder>()
-            .ToTable("Orders")
-            .HasMany(o => o.Items).WithForeignKey("OrderId");
-        _registry.Entity<SqlOrderItem>()
-            .ToTable("OrderItems");
-    }
+    
 
     private SqlJoinBuilder CreateBuilder(ISqlDialect? dialect = null)
     {
@@ -40,7 +29,7 @@ public class SqlJoinBuilderTests
     [Fact]
     public void BuildJoinClause_NoSelectTreeNoIncludes_ReturnsEmpty()
     {
-        var mapping = _registry.GetMapping(typeof(SqlCustomer));
+        var mapping = _registry.GetMapping(typeof(Customer));
         var builder = CreateBuilder();
         var options = new QueryOptions();
         var parameters = new SqlParameterContext(Dialect);
@@ -54,7 +43,7 @@ public class SqlJoinBuilderTests
     [Fact]
     public void BuildJoinClause_SelectTreeWithNavigation_GeneratesJoin()
     {
-        var mapping = _registry.GetMapping(typeof(SqlCustomer));
+        var mapping = _registry.GetMapping(typeof(Customer));
         var builder = CreateBuilder();
         var options = new QueryOptions();
         var parameters = new SqlParameterContext(Dialect);
@@ -72,12 +61,12 @@ public class SqlJoinBuilderTests
     [Fact]
     public void BuildJoinClause_MultiLevelNavigation_GeneratesMultipleJoins()
     {
-        var mapping = _registry.GetMapping(typeof(SqlCustomer));
+        var mapping = _registry.GetMapping(typeof(Customer));
         var builder = CreateBuilder();
         var options = new QueryOptions();
         var parameters = new SqlParameterContext(Dialect);
         var tree = new SelectionNode();
-        tree.GetOrAddChild("Orders").GetOrAddChild("Items").GetOrAddChild("Sku");
+        tree.GetOrAddChild("Orders").GetOrAddChild("OrderItems").GetOrAddChild("Sku");
 
         var result = builder.BuildJoinClause(options, mapping, parameters, tree);
 
@@ -88,7 +77,7 @@ public class SqlJoinBuilderTests
     [Fact]
     public void BuildJoinClause_WithIncludes_GeneratesJoin()
     {
-        var mapping = _registry.GetMapping(typeof(SqlCustomer));
+        var mapping = _registry.GetMapping(typeof(Customer));
         var builder = CreateBuilder();
         var options = new QueryOptions
         {
@@ -106,7 +95,7 @@ public class SqlJoinBuilderTests
     [Fact]
     public void BuildJoinClause_WithFilteredInclude_GeneratesJoinWithFilter()
     {
-        var mapping = _registry.GetMapping(typeof(SqlCustomer));
+        var mapping = _registry.GetMapping(typeof(Customer));
         var builder = CreateBuilder();
         var options = new QueryOptions
         {
@@ -136,7 +125,7 @@ public class SqlJoinBuilderTests
     [Fact]
     public void BuildJoinClause_DuplicatePaths_Deduplicates()
     {
-        var mapping = _registry.GetMapping(typeof(SqlCustomer));
+        var mapping = _registry.GetMapping(typeof(Customer));
         var builder = CreateBuilder();
         var options = new QueryOptions
         {
@@ -155,7 +144,7 @@ public class SqlJoinBuilderTests
     [Fact]
     public void BuildJoinClause_SelectTreeAndIncludes_Deduplicates()
     {
-        var mapping = _registry.GetMapping(typeof(SqlCustomer));
+        var mapping = _registry.GetMapping(typeof(Customer));
         var builder = CreateBuilder();
         var options = new QueryOptions
         {
@@ -174,7 +163,7 @@ public class SqlJoinBuilderTests
     [Fact]
     public void BuildJoinClause_UnknownPath_IsSkipped()
     {
-        var mapping = _registry.GetMapping(typeof(SqlCustomer));
+        var mapping = _registry.GetMapping(typeof(Customer));
         var builder = CreateBuilder();
         var options = new QueryOptions
         {
@@ -192,7 +181,7 @@ public class SqlJoinBuilderTests
     public void BuildJoinClause_WithPostgreSql_UsesCorrectQuoting()
     {
         var dialect = new PostgreSqlDialect();
-        var mapping = _registry.GetMapping(typeof(SqlCustomer));
+        var mapping = _registry.GetMapping(typeof(Customer));
         var builder = CreateBuilder(dialect);
         var options = new QueryOptions
         {
@@ -211,7 +200,7 @@ public class SqlJoinBuilderTests
     public void BuildJoinClause_WithMySql_UsesCorrectQuoting()
     {
         var dialect = new MySqlDialect();
-        var mapping = _registry.GetMapping(typeof(SqlCustomer));
+        var mapping = _registry.GetMapping(typeof(Customer));
         var builder = CreateBuilder(dialect);
         var options = new QueryOptions
         {
@@ -229,7 +218,7 @@ public class SqlJoinBuilderTests
     [Fact]
     public void BuildJoinClause_CaseInsensitiveFilter_AppliesCorrectly()
     {
-        var mapping = _registry.GetMapping(typeof(SqlCustomer));
+        var mapping = _registry.GetMapping(typeof(Customer));
         var builder = CreateBuilder();
         var options = new QueryOptions
         {
@@ -258,7 +247,7 @@ public class SqlJoinBuilderTests
     [Fact]
     public void BuildJoinClause_SelectTreeWithFilteredNavigation_GeneratesFilteredJoin()
     {
-        var mapping = _registry.GetMapping(typeof(SqlCustomer));
+        var mapping = _registry.GetMapping(typeof(Customer));
         var builder = CreateBuilder();
         var options = new QueryOptions();
         var parameters = new SqlParameterContext(Dialect);
@@ -279,19 +268,14 @@ public class SqlJoinBuilderTests
     [Fact]
     public void BuildJoinClause_WithTableAlias_UsesAliasInJoinCondition()
     {
-        var registry = new MappingRegistry();
-        registry.Entity<SqlCustomer>()
-            .ToTable("Customers").HasAlias("c")
-            .HasMany(c => c.Orders).WithForeignKey("CustomerId");
-        registry.Entity<SqlOrder>()
-            .ToTable("Orders");
 
-        var mapping = registry.GetMapping(typeof(SqlCustomer));
+        var mapping = _registry.GetMapping(typeof(Customer));
+        _registry.Entity<Customer>().HasAlias("c");
         var includeTranslator = new SqlIncludeTranslator(Dialect);
         var existsTranslator = new SqlExistsTranslator(Dialect);
         var countTranslator = new SqlCountTranslator(Dialect);
-        var whereBuilder = new SqlWhereBuilder(registry, Dialect, existsTranslator, countTranslator);
-        var builder = new SqlJoinBuilder(registry, Dialect, includeTranslator, whereBuilder);
+        var whereBuilder = new SqlWhereBuilder(_registry, Dialect, existsTranslator, countTranslator);
+        var builder = new SqlJoinBuilder(_registry, Dialect, includeTranslator, whereBuilder);
         var options = new QueryOptions
         {
             Includes = ["Orders"]
@@ -307,23 +291,13 @@ public class SqlJoinBuilderTests
     [Fact]
     public void BuildJoinClause_MultipleFilteredIncludes_GeneratesMultipleJoins()
     {
-        var registry = new MappingRegistry();
-        registry.Entity<SqlCustomer>()
-            .ToTable("Customers")
-            .HasMany(c => c.Orders).WithForeignKey("CustomerId");
-        registry.Entity<SqlCustomer>()
-            .HasOne(c => c.Address).WithForeignKey("CustomerId");
-        registry.Entity<SqlOrder>()
-            .ToTable("Orders");
-        registry.Entity<SqlAddress>()
-            .ToTable("Addresses");
 
-        var mapping = registry.GetMapping(typeof(SqlCustomer));
+        var mapping = _registry.GetMapping(typeof(Customer));
         var includeTranslator = new SqlIncludeTranslator(Dialect);
         var existsTranslator = new SqlExistsTranslator(Dialect);
         var countTranslator = new SqlCountTranslator(Dialect);
-        var whereBuilder = new SqlWhereBuilder(registry, Dialect, existsTranslator, countTranslator);
-        var builder = new SqlJoinBuilder(registry, Dialect, includeTranslator, whereBuilder);
+        var whereBuilder = new SqlWhereBuilder(_registry, Dialect, existsTranslator, countTranslator);
+        var builder = new SqlJoinBuilder(_registry, Dialect, includeTranslator, whereBuilder);
         var options = new QueryOptions
         {
             Includes = ["Orders", "Address"]

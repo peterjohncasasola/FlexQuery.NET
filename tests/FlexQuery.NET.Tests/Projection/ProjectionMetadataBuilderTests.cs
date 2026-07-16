@@ -5,27 +5,21 @@ namespace FlexQuery.NET.Tests.Projection;
 
 public class ProjectionMetadataBuilderTests
 {
-    private sealed class TestEntity
-    {
-        public int Id { get; set; }
-        public string Name { get; set; } = string.Empty;
-    }
-
     [Fact]
     public void Build_ReturnsProjectionMetadata()
     {
         var options = new QueryOptions { Select = ["Id", "Name"] };
 
-        var result = ProjectionMetadataBuilder.Build(typeof(TestEntity), options);
+        var result = ProjectionMetadataBuilder.Build(typeof(Customer), options);
 
         result.Should().NotBeNull();
-        result.EntityType.Should().Be(typeof(TestEntity));
+        result.EntityType.Should().Be(typeof(Customer));
     }
 
     [Fact]
     public void Build_EmptyOptions_ReturnsMetadata()
     {
-        var result = ProjectionMetadataBuilder.Build(typeof(TestEntity), new QueryOptions());
+        var result = ProjectionMetadataBuilder.Build(typeof(Customer), new QueryOptions());
 
         result.Should().NotBeNull();
     }

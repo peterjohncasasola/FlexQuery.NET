@@ -5,35 +5,6 @@ namespace FlexQuery.NET.Tests.Caching;
 
 public class ReflectionCacheTests
 {
-    private class Customer
-    {
-        public int Id { get; set; }
-        public string? Name { get; set; }
-        public Address? Address { get; set; }
-        public List<Order>? Orders { get; set; }
-        public ICollection<Order>? OrderCollection { get; set; }
-    }
-
-    private class Address
-    {
-        public int Id { get; set; }
-        public string? Street { get; set; }
-        public string? City { get; set; }
-    }
-
-    private class Order
-    {
-        public int Id { get; set; }
-        public decimal Total { get; set; }
-        public List<OrderItem>? Items { get; set; }
-    }
-
-    private class OrderItem
-    {
-        public int Id { get; set; }
-        public string? ProductName { get; set; }
-        public decimal Price { get; set; }
-    }
 
     // ── GetProperty ─────────────────────────────────────────────────────
 
@@ -94,7 +65,7 @@ public class ReflectionCacheTests
     public void GetProperties_Returns_All_Public_Instance_Properties()
     {
         var props = ReflectionCache.GetProperties(typeof(Address));
-        props.Select(p => p.Name).Should().BeEquivalentTo("Id", "Street", "City");
+        props.Select(p => p.Name).Should().BeEquivalentTo("Id", "CustomerId", "Customer", "Street", "City", "Province", "Country", "PostalCode", "IsActive");
     }
 
     [Fact]
@@ -144,14 +115,14 @@ public class ReflectionCacheTests
     [Fact]
     public void TryResolvePropertyChain_Deep_Nested_Chain()
     {
-        // Customer.Orders.Items.ProductName resolves through two collection layers:
+        // Customer.Orders.OrderItems.ProductName resolves through two collection layers:
         // Customer → List<Order> → Order → List<OrderItem> → OrderItem
-        var found = ReflectionCache.TryResolvePropertyChain(typeof(Customer), "Orders.Items.ProductName", out var chain);
+        var found = ReflectionCache.TryResolvePropertyChain(typeof(Customer), "Orders.OrderItems.Description", out var chain);
         found.Should().BeTrue();
         chain.Should().HaveCount(3);
         chain[0].Name.Should().Be("Orders");
-        chain[1].Name.Should().Be("Items");
-        chain[2].Name.Should().Be("ProductName");
+        chain[1].Name.Should().Be("OrderItems");
+        chain[2].Name.Should().Be("Description");
     }
 
     [Fact]
@@ -382,7 +353,7 @@ public class ReflectionCacheTests
     public void Parallel_Chain_Resolution_No_Exceptions()
     {
         var exceptions = new ConcurrentBag<Exception>();
-        var paths = new[] { "Orders.Total", "Address.City", "Orders.Items.Price", "Name" };
+        var paths = new[] { "Orders.Total", "Address.City", "Orders.OrderItems.Price", "Name" };
 
         Parallel.For(0, 50, _ =>
         {

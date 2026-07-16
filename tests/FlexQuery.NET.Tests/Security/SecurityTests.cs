@@ -22,7 +22,7 @@ public class SecurityTests : IDisposable
         {
             var filter = new FqlQueryParser().Parse($"name = \"{injectedValue}\"");
             var options = new QueryOptions { Filter = filter };
-            return _db.Entities.ApplyFilter(options).ToList();
+            return _db.Customers.ApplyFilter(options).ToList();
         };
 
         try
@@ -44,7 +44,7 @@ public class SecurityTests : IDisposable
         {
             var filter = new FqlQueryParser().Parse($"orders.any(status = \"{injectedValue}\")");
             var options = new QueryOptions { Filter = filter };
-            return _db.Entities.ApplyFilter(options).ToList();
+            return _db.Customers.ApplyFilter(options).ToList();
         };
 
         try

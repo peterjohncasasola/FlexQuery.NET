@@ -46,8 +46,8 @@ public class QueryNormalizationTests
         first.Filter!.Filters.Select(f => f.Field).Should().ContainInOrder("age", "name");
         second.Filter!.Filters.Select(f => f.Field).Should().ContainInOrder("age", "name");
 
-        first.GetCacheKey(typeof(TestEntity), "predicate")
-            .Should().Be(second.GetCacheKey(typeof(TestEntity), "predicate"));
+        first.GetCacheKey(typeof(Customer), "predicate")
+            .Should().Be(second.GetCacheKey(typeof(Customer), "predicate"));
     }
 
     [Fact]
@@ -77,8 +77,8 @@ public class QueryNormalizationTests
             }
         };
 
-        optionsA.GetCacheKey(typeof(TestEntity), "predicate")
-            .Should().Be(optionsB.GetCacheKey(typeof(TestEntity), "predicate"));
+        optionsA.GetCacheKey(typeof(Customer), "predicate")
+            .Should().Be(optionsB.GetCacheKey(typeof(Customer), "predicate"));
     }
 
     [Fact]
@@ -143,8 +143,8 @@ public class QueryNormalizationTests
             }
         };
 
-        normal.GetCacheKey(typeof(TestEntity), "predicate")
-            .Should().NotBe(negated.GetCacheKey(typeof(TestEntity), "predicate"));
+        normal.GetCacheKey(typeof(Customer), "predicate")
+            .Should().NotBe(negated.GetCacheKey(typeof(Customer), "predicate"));
     }
 
     [Fact]
@@ -188,8 +188,8 @@ public class QueryNormalizationTests
             }
         };
 
-        statusScoped.GetCacheKey(typeof(TestEntity), "predicate")
-            .Should().NotBe(totalScoped.GetCacheKey(typeof(TestEntity), "predicate"));
+        statusScoped.GetCacheKey(typeof(Customer), "predicate")
+            .Should().NotBe(totalScoped.GetCacheKey(typeof(Customer), "predicate"));
     }
 
     [Fact]

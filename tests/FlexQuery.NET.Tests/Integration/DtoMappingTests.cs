@@ -14,17 +14,20 @@ public class DtoMappingTests : IDisposable
     {
         var parameters = new FlexQueryParameters
         {
-            Filter = "dtoName:eq:Alice Johnson_Mapped"
+            Filter = "dtoName:eq:Alice Johnson_Mapped",
+            Select = "dtoName"
         };
 
-        var result = _db.Entities.AsQueryable().FlexQuery(parameters, exec =>
+        var result = _db.Customers.AsQueryable().FlexQuery(parameters, exec =>
         {
-            exec.MapField<TestEntity, string>("dtoName", x => x.Name + "_Mapped");
+            exec.MapField<Customer, string>("dtoName", x => x.Name + "_Mapped");
         });
 
         result.Data.Should().HaveCount(1);
-        var json = JsonSerializer.Serialize(result.Data);
-        json.Should().Contain("Alice Johnson");
+        var first = result.Data[0];
+        var nameProp = first.GetType().GetProperty("dtoName");
+        nameProp.Should().NotBeNull();
+        nameProp!.GetValue(first).ToString().Should().Be("Alice Johnson_Mapped");
     }
 
     [Fact]
@@ -36,13 +39,13 @@ public class DtoMappingTests : IDisposable
             PageSize = 100
         };
 
-        var result = _db.Entities.AsQueryable().FlexQuery(parameters, exec =>
+        var result = _db.Customers.AsQueryable().FlexQuery(parameters, exec =>
         {
             // Map dtoAge to (Age * 2)
-            exec.MapField<TestEntity, int>("dtoAge", x => x.Age * 2);
+            exec.MapField<Customer, int>("dtoAge", x => x.Age * 2);
         });
 
-        var items = result.Data.Cast<TestEntity>().ToList();
+        var items = result.Data.Cast<Customer>().ToList();
         items.Select(x => x.Age * 2).Should().BeInAscendingOrder();
     }
 
@@ -56,10 +59,10 @@ public class DtoMappingTests : IDisposable
         };
 
         // Note: Seeder sets Alice's profile to non-null with bio "Bio for Alice Johnson"
-        var result = _db.Entities.AsQueryable().FlexQuery(parameters, exec =>
+        var result = _db.Customers.AsQueryable().FlexQuery(parameters, exec =>
         {
-            exec.MapField<TestEntity, string>("dtoName", x => x.Name);
-            exec.MapField<TestEntity, string>("dtoBio", x => x.Profile != null ? x.Profile.Bio : "No Bio");
+            exec.MapField<Customer, string>("dtoName", x => x.Name);
+            exec.MapField<Customer, string>("dtoBio", x => x.Profile != null ? x.Profile.Bio : "No Bio");
         });
 
         result.Data.Should().HaveCount(1);
@@ -81,9 +84,9 @@ public class DtoMappingTests : IDisposable
             PageSize = 100
         };
 
-        var result = _db.Entities.AsQueryable().FlexQuery(parameters, exec =>
+        var result = _db.Customers.AsQueryable().FlexQuery(parameters, exec =>
         {
-            exec.MapField<TestEntity, int>("dtoAge", x => x.Age);
+            exec.MapField<Customer, int>("dtoAge", x => x.Age);
         });
 
         result.Data.Should().NotBeEmpty();
@@ -100,14 +103,14 @@ public class DtoMappingTests : IDisposable
             Filter = "totalAmount:gt:100"
         };
 
-        var result = _db.Entities.AsQueryable().FlexQuery(parameters, exec =>
+        var result = _db.Customers.AsQueryable().FlexQuery(parameters, exec =>
         {
-            exec.MapField<TestEntity, decimal>("totalAmount", x => x.Orders.Sum(o => o.Total));
+            exec.MapField<Customer, decimal>("totalAmount", x => x.Orders.Sum(o => o.Total));
         });
 
         // David Brown has 2 orders (100.0, 50.0) -> sum 150.0
         result.Data.Should().NotBeEmpty();
-        var items = result.Data.Cast<TestEntity>().ToList();
+        var items = result.Data.Cast<Customer>().ToList();
         items.Should().AllSatisfy(x => x.Orders.Sum(o => o.Total).Should().BeGreaterThan(100));
     }
 }

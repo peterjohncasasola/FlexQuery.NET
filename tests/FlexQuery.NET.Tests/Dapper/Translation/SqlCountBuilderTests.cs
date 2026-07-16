@@ -79,9 +79,9 @@ public class SqlCountBuilderTests
     [Fact]
     public void ExtractCountSql_OrderByInsideSubquery_NotStripped()
     {
-        var sql = "SELECT Id, (SELECT COUNT(*) FROM Items WHERE Items.ParentId = Parents.Id ORDER BY Items.Name) AS ItemCount FROM Parents";
+        var sql = "SELECT Id, (SELECT COUNT(*) FROM OrderItems WHERE OrderItems.ParentId = Parents.Id ORDER BY OrderItems.Name) AS ItemCount FROM Parents";
         var result = SqlCountBuilder.ExtractCountSql(sql);
-        result.Should().Be("SELECT COUNT(1) FROM (SELECT Id, (SELECT COUNT(*) FROM Items WHERE Items.ParentId = Parents.Id ORDER BY Items.Name) AS ItemCount FROM Parents) AS CountTable");
+        result.Should().Be("SELECT COUNT(1) FROM (SELECT Id, (SELECT COUNT(*) FROM OrderItems WHERE OrderItems.ParentId = Parents.Id ORDER BY OrderItems.Name) AS ItemCount FROM Parents) AS CountTable");
     }
 
     [Fact]
@@ -127,16 +127,16 @@ public class SqlCountBuilderTests
     [Fact]
     public void ExtractCountSql_OrderByInSubquery_NotStripped()
     {
-        var sql = "SELECT * FROM (SELECT * FROM Items ORDER BY Name) AS sorted WHERE sorted.Price > 100 ORDER BY sorted.Price";
+        var sql = "SELECT * FROM (SELECT * FROM OrderItems ORDER BY Name) AS sorted WHERE sorted.Price > 100 ORDER BY sorted.Price";
         var result = SqlCountBuilder.ExtractCountSql(sql);
-        result.Should().Be("SELECT COUNT(1) FROM (SELECT * FROM (SELECT * FROM Items ORDER BY Name) AS sorted WHERE sorted.Price > 100) AS CountTable");
+        result.Should().Be("SELECT COUNT(1) FROM (SELECT * FROM (SELECT * FROM OrderItems ORDER BY Name) AS sorted WHERE sorted.Price > 100) AS CountTable");
     }
 
     [Fact]
     public void ExtractCountSql_MultipleOrderByKeywords_StripsOutermostOnly()
     {
-        var sql = "SELECT * FROM (SELECT * FROM Items ORDER BY Name) AS sub ORDER BY sub.Price";
+        var sql = "SELECT * FROM (SELECT * FROM OrderItems ORDER BY Name) AS sub ORDER BY sub.Price";
         var result = SqlCountBuilder.ExtractCountSql(sql);
-        result.Should().Be("SELECT COUNT(1) FROM (SELECT * FROM (SELECT * FROM Items ORDER BY Name) AS sub) AS CountTable");
+        result.Should().Be("SELECT COUNT(1) FROM (SELECT * FROM (SELECT * FROM OrderItems ORDER BY Name) AS sub) AS CountTable");
     }
 }

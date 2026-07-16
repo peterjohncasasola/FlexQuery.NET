@@ -29,18 +29,18 @@ public class FilterExpressionBuilderTests
     [InlineData("endswith", "Jo", "John", false)]
     public void StringMethods_MatchCorrectly(string op, string value, string name, bool expected)
     {
-        var param = Expression.Parameter(typeof(TestEntity));
-        var member = Expression.Property(param, nameof(TestEntity.Name));
-        var predicate = Compile<TestEntity>(member, op, value);
+        var param = Expression.Parameter(typeof(Customer));
+        var member = Expression.Property(param, nameof(Customer.Name));
+        var predicate = Compile<Customer>(member, op, value);
 
-        predicate(new TestEntity { Name = name }).Should().Be(expected);
+        predicate(new Customer { Name = name }).Should().Be(expected);
     }
 
     [Fact]
     public void Contains_WithNullValue_UsesEmptyString()
     {
-        var param = Expression.Parameter(typeof(TestEntity));
-        var member = Expression.Property(param, nameof(TestEntity.Name));
+        var param = Expression.Parameter(typeof(Customer));
+        var member = Expression.Property(param, nameof(Customer.Name));
         var expr = FilterExpressionBuilder.Build(member, FilterOperators.Contains, null);
 
         expr.Should().NotBeNull();
@@ -54,11 +54,11 @@ public class FilterExpressionBuilderTests
     [InlineData("neq", "John", "John", false)]
     public void StringEqual_ComparesDirectly(string op, string value, string name, bool expected)
     {
-        var param = Expression.Parameter(typeof(TestEntity));
-        var member = Expression.Property(param, nameof(TestEntity.Name));
-        var predicate = Compile<TestEntity>(member, op, value);
+        var param = Expression.Parameter(typeof(Customer));
+        var member = Expression.Property(param, nameof(Customer.Name));
+        var predicate = Compile<Customer>(member, op, value);
 
-        predicate(new TestEntity { Name = name }).Should().Be(expected);
+        predicate(new Customer { Name = name }).Should().Be(expected);
     }
 
     [Theory]
@@ -71,41 +71,41 @@ public class FilterExpressionBuilderTests
     [InlineData("lte", "30", 30, true)]
     public void NumericComparison_Evaluates(string op, string value, int age, bool expected)
     {
-        var param = Expression.Parameter(typeof(TestEntity));
-        var member = Expression.Property(param, nameof(TestEntity.Age));
-        var predicate = Compile<TestEntity>(member, op, value);
+        var param = Expression.Parameter(typeof(Customer));
+        var member = Expression.Property(param, nameof(Customer.Age));
+        var predicate = Compile<Customer>(member, op, value);
 
-        predicate(new TestEntity { Age = age }).Should().Be(expected);
+        predicate(new Customer { Age = age }).Should().Be(expected);
     }
 
     [Fact]
     public void In_WithCommaSeparatedValues_MatchesAny()
     {
-        var param = Expression.Parameter(typeof(TestEntity));
-        var member = Expression.Property(param, nameof(TestEntity.Age));
-        var predicate = Compile<TestEntity>(member, FilterOperators.In, "20,30,40");
+        var param = Expression.Parameter(typeof(Customer));
+        var member = Expression.Property(param, nameof(Customer.Age));
+        var predicate = Compile<Customer>(member, FilterOperators.In, "20,30,40");
 
-        predicate(new TestEntity { Age = 30 }).Should().BeTrue();
-        predicate(new TestEntity { Age = 25 }).Should().BeFalse();
+        predicate(new Customer { Age = 30 }).Should().BeTrue();
+        predicate(new Customer { Age = 25 }).Should().BeFalse();
     }
 
     [Fact]
     public void In_WithPartiallyUnconvertibleValues_SkipsBadValues()
     {
-        var param = Expression.Parameter(typeof(TestEntity));
-        var member = Expression.Property(param, nameof(TestEntity.Age));
-        var predicate = Compile<TestEntity>(member, FilterOperators.In, "20,abc,30");
+        var param = Expression.Parameter(typeof(Customer));
+        var member = Expression.Property(param, nameof(Customer.Age));
+        var predicate = Compile<Customer>(member, FilterOperators.In, "20,abc,30");
 
-        predicate(new TestEntity { Age = 20 }).Should().BeTrue();
-        predicate(new TestEntity { Age = 30 }).Should().BeTrue();
-        predicate(new TestEntity { Age = 25 }).Should().BeFalse();
+        predicate(new Customer { Age = 20 }).Should().BeTrue();
+        predicate(new Customer { Age = 30 }).Should().BeTrue();
+        predicate(new Customer { Age = 25 }).Should().BeFalse();
     }
 
     [Fact]
     public void In_WithEmptyValue_ReturnsConstantFalse()
     {
-        var param = Expression.Parameter(typeof(TestEntity));
-        var member = Expression.Property(param, nameof(TestEntity.Age));
+        var param = Expression.Parameter(typeof(Customer));
+        var member = Expression.Property(param, nameof(Customer.Age));
         var expr = FilterExpressionBuilder.Build(member, FilterOperators.In, "   ");
 
         expr.Should().BeOfType<ConstantExpression>()
@@ -115,30 +115,30 @@ public class FilterExpressionBuilderTests
     [Fact]
     public void NotIn_NegatesInResult()
     {
-        var param = Expression.Parameter(typeof(TestEntity));
-        var member = Expression.Property(param, nameof(TestEntity.Age));
-        var predicate = Compile<TestEntity>(member, FilterOperators.NotIn, "20,30,40");
+        var param = Expression.Parameter(typeof(Customer));
+        var member = Expression.Property(param, nameof(Customer.Age));
+        var predicate = Compile<Customer>(member, FilterOperators.NotIn, "20,30,40");
 
-        predicate(new TestEntity { Age = 25 }).Should().BeTrue();
-        predicate(new TestEntity { Age = 30 }).Should().BeFalse();
+        predicate(new Customer { Age = 25 }).Should().BeTrue();
+        predicate(new Customer { Age = 30 }).Should().BeFalse();
     }
 
     [Fact]
     public void Between_WithinBounds_Matches()
     {
-        var param = Expression.Parameter(typeof(TestEntity));
-        var member = Expression.Property(param, nameof(TestEntity.Age));
-        var predicate = Compile<TestEntity>(member, FilterOperators.Between, "20,40");
+        var param = Expression.Parameter(typeof(Customer));
+        var member = Expression.Property(param, nameof(Customer.Age));
+        var predicate = Compile<Customer>(member, FilterOperators.Between, "20,40");
 
-        predicate(new TestEntity { Age = 30 }).Should().BeTrue();
-        predicate(new TestEntity { Age = 50 }).Should().BeFalse();
+        predicate(new Customer { Age = 30 }).Should().BeTrue();
+        predicate(new Customer { Age = 50 }).Should().BeFalse();
     }
 
     [Fact]
     public void Between_WithSingleBound_ReturnsNull()
     {
-        var param = Expression.Parameter(typeof(TestEntity));
-        var member = Expression.Property(param, nameof(TestEntity.Age));
+        var param = Expression.Parameter(typeof(Customer));
+        var member = Expression.Property(param, nameof(Customer.Age));
 
         FilterExpressionBuilder.Build(member, FilterOperators.Between, "20").Should().BeNull();
     }
@@ -146,8 +146,8 @@ public class FilterExpressionBuilderTests
     [Fact]
     public void Between_OnNonComparableType_ReturnsNull()
     {
-        var param = Expression.Parameter(typeof(TestEntity));
-        var member = Expression.Property(param, nameof(TestEntity.Name));
+        var param = Expression.Parameter(typeof(Customer));
+        var member = Expression.Property(param, nameof(Customer.Name));
 
         FilterExpressionBuilder.Build(member, FilterOperators.Between, "a,z").Should().BeNull();
     }
@@ -155,8 +155,8 @@ public class FilterExpressionBuilderTests
     [Fact]
     public void IsNull_OnNonNullableValueType_ReturnsConstantFalse()
     {
-        var param = Expression.Parameter(typeof(TestEntity));
-        var member = Expression.Property(param, nameof(TestEntity.Age));
+        var param = Expression.Parameter(typeof(Customer));
+        var member = Expression.Property(param, nameof(Customer.Age));
         var expr = FilterExpressionBuilder.Build(member, FilterOperators.IsNull, null);
 
         expr.Should().BeOfType<ConstantExpression>()
@@ -166,8 +166,8 @@ public class FilterExpressionBuilderTests
     [Fact]
     public void IsNotNull_OnNonNullableValueType_ReturnsConstantTrue()
     {
-        var param = Expression.Parameter(typeof(TestEntity));
-        var member = Expression.Property(param, nameof(TestEntity.Age));
+        var param = Expression.Parameter(typeof(Customer));
+        var member = Expression.Property(param, nameof(Customer.Age));
         var expr = FilterExpressionBuilder.Build(member, FilterOperators.IsNotNull, null);
 
         expr.Should().BeOfType<ConstantExpression>()
@@ -199,8 +199,8 @@ public class FilterExpressionBuilderTests
     [Fact]
     public void Comparison_OnNonComparableType_ReturnsNull()
     {
-        var param = Expression.Parameter(typeof(TestEntity));
-        var member = Expression.Property(param, nameof(TestEntity.Name));
+        var param = Expression.Parameter(typeof(Customer));
+        var member = Expression.Property(param, nameof(Customer.Name));
 
         FilterExpressionBuilder.Build(member, FilterOperators.GreaterThan, "x").Should().BeNull();
     }
@@ -208,8 +208,8 @@ public class FilterExpressionBuilderTests
     [Fact]
     public void UnknownOperator_ReturnsNull()
     {
-        var param = Expression.Parameter(typeof(TestEntity));
-        var member = Expression.Property(param, nameof(TestEntity.Age));
+        var param = Expression.Parameter(typeof(Customer));
+        var member = Expression.Property(param, nameof(Customer.Age));
 
         FilterExpressionBuilder.Build(member, "bogus", "1").Should().BeNull();
     }

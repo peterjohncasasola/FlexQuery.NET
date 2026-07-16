@@ -11,29 +11,6 @@ namespace FlexQuery.NET.Tests.Validation;
 
 public class ValidationTests
 {
-    private class Customer
-    {
-        public int Id { get; set; }
-        public string Name { get; set; } = string.Empty;
-        public string Email { get; set; } = string.Empty;
-        public List<Order> Orders { get; set; } = new();
-    }
-
-    private class Order
-    {
-        public int Id { get; set; }
-        public decimal Total { get; set; }
-        public string Status { get; set; } = string.Empty;
-        public int CustomerId { get; set; }
-        public Customer Customer { get; set; } = null!;
-    }
-
-    private class Product
-    {
-        public int Id { get; set; }
-        public string Name { get; set; } = string.Empty;
-    }
-
     [Fact]
     public void Should_Fail_When_Field_Does_Not_Exist()
     {

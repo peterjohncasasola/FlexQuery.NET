@@ -4,24 +4,6 @@ namespace FlexQuery.NET.Tests.Diagnostics;
 
 public class DebugTests
 {
-    private class Customer
-    {
-        public int Id { get; set; }
-        public string Name { get; set; } = string.Empty;
-        public List<Order> Orders { get; set; } = new();
-    }
-
-    private class Order
-    {
-        public int Id { get; set; }
-        public string Status { get; set; } = string.Empty;
-        public List<OrderItem> OrderItems { get; set; } = new();
-    }
-
-    private class OrderItem
-    {
-        public int Id { get; set; }
-    }
 
     [Fact]
     public void ToFlexQueryDebug_Should_Generate_Lambda_String()

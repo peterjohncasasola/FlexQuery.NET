@@ -26,16 +26,13 @@ public class SqlTranslatorRegressionTests
     [Fact]
     public void Translate_SelfReferencingJoin_GeneratesDistinctAliases_ToPreventCollisions()
     {
-        var registry = new MappingRegistry();
-        registry.Entity<SqlEmployee>()
-            .ToTable("Employees")
-            .HasOne(e => e.Manager).WithForeignKey("ManagerId");
+        var registry = SharedFlexQueryModel.Instance.Registry;
 
         var options = NoPaging(new QueryOptions
         {
             ProjectionMode = ProjectionMode.Flat,
             Select = ["Id", "Manager.Name"],
-            Items = { [ContextKeys.EntityType] = typeof(SqlEmployee) }
+            Items = { [ContextKeys.EntityType] = typeof(Employee) }
         });
 
         var translator = new SqlTranslator(registry, new SqlServerDialect());
@@ -52,8 +49,7 @@ public class SqlTranslatorRegressionTests
     [Fact]
     public void Translate_Parameters_AreOrderedSequentially_BasedOnFilterOrder()
     {
-        var registry = new MappingRegistry();
-        registry.Entity<TestEntityForParamOrder>().ToTable("Users");
+        var registry = SharedFlexQueryModel.Instance.Registry;
 
         var options = NoPaging(new QueryOptions
         {
@@ -67,7 +63,7 @@ public class SqlTranslatorRegressionTests
                     new FilterCondition { Field = "Status", Operator = "eq", Value = "Active" }
                 ]
             },
-            Items = { [ContextKeys.EntityType] = typeof(TestEntityForParamOrder) }
+            Items = { [ContextKeys.EntityType] = typeof(Customer) }
         });
 
         var translator = new SqlTranslator(registry, new SqlServerDialect());
@@ -89,8 +85,7 @@ public class SqlTranslatorRegressionTests
     [Fact]
     public void Translate_FilterParameters_DoNotCollideWith_PagingParameters()
     {
-        var registry = new MappingRegistry();
-        registry.Entity<TestEntityForParamOrder>().ToTable("Users");
+        var registry = SharedFlexQueryModel.Instance.Registry;
 
         var options = new QueryOptions
         {
@@ -106,7 +101,7 @@ public class SqlTranslatorRegressionTests
             },
             Paging = { Page = 1, PageSize = 10 },
             CaseInsensitive = false,
-            Items = { [ContextKeys.EntityType] = typeof(TestEntityForParamOrder) }
+            Items = { [ContextKeys.EntityType] = typeof(Customer) }
         };
 
         var translator = new SqlTranslator(registry, new SqlServerDialect());
@@ -129,11 +124,7 @@ public class SqlTranslatorRegressionTests
     [Fact]
     public void Translate_AnyOperator_ParametersAreOrdered_BeforePaging()
     {
-        var registry = new MappingRegistry();
-        registry.Entity<SqlCustomer>()
-            .ToTable("Customers")
-            .HasMany(c => c.Orders).WithForeignKey("CustomerId");
-        registry.Entity<SqlOrder>().ToTable("Orders");
+        var registry = SharedFlexQueryModel.Instance.Registry;
 
         var options = new QueryOptions
         {
@@ -156,7 +147,7 @@ public class SqlTranslatorRegressionTests
             },
             Paging = { Page = 2, PageSize = 5 },
             CaseInsensitive = false,
-            Items = { [ContextKeys.EntityType] = typeof(SqlCustomer) }
+            Items = { [ContextKeys.EntityType] = typeof(Customer) }
         };
 
         var translator = new SqlTranslator(registry, new SqlServerDialect());
@@ -179,8 +170,7 @@ public class SqlTranslatorRegressionTests
     [Fact]
     public void Translate_InOperator_ExpandsArray_IntoSequentialParameters()
     {
-        var registry = new MappingRegistry();
-        registry.Entity<TestEntityForParamOrder>().ToTable("Users");
+        var registry = SharedFlexQueryModel.Instance.Registry;
 
         var options = NoPaging(new QueryOptions
         {
@@ -188,7 +178,7 @@ public class SqlTranslatorRegressionTests
             {
                 Filters = [new FilterCondition { Field = "Id", Operator = "in", Value = "1,2,3" }]
             },
-            Items = { [ContextKeys.EntityType] = typeof(TestEntityForParamOrder) }
+            Items = { [ContextKeys.EntityType] = typeof(Customer) }
         });
 
         var translator = new SqlTranslator(registry, new SqlServerDialect());
@@ -207,75 +197,55 @@ public class SqlTranslatorRegressionTests
     [Fact]
     public void Translate_NestedProjection_GeneratesLeftJoins_ForDeepNavigation()
     {
-        var registry = new MappingRegistry();
-        registry.Entity<SqlCustomer>()
-            .ToTable("Customers")
-            .HasMany(c => c.Orders).WithForeignKey("CustomerId");
-        registry.Entity<SqlOrder>()
-            .ToTable("Orders")
-            .HasMany(o => o.Items).WithForeignKey("OrderId");
-        registry.Entity<SqlOrderItem>()
-            .ToTable("Items");
+        var registry = SharedFlexQueryModel.Instance.Registry;
 
         var options = NoPaging(new QueryOptions
         {
             ProjectionMode = ProjectionMode.Flat,
-            Select = ["Orders.Items.Sku", "Orders.Items.Id"],
-            Items = { [ContextKeys.EntityType] = typeof(SqlCustomer) }
+            Select = ["Orders.OrderItems.Sku", "Orders.OrderItems.Id"],
+            Items = { [ContextKeys.EntityType] = typeof(Customer) }
         });
 
         var translator = new SqlTranslator(registry, new SqlServerDialect());
         var command = translator.Translate(options);
 
         command.Sql.Should().Contain("LEFT JOIN [Orders] AS [Orders] ON [Orders].[CustomerId] = [Customers].[Id]");
-        command.Sql.Should().Contain("LEFT JOIN [Items] AS [Items] ON [Items].[OrderId] = [Orders].[Id]");
-        command.Sql.Should().Contain("[Items].[Sku]");
-        command.Sql.Should().Contain("[Items].[Id]");
+        command.Sql.Should().Contain("LEFT JOIN [OrderItems] AS [OrderItems] ON [OrderItems].[OrderId] = [Orders].[Id]");
+        command.Sql.Should().Contain("[OrderItems].[Sku]");
+        command.Sql.Should().Contain("[OrderItems].[Id]");
     }
 
     [Fact]
     public void Translate_OrdersItemsNested_GeneratesCorrectTwoJoins()
     {
-        var registry = new MappingRegistry();
-        registry.Entity<SqlCustomer>()
-            .ToTable("Customers")
-            .HasMany(c => c.Orders).WithForeignKey("CustomerId");
-        registry.Entity<SqlOrder>()
-            .ToTable("Orders")
-            .HasMany(o => o.Items).WithForeignKey("OrderId");
-        registry.Entity<SqlOrderItem>()
-            .ToTable("Items");
+        var registry = SharedFlexQueryModel.Instance.Registry;
 
         var options = NoPaging(new QueryOptions
         {
             ProjectionMode = ProjectionMode.Flat,
-            Select = ["Orders.Items.Sku", "Orders.Items.Id"],
-            Items = { [ContextKeys.EntityType] = typeof(SqlCustomer) }
+            Select = ["Orders.OrderItems.Sku", "Orders.OrderItems.Id"],
+            Items = { [ContextKeys.EntityType] = typeof(Customer) }
         });
 
         var translator = new SqlTranslator(registry, new SqlServerDialect());
         var command = translator.Translate(options);
 
         command.Sql.Should().Contain("LEFT JOIN [Orders] AS [Orders] ON [Orders].[CustomerId] = [Customers].[Id]");
-        command.Sql.Should().Contain("LEFT JOIN [Items] AS [Items] ON [Items].[OrderId] = [Orders].[Id]");
-        command.Sql.Should().Contain("[Items].[Sku]");
-        command.Sql.Should().Contain("[Items].[Id]");
+        command.Sql.Should().Contain("LEFT JOIN [OrderItems] AS [OrderItems] ON [OrderItems].[OrderId] = [Orders].[Id]");
+        command.Sql.Should().Contain("[OrderItems].[Sku]");
+        command.Sql.Should().Contain("[OrderItems].[Id]");
     }
 
     [Fact]
     public void Translate_FlatMixed_RootAndNestedFields_FullyQualifiesColumns()
     {
-        var registry = new MappingRegistry();
-        registry.Entity<SqlCustomer>()
-            .ToTable("Customers")
-            .HasMany(c => c.Orders).WithForeignKey("CustomerId");
-        registry.Entity<SqlOrder>().ToTable("Orders");
+        var registry = SharedFlexQueryModel.Instance.Registry;
 
         var options = NoPaging(new QueryOptions
         {
             ProjectionMode = ProjectionMode.FlatMixed,
             Select = ["Name", "Orders.Total"],
-            Items = { [ContextKeys.EntityType] = typeof(SqlCustomer) }
+            Items = { [ContextKeys.EntityType] = typeof(Customer) }
         });
 
         var translator = new SqlTranslator(registry, new SqlServerDialect());
@@ -293,8 +263,7 @@ public class SqlTranslatorRegressionTests
     [Fact]
     public void Translate_IsNullOperator_GeneratesIsNullClause()
     {
-        var registry = new MappingRegistry();
-        registry.Entity<TestEntityWithNullable>().ToTable("TestEntities");
+        var registry = SharedFlexQueryModel.Instance.Registry;
 
         var options = NoPaging(new QueryOptions
         {
@@ -302,7 +271,7 @@ public class SqlTranslatorRegressionTests
             {
                 Filters = [new FilterCondition { Field = "Description", Operator = "isnull", Value = null }]
             },
-            Items = { [ContextKeys.EntityType] = typeof(TestEntityWithNullable) }
+            Items = { [ContextKeys.EntityType] = typeof(Product) }
         });
 
         var translator = new SqlTranslator(registry, new SqlServerDialect());
@@ -315,8 +284,7 @@ public class SqlTranslatorRegressionTests
     [Fact]
     public void Translate_IsNotNullOperator_GeneratesIsNotNullClause()
     {
-        var registry = new MappingRegistry();
-        registry.Entity<TestEntityWithNullable>().ToTable("TestEntities");
+        var registry = SharedFlexQueryModel.Instance.Registry;
 
         var options = NoPaging(new QueryOptions
         {
@@ -324,7 +292,7 @@ public class SqlTranslatorRegressionTests
             {
                 Filters = [new FilterCondition { Field = "Description", Operator = "isnotnull", Value = null }]
             },
-            Items = { [ContextKeys.EntityType] = typeof(TestEntityWithNullable) }
+            Items = { [ContextKeys.EntityType] = typeof(Product) }
         });
 
         var translator = new SqlTranslator(registry, new SqlServerDialect());
@@ -337,11 +305,7 @@ public class SqlTranslatorRegressionTests
     [Fact]
     public void Translate_IsNull_InAnySubquery_GeneratesCorrectClause()
     {
-        var registry = new MappingRegistry();
-        registry.Entity<SqlCustomer>()
-            .ToTable("Customers")
-            .HasMany(c => c.Orders).WithForeignKey("CustomerId");
-        registry.Entity<SqlOrder>().ToTable("Orders");
+        var registry = SharedFlexQueryModel.Instance.Registry;
 
         var options = NoPaging(new QueryOptions
         {
@@ -360,7 +324,7 @@ public class SqlTranslatorRegressionTests
                     }
                 ]
             },
-            Items = { [ContextKeys.EntityType] = typeof(SqlCustomer) }
+            Items = { [ContextKeys.EntityType] = typeof(Customer) }
         });
 
         var translator = new SqlTranslator(registry, new SqlServerDialect());
@@ -378,13 +342,12 @@ public class SqlTranslatorRegressionTests
     [InlineData(typeof(SqliteDialect), "\"", "\"", "LIMIT")]
     public void Translate_DialectSpecific_IdentifierQuoting(Type dialectType, string quotePrefix, string quoteSuffix, string pagingKeyword)
     {
-        var registry = new MappingRegistry();
-        registry.Entity<TestEntity>().ToTable("Users");
+        var registry = SharedFlexQueryModel.Instance.Registry;
 
         var options = NoPaging(new QueryOptions
         {
             Select = ["Id", "Name"],
-            Items = { [ContextKeys.EntityType] = typeof(TestEntity) }
+            Items = { [ContextKeys.EntityType] = typeof(Customer) }
         });
 
         var dialect = (ISqlDialect)Activator.CreateInstance(dialectType)!;
@@ -398,13 +361,12 @@ public class SqlTranslatorRegressionTests
     [Fact]
     public void Translate_Sqlite_Paging_UsesLimitOffset()
     {
-        var registry = new MappingRegistry();
-        registry.Entity<TestEntity>().ToTable("Users");
+        var registry = SharedFlexQueryModel.Instance.Registry;
 
         var options = new QueryOptions
         {
             Paging = { Page = 2, PageSize = 25 },
-            Items = { [ContextKeys.EntityType] = typeof(TestEntity) }
+            Items = { [ContextKeys.EntityType] = typeof(Customer) }
         };
 
         var translator = new SqlTranslator(registry, new SqliteDialect());
@@ -416,13 +378,12 @@ public class SqlTranslatorRegressionTests
     [Fact]
     public void Translate_Sqlite_Paging_WithoutSort_AutoGeneratesOrderBy()
     {
-        var registry = new MappingRegistry();
-        registry.Entity<TestEntity>().ToTable("Users");
+        var registry =SharedFlexQueryModel.Instance.Registry;
 
         var options = new QueryOptions
         {
             Paging = { Page = 1, PageSize = 10 },
-            Items = { [ContextKeys.EntityType] = typeof(TestEntity) }
+            Items = { [ContextKeys.EntityType] = typeof(Customer) }
         };
 
         var translator = new SqlTranslator(registry, new SqliteDialect());
@@ -437,12 +398,12 @@ public class SqlTranslatorRegressionTests
     public void Translate_SqlServer_Paging_WithoutSort_Throws()
     {
         var registry = new MappingRegistry();
-        registry.Entity<TestEntity>().ToTable("Users");
+        registry.Entity<Customer>().ToTable("Users");
 
         var options = new QueryOptions
         {
             Paging = { Page = 1, PageSize = 10 },
-            Items = { [ContextKeys.EntityType] = typeof(TestEntity) }
+            Items = { [ContextKeys.EntityType] = typeof(Customer) }
         };
 
         var translator = new SqlTranslator(registry, new SqlServerDialect());
@@ -460,7 +421,7 @@ public class SqlTranslatorRegressionTests
     public void Translate_CaseInsensitiveTrue_WrapsStringEqWithLower()
     {
         var registry = new MappingRegistry();
-        registry.Entity<TestEntity>().ToTable("Users");
+        registry.Entity<Customer>().ToTable("Users");
 
         var options = new QueryOptions
         {
@@ -470,7 +431,7 @@ public class SqlTranslatorRegressionTests
             {
                 Filters = [new FilterCondition { Field = "Name", Operator = "eq", Value = "John" }]
             },
-            Items = { [ContextKeys.EntityType] = typeof(TestEntity) }
+            Items = { [ContextKeys.EntityType] = typeof(Customer) }
         };
 
         var translator = new SqlTranslator(registry, new SqlServerDialect());
@@ -483,7 +444,7 @@ public class SqlTranslatorRegressionTests
     public void Translate_CaseInsensitiveTrue_WrapsStringContainsWithLower()
     {
         var registry = new MappingRegistry();
-        registry.Entity<TestEntity>().ToTable("Users");
+        registry.Entity<Customer>().ToTable("Users");
 
         var options = new QueryOptions
         {
@@ -493,7 +454,7 @@ public class SqlTranslatorRegressionTests
             {
                 Filters = [new FilterCondition { Field = "Name", Operator = "contains", Value = "john" }]
             },
-            Items = { [ContextKeys.EntityType] = typeof(TestEntity) }
+            Items = { [ContextKeys.EntityType] = typeof(Customer) }
         };
 
         var translator = new SqlTranslator(registry, new SqlServerDialect());
@@ -506,7 +467,7 @@ public class SqlTranslatorRegressionTests
     public void Translate_CaseInsensitiveTrue_WrapsStringInWithLower()
     {
         var registry = new MappingRegistry();
-        registry.Entity<TestEntity>().ToTable("Users");
+        registry.Entity<Customer>().ToTable("Users");
 
         var options = new QueryOptions
         {
@@ -516,7 +477,7 @@ public class SqlTranslatorRegressionTests
             {
                 Filters = [new FilterCondition { Field = "Name", Operator = "in", Value = "John,Jane" }]
             },
-            Items = { [ContextKeys.EntityType] = typeof(TestEntity) }
+            Items = { [ContextKeys.EntityType] = typeof(Customer) }
         };
 
         var translator = new SqlTranslator(registry, new SqlServerDialect());
@@ -529,7 +490,7 @@ public class SqlTranslatorRegressionTests
     public void Translate_CaseInsensitiveTrue_DoesNotWrapNonStringFields()
     {
         var registry = new MappingRegistry();
-        registry.Entity<TestEntity>().ToTable("Users");
+        registry.Entity<Customer>().ToTable("Users");
 
         var options = new QueryOptions
         {
@@ -539,7 +500,7 @@ public class SqlTranslatorRegressionTests
             {
                 Filters = [new FilterCondition { Field = "Age", Operator = "gt", Value = "18" }]
             },
-            Items = { [ContextKeys.EntityType] = typeof(TestEntity) }
+            Items = { [ContextKeys.EntityType] = typeof(Customer) }
         };
 
         var translator = new SqlTranslator(registry, new SqlServerDialect());
@@ -552,8 +513,7 @@ public class SqlTranslatorRegressionTests
     [Fact]
     public void Translate_CaseInsensitiveFalse_DoesNotWrapStringComparisons()
     {
-        var registry = new MappingRegistry();
-        registry.Entity<TestEntity>().ToTable("Users");
+        var registry = SharedFlexQueryModel.Instance.Registry;
 
         var options = new QueryOptions
         {
@@ -563,7 +523,7 @@ public class SqlTranslatorRegressionTests
             {
                 Filters = [new FilterCondition { Field = "Name", Operator = "eq", Value = "John" }]
             },
-            Items = { [ContextKeys.EntityType] = typeof(TestEntity) }
+            Items = { [ContextKeys.EntityType] = typeof(Customer) }
         };
 
         var translator = new SqlTranslator(registry, new SqlServerDialect());
@@ -576,8 +536,7 @@ public class SqlTranslatorRegressionTests
     [Fact]
     public void Translate_CaseInsensitiveTrue_WrapsStringStartsWithWithLower()
     {
-        var registry = new MappingRegistry();
-        registry.Entity<TestEntity>().ToTable("Users");
+        var registry = SharedFlexQueryModel.Instance.Registry;
 
         var options = new QueryOptions
         {
@@ -587,7 +546,7 @@ public class SqlTranslatorRegressionTests
             {
                 Filters = [new FilterCondition { Field = "Name", Operator = "startswith", Value = "Jo" }]
             },
-            Items = { [ContextKeys.EntityType] = typeof(TestEntity) }
+            Items = { [ContextKeys.EntityType] = typeof(Customer) }
         };
 
         var translator = new SqlTranslator(registry, new SqlServerDialect());
@@ -599,8 +558,7 @@ public class SqlTranslatorRegressionTests
     [Fact]
     public void Translate_CaseInsensitiveTrue_WrapsStringEndsWithWithLower()
     {
-        var registry = new MappingRegistry();
-        registry.Entity<TestEntity>().ToTable("Users");
+        var registry = SharedFlexQueryModel.Instance.Registry;
 
         var options = new QueryOptions
         {
@@ -610,7 +568,7 @@ public class SqlTranslatorRegressionTests
             {
                 Filters = [new FilterCondition { Field = "Name", Operator = "endswith", Value = "hn" }]
             },
-            Items = { [ContextKeys.EntityType] = typeof(TestEntity) }
+            Items = { [ContextKeys.EntityType] = typeof(Customer) }
         };
 
         var translator = new SqlTranslator(registry, new SqlServerDialect());
@@ -622,8 +580,7 @@ public class SqlTranslatorRegressionTests
     [Fact]
     public void Translate_CaseInsensitiveTrue_WrapsStringBetweenWithLower()
     {
-        var registry = new MappingRegistry();
-        registry.Entity<TestEntity>().ToTable("Users");
+        var registry = SharedFlexQueryModel.Instance.Registry;
 
         var options = new QueryOptions
         {
@@ -633,7 +590,7 @@ public class SqlTranslatorRegressionTests
             {
                 Filters = [new FilterCondition { Field = "Name", Operator = "between", Value = "A,Z" }]
             },
-            Items = { [ContextKeys.EntityType] = typeof(TestEntity) }
+            Items = { [ContextKeys.EntityType] = typeof(Customer) }
         };
 
         var translator = new SqlTranslator(registry, new SqlServerDialect());
@@ -649,15 +606,7 @@ public class SqlTranslatorRegressionTests
     [Fact]
     public void Translate_DeepNestedAny_UserRolesPermissions_GeneratesCorrectExists()
     {
-        var registry = new MappingRegistry();
-        registry.Entity<SqlUser>()
-            .ToTable("Users")
-            .HasMany(u => u.Roles).WithForeignKey("UserId");
-        registry.Entity<SqlRole>()
-            .ToTable("Roles")
-            .HasMany(r => r.Permissions).WithForeignKey("RoleId");
-        registry.Entity<SqlPermission>()
-            .ToTable("Permissions");
+        var registry = SharedFlexQueryModel.Instance.Registry;
 
         var options = NoPaging(new QueryOptions
         {
@@ -687,7 +636,7 @@ public class SqlTranslatorRegressionTests
                     }
                 ]
             },
-            Items = { [ContextKeys.EntityType] = typeof(SqlUser) }
+            Items = { [ContextKeys.EntityType] = typeof(User) }
         });
 
         var translator = new SqlTranslator(registry, new SqlServerDialect());
@@ -701,8 +650,7 @@ public class SqlTranslatorRegressionTests
     [Fact]
     public void Translate_ComplexOrLogic_WrapsConditionsInParentheses()
     {
-        var registry = new MappingRegistry();
-        registry.Entity<TestEntity>().ToTable("Users");
+        var registry = SharedFlexQueryModel.Instance.Registry;
 
         var options = NoPaging(new QueryOptions
         {
@@ -715,7 +663,7 @@ public class SqlTranslatorRegressionTests
                     new FilterCondition { Field = "Status", Operator = "eq", Value = "Active" }
                 ]
             },
-            Items = { [ContextKeys.EntityType] = typeof(TestEntity) }
+            Items = { [ContextKeys.EntityType] = typeof(Customer) }
         });
 
         var translator = new SqlTranslator(registry, new SqlServerDialect());
@@ -731,8 +679,7 @@ public class SqlTranslatorRegressionTests
     [Fact]
     public void Translate_AndOrGroups_WrapsEachSubGroupInParentheses_Scenario1()
     {
-        var registry = new MappingRegistry();
-        registry.Entity<TestEntity>().ToTable("Users");
+        var registry = SharedFlexQueryModel.Instance.Registry;
 
         var options = NoPaging(new QueryOptions
         {
@@ -761,7 +708,7 @@ public class SqlTranslatorRegressionTests
                     }
                 ]
             },
-            Items = { [ContextKeys.EntityType] = typeof(TestEntity) }
+            Items = { [ContextKeys.EntityType] = typeof(Customer) }
         });
 
         var translator = new SqlTranslator(registry, new SqlServerDialect());
@@ -779,8 +726,7 @@ public class SqlTranslatorRegressionTests
     [Fact]
     public void Translate_AndWithNestedOrGroup_WrapsOrInParentheses_Scenario2()
     {
-        var registry = new MappingRegistry();
-        registry.Entity<TestEntity>().ToTable("Users");
+        var registry = SharedFlexQueryModel.Instance.Registry;
 
         var options = NoPaging(new QueryOptions
         {
@@ -804,7 +750,7 @@ public class SqlTranslatorRegressionTests
                     }
                 ]
             },
-            Items = { [ContextKeys.EntityType] = typeof(TestEntity) }
+            Items = { [ContextKeys.EntityType] = typeof(Customer) }
         });
 
         var translator = new SqlTranslator(registry, new SqlServerDialect());
@@ -822,8 +768,7 @@ public class SqlTranslatorRegressionTests
     [Fact]
     public void Translate_MultipleOrGroupsUnderAnd_PreservesGrouping_Scenario3()
     {
-        var registry = new MappingRegistry();
-        registry.Entity<TestEntity>().ToTable("Users");
+        var registry = SharedFlexQueryModel.Instance.Registry;
 
         var options = NoPaging(new QueryOptions
         {
@@ -852,7 +797,7 @@ public class SqlTranslatorRegressionTests
                     }
                 ]
             },
-            Items = { [ContextKeys.EntityType] = typeof(TestEntity) }
+            Items = { [ContextKeys.EntityType] = typeof(Customer) }
         });
 
         var translator = new SqlTranslator(registry, new SqlServerDialect());
@@ -870,8 +815,7 @@ public class SqlTranslatorRegressionTests
     [Fact]
     public void Translate_DeeplyNestedGroups_PreservesAllParentheses_Scenario4()
     {
-        var registry = new MappingRegistry();
-        registry.Entity<TestEntity>().ToTable("Users");
+        var registry = SharedFlexQueryModel.Instance.Registry;
 
         var options = NoPaging(new QueryOptions
         {
@@ -911,7 +855,7 @@ public class SqlTranslatorRegressionTests
                     }
                 ]
             },
-            Items = { [ContextKeys.EntityType] = typeof(TestEntity) }
+            Items = { [ContextKeys.EntityType] = typeof(Customer) }
         });
 
         var translator = new SqlTranslator(registry, new SqlServerDialect());
@@ -926,89 +870,6 @@ public class SqlTranslatorRegressionTests
         command.Parameters["@p2"].Should().Be("Active");
         command.Parameters["@p3"].Should().Be(10);
         command.Parameters["@p4"].Should().Be("Child");
-    }
-
-    #endregion
-
-    #region Test Models
-
-    private class TestEntity
-    {
-        public int Id { get; set; }
-        public string Name { get; set; } = string.Empty;
-        public int Age { get; set; }
-        public string Status { get; set; } = string.Empty;
-        public string Country { get; set; } = string.Empty;
-    }
-
-    private class TestEntityForParamOrder
-    {
-        public int Id { get; set; }
-        public int Age { get; set; }
-        public string Name { get; set; } = string.Empty;
-        public string Status { get; set; } = string.Empty;
-    }
-
-    private class TestEntityWithNullable
-    {
-        public int Id { get; set; }
-        public string? Description { get; set; }
-    }
-
-    private class SqlUser
-    {
-        public int Id { get; set; }
-        public string Name { get; set; } = string.Empty;
-        public List<SqlRole> Roles { get; set; } = [];
-    }
-
-    private class SqlRole
-    {
-        public int Id { get; set; }
-        public string Name { get; set; } = string.Empty;
-        public int UserId { get; set; }
-        public SqlUser User { get; set; } = null!;
-        public List<SqlPermission> Permissions { get; set; } = [];
-    }
-
-    private class SqlPermission
-    {
-        public int Id { get; set; }
-        public string Name { get; set; } = string.Empty;
-        public int RoleId { get; set; }
-        public SqlRole Role { get; set; } = null!;
-    }
-
-    private class SqlCustomer
-    {
-        public int Id { get; set; }
-        public string Name { get; set; } = string.Empty;
-        public List<SqlOrder> Orders { get; set; } = [];
-    }
-
-    private class SqlOrder
-    {
-        public int Id { get; set; }
-        public string Number { get; set; } = string.Empty;
-        public decimal Total { get; set; }
-        public int CustomerId { get; set; }
-        public SqlCustomer Customer { get; set; } = null!;
-        public List<SqlOrderItem> Items { get; set; } = [];
-    }
-
-    private class SqlOrderItem
-    {
-        public int Id { get; set; }
-        public string Sku { get; set; } = string.Empty;
-        public int OrderId { get; set; }
-    }
-
-    private class SqlEmployee
-    {
-        public int Id { get; set; }
-        public string Name { get; set; } = string.Empty;
-        public int ManagerId { get; set; }
-        public SqlEmployee Manager { get; set; } = null!;
     }
 
     #endregion

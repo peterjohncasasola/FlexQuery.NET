@@ -15,21 +15,7 @@ namespace FlexQuery.NET.Tests.Security;
 
 public class FieldSecurityTests
 {
-    private class Customer
-    {
-        public int Id { get; set; }
-        public string Name { get; set; } = string.Empty;
-        public string SSN { get; set; } = string.Empty;
-        public List<Order> Orders { get; set; } = new();
-    }
-
-    private class Order
-    {
-        public int Id { get; set; }
-        public decimal Total { get; set; }
-        public string Status { get; set; } = string.Empty;
-    }
-
+   
     [Fact]
     public void Should_Fail_When_Field_Is_Blacklisted()
     {
@@ -169,7 +155,7 @@ public class FieldSecurityTests
     [Fact]
     public void Should_Fail_When_Field_Depth_Is_Exceeded()
     {
-        var options = QueryOptionsParser.Parse(new Dictionary<string, StringValues> { { "filter", "Orders.Items.Id:eq:1" } });
+        var options = QueryOptionsParser.Parse(new Dictionary<string, StringValues> { { "filter", "Orders.OrderItems.Id:eq:1" } });
         var execOptions = new QueryExecutionOptions
         {
             MaxFieldDepth = 2
@@ -823,20 +809,6 @@ public class FieldSecurityTests
     // ──────────────────────────────────────────────────────────────────
     //  Wildcard expansion tests
     // ──────────────────────────────────────────────────────────────────
-
-    private class CustomerWithOrders
-    {
-        public int Id { get; set; }
-        public string Name { get; set; } = string.Empty;
-        public List<OrderItem> Orders { get; set; } = new();
-    }
-
-    private class OrderItem
-    {
-        public int OrderId { get; set; }
-        public decimal Total { get; set; }
-        public string Status { get; set; } = string.Empty;
-    }
 
     [Fact]
     public void DefaultProjection_ShouldExpandWildcard_SelectableFields()

@@ -99,9 +99,10 @@ internal static class DefaultProjectionHelper
             ? string.Empty
             : pattern[..(starIndex - 1)];
 
+        var visited = new HashSet<Type>();
         if (string.IsNullOrEmpty(pathBeforeStar))
         {
-            ExpandUnderType(type, string.Empty, result);
+            ExpandUnderType(type, string.Empty, result, visited);
         }
         else
         {
@@ -118,12 +119,15 @@ internal static class DefaultProjectionHelper
                 if (currentType == null) return;
             }
 
-            ExpandUnderType(currentType, string.Join(".", prefix), result);
+            ExpandUnderType(currentType, string.Join(".", prefix), result, visited);
         }
     }
 
-    private static void ExpandUnderType(Type type, string prefix, List<string> result)
+    private static void ExpandUnderType(Type type, string prefix, List<string> result, HashSet<Type> visited)
     {
+        if (!visited.Add(type))
+            return;
+
         var allProps = ReflectionCache.GetProperties(type);
 
         foreach (var prop in allProps)
@@ -143,7 +147,7 @@ internal static class DefaultProjectionHelper
                 if (childType != null && childType != type)
                 {
                     var childPrefix = string.IsNullOrEmpty(prefix) ? prop.Name : $"{prefix}.{prop.Name}";
-                    ExpandUnderType(childType, childPrefix, result);
+                    ExpandUnderType(childType, childPrefix, result, visited);
                 }
             }
         }

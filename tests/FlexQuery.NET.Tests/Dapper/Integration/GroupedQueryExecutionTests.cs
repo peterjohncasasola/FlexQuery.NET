@@ -2,8 +2,6 @@ using System.Data.Common;
 using System.Reflection;
 using FlexQuery.NET.Dapper;
 using FlexQuery.NET.Dapper.Options;
-using FlexQuery.NET.Dapper.Dialects;
-using DapperModelBuilder = FlexQuery.NET.Dapper.Configuration.ModelBuilder;
 using FlexQuery.NET.Models;
 using FlexQuery.NET.Models.Aggregates;
 using FlexQuery.NET.Models.Filters;
@@ -30,7 +28,7 @@ public class GroupedQueryExecutionTests : IDisposable
     public async Task Dapper_GroupedAggregate_UsesAllFilteredRowsBeforePaging()
     {
         var additionalOrders = Enumerable.Range(0, 996)
-            .Select(index => new SqlOrder
+            .Select(index => new Order
             {
                 Id = 1000 + index,
                 Number = $"GROUP-BULK-{index:D4}",
@@ -46,7 +44,7 @@ public class GroupedQueryExecutionTests : IDisposable
 
         result.Data.Should().HaveCount(3);
         var customerOne = result.Data.Single(row => Read<int>(row, "CustomerId") == 1);
-        Read<double>(customerOne, "totalSum").Should().BeApproximately(502.5, 0.001);
+        Read<double>(customerOne, "totalSum").Should().BeApproximately(507.0, 0.001);
     }
 
     [Fact]
@@ -176,21 +174,9 @@ public class GroupedQueryExecutionTests : IDisposable
         {
             IncludeTotalCount = true
         };
-        ConfigureMappings(dapperOptions);
-        return _connection.FlexQueryAsync<SqlOrder>(options, dapperOptions);
-    }
-
-    private static void ConfigureMappings(DapperQueryOptions options)
-    {
-        var builder = new DapperModelBuilder();
-        builder.Entity<SqlCustomer>()
-            .ToTable("Customers")
-            .HasMany(c => c.Orders).WithForeignKey("CustomerId");
-        builder.Entity<SqlOrder>()
-            .ToTable("Orders")
-            .HasMany(o => o.Items).WithForeignKey("OrderId");
-        builder.Entity<SqlOrderItem>().ToTable("OrderItems");
-        options.UseModel(builder.Build());
+        dapperOptions.UseModel(SharedFlexQueryModel.Instance);
+        
+        return _connection.FlexQueryAsync<Order>(options, dapperOptions);
     }
 
     private static QueryOptions GroupedOptions(int page, int pageSize)
@@ -293,7 +279,7 @@ public class GroupedQueryExecutionTests : IDisposable
         params (int Id, int CustomerId, string Date, decimal Total)[] rows)
     {
         var orders = rows
-            .Select(row => new SqlOrder
+            .Select(row => new Order
             {
                 Id = row.Id,
                 Number = $"{prefix}-{row.Id}",

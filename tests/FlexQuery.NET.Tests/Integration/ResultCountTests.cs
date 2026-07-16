@@ -167,7 +167,7 @@ public class ResultCountTests
     private static async Task AddHavingRowsAsync(SqlProjectionDbContext db)
     {
         db.Orders.AddRange(
-            new SqlOrder
+            new Order
             {
                 Id = 100,
                 Number = "RC-HAVING-100",
@@ -175,7 +175,7 @@ public class ResultCountTests
                 Total = 100m,
                 OrderDate = new DateTime(2026, 6, 1, 0, 0, 0, DateTimeKind.Utc)
             },
-            new SqlOrder
+            new Order
             {
                 Id = 101,
                 Number = "RC-HAVING-101",
@@ -183,7 +183,7 @@ public class ResultCountTests
                 Total = 50m,
                 OrderDate = new DateTime(2026, 6, 2, 0, 0, 0, DateTimeKind.Utc)
             },
-            new SqlOrder
+            new Order
             {
                 Id = 102,
                 Number = "RC-HAVING-102",
@@ -191,7 +191,7 @@ public class ResultCountTests
                 Total = 70m,
                 OrderDate = new DateTime(2026, 6, 3, 0, 0, 0, DateTimeKind.Utc)
             },
-            new SqlOrder
+            new Order
             {
                 Id = 103,
                 Number = "RC-HAVING-103",
@@ -199,7 +199,7 @@ public class ResultCountTests
                 Total = 50m,
                 OrderDate = new DateTime(2026, 6, 4, 0, 0, 0, DateTimeKind.Utc)
             },
-            new SqlOrder
+            new Order
             {
                 Id = 104,
                 Number = "RC-HAVING-104",
@@ -214,7 +214,7 @@ public class ResultCountTests
     [Fact]
     public async Task Dapper_IncludeTotalCountFalse_ReturnsNullTotalCount()
     {
-        using var db = SqlProjectionDbContext.CreateSeeded();
+        await using var db = SqlProjectionDbContext.CreateSeeded();
         var result = await ExecuteDapperOrdersAsync(db, new QueryOptions
         {
             Paging = { Page = 1, PageSize = 2 },
@@ -228,7 +228,7 @@ public class ResultCountTests
     [Fact]
     public async Task Dapper_IncludeTotalCountTrue_ReturnsActualCount()
     {
-        using var db = SqlProjectionDbContext.CreateSeeded();
+        await using var db = SqlProjectionDbContext.CreateSeeded();
         var result = await ExecuteDapperOrdersAsync(db, new QueryOptions
         {
             Paging = { Page = 1, PageSize = 2 },
@@ -253,22 +253,15 @@ public class ResultCountTests
             IncludeTotalCount = includeTotalCount
         };
 
-        return await connection.FlexQueryAsync<SqlOrder>(
+        return await connection.FlexQueryAsync<Order>(
             options,
             options: CreateRegistry(dapperOptions));
     }
 
     private static DapperQueryOptions CreateRegistry(DapperQueryOptions registry)
     {
-        var builder = new DapperModelBuilder();
-        builder.Entity<SqlCustomer>()
-            .ToTable("Customers")
-            .HasMany(c => c.Orders).WithForeignKey("CustomerId");
-        builder.Entity<SqlOrder>()
-            .ToTable("Orders")
-            .HasMany(o => o.Items).WithForeignKey("OrderId");
-        builder.Entity<SqlOrderItem>().ToTable("OrderItems");
-        registry.UseModel(builder.Build());
+        var flexQueryModel = SharedFlexQueryModel.Instance;
+        registry.UseModel(flexQueryModel);
         return registry;
     }
 }

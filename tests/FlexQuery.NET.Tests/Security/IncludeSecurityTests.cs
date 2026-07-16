@@ -17,7 +17,7 @@ public class IncludeSecurityTests
             Includes = new List<string> { "Orders", "Profile" },
             Expand = new List<IncludeNode>
             {
-                new IncludeNode { Path = "Orders", Children = { new IncludeNode { Path = "Items" } } }
+                new IncludeNode { Path = "Orders", Children = { new IncludeNode { Path = "OrderItems" } } }
             }
         };
 
@@ -37,16 +37,16 @@ public class IncludeSecurityTests
     {
         var options = new QueryOptions
         {
-            Includes = new List<string> { "Orders", "Orders.Items", "Profile" },
+            Includes = new List<string> { "Orders", "Orders.OrderItems", "Profile" },
             Expand = new List<IncludeNode>
             {
-                new IncludeNode { Path = "Orders", Children = { new IncludeNode { Path = "Items" } } }
+                new IncludeNode { Path = "Orders", Children = { new IncludeNode { Path = "OrderItems" } } }
             }
         };
 
         var exec = new QueryExecutionOptions
         {
-            AllowedIncludes = new HashSet<string> { "Orders", "Orders.Items", "Profile" }
+            AllowedIncludes = new HashSet<string> { "Orders", "Orders.OrderItems", "Profile" }
         };
         var context = new QueryContext { ExecutionOptions = exec };
         
@@ -119,12 +119,12 @@ public class IncludeSecurityTests
     {
         var options = new QueryOptions
         {
-            Includes = new List<string> { "orders.items" }
+            Includes = new List<string> { "orders.orderitems" }
         };
 
         var exec = new QueryExecutionOptions
         {
-            AllowedIncludes = new HashSet<string> { "Orders.Items" },
+            AllowedIncludes = new HashSet<string> { "Orders.OrderItems" },
             CaseInsensitive = true
         };
         var context = new QueryContext { ExecutionOptions = exec };

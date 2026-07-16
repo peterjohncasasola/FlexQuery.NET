@@ -20,23 +20,7 @@ public class SqlInjectionTests
 {
     private readonly IMappingRegistry _registry = new MappingRegistry();
     private readonly SqlTranslator _translator = new SqlTranslator(new MappingRegistry(), new SqlServerDialect());
-
-    private class TestEntity
-    {
-        public int Id { get; set; }
-        public string Name { get; set; } = string.Empty;
-        public string Status { get; set; } = string.Empty;
-        public int Age { get; set; }
-        public decimal Price { get; set; }
-        public string SecretField { get; set; } = string.Empty;
-        public List<Order> Orders { get; set; } = new();
-    }
-
-    private class Order
-    {
-        public int Id { get; set; }
-        public decimal Total { get; set; }
-    }
+    
 
     // ==================== FILTER VALUE INJECTION ====================
 
@@ -50,7 +34,7 @@ public class SqlInjectionTests
                 Filters = [new FilterCondition { Field = "Name", Operator = "eq", Value = "'; DROP TABLE Users;--" }]
             }
         };
-        options.Items[ContextKeys.EntityType] = typeof(TestEntity);
+        options.Items[ContextKeys.EntityType] = typeof(Customer);
         options.Paging.Disabled = true;
 
         var command = _translator.Translate(options);
@@ -71,12 +55,12 @@ public class SqlInjectionTests
                 Filters = [new FilterCondition { Field = "Name'); DROP TABLE Users;--", Operator = "eq", Value = "test" }]
             }
         };
-        options.Items[ContextKeys.EntityType] = typeof(TestEntity);
+        options.Items[ContextKeys.EntityType] = typeof(Customer);
         options.Paging.Disabled = true;
 
         // The field name gets quoted as identifier; injection within field name is neutralized
         // But if field doesn't exist, Name');DROP... would be rejected as FIELD_NOT_FOUND
-        Action validate = () => options.ValidateOrThrow<TestEntity>(new QueryExecutionOptions());
+        Action validate = () => options.ValidateOrThrow<Customer>(new QueryExecutionOptions());
 
         // Injection pattern in field name fails validation as unknown field
         validate.Should().Throw<QueryValidationException>()
@@ -93,7 +77,7 @@ public class SqlInjectionTests
                 Filters = [new FilterCondition { Field = "Age", Operator = "between", Value = "18;DROP TABLE Users;,65" }]
             }
         };
-        options.Items[ContextKeys.EntityType] = typeof(TestEntity);
+        options.Items[ContextKeys.EntityType] = typeof(Customer);
         options.Paging.Disabled = true;
 
         var command = _translator.Translate(options);
@@ -112,7 +96,7 @@ public class SqlInjectionTests
                 Filters = [new FilterCondition { Field = "Name", Operator = "in", Value = "a', OR '1'='1" }]
             }
         };
-        options.Items[ContextKeys.EntityType] = typeof(TestEntity);
+        options.Items[ContextKeys.EntityType] = typeof(Customer);
         options.Paging.Disabled = true;
 
         var command = _translator.Translate(options);
@@ -135,7 +119,7 @@ public class SqlInjectionTests
             Sort = [new SortNode { Field = "CreatedAt", Descending = false }],
             Paging = { Disabled = true }
         };
-        options.Items[ContextKeys.EntityType] = typeof(TestEntity);
+        options.Items[ContextKeys.EntityType] = typeof(Customer);
 
         var command = _translator.Translate(options);
 
@@ -151,7 +135,7 @@ public class SqlInjectionTests
             Sort = [new SortNode { Field = "Name; DROP TABLE Users;--", Descending = false }],
             Paging = { Disabled = true }
         };
-        options.Items[ContextKeys.EntityType] = typeof(TestEntity);
+        options.Items[ContextKeys.EntityType] = typeof(Customer);
 
         var command = _translator.Translate(options);
 
@@ -170,7 +154,7 @@ public class SqlInjectionTests
             Select = ["Id", "Name", "(SELECT * FROM Users)"],
             Paging = { Disabled = true }
         };
-        options.Items[ContextKeys.EntityType] = typeof(TestEntity);
+        options.Items[ContextKeys.EntityType] = typeof(Customer);
 
         var command = _translator.Translate(options);
 
@@ -187,7 +171,7 @@ public class SqlInjectionTests
             Select = ["Id); DROP TABLE Users; --"],
             Paging = { Disabled = true }
         };
-        options.Items[ContextKeys.EntityType] = typeof(TestEntity);
+        options.Items[ContextKeys.EntityType] = typeof(Customer);
 
         var command = _translator.Translate(options);
 
@@ -205,7 +189,7 @@ public class SqlInjectionTests
             GroupBy = ["Status; DROP TABLE Orders"],
             Paging = { Disabled = true }
         };
-        options.Items[ContextKeys.EntityType] = typeof(TestEntity);
+        options.Items[ContextKeys.EntityType] = typeof(Customer);
 
         var command = _translator.Translate(options);
 
@@ -222,7 +206,7 @@ public class SqlInjectionTests
             GroupBy = ["Name', 'Value') SELECT * FROM Users--"],
             Paging = { Disabled = true }
         };
-        options.Items[ContextKeys.EntityType] = typeof(TestEntity);
+        options.Items[ContextKeys.EntityType] = typeof(Customer);
 
         var command = _translator.Translate(options);
 
@@ -247,7 +231,7 @@ public class SqlInjectionTests
                 Value = "5; DROP TABLE Users;--"
             }
         };
-        options.Items[ContextKeys.EntityType] = typeof(TestEntity);
+        options.Items[ContextKeys.EntityType] = typeof(Customer);
         options.Paging.Disabled = true;
 
         var command = _translator.Translate(options);
@@ -267,7 +251,7 @@ public class SqlInjectionTests
             Aggregates = { new AggregateModel { Function = AggregateFunction.Sum, Field = "Price", Alias = "Total" } },
             Paging = { Disabled = true }
         };
-        options.Items[ContextKeys.EntityType] = typeof(TestEntity);
+        options.Items[ContextKeys.EntityType] = typeof(Customer);
 
         var command = _translator.Translate(options);
 
@@ -284,7 +268,7 @@ public class SqlInjectionTests
             Aggregates = { new AggregateModel { Function = AggregateFunction.Count, Field = "Id", Alias = "Cnt); DROP TABLE Users;--" } },
             Paging = { Disabled = true }
         };
-        options.Items[ContextKeys.EntityType] = typeof(TestEntity);
+        options.Items[ContextKeys.EntityType] = typeof(Customer);
 
         var command = _translator.Translate(options);
 
@@ -300,7 +284,7 @@ public class SqlInjectionTests
             Aggregates = { new AggregateModel { Function = AggregateFunction.Sum, Field = "Price", Alias = "Total" } },
             Paging = { Disabled = true }
         };
-        options.Items[ContextKeys.EntityType] = typeof(TestEntity);
+        options.Items[ContextKeys.EntityType] = typeof(Customer);
 
         var command = _translator.TranslateAggregates(options);
 
@@ -317,11 +301,11 @@ public class SqlInjectionTests
             Includes = ["Orders"],
             Paging = { Disabled = true }
         };
-        options.Items[ContextKeys.EntityType] = typeof(TestEntity);
+        options.Items[ContextKeys.EntityType] = typeof(Customer);
 
         var command = _translator.Translate(options);
 
-        command.Sql.Should().Contain("[TestEntities]"); // Convention-based table name from TestEntity
+        command.Sql.Should().Contain("[Customers]"); // Convention-based table name from Customer
     }
 
     [Fact]
@@ -332,7 +316,7 @@ public class SqlInjectionTests
             Includes = ["Orders; DROP TABLE Users;--"],
             Paging = { Disabled = true }
         };
-        options.Items[ContextKeys.EntityType] = typeof(TestEntity);
+        options.Items[ContextKeys.EntityType] = typeof(Customer);
 
         // The include name will be treated as a literal navigation name that likely doesn't exist
         // But translation should still quote it as an identifier to prevent injection
@@ -351,7 +335,7 @@ public class SqlInjectionTests
             Select = ["Order"], // "Order" is a SQL keyword
             Paging = { Disabled = true }
         };
-        options.Items[ContextKeys.EntityType] = typeof(TestEntity);
+        options.Items[ContextKeys.EntityType] = typeof(Customer);
 
         var command = _translator.Translate(options);
 
@@ -369,7 +353,7 @@ public class SqlInjectionTests
             },
             Paging = { Disabled = true }
         };
-        options.Items[ContextKeys.EntityType] = typeof(TestEntity);
+        options.Items[ContextKeys.EntityType] = typeof(Customer);
 
         // Field with quote in name - should be quoted as [Field'WithQuotes]
         var command = _translator.Translate(options);
@@ -387,7 +371,7 @@ public class SqlInjectionTests
             Select = ["Id", "UNION SELECT * FROM Users"],
             Paging = { Disabled = true }
         };
-        options.Items[ContextKeys.EntityType] = typeof(TestEntity);
+        options.Items[ContextKeys.EntityType] = typeof(Customer);
 
         var command = _translator.Translate(options);
 
@@ -404,7 +388,7 @@ public class SqlInjectionTests
             Select = ["(SELECT @@VERSION)"],
             Paging = { Disabled = true }
         };
-        options.Items[ContextKeys.EntityType] = typeof(TestEntity);
+        options.Items[ContextKeys.EntityType] = typeof(Customer);
 
         var command = _translator.Translate(options);
 
@@ -426,7 +410,7 @@ public class SqlInjectionTests
             },
             Paging = { Disabled = true }
         };
-        options.Items[ContextKeys.EntityType] = typeof(TestEntity);
+        options.Items[ContextKeys.EntityType] = typeof(Customer);
 
         var command = _translator.Translate(options);
 
@@ -444,7 +428,7 @@ public class SqlInjectionTests
             },
             Paging = { Disabled = true }
         };
-        options.Items[ContextKeys.EntityType] = typeof(TestEntity);
+        options.Items[ContextKeys.EntityType] = typeof(Customer);
 
         var command = _translator.Translate(options);
 
@@ -465,7 +449,7 @@ public class SqlInjectionTests
             },
             Paging = { Disabled = true }
         };
-        options.Items[ContextKeys.EntityType] = typeof(TestEntity);
+        options.Items[ContextKeys.EntityType] = typeof(Customer);
 
         var command = _translator.Translate(options);
 
@@ -487,7 +471,7 @@ public class SqlInjectionTests
             },
             Paging = { Disabled = true }
         };
-        options.Items[ContextKeys.EntityType] = typeof(TestEntity);
+        options.Items[ContextKeys.EntityType] = typeof(Customer);
 
         var command = _translator.Translate(options);
 
@@ -520,7 +504,7 @@ public class SqlInjectionTests
             },
             Paging = { Disabled = true }
         };
-        options.Items[ContextKeys.EntityType] = typeof(TestEntity);
+        options.Items[ContextKeys.EntityType] = typeof(Customer);
 
         var command = _translator.Translate(options);
 

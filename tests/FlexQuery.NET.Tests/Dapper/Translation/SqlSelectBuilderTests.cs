@@ -10,20 +10,16 @@ namespace FlexQuery.NET.Tests.Dapper.Translation;
 
 public class SqlSelectBuilderTests
 {
-    private readonly IMappingRegistry _registry = new MappingRegistry();
+    private readonly IMappingRegistry _registry = SharedFlexQueryModel.Instance.Registry;
     private static readonly ISqlDialect Dialect = new SqlServerDialect();
 
-    public SqlSelectBuilderTests()
-    {
-        _registry.Entity<SelectTestEntity>().ToTable("entities");
-    }
-
+    
     // ── BuildAggregateSelectParts ────────────────────────────────────────
 
     [Fact]
     public void BuildAggregateSelectParts_CountStarNullField_ReturnsCount1()
     {
-        var mapping = _registry.GetMapping(typeof(SelectTestEntity));
+        var mapping = _registry.GetMapping(typeof(Customer));
         var builder = new SqlSelectBuilder(_registry, Dialect);
         var options = new QueryOptions
         {
@@ -38,7 +34,7 @@ public class SqlSelectBuilderTests
     [Fact]
     public void BuildAggregateSelectParts_CountStarWildcard_ReturnsCount1()
     {
-        var mapping = _registry.GetMapping(typeof(SelectTestEntity));
+        var mapping = _registry.GetMapping(typeof(Customer));
         var builder = new SqlSelectBuilder(_registry, Dialect);
         var options = new QueryOptions
         {
@@ -53,7 +49,7 @@ public class SqlSelectBuilderTests
     [Fact]
     public void BuildAggregateSelectParts_CountField_GeneratesCountField()
     {
-        var mapping = _registry.GetMapping(typeof(SelectTestEntity));
+        var mapping = _registry.GetMapping(typeof(Customer));
         var builder = new SqlSelectBuilder(_registry, Dialect);
         var options = new QueryOptions
         {
@@ -68,7 +64,7 @@ public class SqlSelectBuilderTests
     [Fact]
     public void BuildAggregateSelectParts_Sum_GeneratesSum()
     {
-        var mapping = _registry.GetMapping(typeof(SelectTestEntity));
+        var mapping = _registry.GetMapping(typeof(Employee));
         var builder = new SqlSelectBuilder(_registry, Dialect);
         var options = new QueryOptions
         {
@@ -83,7 +79,7 @@ public class SqlSelectBuilderTests
     [Fact]
     public void BuildAggregateSelectParts_Avg_GeneratesAvg()
     {
-        var mapping = _registry.GetMapping(typeof(SelectTestEntity));
+        var mapping = _registry.GetMapping(typeof(Employee));
         var builder = new SqlSelectBuilder(_registry, Dialect);
         var options = new QueryOptions
         {
@@ -98,7 +94,7 @@ public class SqlSelectBuilderTests
     [Fact]
     public void BuildAggregateSelectParts_Min_GeneratesMin()
     {
-        var mapping = _registry.GetMapping(typeof(SelectTestEntity));
+        var mapping = _registry.GetMapping(typeof(Employee));
         var builder = new SqlSelectBuilder(_registry, Dialect);
         var options = new QueryOptions
         {
@@ -113,7 +109,7 @@ public class SqlSelectBuilderTests
     [Fact]
     public void BuildAggregateSelectParts_Max_GeneratesMax()
     {
-        var mapping = _registry.GetMapping(typeof(SelectTestEntity));
+        var mapping = _registry.GetMapping(typeof(Employee));
         var builder = new SqlSelectBuilder(_registry, Dialect);
         var options = new QueryOptions
         {
@@ -128,7 +124,7 @@ public class SqlSelectBuilderTests
     [Fact]
     public void BuildAggregateSelectParts_MultipleAggregates_ReturnsAll()
     {
-        var mapping = _registry.GetMapping(typeof(SelectTestEntity));
+        var mapping = _registry.GetMapping(typeof(Employee));
         var builder = new SqlSelectBuilder(_registry, Dialect);
         var options = new QueryOptions
         {
@@ -152,8 +148,8 @@ public class SqlSelectBuilderTests
     public void BuildAggregateSelectParts_WithTableAlias_UsesAlias()
     {
         var registry = new MappingRegistry();
-        registry.Entity<SelectTestEntity>().ToTable("entities").HasAlias("e");
-        var mapping = registry.GetMapping(typeof(SelectTestEntity));
+        registry.Entity<Employee>().ToTable("Employees").HasAlias("e");
+        var mapping = registry.GetMapping(typeof(Employee));
         var builder = new SqlSelectBuilder(registry, Dialect);
         var options = new QueryOptions
         {
@@ -170,20 +166,20 @@ public class SqlSelectBuilderTests
     [Fact]
     public void BuildSelectClause_NoSelect_FallsBackToAllColumns()
     {
-        var mapping = _registry.GetMapping(typeof(SelectTestEntity));
+        var mapping = _registry.GetMapping(typeof(Employee));
         var builder = new SqlSelectBuilder(_registry, Dialect);
         var options = new QueryOptions();
         var tree = new SelectionNode();
 
         var result = builder.BuildSelectClause(options, mapping, string.Empty, tree);
 
-        result.Should().Be("SELECT [Id] AS [Id], [Name] AS [Name], [Status] AS [Status], [Score] AS [Score]");
+        result.Should().Be("SELECT [Id] AS [Id], [Name] AS [Name], [ManagerId] AS [ManagerId], [Score] AS [Score], [Status] AS [Status]");
     }
 
     [Fact]
     public void BuildSelectClause_WithSelect_IncludesOnlySelectedFields()
     {
-        var mapping = _registry.GetMapping(typeof(SelectTestEntity));
+        var mapping = _registry.GetMapping(typeof(Employee));
         var builder = new SqlSelectBuilder(_registry, Dialect);
         var options = new QueryOptions
         {
@@ -201,7 +197,7 @@ public class SqlSelectBuilderTests
     [Fact]
     public void BuildSelectClause_WithDistinct_IncludesDistinct()
     {
-        var mapping = _registry.GetMapping(typeof(SelectTestEntity));
+        var mapping = _registry.GetMapping(typeof(Customer));
         var builder = new SqlSelectBuilder(_registry, Dialect);
         var options = new QueryOptions
         {
@@ -218,7 +214,7 @@ public class SqlSelectBuilderTests
     [Fact]
     public void BuildSelectClause_WithGroupByAndAggregates_IncludesBoth()
     {
-        var mapping = _registry.GetMapping(typeof(SelectTestEntity));
+        var mapping = _registry.GetMapping(typeof(Customer));
         var builder = new SqlSelectBuilder(_registry, Dialect);
         var options = new QueryOptions
         {
@@ -235,7 +231,7 @@ public class SqlSelectBuilderTests
     [Fact]
     public void BuildSelectClause_WithGroupByOnly_ReturnsGroupByColumns()
     {
-        var mapping = _registry.GetMapping(typeof(SelectTestEntity));
+        var mapping = _registry.GetMapping(typeof(Customer));
         var builder = new SqlSelectBuilder(_registry, Dialect);
         var options = new QueryOptions
         {
@@ -251,7 +247,7 @@ public class SqlSelectBuilderTests
     [Fact]
     public void BuildSelectClause_WithAlias_UsesAlias()
     {
-        var mapping = _registry.GetMapping(typeof(SelectTestEntity));
+        var mapping = _registry.GetMapping(typeof(Customer));
         var builder = new SqlSelectBuilder(_registry, Dialect);
         var options = new QueryOptions();
         var tree = new SelectionNode();
@@ -266,15 +262,10 @@ public class SqlSelectBuilderTests
     [Fact]
     public void BuildSelectClause_WithNavigation_IncludesNavigationColumns()
     {
-        var registry = new MappingRegistry();
-        registry.Entity<SqlCustomer>()
-            .ToTable("Customers")
-            .HasMany(c => c.Orders).WithForeignKey("CustomerId");
-        registry.Entity<SqlOrder>()
-            .ToTable("Orders");
 
-        var mapping = registry.GetMapping(typeof(SqlCustomer));
-        var builder = new SqlSelectBuilder(registry, Dialect);
+
+        var mapping = _registry.GetMapping(typeof(Customer));
+        var builder = new SqlSelectBuilder(_registry, Dialect);
         var options = new QueryOptions();
         var tree = new SelectionNode();
         var ordersNode = tree.GetOrAddChild("Orders");
@@ -291,15 +282,9 @@ public class SqlSelectBuilderTests
     [Fact]
     public void BuildSelectClause_WithNavigationAndSpecificFields_IncludesOnlySelected()
     {
-        var registry = new MappingRegistry();
-        registry.Entity<SqlCustomer>()
-            .ToTable("Customers")
-            .HasMany(c => c.Orders).WithForeignKey("CustomerId");
-        registry.Entity<SqlOrder>()
-            .ToTable("Orders");
 
-        var mapping = registry.GetMapping(typeof(SqlCustomer));
-        var builder = new SqlSelectBuilder(registry, Dialect);
+        var mapping = _registry.GetMapping(typeof(Customer));
+        var builder = new SqlSelectBuilder(_registry, Dialect);
         var options = new QueryOptions();
         var tree = new SelectionNode();
         var ordersNode = tree.GetOrAddChild("Orders");
@@ -314,7 +299,7 @@ public class SqlSelectBuilderTests
     [Fact]
     public void BuildSelectClause_WithPostgreSql_UsesCorrectQuoting()
     {
-        var mapping = _registry.GetMapping(typeof(SelectTestEntity));
+        var mapping = _registry.GetMapping(typeof(Customer));
         var builder = new SqlSelectBuilder(_registry, new PostgreSqlDialect());
         var options = new QueryOptions();
         var tree = new SelectionNode();
@@ -328,7 +313,7 @@ public class SqlSelectBuilderTests
     [Fact]
     public void BuildSelectClause_WithMySql_UsesCorrectQuoting()
     {
-        var mapping = _registry.GetMapping(typeof(SelectTestEntity));
+        var mapping = _registry.GetMapping(typeof(Customer));
         var builder = new SqlSelectBuilder(_registry, new MySqlDialect());
         var options = new QueryOptions();
         var tree = new SelectionNode();
@@ -342,10 +327,9 @@ public class SqlSelectBuilderTests
     [Fact]
     public void BuildSelectClause_WithTableAlias_UsesAlias()
     {
-        var registry = new MappingRegistry();
-        registry.Entity<SelectTestEntity>().ToTable("entities").HasAlias("e");
-        var mapping = registry.GetMapping(typeof(SelectTestEntity));
-        var builder = new SqlSelectBuilder(registry, Dialect);
+        var mapping = _registry.GetMapping<Employee>();
+        _registry.Entity<Employee>().ToTable("Employees").HasAlias("e");
+        var builder = new SqlSelectBuilder(_registry, Dialect);
         var options = new QueryOptions();
         var tree = new SelectionNode();
         tree.GetOrAddChild("Name");
@@ -360,11 +344,10 @@ public class SqlSelectBuilderTests
     [Fact]
     public void BuildFlatSelectClause_NoNavPath_ReturnsRootColumns()
     {
-        var registry = new MappingRegistry();
-        registry.Entity<SqlCustomer>().ToTable("Customers");
+       
 
-        var mapping = registry.GetMapping(typeof(SqlCustomer));
-        var builder = new SqlSelectBuilder(registry, Dialect);
+        var mapping = _registry.GetMapping(typeof(Customer));
+        var builder = new SqlSelectBuilder(_registry, Dialect);
         var options = new QueryOptions
         {
             ProjectionMode = ProjectionMode.Flat,
@@ -384,15 +367,9 @@ public class SqlSelectBuilderTests
     [Fact]
     public void BuildFlatSelectClause_WithNavigation_GeneratesJoins()
     {
-        var registry = new MappingRegistry();
-        registry.Entity<SqlCustomer>()
-            .ToTable("Customers")
-            .HasMany(c => c.Orders).WithForeignKey("CustomerId");
-        registry.Entity<SqlOrder>()
-            .ToTable("Orders");
 
-        var mapping = registry.GetMapping(typeof(SqlCustomer));
-        var builder = new SqlSelectBuilder(registry, Dialect);
+        var mapping = _registry.GetMapping(typeof(Customer));
+        var builder = new SqlSelectBuilder(_registry, Dialect);
         var options = new QueryOptions
         {
             ProjectionMode = ProjectionMode.Flat,
@@ -413,49 +390,34 @@ public class SqlSelectBuilderTests
     [Fact]
     public void BuildFlatSelectClause_MultiLevel_GeneratesMultipleJoins()
     {
-        var registry = new MappingRegistry();
-        registry.Entity<SqlCustomer>()
-            .ToTable("Customers")
-            .HasMany(c => c.Orders).WithForeignKey("CustomerId");
-        registry.Entity<SqlOrder>()
-            .ToTable("Orders")
-            .HasMany(o => o.Items).WithForeignKey("OrderId");
-        registry.Entity<SqlOrderItem>()
-            .ToTable("OrderItems");
 
-        var mapping = registry.GetMapping(typeof(SqlCustomer));
-        var builder = new SqlSelectBuilder(registry, Dialect);
+        var mapping = _registry.GetMapping(typeof(Customer));
+        var builder = new SqlSelectBuilder(_registry, Dialect);
         var options = new QueryOptions
         {
             ProjectionMode = ProjectionMode.Flat,
-            Select = ["Orders.Items.Sku"]
+            Select = ["Orders.OrderItems.Sku"]
         };
         var tree = new SelectionNode();
         var ordersNode = tree.GetOrAddChild("Orders");
-        var itemsNode = ordersNode.GetOrAddChild("Items");
+        var itemsNode = ordersNode.GetOrAddChild("OrderItems");
         itemsNode.GetOrAddChild("Sku");
 
         var (selectClause, joinClause, flatJoins) = builder.BuildFlatSelectClause(options, mapping, string.Empty, tree);
 
-        selectClause.Should().Be("SELECT [Items].[Sku] AS [Sku]");
+        selectClause.Should().Be("SELECT [OrderItems].[Sku] AS [Sku]");
         joinClause.Should().Contain("LEFT JOIN [Orders]");
         joinClause.Should().Contain("LEFT JOIN [OrderItems]");
         flatJoins.Should().Contain("Orders");
-        flatJoins.Should().Contain("Items");
+        flatJoins.Should().Contain("OrderItems");
     }
 
     [Fact]
     public void BuildFlatSelectClause_FlatMixed_IncludesRootScalars()
     {
-        var registry = new MappingRegistry();
-        registry.Entity<SqlCustomer>()
-            .ToTable("Customers")
-            .HasMany(c => c.Orders).WithForeignKey("CustomerId");
-        registry.Entity<SqlOrder>()
-            .ToTable("Orders");
-
-        var mapping = registry.GetMapping(typeof(SqlCustomer));
-        var builder = new SqlSelectBuilder(registry, Dialect);
+        
+        var mapping = _registry.GetMapping(typeof(Customer));
+        var builder = new SqlSelectBuilder(_registry, Dialect);
         var options = new QueryOptions
         {
             ProjectionMode = ProjectionMode.FlatMixed,
@@ -477,15 +439,9 @@ public class SqlSelectBuilderTests
     [Fact]
     public void BuildFlatSelectClause_NoSelect_FallsBackToAllColumns()
     {
-        var registry = new MappingRegistry();
-        registry.Entity<SqlCustomer>()
-            .ToTable("Customers")
-            .HasMany(c => c.Orders).WithForeignKey("CustomerId");
-        registry.Entity<SqlOrder>()
-            .ToTable("Orders");
 
-        var mapping = registry.GetMapping(typeof(SqlCustomer));
-        var builder = new SqlSelectBuilder(registry, Dialect);
+        var mapping = _registry.GetMapping(typeof(Customer));
+        var builder = new SqlSelectBuilder(_registry, Dialect);
         var options = new QueryOptions
         {
             ProjectionMode = ProjectionMode.Flat,
@@ -505,19 +461,9 @@ public class SqlSelectBuilderTests
     [Fact]
     public void BuildFlatSelectClause_BranchingNavPath_Throws()
     {
-        var registry = new MappingRegistry();
-        registry.Entity<SqlCustomer>()
-            .ToTable("Customers")
-            .HasMany(c => c.Orders).WithForeignKey("CustomerId");
-        registry.Entity<SqlCustomer>()
-            .HasOne(c => c.Address).WithForeignKey("CustomerId");
-        registry.Entity<SqlOrder>()
-            .ToTable("Orders");
-        registry.Entity<SqlAddress>()
-            .ToTable("Addresses");
 
-        var mapping = registry.GetMapping(typeof(SqlCustomer));
-        var builder = new SqlSelectBuilder(registry, Dialect);
+        var mapping = _registry.GetMapping(typeof(Customer));
+        var builder = new SqlSelectBuilder(_registry, Dialect);
         var options = new QueryOptions
         {
             ProjectionMode = ProjectionMode.Flat
@@ -534,15 +480,9 @@ public class SqlSelectBuilderTests
     [Fact]
     public void BuildFlatSelectClause_WithPostgreSql_UsesCorrectQuoting()
     {
-        var registry = new MappingRegistry();
-        registry.Entity<SqlCustomer>()
-            .ToTable("Customers")
-            .HasMany(c => c.Orders).WithForeignKey("CustomerId");
-        registry.Entity<SqlOrder>()
-            .ToTable("Orders");
 
-        var mapping = registry.GetMapping(typeof(SqlCustomer));
-        var builder = new SqlSelectBuilder(registry, new PostgreSqlDialect());
+        var mapping = _registry.GetMapping(typeof(Customer));
+        var builder = new SqlSelectBuilder(_registry, new PostgreSqlDialect());
         var options = new QueryOptions
         {
             ProjectionMode = ProjectionMode.Flat,
@@ -561,15 +501,9 @@ public class SqlSelectBuilderTests
     [Fact]
     public void BuildFlatSelectClause_WithMySql_UsesCorrectQuoting()
     {
-        var registry = new MappingRegistry();
-        registry.Entity<SqlCustomer>()
-            .ToTable("Customers")
-            .HasMany(c => c.Orders).WithForeignKey("CustomerId");
-        registry.Entity<SqlOrder>()
-            .ToTable("Orders");
-
-        var mapping = registry.GetMapping(typeof(SqlCustomer));
-        var builder = new SqlSelectBuilder(registry, new MySqlDialect());
+      
+        var mapping = _registry.GetMapping(typeof(Customer));
+        var builder = new SqlSelectBuilder(_registry, new MySqlDialect());
         var options = new QueryOptions
         {
             ProjectionMode = ProjectionMode.Flat,
@@ -584,12 +518,5 @@ public class SqlSelectBuilderTests
         selectClause.Should().Contain("`Orders`.`Total`");
         joinClause.Should().Contain("LEFT JOIN");
     }
-
-    private sealed class SelectTestEntity
-    {
-        public int Id { get; set; }
-        public string Name { get; set; } = string.Empty;
-        public string Status { get; set; } = string.Empty;
-        public decimal Score { get; set; }
-    }
+    
 }

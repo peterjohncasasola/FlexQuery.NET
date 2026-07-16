@@ -22,7 +22,7 @@ public class FlexQueryNonDiSmokeTests
             MiniODataApi.Register();
             FlexQueryCore.Configure(o => o.MaxPageSize = 200);
             Fql.Register(); 
-            FlexQueryDapper.Configure(o => o.Model.Entity<TestEntity>());
+            FlexQueryDapper.Configure(o => o.Model.Entity<Customer>());
             FlexQueryEFCore.Setup();
         };
 

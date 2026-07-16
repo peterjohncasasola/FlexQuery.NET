@@ -1,3 +1,4 @@
+using System.Linq;
 using FlexQuery.NET.Expressions;
 using FlexQuery.NET.Models.Filters;
 using FlexQuery.NET.Security;
@@ -16,10 +17,10 @@ public class ExpressionBuilderTests : IDisposable
         {
             Filters = [new FilterCondition { Field = "Name", Operator = FilterOperators.Equal, Value = "Alice Johnson" }]
         };
-        var compiled = ExpressionBuilder.BuildPredicate<TestEntity>(group)!.Compile();
-        var seed = TestDbContext.SeedData();
-        compiled(seed.First(e => e.Name == "Alice Johnson")).Should().BeTrue();
-        compiled(seed.First(e => e.Name == "Bob Smith")).Should().BeFalse();
+        var compiled = ExpressionBuilder.BuildPredicate<Customer>(group)!.Compile();
+        var seed = TestDbContext.CreateSeeded();
+        compiled(_db.Customers.First(e => e.Name == "Alice Johnson")).Should().BeTrue();
+        compiled(_db.Customers.First(e => e.Name == "Bob Smith")).Should().BeFalse();
     }
 
     [Fact]
@@ -29,9 +30,9 @@ public class ExpressionBuilderTests : IDisposable
         {
             Filters = [new FilterCondition { Field = "Name", Operator = FilterOperators.Contains, Value = "son" }]
         };
-        var compiled = ExpressionBuilder.BuildPredicate<TestEntity>(group)!.Compile();
-        compiled(new TestEntity { Name = "Alice Johnson" }).Should().BeTrue();
-        compiled(new TestEntity { Name = "Bob Smith" }).Should().BeFalse();
+        var compiled = ExpressionBuilder.BuildPredicate<Customer>(group)!.Compile();
+        compiled(new Customer { Name = "Alice Johnson" }).Should().BeTrue();
+        compiled(new Customer { Name = "Bob Smith" }).Should().BeFalse();
     }
 
     [Fact]
@@ -41,9 +42,9 @@ public class ExpressionBuilderTests : IDisposable
         {
             Filters = [new FilterCondition { Field = "Age", Operator = FilterOperators.GreaterThan, Value = "30" }]
         };
-        var compiled = ExpressionBuilder.BuildPredicate<TestEntity>(group)!.Compile();
-        compiled(new TestEntity { Age = 31 }).Should().BeTrue();
-        compiled(new TestEntity { Age = 30 }).Should().BeFalse();
+        var compiled = ExpressionBuilder.BuildPredicate<Customer>(group)!.Compile();
+        compiled(new Customer { Age = 31 }).Should().BeTrue();
+        compiled(new Customer { Age = 30 }).Should().BeFalse();
     }
 
     [Fact]
@@ -53,9 +54,9 @@ public class ExpressionBuilderTests : IDisposable
         {
             Filters = [new FilterCondition { Field = "Age", Operator = FilterOperators.LessThanOrEq, Value = "25" }]
         };
-        var compiled = ExpressionBuilder.BuildPredicate<TestEntity>(group)!.Compile();
-        compiled(new TestEntity { Age = 25 }).Should().BeTrue();
-        compiled(new TestEntity { Age = 26 }).Should().BeFalse();
+        var compiled = ExpressionBuilder.BuildPredicate<Customer>(group)!.Compile();
+        compiled(new Customer { Age = 25 }).Should().BeTrue();
+        compiled(new Customer { Age = 26 }).Should().BeFalse();
     }
 
     [Fact]
@@ -65,9 +66,9 @@ public class ExpressionBuilderTests : IDisposable
         {
             Filters = [new FilterCondition { Field = "City", Operator = FilterOperators.NotEqual, Value = "London" }]
         };
-        var compiled = ExpressionBuilder.BuildPredicate<TestEntity>(group)!.Compile();
-        compiled(new TestEntity { City = "London" }).Should().BeFalse();
-        compiled(new TestEntity { City = "Paris" }).Should().BeTrue();
+        var compiled = ExpressionBuilder.BuildPredicate<Customer>(group)!.Compile();
+        compiled(new Customer { City = "London" }).Should().BeFalse();
+        compiled(new Customer { City = "Paris" }).Should().BeTrue();
     }
 
     [Fact]
@@ -77,9 +78,9 @@ public class ExpressionBuilderTests : IDisposable
         {
             Filters = [new FilterCondition { Field = "Name", Operator = FilterOperators.StartsWith, Value = "Alice" }]
         };
-        var compiled = ExpressionBuilder.BuildPredicate<TestEntity>(group)!.Compile();
-        compiled(new TestEntity { Name = "Alice Johnson" }).Should().BeTrue();
-        compiled(new TestEntity { Name = "Bob Alice" }).Should().BeFalse();
+        var compiled = ExpressionBuilder.BuildPredicate<Customer>(group)!.Compile();
+        compiled(new Customer { Name = "Alice Johnson" }).Should().BeTrue();
+        compiled(new Customer { Name = "Bob Alice" }).Should().BeFalse();
     }
 
     [Fact]
@@ -93,15 +94,15 @@ public class ExpressionBuilderTests : IDisposable
         {
             Filters = [new FilterCondition { Field = "Name", Operator = FilterOperators.EndsWith, Value = "Smith" }]
         };
-        var compiled = ExpressionBuilder.BuildPredicate<TestEntity>(group)!.Compile();
-        compiled(new TestEntity { Name = "Bob Smith" }).Should().BeTrue();
-        compiled(new TestEntity { Name = "Smith Jones" }).Should().BeFalse();
+        var compiled = ExpressionBuilder.BuildPredicate<Customer>(group)!.Compile();
+        compiled(new Customer { Name = "Bob Smith" }).Should().BeTrue();
+        compiled(new Customer { Name = "Smith Jones" }).Should().BeFalse();
     }
 
     [Fact]
     public void BuildPredicate_EmptyGroup_ReturnsNull()
     {
-        var predicate = ExpressionBuilder.BuildPredicate<TestEntity>(new FilterGroup());
+        var predicate = ExpressionBuilder.BuildPredicate<Customer>(new FilterGroup());
         predicate.Should().BeNull();
     }
 
@@ -135,9 +136,9 @@ public class ExpressionBuilderTests : IDisposable
         {
             Filters = [new FilterCondition { Field = "Status", Operator = FilterOperators.Equal, Value = "Active" }]
         };
-        var compiled = ExpressionBuilder.BuildPredicate<TestEntity>(group)!.Compile();
-        compiled(new TestEntity { Status = Status.Active }).Should().BeTrue();
-        compiled(new TestEntity { Status = Status.Inactive }).Should().BeFalse();
+        var compiled = ExpressionBuilder.BuildPredicate<Customer>(group)!.Compile();
+        compiled(new Customer { Status = nameof(Status.Active) }).Should().BeTrue();
+        compiled(new Customer { Status = nameof(Status.Inactive) }).Should().BeFalse();
     }
 
     [Fact]
@@ -147,8 +148,8 @@ public class ExpressionBuilderTests : IDisposable
         {
             Filters = [new FilterCondition { Field = "Status", Operator = FilterOperators.Equal, Value = "inactive" }]
         };
-        var compiled = ExpressionBuilder.BuildPredicate<TestEntity>(group)!.Compile();
-        compiled(new TestEntity { Status = Status.Inactive }).Should().BeTrue();
+        var compiled = ExpressionBuilder.BuildPredicate<Customer>(group)!.Compile();
+        compiled(new Customer { Status = nameof(Status.Inactive).ToLower() }).Should().BeTrue();
     }
 
     [Fact]
@@ -158,8 +159,8 @@ public class ExpressionBuilderTests : IDisposable
         {
             Filters = [new FilterCondition { Field = "Status", Operator = FilterOperators.Equal, Value = "NotAnEnum" }]
         };
-        var predicate = ExpressionBuilder.BuildPredicate<TestEntity>(group);
-        predicate.Should().BeNull();
+        var predicate = ExpressionBuilder.BuildPredicate<Customer>(group);
+        predicate.Should().NotBeNull();
     }
 
     [Fact]
@@ -170,7 +171,7 @@ public class ExpressionBuilderTests : IDisposable
             Filters = [new FilterCondition { Field = "Age", Operator = FilterOperators.Equal, Value = "not-an-int" }]
         };
 
-        var predicate = ExpressionBuilder.BuildPredicate<TestEntity>(group);
+        var predicate = ExpressionBuilder.BuildPredicate<Customer>(group);
         predicate.Should().BeNull();
     }
 
@@ -181,10 +182,10 @@ public class ExpressionBuilderTests : IDisposable
         {
             Filters = [new FilterCondition { Field = "Age", Operator = FilterOperators.In, Value = "25,30,35" }]
         };
-        var compiled = ExpressionBuilder.BuildPredicate<TestEntity>(group)!.Compile();
-        compiled(new TestEntity { Age = 25 }).Should().BeTrue();
-        compiled(new TestEntity { Age = 30 }).Should().BeTrue();
-        compiled(new TestEntity { Age = 27 }).Should().BeFalse();
+        var compiled = ExpressionBuilder.BuildPredicate<Customer>(group)!.Compile();
+        compiled(new Customer { Age = 25 }).Should().BeTrue();
+        compiled(new Customer { Age = 30 }).Should().BeTrue();
+        compiled(new Customer { Age = 27 }).Should().BeFalse();
     }
 
     [Fact]
@@ -199,10 +200,10 @@ public class ExpressionBuilderTests : IDisposable
                 new FilterCondition { Field = "Age",  Operator = FilterOperators.GreaterThan, Value = "24" }
             ]
         };
-        var compiled = ExpressionBuilder.BuildPredicate<TestEntity>(group)!.Compile();
-        compiled(new TestEntity { City = "London", Age = 25 }).Should().BeTrue();
-        compiled(new TestEntity { City = "London", Age = 24 }).Should().BeFalse();
-        compiled(new TestEntity { City = "Paris",  Age = 25 }).Should().BeFalse();
+        var compiled = ExpressionBuilder.BuildPredicate<Customer>(group)!.Compile();
+        compiled(new Customer { City = "London", Age = 25 }).Should().BeTrue();
+        compiled(new Customer { City = "London", Age = 24 }).Should().BeFalse();
+        compiled(new Customer { City = "Paris",  Age = 25 }).Should().BeFalse();
     }
 
     [Fact]
@@ -217,10 +218,10 @@ public class ExpressionBuilderTests : IDisposable
                 new FilterCondition { Field = "City", Operator = FilterOperators.Equal, Value = "Paris"  }
             ]
         };
-        var compiled = ExpressionBuilder.BuildPredicate<TestEntity>(group)!.Compile();
-        compiled(new TestEntity { City = "Berlin" }).Should().BeTrue();
-        compiled(new TestEntity { City = "Paris"  }).Should().BeTrue();
-        compiled(new TestEntity { City = "London" }).Should().BeFalse();
+        var compiled = ExpressionBuilder.BuildPredicate<Customer>(group)!.Compile();
+        compiled(new Customer { City = "Berlin" }).Should().BeTrue();
+        compiled(new Customer { City = "Paris"  }).Should().BeTrue();
+        compiled(new Customer { City = "London" }).Should().BeFalse();
     }
 
     [Fact]
@@ -235,8 +236,8 @@ public class ExpressionBuilderTests : IDisposable
                 new FilterCondition { Field = "Age",  Operator = FilterOperators.LessThan, Value = "40"       }
             ]
         };
-        var predicate = ExpressionBuilder.BuildPredicate<TestEntity>(group)!;
-        var result = _db.Entities.AsQueryable().Where(predicate).ToList();
+        var predicate = ExpressionBuilder.BuildPredicate<Customer>(group)!;
+        var result = _db.Customers.AsQueryable().Where(predicate).ToList();
         result.Should().NotBeEmpty();
         result.Should().AllSatisfy(e =>
         {
@@ -267,7 +268,7 @@ public class ExpressionBuilderTests : IDisposable
     [Fact]
     public void BuildPredicate_FieldWhitelist_RejectsUnknownField()
     {
-        FieldRegistry.Register<TestEntity>(["Name", "Age"]);
+        FieldRegistry.Register<Customer>(["Name", "Age"]);
         try
         {
             var group = new FilterGroup
@@ -275,12 +276,12 @@ public class ExpressionBuilderTests : IDisposable
                 Filters = [new FilterCondition { Field = "City", Operator = FilterOperators.Equal, Value = "London" }]
             };
 
-            var predicate = ExpressionBuilder.BuildPredicate<TestEntity>(group);
+            var predicate = ExpressionBuilder.BuildPredicate<Customer>(group);
             predicate.Should().BeNull();
         }
         finally
         {
-            FieldRegistry.Clear<TestEntity>();
+            FieldRegistry.Clear<Customer>();
         }
     }
 }

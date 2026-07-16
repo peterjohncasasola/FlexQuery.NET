@@ -199,7 +199,7 @@ public sealed class SecurityGovernanceEfCoreIntegrationTests : IDisposable
             StrictFieldValidation = false
         };
 
-        options.Validate(typeof(GovernanceCustomer), execOptions);
+        options.Validate(typeof(Customer), execOptions);
 
         options.Select.Should().Contain("Name");
         options.Select.Should().NotContain("SSN");
@@ -407,7 +407,7 @@ public sealed class SecurityGovernanceEfCoreIntegrationTests : IDisposable
         };
 
         // FieldAccessValidator now validates SelectTree: should throw
-        var act = () => options.Validate(typeof(GovernanceCustomer), execOptions);
+        var act = () => options.Validate(typeof(Customer), execOptions);
 
         act.Should().Throw<QueryValidationException>()
             .Which.Message.Should().Contain("SSN");
@@ -428,7 +428,7 @@ public sealed class SecurityGovernanceEfCoreIntegrationTests : IDisposable
         };
 
         // Non-strict: validation passes, SSN is removed from the tree
-        var result = options.Validate(typeof(GovernanceCustomer), execOptions);
+        var result = options.Validate(typeof(Customer), execOptions);
 
         options.SelectTree.Should().BeNull(
             "SelectTree should be nullified when all children are removed in non-strict mode");
@@ -474,8 +474,8 @@ public sealed class GovernanceDbContext : DbContext
 {
     private readonly SqliteConnection _connection;
 
-    public DbSet<GovernanceCustomer> Customers => Set<GovernanceCustomer>();
-    public DbSet<GovernanceOrder> Orders => Set<GovernanceOrder>();
+    public DbSet<Customer> Customers => Set<Customer>();
+    public DbSet<Order> Orders => Set<Order>();
 
     private GovernanceDbContext(DbContextOptions<GovernanceDbContext> options, SqliteConnection connection)
         : base(options)
@@ -485,18 +485,20 @@ public sealed class GovernanceDbContext : DbContext
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
-        modelBuilder.Entity<GovernanceCustomer>(entity =>
+        modelBuilder.Entity<Customer>(entity =>
         {
             entity.HasKey(x => x.Id);
             entity.Property(x => x.Name).IsRequired();
             entity.Property(x => x.SSN).IsRequired();
             entity.Property(x => x.Salary).HasColumnType("NUMERIC");
+            entity.Ignore(x => x.Address);
+            entity.Ignore(x => x.Addresses);
             entity.HasMany(x => x.Orders)
                 .WithOne()
                 .HasForeignKey(x => x.CustomerId);
         });
 
-        modelBuilder.Entity<GovernanceOrder>(entity =>
+        modelBuilder.Entity<Order>(entity =>
         {
             entity.HasKey(x => x.Id);
             entity.Property(x => x.Total).HasColumnType("NUMERIC");
@@ -526,7 +528,7 @@ public sealed class GovernanceDbContext : DbContext
         if (!context.Customers.Any())
         {
             context.Customers.AddRange(
-                new GovernanceCustomer
+                new Customer
                 {
                     Id = 1,
                     Name = "Alice",
@@ -538,7 +540,7 @@ public sealed class GovernanceDbContext : DbContext
                         new() { Id = 2, CustomerId = 1, Total = 200m, Status = "Pending", Category = "Books" }
                     ]
                 },
-                new GovernanceCustomer
+                new Customer
                 {
                     Id = 2,
                     Name = "Bob",
@@ -549,7 +551,7 @@ public sealed class GovernanceDbContext : DbContext
                         new() { Id = 3, CustomerId = 2, Total = 300m, Status = "Shipped", Category = "Electronics" }
                     ]
                 },
-                new GovernanceCustomer
+                new Customer
                 {
                     Id = 3,
                     Name = "Charlie",
@@ -568,21 +570,3 @@ public sealed class GovernanceDbContext : DbContext
     }
 }
 
-public sealed class GovernanceCustomer
-{
-    public int Id { get; set; }
-    public string Name { get; set; } = string.Empty;
-    public string SSN { get; set; } = string.Empty;
-    public decimal Salary { get; set; }
-    public List<GovernanceOrder> Orders { get; set; } = [];
-}
-
-public sealed class GovernanceOrder
-{
-    public int Id { get; set; }
-    public int CustomerId { get; set; }
-    public decimal Total { get; set; }
-    public string Status { get; set; } = string.Empty;
-    public string Category { get; set; } = string.Empty;
-    // No back-reference to GovernanceCustomer to avoid circular recursion in DefaultProjectionHelper
-}

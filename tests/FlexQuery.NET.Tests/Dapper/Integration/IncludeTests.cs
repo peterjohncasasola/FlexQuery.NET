@@ -17,7 +17,7 @@ public class IncludeTests : DapperApiTestBase
         response.EnsureSuccessStatusCode();
         var json = await response.Content.ReadFromJsonAsync<JsonElement>();
         var alice = json.GetProperty("Data").EnumerateArray()
-            .First(x => x.GetProperty("Name").GetString() == "Alice");
+            .First(x => x.GetProperty("Name").GetString() == "Alice Johnson");
         
         alice.TryGetProperty("Orders", out var orders).Should().BeTrue();
         orders.EnumerateArray().Should().NotBeEmpty();
@@ -33,7 +33,7 @@ public class IncludeTests : DapperApiTestBase
         response.EnsureSuccessStatusCode();
         var json = await response.Content.ReadFromJsonAsync<JsonElement>();
         var alice = json.GetProperty("Data").EnumerateArray()
-            .First(x => x.GetProperty("Name").GetString() == "Alice");
+            .First(x => x.GetProperty("Name").GetString() == "Alice Johnson");
         
         var orders = alice.GetProperty("Orders").EnumerateArray().ToList();
         orders.Should().HaveCount(1);

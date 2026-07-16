@@ -33,7 +33,7 @@ public class SelectTests : IDisposable
     public async Task Select_Empty_ReturnsOriginalTypePropertiesAsDynamic()
     {
         var options = new QueryOptions();
-        var query = _db.Entities.ApplySelect(options);
+        var query = _db.Customers.ApplySelect(options);
         
         var list = await query.ToListAsync();
         list.Should().NotBeEmpty();
@@ -47,7 +47,7 @@ public class SelectTests : IDisposable
         type.GetProperty("Age").Should().NotBeNull();
         
         // Since Select was empty, ApplySelect returns the original query cast to object,
-        // so we get the full TestEntity back including Profile.
+        // so we get the full Customer back including Profile.
         type.GetProperty("Profile").Should().NotBeNull();
     }
 
@@ -55,7 +55,7 @@ public class SelectTests : IDisposable
     public async Task Select_FlatFields_ProjectsOnlyRequestedFields()
     {
         var options = new QueryOptions { Select = ["Id", "Name"] };
-        var query = _db.Entities.ApplySelect(options);
+        var query = _db.Customers.ApplySelect(options);
         
         var list = await query.ToListAsync();
         var first = list.First();
@@ -74,7 +74,7 @@ public class SelectTests : IDisposable
     public async Task Select_NestedProperties_ResolvesAndProjects()
     {
         var options = new QueryOptions { Select = ["Id", "Profile.Bio"] };
-        var query = _db.Entities.ApplySelect(options);
+        var query = _db.Customers.ApplySelect(options);
         
         var list = await query.ToListAsync();
         var first = list.First();
@@ -97,7 +97,7 @@ public class SelectTests : IDisposable
     {
         // Diana Prince (Id=4) has null Profile
         var options = new QueryOptions { Select = ["Id", "Profile.Bio"] };
-        var query = _db.Entities.Where(e => e.Id == 4).ApplySelect(options);
+        var query = _db.Customers.Where(e => e.Id == 4).ApplySelect(options);
         
         var list = await query.ToListAsync();
         var first = list.First();
@@ -110,7 +110,7 @@ public class SelectTests : IDisposable
     public async Task Select_CollectionProperties_ProjectsCollectionElements()
     {
         var options = new QueryOptions { Select = ["Id", "Orders.Total"] };
-        var query = _db.Entities.Where(e => e.Id == 1).ApplySelect(options);
+        var query = _db.Customers.Where(e => e.Id == 1).ApplySelect(options);
         
         var list = await query.ToListAsync();
         var first = list.First();
@@ -129,14 +129,14 @@ public class SelectTests : IDisposable
         orderType.GetProperty("Total").Should().NotBeNull();
         orderType.GetProperty("Id").Should().BeNull(); // Not requested
         
-        ((decimal)orderType.GetProperty("Total")!.GetValue(items[0])!).Should().Be(50.0m);
+        ((decimal)orderType.GetProperty("Total")!.GetValue(items[0])!).Should().Be(150.0m);
     }
 
     [Fact]
     public async Task Select_IncludeFormat_BringsInWholeNestedObject()
     {
         var options = new QueryOptions { Includes = ["Profile"] };
-        var query = _db.Entities.ApplySelect(options);
+        var query = _db.Customers.ApplySelect(options);
         
         var list = await query.ToListAsync();
         var first = list.First();
@@ -167,7 +167,7 @@ public class SelectTests : IDisposable
 
         var options = new QueryOptions { SelectTree = selectTree };
         
-        var query = _db.Entities.Where(e => e.Id == 1).ApplySelect(options);
+        var query = _db.Customers.Where(e => e.Id == 1).ApplySelect(options);
         var list = await query.ToListAsync();
         var first = list.First();
         var type = first.GetType();
@@ -187,7 +187,7 @@ public class SelectTests : IDisposable
     public async Task Select_InvalidField_IsIgnoredAndDoesNotThrow()
     {
         var options = new QueryOptions { Select = ["Id", "NonExistentField", "Profile.Fake"] };
-        var query = _db.Entities.ApplySelect(options);
+        var query = _db.Customers.ApplySelect(options);
         
         var list = await query.ToListAsync();
         var first = list.First();
@@ -228,6 +228,6 @@ public class SelectTests : IDisposable
         sql.Should().NotContain("\"CreatedAtUtc\"");
 
         var rows = await projected.ToListAsync();
-        rows.Should().HaveCount(3);
+        rows.Should().HaveCount(8);
     }
 }

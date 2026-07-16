@@ -11,13 +11,7 @@ namespace FlexQuery.NET.Tests.Dapper.Translation;
 
 public class SqlTranslatorTests
 {
-    private readonly IMappingRegistry _registry = new MappingRegistry();
-
-    public SqlTranslatorTests()
-    {
-        _registry.Entity<TestRole>().ToTable("roles");
-        _registry.Entity<TestEntityWithJoin>().ToTable("users").HasMany(e => e.Roles).WithForeignKey("UserId");
-    }
+    private readonly IMappingRegistry _registry = SharedFlexQueryModel.Instance.Registry;
 
     private static QueryOptions NoPaging(QueryOptions options)
     {
@@ -29,7 +23,7 @@ public class SqlTranslatorTests
     public void Translate_EmptyFilter_GeneratesSelectAll()
     {
         var options = NoPaging(new QueryOptions());
-        options.Items[ContextKeys.EntityType] = typeof(TestEntity);
+        options.Items[ContextKeys.EntityType] = typeof(Customer);
 
         var translator = new SqlTranslator(_registry, new SqlServerDialect());
         var command = translator.Translate(options);
@@ -49,7 +43,7 @@ public class SqlTranslatorTests
                 Filters = [new FilterCondition { Field = "Name", Operator = "eq", Value = "Alice" }]
             }
         });
-        options.Items[ContextKeys.EntityType] = typeof(TestEntity);
+        options.Items[ContextKeys.EntityType] = typeof(Customer);
 
         var translator = new SqlTranslator(_registry, new SqlServerDialect());
         var command = translator.Translate(options);
@@ -69,7 +63,7 @@ public class SqlTranslatorTests
                 Filters = [new FilterCondition { Field = "Status", Operator = "in", Value = "Active,Pending" }]
             }
         });
-        options.Items[ContextKeys.EntityType] = typeof(TestEntity);
+        options.Items[ContextKeys.EntityType] = typeof(Customer);
 
         var translator = new SqlTranslator(_registry, new SqlServerDialect());
         var command = translator.Translate(options);
@@ -88,7 +82,7 @@ public class SqlTranslatorTests
                 Filters = [new FilterCondition { Field = "Age", Operator = "between", Value = "20,30" }]
             }
         });
-        options.Items[ContextKeys.EntityType] = typeof(TestEntity);
+        options.Items[ContextKeys.EntityType] = typeof(Customer);
 
         var translator = new SqlTranslator(_registry, new SqlServerDialect());
         var command = translator.Translate(options);
@@ -109,7 +103,7 @@ public class SqlTranslatorTests
                 Filters = [new FilterCondition { Field = "Name", Operator = "contains", Value = "John" }]
             }
         });
-        options.Items[ContextKeys.EntityType] = typeof(TestEntity);
+        options.Items[ContextKeys.EntityType] = typeof(Customer);
 
         var translator = new SqlTranslator(_registry, new SqlServerDialect());
         var command = translator.Translate(options);
@@ -126,7 +120,7 @@ public class SqlTranslatorTests
         {
             Sort = [new SortNode { Field = "Name", Descending = true }]
         });
-        options.Items[ContextKeys.EntityType] = typeof(TestEntity);
+        options.Items[ContextKeys.EntityType] = typeof(Customer);
 
         var translator = new SqlTranslator(_registry, new SqlServerDialect());
         var command = translator.Translate(options);
@@ -142,7 +136,7 @@ public class SqlTranslatorTests
         {
             GroupBy = ["City"]
         });
-        options.Items[ContextKeys.EntityType] = typeof(TestEntity);
+        options.Items[ContextKeys.EntityType] = typeof(Customer);
 
         var translator = new SqlTranslator(_registry, new SqlServerDialect());
         var command = translator.Translate(options);
@@ -157,7 +151,7 @@ public class SqlTranslatorTests
         {
             Aggregates = [new AggregateModel { Function = AggregateFunction.Count, Alias = "TotalCount" }]
         });
-        options.Items[ContextKeys.EntityType] = typeof(TestEntity);
+        options.Items[ContextKeys.EntityType] = typeof(Customer);
 
         var translator = new SqlTranslator(_registry, new SqlServerDialect());
         var command = translator.TranslateAggregates(options);
@@ -173,7 +167,7 @@ public class SqlTranslatorTests
             Sort = { new SortNode { Field = "Id" } },
             Paging = { Page = 2, PageSize = 10 }
         };
-        options.Items[ContextKeys.EntityType] = typeof(TestEntity);
+        options.Items[ContextKeys.EntityType] = typeof(Customer);
 
         var translator = new SqlTranslator(_registry, new SqlServerDialect());
         var command = translator.Translate(options);
@@ -200,7 +194,7 @@ public class SqlTranslatorTests
                 ]
             }
         });
-        options.Items[ContextKeys.EntityType] = typeof(TestEntity);
+        options.Items[ContextKeys.EntityType] = typeof(Customer);
 
         var translator = new SqlTranslator(_registry, new SqlServerDialect());
         var command = translator.Translate(options);
@@ -224,7 +218,7 @@ public class SqlTranslatorTests
                 ]
             }
         });
-        options.Items[ContextKeys.EntityType] = typeof(TestEntity);
+        options.Items[ContextKeys.EntityType] = typeof(Customer);
 
         var translator = new SqlTranslator(_registry, new SqlServerDialect());
         var command = translator.Translate(options);
@@ -240,7 +234,7 @@ public class SqlTranslatorTests
         {
             Select = ["Id", "Name", "Age"]
         });
-        options.Items[ContextKeys.EntityType] = typeof(TestEntity);
+        options.Items[ContextKeys.EntityType] = typeof(Customer);
 
         var translator = new SqlTranslator(_registry, new SqlServerDialect());
         var command = translator.Translate(options);
@@ -257,7 +251,7 @@ public class SqlTranslatorTests
         {
             Distinct = true
         });
-        options.Items[ContextKeys.EntityType] = typeof(TestEntity);
+        options.Items[ContextKeys.EntityType] = typeof(Customer);
 
         var translator = new SqlTranslator(_registry, new SqlServerDialect());
         var command = translator.Translate(options);
@@ -279,7 +273,7 @@ public class SqlTranslatorTests
                 Function = AggregateFunction.Sum
             }
         });
-        options.Items[ContextKeys.EntityType] = typeof(TestEntity);
+        options.Items[ContextKeys.EntityType] = typeof(Customer);
 
         var translator = new SqlTranslator(_registry, new SqlServerDialect());
         var command = translator.Translate(options);
@@ -303,7 +297,7 @@ public class SqlTranslatorTests
                 Value = "20"
             }
         });
-        options.Items[ContextKeys.EntityType] = typeof(TestEntity);
+        options.Items[ContextKeys.EntityType] = typeof(Customer);
 
         var translator = new SqlTranslator(_registry, new SqlServerDialect());
         var command = translator.Translate(options);
@@ -328,7 +322,7 @@ public class SqlTranslatorTests
                 Value = "20"
             }
         });
-        options.Items[ContextKeys.EntityType] = typeof(TestEntity);
+        options.Items[ContextKeys.EntityType] = typeof(Customer);
 
         var translator = new SqlTranslator(_registry, new SqlServerDialect());
         var command = translator.Translate(options);
@@ -348,7 +342,7 @@ public class SqlTranslatorTests
             GroupBy = ["Status"],
             Aggregates = [new AggregateModel { Function = AggregateFunction.Count, Alias = "Count" }],
         });
-        options.Items[ContextKeys.EntityType] = typeof(TestEntity);
+        options.Items[ContextKeys.EntityType] = typeof(Customer);
 
         var translator = new SqlTranslator(_registry, new SqlServerDialect());
         var command = translator.Translate(options);
@@ -363,7 +357,7 @@ public class SqlTranslatorTests
         {
             Includes = new List<string> { "Roles" }
         });
-        options.Items[ContextKeys.EntityType] = typeof(TestEntityWithJoin);
+        options.Items[ContextKeys.EntityType] = typeof(User);
 
         var translator = new SqlTranslator(_registry, new SqlServerDialect());
         var command = translator.Translate(options);
@@ -389,15 +383,15 @@ public class SqlTranslatorTests
                 }]
             }
         });
-        options.Items[ContextKeys.EntityType] = typeof(TestEntityWithJoin);
+        options.Items[ContextKeys.EntityType] = typeof(User);
 
         var translator = new SqlTranslator(_registry, new SqlServerDialect());
         var command = translator.Translate(options);
 
         command.Sql.Should().Contain("EXISTS");
-        command.Sql.Should().Contain("SELECT 1 FROM [roles]");
-        command.Sql.Should().Contain("[roles].[UserId] = [users].[Id]");
-        command.Sql.Should().Contain("[Name] = @p0");
+        command.Sql.Should().Contain("SELECT 1 FROM [Roles]");
+        command.Sql.Should().Contain("[Roles].[UserId] = [Users].[Id]");
+        command.Sql.Should().Contain("LOWER([Name]) = LOWER(@p0)");
         command.Parameters["@p0"].Should().Be("Admin");
     }
 
@@ -419,14 +413,14 @@ public class SqlTranslatorTests
                 }]
             }
         });
-        options.Items[ContextKeys.EntityType] = typeof(TestEntityWithJoin);
+        options.Items[ContextKeys.EntityType] = typeof(User);
 
         var translator = new SqlTranslator(_registry, new SqlServerDialect());
         var command = translator.Translate(options);
 
         command.Sql.Should().Contain("NOT EXISTS");
-        command.Sql.Should().Contain("SELECT 1 FROM [roles]");
-        command.Sql.Should().Contain("NOT ([Name] = @p0)");
+        command.Sql.Should().Contain("SELECT 1 FROM [Roles]");
+        command.Sql.Should().Contain("NOT (LOWER([Name]) = LOWER(@p0))");
     }
 
     [Fact]
@@ -448,13 +442,13 @@ public class SqlTranslatorTests
                 }]
             }
         });
-        options.Items[ContextKeys.EntityType] = typeof(TestEntityWithJoin);
+        options.Items[ContextKeys.EntityType] = typeof(User);
 
         var translator = new SqlTranslator(_registry, new SqlServerDialect());
         var command = translator.Translate(options);
 
-        command.Sql.Should().Contain("(SELECT COUNT(*) FROM [roles]");
-        command.Sql.Should().Contain("[roles].[UserId] = [users].[Id]");
+        command.Sql.Should().Contain("(SELECT COUNT(*) FROM [Roles]");
+        command.Sql.Should().Contain("[Roles].[UserId] = [Users].[Id]");
         command.Sql.Should().Contain("> @p1");
         command.Parameters["@p1"].Should().Be(5);
     }
@@ -476,41 +470,21 @@ public class SqlTranslatorTests
                 }
             ]
         });
-        options.Items[ContextKeys.EntityType] = typeof(TestEntityWithJoin);
+        options.Items[ContextKeys.EntityType] = typeof(User);
 
         var translator = new SqlTranslator(_registry, new SqlServerDialect());
         var command = translator.Translate(options);
 
-        command.Sql.Should().Contain("LEFT JOIN [roles]");
-        command.Sql.Should().Contain("[Roles].[UserId] = [users].[Id]");
+        command.Sql.Should().Contain("LEFT JOIN [Roles]");
+        command.Sql.Should().Contain("[Roles].[UserId] = [Users].[Id]");
         command.Sql.Should().Contain("AND ([IsActive] = @p0)");
     }
-
-    private class TestEntity
-    {
-        public int Id { get; set; }
-        public string Name { get; set; } = string.Empty;
-        public int Age { get; set; }
-        public string City { get; set; } = string.Empty;
-        public string Status { get; set; } = string.Empty;
-    }
-
-    private class TestRole { public int Id { get; set; } }
-
-    private class TestEntityWithJoin
-    {
-        public int Id { get; set; }
-        public string Name { get; set; } = string.Empty;
-        public ICollection<TestRole> Roles { get; set; } = new List<TestRole>();
-    }
+    
 
     [Fact]
     public void Translate_FlatMode_GeneratesFlatJoins()
     {
-        var registry = new MappingRegistry();
-        registry.Entity<SqlCustomer>()
-            .ToTable("Customers")
-            .HasMany(c => c.Orders).WithForeignKey("CustomerId");
+        var registry = SharedFlexQueryModel.Instance.Registry;
 
         var options = new QueryOptions
         {
@@ -518,7 +492,7 @@ public class SqlTranslatorTests
             Select = ["Orders.Total"],
             Paging = { Disabled = true }
         };
-        options.Items[ContextKeys.EntityType] = typeof(SqlCustomer);
+        options.Items[ContextKeys.EntityType] = typeof(Customer);
 
         var translator = new SqlTranslator(registry, new SqliteDialect());
         var command = translator.Translate(options);
@@ -531,10 +505,7 @@ public class SqlTranslatorTests
     [Fact]
     public void Translate_FlatMixedMode_IncludesRootScalars()
     {
-        var registry = new MappingRegistry();
-        registry.Entity<SqlCustomer>()
-            .ToTable("Customers")
-            .HasMany(c => c.Orders).WithForeignKey("CustomerId");
+        var registry = SharedFlexQueryModel.Instance.Registry;
 
         var options = new QueryOptions
         {
@@ -542,7 +513,7 @@ public class SqlTranslatorTests
             Select = ["Name", "Orders.Total"],
             Paging = { Disabled = true }
         };
-        options.Items[ContextKeys.EntityType] = typeof(SqlCustomer);
+        options.Items[ContextKeys.EntityType] = typeof(Customer);
 
         var translator = new SqlTranslator(registry, new SqliteDialect());
         var command = translator.Translate(options);
@@ -555,31 +526,25 @@ public class SqlTranslatorTests
     [Fact]
     public void Translate_FlatMode_MultiLevel_NestedCollection()
     {
-        var registry = new MappingRegistry();
-        registry.Entity<SqlCustomer>()
-            .ToTable("Customers")
-            .HasMany(c => c.Orders).WithForeignKey("CustomerId");
-        registry.Entity<SqlOrder>()
-            .ToTable("Orders")
-            .HasMany(o => o.Items).WithForeignKey("OrderId");
+        var registry = SharedFlexQueryModel.Instance.Registry;
 
         var options = new QueryOptions
         {
             ProjectionMode = ProjectionMode.Flat,
-            Select = ["Orders.Items.Sku", "Orders.Items.Id"],
+            Select = ["Orders.OrderItems.Sku", "Orders.OrderItems.Id"],
             Paging = { Disabled = true }
         };
-        options.Items[ContextKeys.EntityType] = typeof(SqlCustomer);
+        options.Items[ContextKeys.EntityType] = typeof(Customer);
 
         var translator = new SqlTranslator(registry, new SqliteDialect());
         var command = translator.Translate(options);
 
         command.Sql.Should().Contain("LEFT JOIN");
         command.Sql.Should().Contain("\"Orders\"");
-        command.Sql.Should().Contain("\"Items\"");
-        command.Sql.Should().Contain("\"Items\".\"Sku\"");
-        command.Sql.Should().Contain("\"Items\".\"Id\"");
+        command.Sql.Should().Contain("\"OrderItems\"");
+        command.Sql.Should().Contain("\"OrderItems\".\"Sku\"");
+        command.Sql.Should().Contain("\"OrderItems\".\"Id\"");
         command.FlatJoins.Should().Contain("Orders");
-        command.FlatJoins.Should().Contain("Items");
+        command.FlatJoins.Should().Contain("OrderItems");
     }
 }
