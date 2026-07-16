@@ -28,8 +28,8 @@ internal static class DslHavingParser
         if (!match.Success)
             throw new DslParseException(
                 $"Unable to parse HAVING expression '{rawHaving}'. " +
-                "Expected format: FUNCTION(Field):OPERATOR:value or FUNCTION:Field:OPERATOR:value. " +
-                "For example: sum(Amount):gt:1000 or sum:total:gt:100");
+                "Expected format: FUNCTION:Field:OPERATOR:value. " +
+                "For example: sum:total:gt:100");
 
         var fnRaw = match.Groups[QueryOptionKeys.Fn].Value.ToLowerInvariant();
         if (fnRaw == "average") fnRaw = "avg";

@@ -15,6 +15,7 @@ public class DslSelectParserTests
 
         act.Should().Throw<DslParseException>();
     }
+    
 
     [Fact]
     public void Parse_ValidPaths_PopulatesSelect()
@@ -24,17 +25,6 @@ public class DslSelectParserTests
         DslSelectParser.Parse(options, "Id,Name,Profile.AvatarUrl");
 
         options.Select.Should().BeEquivalentTo(new[] { "Id", "Name", "Profile.AvatarUrl" });
-    }
-
-    [Fact]
-    public void Parse_AliasExpression_ExtractsPathBeforeAs()
-    {
-        var options = new QueryOptions();
-
-        DslSelectParser.Parse(options, "Name AS FullName, Age");
-
-        options.Select.Should().Contain("Name AS FullName");
-        options.Select.Should().Contain("Age");
     }
 
     [Fact]
@@ -58,17 +48,17 @@ public class DslSelectParserTests
     }
 
     [Fact]
-    public void Parse_ColonAlias_Simple()
+    public void Parse_SimpleAlias_PopulatesSelect()
     {
         var options = new QueryOptions();
 
-        DslSelectParser.Parse(options, "Name:FullName");
+        DslSelectParser.Parse(options, "DateOfBirth:BirthDate");
 
-        options.Select.Should().Contain("Name AS FullName");
+        options.Select.Should().Contain("DateOfBirth AS BirthDate");
     }
 
     [Fact]
-    public void Parse_ColonAlias_NestedPath()
+    public void Parse_NavigationAlias_PopulatesSelect()
     {
         var options = new QueryOptions();
 
@@ -78,7 +68,7 @@ public class DslSelectParserTests
     }
 
     [Fact]
-    public void Parse_ColonAlias_EmptyAlias_Throws()
+    public void Parse_InvalidAlias_Empty_Throws()
     {
         var options = new QueryOptions();
 
@@ -88,7 +78,37 @@ public class DslSelectParserTests
     }
 
     [Fact]
-    public void Parse_ColonAlias_EmptyPath_Throws()
+    public void Parse_InvalidAlias_StartsWithDigit_Throws()
+    {
+        var options = new QueryOptions();
+
+        var act = () => DslSelectParser.Parse(options, "Name:123Alias");
+
+        act.Should().Throw<DslParseException>();
+    }
+
+    [Fact]
+    public void Parse_InvalidAlias_ContainsSpace_Throws()
+    {
+        var options = new QueryOptions();
+
+        var act = () => DslSelectParser.Parse(options, "Name:Customer Name");
+
+        act.Should().Throw<DslParseException>();
+    }
+
+    [Fact]
+    public void Parse_EmptyAlias_Throws()
+    {
+        var options = new QueryOptions();
+
+        var act = () => DslSelectParser.Parse(options, ":Alias");
+
+        act.Should().Throw<DslParseException>();
+    }
+
+    [Fact]
+    public void Parse_EmptyPath_Throws()
     {
         var options = new QueryOptions();
 
@@ -98,17 +118,7 @@ public class DslSelectParserTests
     }
 
     [Fact]
-    public void Parse_ColonAlias_AliasWithSpace_Throws()
-    {
-        var options = new QueryOptions();
-
-        var act = () => DslSelectParser.Parse(options, "Name:Full Name");
-
-        act.Should().Throw<DslParseException>();
-    }
-
-    [Fact]
-    public void Parse_ColonAlias_MultipleColons_Throws()
+    public void Parse_MultipleColons_Throws()
     {
         var options = new QueryOptions();
 
@@ -118,7 +128,7 @@ public class DslSelectParserTests
     }
 
     [Fact]
-    public void Parse_ColonAlias_ReservedKeywordAs_Throws()
+    public void Parse_AliasReservedKeywordAs_Throws()
     {
         var options = new QueryOptions();
 
@@ -128,7 +138,7 @@ public class DslSelectParserTests
     }
 
     [Fact]
-    public void Parse_ColonAlias_ReservedKeywordAsCaseInsensitive_Throws()
+    public void Parse_AliasReservedKeywordAsCaseInsensitive_Throws()
     {
         var options = new QueryOptions();
 
@@ -138,17 +148,27 @@ public class DslSelectParserTests
     }
 
     [Fact]
-    public void Parse_ColonAlias_MixedWithPlain()
+    public void Parse_AliasWithDot_Throws()
     {
         var options = new QueryOptions();
 
-        DslSelectParser.Parse(options, "Id,Name:FullName,Age");
+        var act = () => DslSelectParser.Parse(options, "Name:Customer.Name");
 
-        options.Select.Should().BeEquivalentTo(new[] { "Id", "Name AS FullName", "Age" });
+        act.Should().Throw<DslParseException>();
+    }
+    
+    [Fact]
+    public void Parse_AliasStartsWithUnderscore_Throws()
+    {
+        var options = new QueryOptions();
+
+        var act = () => DslSelectParser.Parse(options, "Name:_FullName");
+
+        act.Should().Throw<DslParseException>();
     }
 
     [Fact]
-    public void Parse_ColonAlias_WhitespaceAroundColon()
+    public void Parse_WhitespaceAroundColon_Valid()
     {
         var options = new QueryOptions();
 
@@ -158,32 +178,22 @@ public class DslSelectParserTests
     }
 
     [Fact]
-    public void Parse_BackwardCompat_AsSyntax_StillWorks()
+    public void Parse_PlainPropertyPath_Valid()
     {
         var options = new QueryOptions();
 
-        DslSelectParser.Parse(options, "Name AS FullName");
+        DslSelectParser.Parse(options, "Name,Customer.Name");
 
-        options.Select.Should().Contain("Name AS FullName");
+        options.Select.Should().BeEquivalentTo(new[] { "Name", "Customer.Name" });
     }
 
     [Fact]
-    public void Parse_AggregateExpression_Throws()
+    public void Parse_AliasSameAsField_Valid()
     {
         var options = new QueryOptions();
 
-        var act = () => DslSelectParser.Parse(options, "SUM(Total):Revenue");
+        DslSelectParser.Parse(options, "Name:Name");
 
-        act.Should().Throw<DslParseException>();
-    }
-
-    [Fact]
-    public void Parse_ColonAlias_InvalidIdentifier_Throws()
-    {
-        var options = new QueryOptions();
-
-        var act = () => DslSelectParser.Parse(options, "Name:Full-Name");
-
-        act.Should().Throw<DslParseException>();
+        options.Select.Should().Contain("Name AS Name");
     }
 }

@@ -20,19 +20,6 @@ internal static class DslSelectParser
         var validated = new List<string>(fields.Count);
         foreach (var field in fields)
         {
-            var asIndex = field.IndexOf(" AS ", StringComparison.OrdinalIgnoreCase);
-            if (asIndex >= 0)
-            {
-                var pathPart = field[..asIndex].Trim();
-                if (pathPart.Length > 0 && !ParserUtilities.IsValidPropertyPath(pathPart.AsSpan()))
-                    throw new DslParseException(
-                        $"Invalid property path '{pathPart}' in 'select' parameter. " +
-                        "Property paths must be dot-separated identifiers (e.g. 'Id' or 'Customer.Name').");
-
-                validated.Add(field);
-                continue;
-            }
-
             var colonIndex = field.IndexOf(':');
             if (colonIndex >= 0)
             {
@@ -43,6 +30,11 @@ internal static class DslSelectParser
 
                 var rawPath = field[..colonIndex].Trim();
                 var rawAlias = field[(colonIndex + 1)..].Trim();
+
+                if (rawPath.Length == 0)
+                    throw new DslParseException(
+                        $"Invalid property path in 'select' parameter. " +
+                        "Property path must not be empty (e.g. 'Name:FullName').");
 
                 if (rawAlias.Length == 0)
                     throw new DslParseException(
@@ -59,7 +51,7 @@ internal static class DslSelectParser
                         $"Invalid property path '{rawPath}' in 'select' parameter. " +
                         "Property paths must be dot-separated identifiers (e.g. 'Id' or 'Customer.Name').");
 
-                if (!ParserUtilities.IsValidPropertyPath(rawAlias.AsSpan()))
+                if (!ParserUtilities.IsValidIdentifier(rawAlias.AsSpan()))
                     throw new DslParseException(
                         $"Invalid alias '{rawAlias}' in 'select' parameter. " +
                         "Aliases must be valid identifiers (e.g. 'FullName').");

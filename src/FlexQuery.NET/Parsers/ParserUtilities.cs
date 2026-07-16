@@ -83,6 +83,23 @@ internal static class ParserUtilities
         => char.IsLetterOrDigit(c) || c == '_';
 
     /// <summary>
+    /// Validates a single identifier (alias) grammar.
+    /// </summary>
+    internal static bool IsValidIdentifier(ReadOnlySpan<char> value)
+    {
+        if (value.IsEmpty) return false;
+        if (!char.IsLetter(value[0])) return false;
+
+        for (int i = 1; i < value.Length; i++)
+        {
+            if (!char.IsLetterOrDigit(value[i]) && value[i] != '_')
+                return false;
+        }
+
+        return true;
+    }
+
+    /// <summary>
     /// Builds a PascalCase alias for aggregate functions (e.g., "TotalSum" or "Count").
     /// For field-less aggregates (e.g. count()) the alias is just the function name (e.g. "Count").
     /// </summary>
