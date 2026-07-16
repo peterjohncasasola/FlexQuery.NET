@@ -3,7 +3,6 @@ using FlexQuery.NET.Models;
 using FlexQuery.NET.Models.Aggregates;
 using FlexQuery.NET.Models.Filters;
 using FlexQuery.NET.Parsers;
-using Microsoft.Extensions.Primitives;
 
 namespace FlexQuery.NET.Tests.Parsers;
 
@@ -21,7 +20,7 @@ public class DslQueryParserTests
     [Fact]
     public void DslFilter_GroupedOrAndCondition_ParsedToNestedFilterGroup()
     {
-        var opts = Parse(new()
+        var opts = Parse(new Dictionary<string, string>
         {
             ["filter"] = "(name:eq:john|name:eq:doe)&age:gt:20"
         });
@@ -39,7 +38,7 @@ public class DslQueryParserTests
     [Fact]
     public void DslFilter_NestedPathAndInOperator_ParsedCorrectly()
     {
-        var opts = Parse(new()
+        var opts = Parse(new Dictionary<string, string>
         {
             ["filter"] = "orders.customer.name:contains:'john doe'&status:in:Active,Pending",
             ["page"] = "2",
@@ -60,7 +59,7 @@ public class DslQueryParserTests
     [Fact]
     public void DslFilter_IsNull_DoesNotRequireValue()
     {
-        var opts = Parse(new()
+        var opts = Parse(new Dictionary<string, string>
         {
             ["filter"] = "deletedAt:isnull"
         });
@@ -74,7 +73,7 @@ public class DslQueryParserTests
     [Fact]
     public void DslFilter_MalformedDsl_IsRejected()
     {
-        var act = () => Parse(new()
+        var act = () => Parse(new Dictionary<string, string>
         {
             ["filter"] = "name:eq:"
         });
@@ -86,16 +85,17 @@ public class DslQueryParserTests
     [Fact]
     public void DslFilter_PhaseTwoAndThreeOperators_AreParsedCorrectly()
     {
-        var opts = Parse(new()
+        var opts = Parse(new Dictionary<string, string>
         {
-            ["filter"] = "(name:startswith:jo|name:endswith:hn)&status:notin:Inactive,Deleted&age:between:18,60&deletedAt:notnull"
+            ["filter"] =
+                "(name:startswith:jo|name:endswith:hn)&status:notin:Inactive,Deleted&age:between:18,60&deletedAt:notnull"
         });
 
         opts.Filter!.Logic.Should().Be(LogicOperator.And);
         opts.Filter.Groups.Should().ContainSingle();
         opts.Filter.Groups[0].Logic.Should().Be(LogicOperator.Or);
         opts.Filter.Groups[0].Filters.Select(f => f.Operator)
-            .Should().BeEquivalentTo([FilterOperators.StartsWith, FilterOperators.EndsWith]);
+            .Should().BeEquivalentTo(FilterOperators.StartsWith, FilterOperators.EndsWith);
         opts.Filter.Filters.Select(f => f.Operator).Should().Contain([
             FilterOperators.NotIn,
             FilterOperators.Between,
@@ -106,7 +106,7 @@ public class DslQueryParserTests
     [Fact]
     public void DslFilter_NestedDynamicConditions_ParsedToRecursiveGroups()
     {
-        var opts = Parse(new()
+        var opts = Parse(new Dictionary<string, string>
         {
             ["filter"] = "((city:eq:London|city:eq:Berlin)&(age:between:25,40|status:eq:Pending))"
         });
@@ -118,8 +118,9 @@ public class DslQueryParserTests
 
         opts.Filter.Groups[0].Logic.Should().Be(LogicOperator.Or);
         opts.Filter.Groups[0].Filters.Should().HaveCount(2);
-        opts.Filter.Groups[0].Filters.Select(f => f.Field).Should().BeEquivalentTo(["city", "city"]);
-        opts.Filter.Groups[0].Filters.Select(f => f.Operator).Should().AllSatisfy(op => op.Should().Be(FilterOperators.Equal));
+        opts.Filter.Groups[0].Filters.Select(f => f.Field).Should().BeEquivalentTo("city", "city");
+        opts.Filter.Groups[0].Filters.Select(f => f.Operator).Should()
+            .AllSatisfy(op => op.Should().Be(FilterOperators.Equal));
 
         opts.Filter.Groups[1].Logic.Should().Be(LogicOperator.Or);
         opts.Filter.Groups[1].Filters.Should().HaveCount(2);
@@ -132,7 +133,7 @@ public class DslQueryParserTests
     [Fact]
     public void Dsl_ValidSimple_ParsesIntoFilterGroup()
     {
-        var opts = Parse(new()
+        var opts = Parse(new Dictionary<string, string>
         {
             ["filter"] = "(name:eq:john|name:eq:doe)&age:gt:20"
         });
@@ -147,7 +148,7 @@ public class DslQueryParserTests
     [Fact]
     public void Dsl_InvalidOperator_IsRejected()
     {
-        var act = () => Parse(new()
+        var act = () => Parse(new Dictionary<string, string>
         {
             ["filter"] = "age:unknown:20"
         });
@@ -159,7 +160,7 @@ public class DslQueryParserTests
     [Fact]
     public void Dsl_MalformedExpression_IsRejected()
     {
-        var act = () => Parse(new()
+        var act = () => Parse(new Dictionary<string, string>
         {
             ["filter"] = "(name:eq:john|age:gt:20"
         });
@@ -171,7 +172,7 @@ public class DslQueryParserTests
     [Fact]
     public void Dsl_Value_AllowsEmail()
     {
-        var opts = Parse(new()
+        var opts = Parse(new Dictionary<string, string>
         {
             ["filter"] = "email:eq:ops@acmeretail.com"
         });
@@ -183,7 +184,7 @@ public class DslQueryParserTests
     [Fact]
     public void Dsl_Value_AllowsSpaces()
     {
-        var opts = Parse(new()
+        var opts = Parse(new Dictionary<string, string>
         {
             ["filter"] = "name:contains:john doe"
         });
@@ -195,7 +196,7 @@ public class DslQueryParserTests
     [Fact]
     public void Dsl_Value_AllowsUrls()
     {
-        var opts = Parse(new()
+        var opts = Parse(new Dictionary<string, string>
         {
             ["filter"] = "url:eq:https://example.com/page"
         });
@@ -207,7 +208,7 @@ public class DslQueryParserTests
     [Fact]
     public void Dsl_Value_AllowsAdditionalColons()
     {
-        var opts = Parse(new()
+        var opts = Parse(new Dictionary<string, string>
         {
             ["filter"] = "note:eq:value:with:colon"
         });
@@ -219,7 +220,7 @@ public class DslQueryParserTests
     [Fact]
     public void Dsl_Value_SupportsQuotedValues()
     {
-        var opts = Parse(new()
+        var opts = Parse(new Dictionary<string, string>
         {
             ["filter"] = "email:eq:\"ops@acmeretail.com\""
         });
@@ -231,7 +232,7 @@ public class DslQueryParserTests
     [Fact]
     public void Dsl_NotPrefix_ParsesAsNegatedConditionGroup()
     {
-        var opts = Parse(new()
+        var opts = Parse(new Dictionary<string, string>
         {
             ["filter"] = "!name:eq:john"
         });
@@ -247,7 +248,7 @@ public class DslQueryParserTests
     [Fact]
     public void Dsl_NotFunction_ParsesAsNegatedConditionGroup()
     {
-        var opts = Parse(new()
+        var opts = Parse(new Dictionary<string, string>
         {
             ["filter"] = "not(name:eq:john)"
         });
@@ -263,7 +264,7 @@ public class DslQueryParserTests
     [Fact]
     public void Dsl_AnyOperator_ParsesWithRawInnerExpression()
     {
-        var opts = Parse(new()
+        var opts = Parse(new Dictionary<string, string>
         {
             ["filter"] = "orders:any:total:gt:100"
         });
@@ -278,7 +279,7 @@ public class DslQueryParserTests
     [Fact]
     public void Dsl_CountOperator_ParsesWithRawComparisonExpression()
     {
-        var opts = Parse(new()
+        var opts = Parse(new Dictionary<string, string>
         {
             ["filter"] = "orders:count:gt:5"
         });
@@ -297,7 +298,7 @@ public class DslQueryParserTests
     [Fact]
     public void Sort_SingleField_Ascending()
     {
-        var opts = Parse(new()
+        var opts = Parse(new Dictionary<string, string>
         {
             ["sort"] = "name:asc"
         });
@@ -310,7 +311,7 @@ public class DslQueryParserTests
     [Fact]
     public void Sort_SingleField_Descending()
     {
-        var opts = Parse(new()
+        var opts = Parse(new Dictionary<string, string>
         {
             ["sort"] = "name:desc"
         });
@@ -323,7 +324,7 @@ public class DslQueryParserTests
     [Fact]
     public void Sort_SingleField_NoDirection_DefaultsToAscending()
     {
-        var opts = Parse(new()
+        var opts = Parse(new Dictionary<string, string>
         {
             ["sort"] = "name"
         });
@@ -336,7 +337,7 @@ public class DslQueryParserTests
     [Fact]
     public void Sort_MultiField_ParsedCorrectly()
     {
-        var opts = Parse(new()
+        var opts = Parse(new Dictionary<string, string>
         {
             ["sort"] = "createdAt:desc,total:asc"
         });
@@ -351,7 +352,7 @@ public class DslQueryParserTests
     [Fact]
     public void Sort_NestedFields_DotNotation()
     {
-        var opts = Parse(new()
+        var opts = Parse(new Dictionary<string, string>
         {
             ["sort"] = "profile.bio:asc,name:desc"
         });
@@ -366,7 +367,7 @@ public class DslQueryParserTests
     [Fact]
     public void Sort_InvalidDirection_IsRejected()
     {
-        var act = () => Parse(new()
+        var act = () => Parse(new Dictionary<string, string>
         {
             ["sort"] = "name:sideways"
         });
@@ -378,7 +379,7 @@ public class DslQueryParserTests
     [Fact]
     public void Sort_Aggregate_ParsedCorrectly()
     {
-        var opts = Parse(new()
+        var opts = Parse(new Dictionary<string, string>
         {
             ["sort"] = "orders.sum(total):desc,orders.count():asc"
         });
@@ -399,7 +400,7 @@ public class DslQueryParserTests
     [Fact]
     public void Sort_EmptyString_ReturnsEmptyList()
     {
-        var opts = Parse(new()
+        var opts = Parse(new Dictionary<string, string>
         {
             ["sort"] = ""
         });
@@ -414,7 +415,7 @@ public class DslQueryParserTests
     [Fact]
     public void Paging_PageAndPageSize_ParsedCorrectly()
     {
-        var opts = Parse(new()
+        var opts = Parse(new Dictionary<string, string>
         {
             ["page"] = "3",
             ["pageSize"] = "25"
@@ -427,7 +428,7 @@ public class DslQueryParserTests
     [Fact]
     public void Paging_DefaultValues()
     {
-        var opts = Parse(new());
+        var opts = Parse(new Dictionary<string, string>());
 
         opts.Paging.Page.Should().Be(1);
         opts.Paging.PageSize.Should().Be(20);
@@ -441,18 +442,18 @@ public class DslQueryParserTests
     [Fact]
     public void Select_CommaSeparatedFields_ParsedCorrectly()
     {
-        var opts = Parse(new()
+        var opts = Parse(new Dictionary<string, string>
         {
             ["select"] = "Id,Name,Email"
         });
 
-        opts.Select.Should().BeEquivalentTo(["Id", "Name", "Email"]);
+        opts.Select.Should().BeEquivalentTo("Id", "Name", "Email");
     }
 
     [Fact]
     public void Select_EmptyString_ReturnsNull()
     {
-        var opts = Parse(new()
+        var opts = Parse(new Dictionary<string, string>
         {
             ["select"] = ""
         });
@@ -463,12 +464,12 @@ public class DslQueryParserTests
     [Fact]
     public void Select_SingleField_ParsedCorrectly()
     {
-        var opts = Parse(new()
+        var opts = Parse(new Dictionary<string, string>
         {
             ["select"] = "Name"
         });
 
-        opts.Select.Should().BeEquivalentTo(["Name"]);
+        opts.Select.Should().BeEquivalentTo("Name");
     }
 
     // ════════════════════════════════════════════════════════════════════
@@ -478,7 +479,7 @@ public class DslQueryParserTests
     [Fact]
     public void GroupAndAggregateSelect_ParsedCorrectly()
     {
-        var opts = Parse(new()
+        var opts = Parse(new Dictionary<string, string>
         {
             ["groupBy"] = "category,status",
             ["select"] = "category",
@@ -486,8 +487,8 @@ public class DslQueryParserTests
             ["having"] = "sum(total):gt:10000"
         });
 
-        opts.GroupBy.Should().BeEquivalentTo(["category", "status"]);
-        opts.Select.Should().BeEquivalentTo(["category"]);
+        opts.GroupBy.Should().BeEquivalentTo("category", "status");
+        opts.Select.Should().BeEquivalentTo("category");
         opts.Aggregates.Should().HaveCount(2);
         opts.Aggregates.Should().Contain(a => a.Function == AggregateFunction.Sum && a.Field == "total");
         opts.Aggregates.Should().Contain(a => a.Function == AggregateFunction.Count && a.Field == "id");
@@ -500,29 +501,29 @@ public class DslQueryParserTests
     [Fact]
     public void GroupBy_SingleField_ParsedCorrectly()
     {
-        var opts = Parse(new()
+        var opts = Parse(new Dictionary<string, string>
         {
             ["groupBy"] = "category"
         });
 
-        opts.GroupBy.Should().BeEquivalentTo(["category"]);
+        opts.GroupBy.Should().BeEquivalentTo("category");
     }
 
     [Fact]
     public void GroupBy_MultipleFields_ParsedCorrectly()
     {
-        var opts = Parse(new()
+        var opts = Parse(new Dictionary<string, string>
         {
             ["groupBy"] = "category,status,region"
         });
 
-        opts.GroupBy.Should().BeEquivalentTo(["category", "status", "region"]);
+        opts.GroupBy.Should().BeEquivalentTo("category", "status", "region");
     }
 
     [Fact]
     public void Having_Count_GreaterThan()
     {
-        var opts = Parse(new()
+        var opts = Parse(new Dictionary<string, string>
         {
             ["groupBy"] = "status",
             ["select"] = "status",
@@ -540,7 +541,7 @@ public class DslQueryParserTests
     [Fact]
     public void Having_Sum_WithField()
     {
-        var opts = Parse(new()
+        var opts = Parse(new Dictionary<string, string>
         {
             ["groupBy"] = "status",
             ["select"] = "status",
@@ -558,7 +559,7 @@ public class DslQueryParserTests
     [Fact]
     public void Having_ParenthesisFormat_ParsedCorrectly()
     {
-        var opts = Parse(new()
+        var opts = Parse(new Dictionary<string, string>
         {
             ["group"] = "status",
             ["select"] = "status",
@@ -576,7 +577,7 @@ public class DslQueryParserTests
     [Fact]
     public void DslHaving_EmptyString_ReturnsNull()
     {
-        var opts = Parse(new()
+        var opts = Parse(new Dictionary<string, string>
         {
             ["having"] = ""
         });
@@ -587,7 +588,7 @@ public class DslQueryParserTests
     [Fact]
     public void DslHaving_NestedField_ParsedCorrectly()
     {
-        var opts = Parse(new()
+        var opts = Parse(new Dictionary<string, string>
         {
             ["group"] = "status",
             ["select"] = "status",
@@ -609,7 +610,7 @@ public class DslQueryParserTests
     [Fact]
     public void DslAggregate_SingleField_ParsedCorrectly()
     {
-        var opts = Parse(new()
+        var opts = Parse(new Dictionary<string, string>
         {
             ["aggregate"] = "sum:Amount"
         });
@@ -623,7 +624,7 @@ public class DslQueryParserTests
     [Fact]
     public void DslAggregate_WithAlias_ParsedCorrectly()
     {
-        var opts = Parse(new()
+        var opts = Parse(new Dictionary<string, string>
         {
             ["aggregate"] = "sum:Amount:TotalSales"
         });
@@ -637,7 +638,7 @@ public class DslQueryParserTests
     [Fact]
     public void DslAggregate_Multiple_ParsedCorrectly()
     {
-        var opts = Parse(new()
+        var opts = Parse(new Dictionary<string, string>
         {
             ["aggregate"] = "sum:Amount,avg:Price,count:Id"
         });
@@ -654,7 +655,7 @@ public class DslQueryParserTests
     [Fact]
     public void DslAggregate_DefaultAlias_GeneratedCorrectly()
     {
-        var opts = Parse(new()
+        var opts = Parse(new Dictionary<string, string>
         {
             ["aggregate"] = "avg:Price"
         });
@@ -668,7 +669,7 @@ public class DslQueryParserTests
     [Fact]
     public void DslAggregate_NestedField_AliasGeneratedCorrectly()
     {
-        var opts = Parse(new()
+        var opts = Parse(new Dictionary<string, string>
         {
             ["aggregate"] = "sum:Orders.Total"
         });
@@ -682,7 +683,7 @@ public class DslQueryParserTests
     [Fact]
     public void DslAggregate_InvalidFunction_IsRejected()
     {
-        var act = () => Parse(new()
+        var act = () => Parse(new Dictionary<string, string>
         {
             ["aggregate"] = "invalid:Amount,sum:Price"
         });
@@ -694,7 +695,7 @@ public class DslQueryParserTests
     [Fact]
     public void DslAggregate_EmptyString_ReturnsEmptyList()
     {
-        var opts = Parse(new()
+        var opts = Parse(new Dictionary<string, string>
         {
             ["aggregates"] = ""
         });
@@ -705,7 +706,7 @@ public class DslQueryParserTests
     [Fact]
     public void DslAggregate_Null_ReturnsEmptyList()
     {
-        var opts = Parse(new());
+        var opts = Parse(new Dictionary<string, string>());
 
         opts.Aggregates.Should().BeEmpty();
     }
@@ -713,7 +714,7 @@ public class DslQueryParserTests
     [Fact]
     public void DslAggregate_CountStar_ParsedCorrectly()
     {
-        var opts = Parse(new()
+        var opts = Parse(new Dictionary<string, string>
         {
             ["aggregate"] = "count:*"
         });
@@ -727,7 +728,7 @@ public class DslQueryParserTests
     [Fact]
     public void DslAggregate_CaseInsensitiveFunctions_ParsedCorrectly()
     {
-        var opts = Parse(new()
+        var opts = Parse(new Dictionary<string, string>
         {
             ["aggregate"] = "SUM:Amount,Avg:Price,count:Id"
         });
@@ -741,7 +742,7 @@ public class DslQueryParserTests
     [Fact]
     public void DslAggregate_MinMax_ParsedCorrectly()
     {
-        var opts = Parse(new()
+        var opts = Parse(new Dictionary<string, string>
         {
             ["aggregate"] = "min:Date,max:Date"
         });
@@ -753,6 +754,104 @@ public class DslQueryParserTests
         opts.Aggregates[1].Alias.Should().Be("DateMax");
     }
 
+    [Fact]
+    public void DslAggregate_CountAsterisk_ParsedCorrectly()
+    {
+        var opts = Parse(new Dictionary<string, string>
+        {
+            ["aggregate"] = "count:*"
+        });
+
+        opts.Aggregates.Should().ContainSingle();
+        opts.Aggregates[0].Function.Should().Be(AggregateFunction.Count);
+        opts.Aggregates[0].Field.Should().BeNull();
+        opts.Aggregates[0].Alias.Should().Be("Count");
+    }
+
+    [Fact]
+    public void DslAggregate_WithAlias_ExplicitlyProvided()
+    {
+        var opts = Parse(new Dictionary<string, string>
+        {
+            ["aggregate"] = "sum:Amount:TotalSales"
+        });
+
+        opts.Aggregates.Should().ContainSingle();
+        opts.Aggregates[0].Alias.Should().Be("TotalSales");
+    }
+
+    [Fact]
+    public void DslAggregate_MissingFunction_IsRejected()
+    {
+        var act = () => Parse(new Dictionary<string, string>
+        {
+            ["aggregate"] = ":Amount"
+        });
+
+        act.Should().Throw<QueryParseException>()
+            .Which.ParameterName.Should().Be("aggregate");
+    }
+
+    [Fact]
+    public void DslAggregate_MissingField_IsRejected()
+    {
+        var act = () => Parse(new Dictionary<string, string>
+        {
+            ["aggregate"] = "sum:"
+        });
+
+        act.Should().Throw<QueryParseException>()
+            .Which.ParameterName.Should().Be("aggregate");
+    }
+
+    [Fact]
+    public void DslAggregate_DoubleColonEmptyAlias_IsRejected()
+    {
+        var act = () => Parse(new Dictionary<string, string>
+        {
+            ["aggregate"] = "sum::"
+        });
+
+        act.Should().Throw<QueryParseException>()
+            .Which.ParameterName.Should().Be("aggregate");
+    }
+
+    [Fact]
+    public void DslAggregate_DoubleColonWithAlias_IsRejected()
+    {
+        var act = () => Parse(new Dictionary<string, string>
+        {
+            ["aggregate"] = "sum::alias"
+        });
+
+        act.Should().Throw<QueryParseException>()
+            .Which.ParameterName.Should().Be("aggregate");
+    }
+
+    [Fact]
+    public void DslAggregate_TripleColon_IsRejected()
+    {
+        var act = () => Parse(new Dictionary<string, string>
+        {
+            ["aggregate"] = ":::"
+        });
+
+        act.Should().Throw<QueryParseException>()
+            .Which.ParameterName.Should().Be("aggregate");
+    }
+
+    [Fact]
+    public void DslAggregate_TooManyParts_IsRejected()
+    {
+        var act = () => Parse(new Dictionary<string, string>
+        {
+            ["aggregate"] = "sum:Amount:Alias:Extra"
+        });
+
+        act.Should().Throw<QueryParseException>()
+            .Which.ParameterName.Should().Be("aggregate");
+    }
+
     // ════════════════════════════════════════════════════════════════════
     // Filter — Additional Operators
     // ════════════════════════════════════════════════════════════════════
@@ -760,7 +859,7 @@ public class DslQueryParserTests
     [Fact]
     public void DslFilter_LikeOperator_ParsedCorrectly()
     {
-        var opts = Parse(new()
+        var opts = Parse(new Dictionary<string, string>
         {
             ["filter"] = "name:like:%john%"
         });
@@ -773,7 +872,7 @@ public class DslQueryParserTests
     [Fact]
     public void DslFilter_StartsWith_ParsedCorrectly()
     {
-        var opts = Parse(new()
+        var opts = Parse(new Dictionary<string, string>
         {
             ["filter"] = "name:startswith:admin"
         });
@@ -786,7 +885,7 @@ public class DslQueryParserTests
     [Fact]
     public void DslFilter_EndsWith_ParsedCorrectly()
     {
-        var opts = Parse(new()
+        var opts = Parse(new Dictionary<string, string>
         {
             ["filter"] = "email:endswith:.com"
         });
@@ -803,7 +902,7 @@ public class DslQueryParserTests
     [Fact]
     public void DslIntegration_AllParameters_ParsedCorrectly()
     {
-        var opts = Parse(new()
+        var opts = Parse(new Dictionary<string, string>
         {
             ["filter"] = "((status:eq:Open|status:eq:Pending)&amount:gt:100)|customer.name:contains:john",
             ["sort"] = "createdAt:desc,name:asc",
@@ -821,12 +920,14 @@ public class DslQueryParserTests
         opts.Filter.Should().NotBeNull();
         opts.Filter!.Logic.Should().Be(LogicOperator.Or);
         opts.Filter.Filters.Should().ContainSingle(f => f.Field == "customer.name"
-            && f.Operator == FilterOperators.Contains && f.Value == "john");
+                                                        && f.Operator == FilterOperators.Contains &&
+                                                        f.Value == "john");
         opts.Filter.Groups.Should().ContainSingle();
         var innerAnd = opts.Filter.Groups[0];
         innerAnd.Logic.Should().Be(LogicOperator.And);
         innerAnd.Filters.Should().ContainSingle(f => f.Field == "amount"
-            && f.Operator == FilterOperators.GreaterThan && f.Value == "100");
+                                                     && f.Operator == FilterOperators.GreaterThan &&
+                                                     f.Value == "100");
         innerAnd.Groups.Should().ContainSingle();
         var innerOr = innerAnd.Groups[0];
         innerOr.Logic.Should().Be(LogicOperator.Or);
@@ -842,13 +943,13 @@ public class DslQueryParserTests
         opts.Sort[1].Descending.Should().BeFalse();
 
         // Select
-        opts.Select.Should().BeEquivalentTo(["Id", "Name", "CustomerName"]);
+        opts.Select.Should().BeEquivalentTo("Id", "Name", "CustomerName");
 
         // Include
-        opts.Includes.Should().BeEquivalentTo(["Orders", "Profile"]);
+        opts.Includes.Should().BeEquivalentTo("Orders", "Profile");
 
         // GroupBy
-        opts.GroupBy.Should().BeEquivalentTo(["customerId", "category"]);
+        opts.GroupBy.Should().BeEquivalentTo("customerId", "category");
 
         // Aggregates
         opts.Aggregates.Should().HaveCount(3);
@@ -884,7 +985,7 @@ public class DslQueryParserTests
     [Fact]
     public void EmptyInput_ReturnsDefaultOptions()
     {
-        var opts = Parse(new());
+        var opts = Parse(new Dictionary<string, string>());
 
         opts.Filter.Should().BeNull();
         opts.Sort.Should().BeEmpty();
