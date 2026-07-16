@@ -26,4 +26,43 @@ public class AggregateBuilderTests
         result[0].Field.Should().BeNull();
         result[0].Alias.Should().Be("Total");
     }
+
+    [Fact]
+    public void Sum_WithExplicitAlias_SetsAlias()
+    {
+        var builder = new AggregateBuilder();
+        builder.Sum("Amount", "TotalSales");
+        var result = builder.Build();
+
+        result.Should().ContainSingle();
+        result[0].Function.Should().Be(AggregateFunction.Sum);
+        result[0].Field.Should().Be("Amount");
+        result[0].Alias.Should().Be("TotalSales");
+    }
+
+    [Fact]
+    public void Sum_WithNullAlias_AutoGeneratesAlias()
+    {
+        var builder = new AggregateBuilder();
+        builder.Sum("Amount", null);
+        var result = builder.Build();
+
+        result.Should().ContainSingle();
+        result[0].Function.Should().Be(AggregateFunction.Sum);
+        result[0].Field.Should().Be("Amount");
+        result[0].Alias.Should().Be("AmountSum");
+    }
+
+    [Fact]
+    public void Sum_WithEmptyAlias_AutoGeneratesAlias()
+    {
+        var builder = new AggregateBuilder();
+        builder.Sum("Amount", "");
+        var result = builder.Build();
+
+        result.Should().ContainSingle();
+        result[0].Function.Should().Be(AggregateFunction.Sum);
+        result[0].Field.Should().Be("Amount");
+        result[0].Alias.Should().Be("AmountSum");
+    }
 }
