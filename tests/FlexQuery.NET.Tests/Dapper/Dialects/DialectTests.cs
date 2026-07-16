@@ -11,23 +11,7 @@ namespace FlexQuery.NET.Tests.Dapper.Dialects;
 
 public class DialectTests
 {
-    private readonly IMappingRegistry _registry = new MappingRegistry();
-    
-
-    // ========================
-    // Pagination Tests
-    // ========================
-
-    [Fact]
-    public void SqlServer_Pagination_Uses_Offset_Fetch()
-    {
-        var options = CreatePagedOptions();
-        var command = new SqlTranslator(_registry, new SqlServerDialect()).Translate(options);
-
-        command.Sql.Should().Contain("OFFSET");
-        command.Sql.Should().Contain("FETCH NEXT");
-        command.Sql.Should().Contain("ROWS ONLY");
-    }
+    private readonly IMappingRegistry _registry = SharedFlexQueryModel.Instance.Registry;
 
     [Fact]
     public void PostgreSQL_Pagination_Uses_Offset_Limit()
@@ -500,7 +484,7 @@ public class DialectTests
         var options = CreatePagedOptions();
         var command = new SqlTranslator(_registry, new SqlServerDialect()).Translate(options);
 
-        command.Sql.Should().Contain("SELECT [Id] AS [Id], [Name] AS [Name], [Age] AS [Age], [City] AS [City], [Status] AS [Status] FROM [TestEntities]");
+        command.Sql.Should().Contain("SELECT [Id] AS [Id], [Name] AS [Name], [Email] AS [Email], [Phone] AS [Phone], [Age] AS [Age], [City] AS [City], [Status] AS [Status], [IsActive] AS [IsActive], [CreatedAt] AS [CreatedAt], [SSN] AS [SSN], [Salary] AS [Salary], [Category] AS [Category], [SecretField] AS [SecretField], [Country] AS [Country] FROM [Customers]");
         command.Sql.Should().Contain("OFFSET @Offset ROWS FETCH NEXT @PageSize ROWS ONLY");
         command.Parameters.Should().ContainKey("@Offset");
         command.Parameters.Should().ContainKey("@PageSize");
@@ -512,7 +496,7 @@ public class DialectTests
         var options = CreatePagedOptions();
         var command = new SqlTranslator(_registry, new PostgreSqlDialect()).Translate(options);
 
-        command.Sql.Should().Contain("SELECT \"Id\" AS \"Id\", \"Name\" AS \"Name\", \"Age\" AS \"Age\", \"City\" AS \"City\", \"Status\" AS \"Status\" FROM \"TestEntities\"");
+        command.Sql.Should().Contain("SELECT \"Id\" AS \"Id\", \"Name\" AS \"Name\", \"Email\" AS \"Email\", \"Phone\" AS \"Phone\", \"Age\" AS \"Age\", \"City\" AS \"City\", \"Status\" AS \"Status\", \"IsActive\" AS \"IsActive\", \"CreatedAt\" AS \"CreatedAt\", \"SSN\" AS \"SSN\", \"Salary\" AS \"Salary\", \"Category\" AS \"Category\", \"SecretField\" AS \"SecretField\", \"Country\" AS \"Country\" FROM \"Customers\"");
         command.Sql.Should().Contain("LIMIT :PageSize OFFSET :Offset");
         command.Parameters.Should().ContainKey(":Offset");
         command.Parameters.Should().ContainKey(":PageSize");
@@ -524,7 +508,7 @@ public class DialectTests
         var options = CreatePagedOptions();
         var command = new SqlTranslator(_registry, new MySqlDialect()).Translate(options);
 
-        command.Sql.Should().Contain("SELECT `Id` AS `Id`, `Name` AS `Name`, `Age` AS `Age`, `City` AS `City`, `Status` AS `Status` FROM `TestEntities`");
+        command.Sql.Should().Contain("SELECT `Id` AS `Id`, `Name` AS `Name`, `Email` AS `Email`, `Phone` AS `Phone`, `Age` AS `Age`, `City` AS `City`, `Status` AS `Status`, `IsActive` AS `IsActive`, `CreatedAt` AS `CreatedAt`, `SSN` AS `SSN`, `Salary` AS `Salary`, `Category` AS `Category`, `SecretField` AS `SecretField`, `Country` AS `Country` FROM `Customers`");
         command.Sql.Should().Contain("LIMIT ?PageSize OFFSET ?Offset");
         command.Parameters.Should().ContainKey("?Offset");
         command.Parameters.Should().ContainKey("?PageSize");
@@ -536,7 +520,7 @@ public class DialectTests
         var options = CreatePagedOptions();
         var command = new SqlTranslator(_registry, new MariaDbDialect()).Translate(options);
 
-        command.Sql.Should().Contain("SELECT `Id` AS `Id`, `Name` AS `Name`, `Age` AS `Age`, `City` AS `City`, `Status` AS `Status` FROM `TestEntities`");
+        command.Sql.Should().Contain("SELECT `Id` AS `Id`, `Name` AS `Name`, `Email` AS `Email`, `Phone` AS `Phone`, `Age` AS `Age`, `City` AS `City`, `Status` AS `Status`, `IsActive` AS `IsActive`, `CreatedAt` AS `CreatedAt`, `SSN` AS `SSN`, `Salary` AS `Salary`, `Category` AS `Category`, `SecretField` AS `SecretField`, `Country` AS `Country` FROM `Customers`");
         command.Sql.Should().Contain("LIMIT ?PageSize OFFSET ?Offset");
         command.Parameters.Should().ContainKey("?Offset");
         command.Parameters.Should().ContainKey("?PageSize");
@@ -548,7 +532,7 @@ public class DialectTests
         var options = CreatePagedOptions();
         var command = new SqlTranslator(_registry, new SqliteDialect()).Translate(options);
 
-        command.Sql.Should().Contain("SELECT \"Id\" AS \"Id\", \"Name\" AS \"Name\", \"Age\" AS \"Age\", \"City\" AS \"City\", \"Status\" AS \"Status\" FROM \"TestEntities\"");
+        command.Sql.Should().Contain("SELECT \"Id\" AS \"Id\", \"Name\" AS \"Name\", \"Email\" AS \"Email\", \"Phone\" AS \"Phone\", \"Age\" AS \"Age\", \"City\" AS \"City\", \"Status\" AS \"Status\", \"IsActive\" AS \"IsActive\", \"CreatedAt\" AS \"CreatedAt\", \"SSN\" AS \"SSN\", \"Salary\" AS \"Salary\", \"Category\" AS \"Category\", \"SecretField\" AS \"SecretField\", \"Country\" AS \"Country\" FROM \"Customers\"");
         command.Sql.Should().Contain("LIMIT @PageSize OFFSET @Offset");
         command.Parameters.Should().ContainKey("@Offset");
         command.Parameters.Should().ContainKey("@PageSize");
@@ -560,7 +544,7 @@ public class DialectTests
         var options = CreatePagedOptions();
         var command = new SqlTranslator(_registry, new OracleDialect()).Translate(options);
 
-        command.Sql.Should().Contain("SELECT \"Id\" AS \"Id\", \"Name\" AS \"Name\", \"Age\" AS \"Age\", \"City\" AS \"City\", \"Status\" AS \"Status\" FROM \"TestEntities\"");
+        command.Sql.Should().Contain("SELECT \"Id\" AS \"Id\", \"Name\" AS \"Name\", \"Email\" AS \"Email\", \"Phone\" AS \"Phone\", \"Age\" AS \"Age\", \"City\" AS \"City\", \"Status\" AS \"Status\", \"IsActive\" AS \"IsActive\", \"CreatedAt\" AS \"CreatedAt\", \"SSN\" AS \"SSN\", \"Salary\" AS \"Salary\", \"Category\" AS \"Category\", \"SecretField\" AS \"SecretField\", \"Country\" AS \"Country\" FROM \"Customers\"");
         command.Sql.Should().Contain("OFFSET :Offset ROWS FETCH NEXT :PageSize ROWS ONLY");
         command.Parameters.Should().ContainKey(":Offset");
         command.Parameters.Should().ContainKey(":PageSize");
@@ -753,7 +737,7 @@ public class DialectTests
         {
             Aggregates = [new AggregateModel { Function = AggregateFunction.Count, Alias = "TotalCount", Field = "*" }]
         };
-        options.Items[ContextKeys.EntityType] = typeof(TestEntity);
+        options.Items[ContextKeys.EntityType] = typeof(Customer);
 
         var sqlServerCmd = new SqlTranslator(_registry, new SqlServerDialect()).TranslateAggregates(options);
         var pgCmd = new SqlTranslator(_registry, new PostgreSqlDialect()).TranslateAggregates(options);
@@ -885,17 +869,13 @@ public class DialectTests
     [Fact]
     public void All_Dialects_Generate_Join_Clause()
     {
-        _registry.Entity<TestEntityWithJoin>()
-            .ToTable("users")
-            .HasMany(e => e.Roles)
-            .WithForeignKey("UserId");
 
         var options = new QueryOptions
         {
             Paging = { Disabled = true },
             Includes = new List<string> { "Roles" }
         };
-        options.Items[ContextKeys.EntityType] = typeof(TestEntityWithJoin);
+        options.Items[ContextKeys.EntityType] = typeof(User);
 
         var sqlServerCmd = new SqlTranslator(_registry, new SqlServerDialect()).Translate(options);
         var pgCmd = new SqlTranslator(_registry, new PostgreSqlDialect()).Translate(options);
@@ -904,12 +884,12 @@ public class DialectTests
         var sqliteCmd = new SqlTranslator(_registry, new SqliteDialect()).Translate(options);
         var oracleCmd = new SqlTranslator(_registry, new OracleDialect()).Translate(options);
 
-        sqlServerCmd.Sql.Should().Contain("LEFT JOIN [TestRoles] AS [Roles] ON [Roles].[UserId] = [users].[Id]");
-        pgCmd.Sql.Should().Contain("LEFT JOIN \"TestRoles\" AS \"Roles\" ON \"Roles\".\"UserId\" = \"users\".\"Id\"");
-        mySqlCmd.Sql.Should().Contain("LEFT JOIN `TestRoles` AS `Roles` ON `Roles`.`UserId` = `users`.`Id`");
-        mariadbCmd.Sql.Should().Contain("LEFT JOIN `TestRoles` AS `Roles` ON `Roles`.`UserId` = `users`.`Id`");
-        sqliteCmd.Sql.Should().Contain("LEFT JOIN \"TestRoles\" AS \"Roles\" ON \"Roles\".\"UserId\" = \"users\".\"Id\"");
-        oracleCmd.Sql.Should().Contain("LEFT JOIN \"TestRoles\" AS \"Roles\" ON \"Roles\".\"UserId\" = \"users\".\"Id\"");
+        sqlServerCmd.Sql.Should().Contain("LEFT JOIN [Roles] AS [Roles] ON [Roles].[UserId] = [Users].[Id]");
+        pgCmd.Sql.Should().Contain("LEFT JOIN \"Roles\" AS \"Roles\" ON \"Roles\".\"UserId\" = \"Users\".\"Id\"");
+        mySqlCmd.Sql.Should().Contain("LEFT JOIN `Roles` AS `Roles` ON `Roles`.`UserId` = `Users`.`Id`");
+        mariadbCmd.Sql.Should().Contain("LEFT JOIN `Roles` AS `Roles` ON `Roles`.`UserId` = `Users`.`Id`");
+        sqliteCmd.Sql.Should().Contain("LEFT JOIN \"Roles\" AS \"Roles\" ON \"Roles\".\"UserId\" = \"Users\".\"Id\"");
+        oracleCmd.Sql.Should().Contain("LEFT JOIN \"Roles\" AS \"Roles\" ON \"Roles\".\"UserId\" = \"Users\".\"Id\"");
     }
 
     // ========================
@@ -1058,7 +1038,7 @@ public class DialectTests
             Paging = { Page = 2, PageSize = 10 },
             Sort = { new SortNode { Field = "Id" } }
         };
-        options.Items[ContextKeys.EntityType] = typeof(TestEntity);
+        options.Items[ContextKeys.EntityType] = typeof(Customer);
         return options;
     }
 
@@ -1068,7 +1048,7 @@ public class DialectTests
         {
             Paging = { Page = 2, PageSize = 10 }
         };
-        options.Items[ContextKeys.EntityType] = typeof(TestEntity);
+        options.Items[ContextKeys.EntityType] = typeof(Customer);
         return options;
     }
 
@@ -1083,7 +1063,7 @@ public class DialectTests
                 Filters = [new FilterCondition { Field = "Name", Operator = "eq", Value = "Test" }]
             }
         };
-        options.Items[ContextKeys.EntityType] = typeof(TestEntity);
+        options.Items[ContextKeys.EntityType] = typeof(Customer);
         return options;
     }
 
@@ -1098,7 +1078,7 @@ public class DialectTests
                 Filters = [new FilterCondition { Field = "Name", Operator = "contains", Value = "test" }]
             }
         };
-        options.Items[ContextKeys.EntityType] = typeof(TestEntity);
+        options.Items[ContextKeys.EntityType] = typeof(Customer);
         return options;
     }
 
@@ -1113,7 +1093,7 @@ public class DialectTests
                 Filters = [new FilterCondition { Field = "Status", Operator = "in", Value = "Active,Pending" }]
             }
         };
-        options.Items[ContextKeys.EntityType] = typeof(TestEntity);
+        options.Items[ContextKeys.EntityType] = typeof(Customer);
         return options;
     }
 
@@ -1127,7 +1107,7 @@ public class DialectTests
                 Filters = [new FilterCondition { Field = "Age", Operator = "between", Value = "20,30" }]
             }
         };
-        options.Items[ContextKeys.EntityType] = typeof(TestEntity);
+        options.Items[ContextKeys.EntityType] = typeof(Customer);
         return options;
     }
 
@@ -1138,7 +1118,7 @@ public class DialectTests
             GroupBy = ["Status"],
             Aggregates = [new AggregateModel { Function = AggregateFunction.Count, Alias = "TotalCount", Field = "*" }]
         };
-        options.Items[ContextKeys.EntityType] = typeof(TestEntity);
+        options.Items[ContextKeys.EntityType] = typeof(Customer);
         return options;
     }
 
@@ -1148,7 +1128,7 @@ public class DialectTests
         {
             Sort = [new SortNode { Field = "Name", Descending = descending }]
         };
-        options.Items[ContextKeys.EntityType] = typeof(TestEntity);
+        options.Items[ContextKeys.EntityType] = typeof(Customer);
         return options;
     }
 
@@ -1159,7 +1139,7 @@ public class DialectTests
             Paging = { Disabled = true },
             Distinct = true
         };
-        options.Items[ContextKeys.EntityType] = typeof(TestEntity);
+        options.Items[ContextKeys.EntityType] = typeof(Customer);
         return options;
     }
 
@@ -1169,7 +1149,7 @@ public class DialectTests
         {
             GroupBy = ["Status"]
         };
-        options.Items[ContextKeys.EntityType] = typeof(TestEntity);
+        options.Items[ContextKeys.EntityType] = typeof(Customer);
         return options;
     }
 
@@ -1186,46 +1166,24 @@ public class DialectTests
                 Function = AggregateFunction.Sum
             }
         };
-        options.Items[ContextKeys.EntityType] = typeof(TestEntity);
+        options.Items[ContextKeys.EntityType] = typeof(Customer);
         return options;
     }
 
     private static QueryOptions CreateJoinOptions()
     {
-        var registry = new MappingRegistry();
-        registry.Entity<TestEntityWithJoin>()
-            .ToTable("users")
-            .HasMany(e => e.Roles)
-            .WithForeignKey("UserId");
+        var registry = SharedFlexQueryModel.Instance.Registry;
 
         var options = new QueryOptions
         {
             Paging = { Disabled = true },
             Includes = new List<string> { "Roles" }
         };
-        options.Items[ContextKeys.EntityType] = typeof(TestEntityWithJoin);
+        options.Items[ContextKeys.EntityType] = typeof(User);
 
         var translator = new SqlTranslator(registry, new SqlServerDialect());
         var _ = translator.Translate(options); // warm-up
 
         return options;
-    }
-
-    private class TestEntity
-    {
-        public int Id { get; set; }
-        public string Name { get; set; } = string.Empty;
-        public int Age { get; set; }
-        public string City { get; set; } = string.Empty;
-        public string Status { get; set; } = string.Empty;
-    }
-
-    private class TestRole { public int Id { get; set; } }
-
-    private class TestEntityWithJoin
-    {
-        public int Id { get; set; }
-        public string Name { get; set; } = string.Empty;
-        public ICollection<TestRole> Roles { get; set; } = new List<TestRole>();
     }
 }
