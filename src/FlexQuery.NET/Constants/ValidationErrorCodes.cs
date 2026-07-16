@@ -21,4 +21,8 @@ internal static class ValidationErrorCodes
     public const string CursorNullValue = "CURSOR_NULL_VALUE";
     public const string PaginationModeConflict = "PAGINATION_MODE_CONFLICT";
     public const string GovernanceFieldNotFound = "GOVERNANCE_FIELD_NOT_FOUND";
+    public const string InvalidAlias = "INVALID_ALIAS";
+    public const string ReservedAlias = "RESERVED_ALIAS";
+    public const string DuplicateAlias = "DUPLICATE_ALIAS";
+    public const string InvalidAggregateTarget = "INVALID_AGGREGATE_TARGET";
 }
