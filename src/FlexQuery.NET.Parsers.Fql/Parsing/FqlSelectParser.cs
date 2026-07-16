@@ -105,9 +105,9 @@ internal static class FqlSelectParser
 
     private static void ParseSelectionList(ReadOnlySpan<char> span, SelectionNode parent, bool isRoot)
     {
-        int i = 0;
-        bool hasSelection = false;
-        bool wildcardUsed = false;
+        var i = 0;
+        var hasSelection = false;
+        var wildcardUsed = false;
 
         while (i < span.Length)
         {
@@ -125,7 +125,7 @@ internal static class FqlSelectParser
 
                 i++;
 
-                int j = i;
+                var j = i;
                 while (j < span.Length && char.IsWhiteSpace(span[j]))
                     j++;
 
@@ -152,7 +152,7 @@ internal static class FqlSelectParser
             }
             else
             {
-                int start = i;
+                var start = i;
                 while (i < span.Length && (char.IsLetterOrDigit(span[i]) || span[i] == '_'))
                     i++;
 
@@ -183,6 +183,42 @@ internal static class FqlSelectParser
                 throw new FqlParseException(
                     "Root wildcard cannot be combined with other selections.");
 
+            string? alias = null;
+
+            while (i < span.Length && char.IsWhiteSpace(span[i]))
+                i++;
+
+            if (span.Length - i >= 3 &&
+                (span[i] == 'A' || span[i] == 'a') &&
+                (span[i + 1] == 'S' || span[i + 1] == 's') &&
+                char.IsWhiteSpace(span[i + 2]))
+            {
+                i += 3;
+
+                while (i < span.Length && char.IsWhiteSpace(span[i]))
+                    i++;
+
+                var aliasStart = i;
+                while (i < span.Length && (char.IsLetterOrDigit(span[i]) || span[i] == '_'))
+                    i++;
+
+                if (i == aliasStart)
+                    throw new FqlParseException(
+                        "Empty alias in 'select' parameter. Alias must not be empty (e.g. 'Name AS FullName').");
+
+                alias = span.Slice(aliasStart, i - aliasStart).ToString();
+
+                if (string.Equals(alias, "AS", StringComparison.OrdinalIgnoreCase))
+                    throw new FqlParseException(
+                        "Invalid alias in 'select' parameter. " +
+                        "The identifier 'AS' is a reserved keyword and cannot be used as an alias.");
+
+                if (!ParserUtilities.IsValidIdentifier(alias.AsSpan()))
+                    throw new FqlParseException(
+                        $"Invalid alias '{alias}' in 'select' parameter. " +
+                        "Aliases must be valid identifiers (e.g. 'FullName').");
+            }
+
             while (i < span.Length && char.IsWhiteSpace(span[i]))
                 i++;
 
@@ -192,10 +228,15 @@ internal static class FqlSelectParser
 
             if (i < span.Length && span[i] == '(')
             {
+                if (alias != null)
+                    throw new FqlParseException(
+                        "Navigation alias is not supported. " +
+                        "Navigation nodes represent traversal and cannot be aliased.");
+
                 i++;
 
-                int parenStart = i;
-                int parenDepth = 1;
+                var parenStart = i;
+                var parenDepth = 1;
                 while (i < span.Length && parenDepth > 0)
                 {
                     if (span[i] == '(') parenDepth++;
@@ -210,7 +251,7 @@ internal static class FqlSelectParser
                 var innerSpan = span.Slice(parenStart, i - parenStart - 1);
                 var childNode = parent.GetOrAddChild(identifier);
 
-                bool innerHasContent = false;
+                var innerHasContent = false;
                 foreach (var c in innerSpan)
                 {
                     if (!char.IsWhiteSpace(c) && c != ',')
@@ -228,7 +269,9 @@ internal static class FqlSelectParser
             }
             else
             {
-                parent.GetOrAddChild(identifier);
+                var childNode = parent.GetOrAddChild(identifier);
+                if (alias != null)
+                    childNode.Alias = alias;
             }
 
             hasSelection = true;
