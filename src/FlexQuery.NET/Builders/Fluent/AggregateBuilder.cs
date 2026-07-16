@@ -1,4 +1,5 @@
 using FlexQuery.NET.Models.Aggregates;
+using FlexQuery.NET.Parsers;
 
 namespace FlexQuery.NET.Builders.Fluent;
 
@@ -9,45 +10,75 @@ public sealed class AggregateBuilder
 
     internal List<AggregateModel> Build() => _aggregates;
 
-    /// <summary>Adds a SUM(field) AS alias aggregate.</summary>
-    public AggregateBuilder Sum(string field, string alias)
+    /// <summary>Adds a SUM(field) aggregate with an optional alias.</summary>
+    public AggregateBuilder Sum(string field, string? alias)
     {
-        _aggregates.Add(new AggregateModel { Function = AggregateFunction.Sum, Field = field, Alias = alias });
+        _aggregates.Add(new AggregateModel
+        {
+            Function = AggregateFunction.Sum,
+            Field = field,
+            Alias = alias is null || alias == "" ? ParserUtilities.BuildAggregateAlias("sum", field) : alias
+        });
         return this;
     }
 
-    /// <summary>Adds a COUNT(*) AS alias aggregate.</summary>
-    public AggregateBuilder Count(string alias)
+    /// <summary>Adds a COUNT(*) aggregate with an optional alias.</summary>
+    public AggregateBuilder Count(string? alias)
     {
-        _aggregates.Add(new AggregateModel { Function = AggregateFunction.Count, Alias = alias });
+        _aggregates.Add(new AggregateModel
+        {
+            Function = AggregateFunction.Count,
+            Field = null,
+            Alias = alias is null || alias == "" ? ParserUtilities.BuildAggregateAlias("count", null) : alias
+        });
         return this;
     }
 
-    /// <summary>Adds a COUNT(field) AS alias aggregate.</summary>
-    public AggregateBuilder Count(string field, string alias)
+    /// <summary>Adds a COUNT(field) aggregate with an optional alias.</summary>
+    public AggregateBuilder Count(string field, string? alias)
     {
-        _aggregates.Add(new AggregateModel { Function = AggregateFunction.Count, Field = field, Alias = alias });
+        _aggregates.Add(new AggregateModel
+        {
+            Function = AggregateFunction.Count,
+            Field = field,
+            Alias = alias is null || alias == "" ? ParserUtilities.BuildAggregateAlias("count", field) : alias
+        });
         return this;
     }
 
-    /// <summary>Adds an AVG(field) AS alias aggregate.</summary>
-    public AggregateBuilder Avg(string field, string alias)
+    /// <summary>Adds an AVG(field) aggregate with an optional alias.</summary>
+    public AggregateBuilder Avg(string field, string? alias)
     {
-        _aggregates.Add(new AggregateModel { Function = AggregateFunction.Avg, Field = field, Alias = alias });
+        _aggregates.Add(new AggregateModel
+        {
+            Function = AggregateFunction.Avg,
+            Field = field,
+            Alias = alias is null || alias == "" ? ParserUtilities.BuildAggregateAlias("avg", field) : alias
+        });
         return this;
     }
 
-    /// <summary>Adds a MIN(field) AS alias aggregate.</summary>
-    public AggregateBuilder Min(string field, string alias)
+    /// <summary>Adds a MIN(field) aggregate with an optional alias.</summary>
+    public AggregateBuilder Min(string field, string? alias)
     {
-        _aggregates.Add(new AggregateModel { Function = AggregateFunction.Min, Field = field, Alias = alias });
+        _aggregates.Add(new AggregateModel
+        {
+            Function = AggregateFunction.Min,
+            Field = field,
+            Alias = alias is null || alias == "" ? ParserUtilities.BuildAggregateAlias("min", field) : alias
+        });
         return this;
     }
 
-    /// <summary>Adds a MAX(field) AS alias aggregate.</summary>
-    public AggregateBuilder Max(string field, string alias)
+    /// <summary>Adds a MAX(field) aggregate with an optional alias.</summary>
+    public AggregateBuilder Max(string field, string? alias)
     {
-        _aggregates.Add(new AggregateModel { Function = AggregateFunction.Max, Field = field, Alias = alias });
+        _aggregates.Add(new AggregateModel
+        {
+            Function = AggregateFunction.Max,
+            Field = field,
+            Alias = alias is null || alias == "" ? ParserUtilities.BuildAggregateAlias("max", field) : alias
+        });
         return this;
     }
     
