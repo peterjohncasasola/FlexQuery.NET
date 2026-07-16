@@ -7,7 +7,7 @@ namespace FlexQuery.NET.Dapper.Metadata;
 /// to translate entity mappings into SQL. This is an internal implementation
 /// detail of the Dapper integration and is not part of the public API.
 /// </summary>
-internal sealed class FlexQueryModel
+public sealed class FlexQueryModel
 {
     /// <summary>
     /// Gets the mapping registry containing all configured entity mappings.
