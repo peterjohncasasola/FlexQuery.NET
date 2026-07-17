@@ -1,5 +1,6 @@
 using FlexQuery.NET.Constants;
 using FlexQuery.NET.Execution;
+using FlexQuery.NET.Helpers;
 using FlexQuery.NET.Models;
 using FlexQuery.NET.Models.Aggregates;
 using FlexQuery.NET.Parsers;
@@ -11,18 +12,8 @@ namespace FlexQuery.NET.Validation.Rules;
 /// </summary>
 internal sealed class AggregateValidationRule : IValidationRule
 {
-    private static readonly HashSet<string> ReservedKeywords = new(StringComparer.OrdinalIgnoreCase)
-    {
-        "SELECT", "WHERE", "ORDER", "GROUP", "BY", "HAVING", "AGGREGATE",
-        "AND", "OR", "NOT", "IN",
-        "LIKE", "BETWEEN", "IS", "CONTAINS", "STARTSWITH", "ENDSWITH",
-        "ANY", "ALL",
-        "ASC", "DESC", "AS",
-        "NULL", "TRUE", "FALSE"
-    };
-
     /// <inheritdoc />
-    public void Validate(QueryOptions options, QueryContext context, ValidationResult result)
+       public void Validate(QueryOptions options, QueryContext context, ValidationResult result)
     {
         if (options.Aggregates.Count == 0) return;
 
@@ -50,7 +41,7 @@ internal sealed class AggregateValidationRule : IValidationRule
 
     private static void ValidateReservedKeyword(AggregateModel aggregate, ValidationResult result)
     {
-        if (ReservedKeywords.Contains(aggregate.Alias))
+        if (ReservedKeywordHelper.IsReserved(aggregate.Alias))
         {
             result.Errors.Add(new ValidationError(
                 $"Aggregate alias '{aggregate.Alias}' is a reserved keyword and cannot be used as an alias.",
@@ -124,16 +115,10 @@ internal sealed class AggregateValidationRule : IValidationRule
         return $"{function}({field})";
     }
 
-    private readonly struct AggregateKey : IEquatable<AggregateKey>
+    private readonly struct AggregateKey(AggregateFunction function, string? field) : IEquatable<AggregateKey>
     {
-        public AggregateFunction Function { get; }
-        public string Field { get; }
-
-        public AggregateKey(AggregateFunction function, string? field)
-        {
-            Function = function;
-            Field = field ?? string.Empty;
-        }
+        private AggregateFunction Function { get; } = function;
+        private string Field { get; } = field ?? string.Empty;
 
         public bool Equals(AggregateKey other)
             => Function == other.Function &&

@@ -52,14 +52,7 @@ internal static class ReservedKeywordHelper
         // Literals
         "TRUE",
         "FALSE",
-
-        // Aggregate Functions
-        "COUNT",
-        "SUM",
-        "AVG",
-        "MIN",
-        "MAX",
-
+        
         // String Functions
         "CONTAINS",
         "STARTSWITH",
@@ -74,6 +67,7 @@ internal static class ReservedKeywordHelper
         "SUBSTRING",
         "REPLACE",
         "CONCAT",
+        "AGGREGATE",
 
         // Numeric Functions
         "ABS",
