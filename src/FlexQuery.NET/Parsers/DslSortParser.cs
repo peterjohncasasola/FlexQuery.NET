@@ -46,6 +46,10 @@ internal static class DslSortParser
 
     public static List<SortNode> Parse(string? sortRaw) => ParseFromString(sortRaw);
 
+    /// <summary>
+    /// Determines whether the sort item is a normal field sort or an aggregate sort
+    /// by inspecting the first colon-separated segment.
+    /// </summary>
     private static void ParseSortItem(ReadOnlySpan<char> item, List<SortNode> result, string rawInput)
     {
         var firstColon = item.IndexOf(':');
@@ -72,6 +76,9 @@ internal static class DslSortParser
         ParseFieldSort(item, result, rawInput);
     }
 
+    /// <summary>
+    /// Parses a simple field sort in the format field[:direction].
+    /// </summary>
     private static void ParseFieldSort(ReadOnlySpan<char> item, List<SortNode> result, string rawInput)
     {
         var colon = item.IndexOf(':');
@@ -104,6 +111,11 @@ internal static class DslSortParser
         });
     }
 
+    /// <summary>
+    /// Parses an aggregate sort in the format function:target[:direction].
+    /// For sum/avg/min/max, the target is split on the last dot into Field and AggregateField.
+    /// For count, the entire target becomes Field and AggregateField is always null.
+    /// </summary>
     private static void ParseAggregateSort(
         ReadOnlySpan<char> functionSpan,
         ReadOnlySpan<char> remaining,
