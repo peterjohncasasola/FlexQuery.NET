@@ -72,8 +72,7 @@ internal static class FqlAggregateParser
                     $"Invalid field '{fieldRaw}' in aggregate expression '{rawSelect}'. " +
                     "Field must be a valid property path.");
 
-            string? field = null;
-            string? aggregateField = null;
+            string? field;
 
             if (function == AggregateFunction.Count)
             {
@@ -82,15 +81,7 @@ internal static class FqlAggregateParser
             else
             {
                 var dotIndex = fieldRaw.LastIndexOf('.');
-                if (dotIndex > 0)
-                {
-                    field = fieldRaw[..dotIndex];
-                    aggregateField = fieldRaw[(dotIndex + 1)..];
-                }
-                else
-                {
-                    field = fieldRaw;
-                }
+                field = dotIndex > 0 ? fieldRaw[..dotIndex] : fieldRaw;
             }
 
             var remaining = trimmed[(closeParen + 1)..].Trim();
@@ -138,7 +129,7 @@ internal static class FqlAggregateParser
             {
                 Function = function,
                 Field = field,
-                Alias = alias ?? BuildAlias(AggregateFunctionConverter.ToKeyword(function), fieldRaw)
+                Alias = alias ?? BuildAlias(function.ToKeyword(), fieldRaw)
             });
         }
 
@@ -174,7 +165,7 @@ internal static class FqlAggregateParser
         return result;
     }
 
-    internal static string BuildAlias(string function, string? field)
+    private static string BuildAlias(string function, string? field)
     {
         if (field == null)
             return $"{char.ToUpperInvariant(function[0])}{function[1..]}";
