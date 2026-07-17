@@ -1,10 +1,8 @@
 using FlexQuery.NET.Models.Aggregates;
-using FlexQuery.NET.Models.Paging;
 using FlexQuery.NET.Parsers;
 using FlexQuery.NET.Parsers.Dsl;
-using Xunit;
 
-namespace FlexQuery.NET.Tests.Parsers;
+namespace FlexQuery.NET.Tests.Parsers.Dsl;
 
 public class DslSortParserTests
 {
