@@ -1,6 +1,5 @@
 using System.Text.RegularExpressions;
 using FlexQuery.NET.Constants;
-using FlexQuery.NET.Security;
 
 namespace FlexQuery.NET.Parsers.Dsl;
 
@@ -44,7 +43,7 @@ internal static class DslSafetyValidator
     public static void ValidateOperatorToken(string op, int position)
     {
         var normalized = FilterOperators.Normalize(op);
-        if (!OperatorRegistry.IsAllowed(normalized))
+        if (!FilterOperators.IsSupported(normalized))
             throw new DslParseException($"Unsupported DSL operator '{op}' at position {position}.");
     }
 }

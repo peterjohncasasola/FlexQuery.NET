@@ -1,6 +1,10 @@
 namespace FlexQuery.NET.Parsers.Dsl;
 
-/// <summary>A single field/operator/value condition.</summary>
+/// <summary>A single field/operator/value condition in the DSL AST.</summary>
+/// <remarks>
+/// The <see cref="Operator"/> is guaranteed to be a supported DSL operator.
+/// The parser rejects unsupported operators before constructing this node.
+/// </remarks>
 internal sealed class ConditionNode : DslAstNode
 {
     /// <summary>Creates a condition AST node.</summary>
