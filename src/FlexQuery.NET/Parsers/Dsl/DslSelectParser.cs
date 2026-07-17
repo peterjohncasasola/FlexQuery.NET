@@ -1,5 +1,7 @@
+using FlexQuery.NET.Helpers;
 using FlexQuery.NET.Internal;
 using FlexQuery.NET.Models;
+using FlexQuery.NET.Validation;
 
 namespace FlexQuery.NET.Parsers.Dsl;
 
@@ -49,10 +51,7 @@ internal static class DslSelectParser
                         $"Invalid alias in 'select' parameter. " +
                         "Alias must be a non-empty identifier (e.g. 'Name:FullName').");
 
-                if (string.Equals(rawAlias, "AS", StringComparison.OrdinalIgnoreCase))
-                    throw new DslParseException(
-                        $"Invalid alias in 'select' parameter. " +
-                        "The identifier 'AS' is a reserved keyword and cannot be used as an alias.");
+                IdentifierValidator.ValidateAlias(rawAlias, "select");
 
                 if (!ParserUtilities.IsValidPropertyPath(rawPath.AsSpan()))
                     throw new DslParseException(

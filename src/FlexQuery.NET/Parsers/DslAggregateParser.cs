@@ -1,5 +1,6 @@
 using FlexQuery.NET.Models.Aggregates;
 using FlexQuery.NET.Parsers.Dsl;
+using FlexQuery.NET.Validation;
 
 namespace FlexQuery.NET.Parsers;
 
@@ -63,12 +64,19 @@ internal static class DslAggregateParser
             }
 
             var field = parts[1];
+            if (function == AggregateFunction.Count && field == "*")
+            {
+                throw new DslParseException(
+                    $"Unable to parse aggregate expression '{rawAggregates}'. " +
+                    $"count:* is not supported. Use count:<collection> or another aggregate over a property instead.");
+            }
+
             if (field != "*" && !ParserUtilities.IsValidPropertyPath(field.AsSpan()))
                 throw new DslParseException(
                     $"Invalid field '{field}' in aggregate expression '{rawAggregates}'. " +
                     "Field must be a valid property path.");
 
-            aggregateField = field == "*" ? null : field;
+            aggregateField = field;
 
             if (parts.Length == 3)
             {
@@ -77,6 +85,8 @@ internal static class DslAggregateParser
                     throw new DslParseException(
                         $"Unable to parse aggregate expression '{rawAggregates}'. " +
                         $"Expected format: Function:Field[:Alias]. Empty alias in '{trimmed}'.");
+                
+                IdentifierValidator.ValidateAlias(aliasPart, "aggregate");
 
                 result.Add(new AggregateModel
                 {

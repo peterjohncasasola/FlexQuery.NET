@@ -1,6 +1,8 @@
 using System.Text.RegularExpressions;
 using FlexQuery.NET.Constants;
+using FlexQuery.NET.Models.Aggregates;
 using FlexQuery.NET.Models.Paging;
+using FlexQuery.NET.Parsers;
 using FlexQuery.NET.Parsers.Dsl;
 
 namespace FlexQuery.NET.Parsers;
@@ -69,27 +71,28 @@ internal static class DslSortParser
 
         var isDesc = direction.Equals(QueryOptionKeys.Desc, StringComparison.OrdinalIgnoreCase);
 
-        var aggregateMatch = AggregateSortPattern.Match(field);
-        if (aggregateMatch.Success)
-        {
-            var aggregate = aggregateMatch.Groups[QueryOptionKeys.Fn].Value.ToLowerInvariant();
-            var collection = aggregateMatch.Groups[QueryOptionKeys.Collection].Value;
-            var aggregateField = aggregateMatch.Groups[QueryOptionKeys.Field].Success 
-                ? aggregateMatch.Groups[QueryOptionKeys.Field].Value 
-                : null;
-
-            if (!ParserUtilities.IsValidPropertyPath(collection.AsSpan()))
-                throw new DslParseException(
-                    $"Unable to parse sort expression '{rawInput}'. Invalid collection path '{collection}'.");
-
-            result.Add(new SortNode
+            var aggregateMatch = AggregateSortPattern.Match(field);
+            if (aggregateMatch.Success)
             {
-                Field = collection,
-                Descending = isDesc,
-                Aggregate = aggregate,
-                AggregateField = string.IsNullOrWhiteSpace(aggregateField) ? null : aggregateField
-            });
-        }
+                var functionName = aggregateMatch.Groups[QueryOptionKeys.Fn].Value;
+                var aggregateFunction = AggregateFunctionConverter.Parse(functionName);
+                var collection = aggregateMatch.Groups[QueryOptionKeys.Collection].Value;
+                var aggregateField = aggregateMatch.Groups[QueryOptionKeys.Field].Success
+                    ? aggregateMatch.Groups[QueryOptionKeys.Field].Value
+                    : null;
+
+                if (!ParserUtilities.IsValidPropertyPath(collection.AsSpan()))
+                    throw new DslParseException(
+                        $"Unable to parse sort expression '{rawInput}'. Invalid collection path '{collection}'.");
+
+                result.Add(new SortNode
+                {
+                    Field = collection,
+                    Descending = isDesc,
+                    Aggregate = aggregateFunction,
+                    AggregateField = aggregateFunction == AggregateFunction.Count ? null : aggregateField
+                });
+            }
         else
         {
             if (!ParserUtilities.IsValidPropertyPath(field.AsSpan()))

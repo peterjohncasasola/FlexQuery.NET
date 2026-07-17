@@ -42,9 +42,17 @@ internal static class DslHavingParser
                 $"Invalid field '{field}' in HAVING expression '{rawHaving}'. " +
                 "Field must be a valid property path.");
 
+        var function = AggregateFunctionConverter.Parse(fnRaw);
+        if (function == AggregateFunction.Count && string.IsNullOrEmpty(field))
+        {
+            throw new DslParseException(
+                $"Unable to parse HAVING expression '{rawHaving}'. " +
+                $"COUNT(*) is not supported. Use COUNT(<collection>) or another aggregate over a property instead.");
+        }
+
         return new HavingCondition
         {
-            Function = AggregateFunctionConverter.Parse(fnRaw),
+            Function = function,
             Field = string.IsNullOrWhiteSpace(field) ? null : field,
             Operator = FilterOperators.Normalize(match.Groups["op"].Value),
             Value = match.Groups[QueryOptionKeys.Value].Value

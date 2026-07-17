@@ -1,4 +1,6 @@
+using FlexQuery.NET.Helpers;
 using FlexQuery.NET.Models.Aggregates;
+using FlexQuery.NET.Validation;
 
 namespace FlexQuery.NET.Parsers.Fql;
 
@@ -58,12 +60,39 @@ internal static class FqlAggregateParser
                     $"Missing field in '{trimmed}'.");
             }
 
+            if (function == AggregateFunction.Count && fieldRaw == "*")
+            {
+                throw new FqlParseException(
+                    $"Unable to parse aggregate expression '{rawSelect}'. " +
+                    $"COUNT(*) is not supported. Use COUNT(<collection>) or another aggregate over a property instead.");
+            }
+
             if (fieldRaw != "*" && !ParserUtilities.IsValidPropertyPath(fieldRaw.AsSpan()))
                 throw new FqlParseException(
                     $"Invalid field '{fieldRaw}' in aggregate expression '{rawSelect}'. " +
                     "Field must be a valid property path.");
 
-            string? field = fieldRaw == "*" ? null : fieldRaw;
+            string? field = null;
+            string? aggregateField = null;
+
+            if (function == AggregateFunction.Count)
+            {
+                field = fieldRaw;
+            }
+            else
+            {
+                var dotIndex = fieldRaw.LastIndexOf('.');
+                if (dotIndex > 0)
+                {
+                    field = fieldRaw[..dotIndex];
+                    aggregateField = fieldRaw[(dotIndex + 1)..];
+                }
+                else
+                {
+                    field = fieldRaw;
+                }
+            }
+
             var remaining = trimmed[(closeParen + 1)..].Trim();
 
             string? alias = null;
@@ -100,11 +129,16 @@ internal static class FqlAggregateParser
                     $"Unexpected content after field in '{trimmed}'.");
             }
 
+            if (alias is not null)
+            {
+                IdentifierValidator.ValidateAlias(alias, "aggregate");
+            }
+
             result.Add(new AggregateModel
             {
                 Function = function,
                 Field = field,
-                Alias = alias ?? BuildAlias(AggregateFunctionConverter.ToKeyword(function), field)
+                Alias = alias ?? BuildAlias(AggregateFunctionConverter.ToKeyword(function), fieldRaw)
             });
         }
 

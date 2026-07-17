@@ -47,6 +47,13 @@ internal static class FqlHavingParser
                 $"Expected format: FUNCTION(Field) OPERATOR value. " +
                 $"Missing operator and value after function call.");
 
+        if (function == AggregateFunction.Count && fieldRaw == "*")
+        {
+            throw new FqlParseException(
+                $"Unable to parse HAVING expression '{rawHaving}'. " +
+                $"COUNT(*) is not supported. Use COUNT(<collection>) or another aggregate over a property instead.");
+        }
+
         var opStart = 0;
         string op;
         string value;
