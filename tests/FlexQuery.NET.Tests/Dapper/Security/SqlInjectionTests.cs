@@ -1,4 +1,5 @@
 using FlexQuery.NET.Models;
+using FlexQuery.NET.Models.Projection;
 using FlexQuery.NET.Dapper.Mapping;
 using FlexQuery.NET.Dapper.Sql.Translators;
 using FlexQuery.NET.Dapper.Dialects;
@@ -151,7 +152,7 @@ public class SqlInjectionTests
     {
         var options = new QueryOptions
         {
-            Select = ["Id", "Name", "(SELECT * FROM Users)"],
+            Select = [new SelectModel { Field = "Id" }, new SelectModel { Field = "Name" }, new SelectModel { Field = "(SELECT * FROM Users)" }],
             Paging = { Disabled = true }
         };
         options.Items[ContextKeys.EntityType] = typeof(Customer);
@@ -168,7 +169,7 @@ public class SqlInjectionTests
     {
         var options = new QueryOptions
         {
-            Select = ["Id); DROP TABLE Users; --"],
+            Select = [new SelectModel { Field = "Id); DROP TABLE Users; --" }],
             Paging = { Disabled = true }
         };
         options.Items[ContextKeys.EntityType] = typeof(Customer);
@@ -332,7 +333,7 @@ public class SqlInjectionTests
     {
         var options = new QueryOptions
         {
-            Select = ["Order"], // "Order" is a SQL keyword
+            Select = [new SelectModel { Field = "Order" }], // "Order" is a SQL keyword
             Paging = { Disabled = true }
         };
         options.Items[ContextKeys.EntityType] = typeof(Customer);
@@ -368,7 +369,7 @@ public class SqlInjectionTests
     {
         var options = new QueryOptions
         {
-            Select = ["Id", "UNION SELECT * FROM Users"],
+            Select = [new SelectModel { Field = "Id" }, new SelectModel { Field = "UNION SELECT * FROM Users" }],
             Paging = { Disabled = true }
         };
         options.Items[ContextKeys.EntityType] = typeof(Customer);
@@ -385,7 +386,7 @@ public class SqlInjectionTests
     {
         var options = new QueryOptions
         {
-            Select = ["(SELECT @@VERSION)"],
+            Select = [new SelectModel { Field = "(SELECT @@VERSION)" }],
             Paging = { Disabled = true }
         };
         options.Items[ContextKeys.EntityType] = typeof(Customer);
@@ -513,3 +514,5 @@ public class SqlInjectionTests
         command.Parameters["@p0"].Should().Be($"%{malicious}%");
     }
 }
+
+

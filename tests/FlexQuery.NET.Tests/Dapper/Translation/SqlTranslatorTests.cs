@@ -232,7 +232,7 @@ public class SqlTranslatorTests
     {
         var options = NoPaging(new QueryOptions
         {
-            Select = ["Id", "Name", "Age"]
+            Select = [new SelectModel { Field = "Id" }, new SelectModel { Field = "Name" }, new SelectModel { Field = "Age" }]
         });
         options.Items[ContextKeys.EntityType] = typeof(Customer);
 
@@ -489,7 +489,7 @@ public class SqlTranslatorTests
         var options = new QueryOptions
         {
             ProjectionMode = ProjectionMode.Flat,
-            Select = ["Orders.Total"],
+            Select = [new SelectModel { Field = "Orders.Total" }],
             Paging = { Disabled = true }
         };
         options.Items[ContextKeys.EntityType] = typeof(Customer);
@@ -510,7 +510,7 @@ public class SqlTranslatorTests
         var options = new QueryOptions
         {
             ProjectionMode = ProjectionMode.FlatMixed,
-            Select = ["Name", "Orders.Total"],
+            Select = [new SelectModel { Field = "Name" }, new SelectModel { Field = "Orders.Total" }],
             Paging = { Disabled = true }
         };
         options.Items[ContextKeys.EntityType] = typeof(Customer);
@@ -531,7 +531,7 @@ public class SqlTranslatorTests
         var options = new QueryOptions
         {
             ProjectionMode = ProjectionMode.Flat,
-            Select = ["Orders.OrderItems.Sku", "Orders.OrderItems.Id"],
+            Select = [new SelectModel { Field = "Orders.OrderItems.Sku" }, new SelectModel { Field = "Orders.OrderItems.Id" }],
             Paging = { Disabled = true }
         };
         options.Items[ContextKeys.EntityType] = typeof(Customer);
@@ -548,3 +548,4 @@ public class SqlTranslatorTests
         command.FlatJoins.Should().Contain("OrderItems");
     }
 }
+

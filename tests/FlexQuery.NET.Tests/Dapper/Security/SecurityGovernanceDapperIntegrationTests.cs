@@ -12,6 +12,7 @@ using FlexQuery.NET.Models;
 using FlexQuery.NET.Models.Aggregates;
 using FlexQuery.NET.Models.Filters;
 using FlexQuery.NET.Models.Paging;
+using FlexQuery.NET.Models.Projection;
 using FlexQuery.NET.Options;
 
 namespace FlexQuery.NET.Tests.Dapper.Security;
@@ -342,7 +343,7 @@ public class SecurityGovernanceDapperIntegrationTests
     {
         var options = new QueryOptions
         {
-            Select = new List<string> { "Name", "Id" },
+            Select = new List<SelectModel> { new SelectModel { Field = "Name" }, new SelectModel { Field = "Id" } },
             Paging = { Page = 2, PageSize = 2 }
         };
         options.Items[ContextKeys.EntityType] = typeof(GovEntity);
@@ -368,7 +369,7 @@ public class SecurityGovernanceDapperIntegrationTests
         var options = new QueryOptions
         {
             Paging = { Page = 2, PageSize = 2 },
-            Select = new List<string> { "SSN" }
+            Select = new List<SelectModel> { new SelectModel { Field = "SSN" } }
         };
         options.Items[ContextKeys.EntityType] = typeof(GovEntity);
 
@@ -465,8 +466,8 @@ public class SecurityGovernanceDapperIntegrationTests
 
         options.Validate(typeof(Customer), execOptions);
 
-        options.Select.Should().Contain("Name");
-        options.Select.Should().NotContain("Id");
+        options.Select.Should().ContainEquivalentOf(new SelectModel { Field = "Name" });
+        options.Select.Should().NotContainEquivalentOf(new SelectModel { Field = "Id" });
     }
 
     [Fact]

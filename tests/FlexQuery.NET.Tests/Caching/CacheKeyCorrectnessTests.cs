@@ -187,7 +187,7 @@ public class CacheKeyCorrectnessTests
     {
         var options1 = new QueryOptions
         {
-            Select = ["Id", "Name"],
+            Select = [new SelectModel { Field = "Id" }, new SelectModel { Field = "Name" }],
             Filter = new FilterGroup
             {
                 Filters = [new FilterCondition { Field = "Status", Operator = "eq", Value = "Active" }]
@@ -197,7 +197,7 @@ public class CacheKeyCorrectnessTests
 
         var options2 = new QueryOptions
         {
-            Select = ["Id", "Name"],
+            Select = [new SelectModel { Field = "Id" }, new SelectModel { Field = "Name" }],
             Filter = new FilterGroup
             {
                 Filters = [new FilterCondition { Field = "Status", Operator = "eq", Value = "Inactive" }]
@@ -216,7 +216,7 @@ public class CacheKeyCorrectnessTests
     {
         var options1 = new QueryOptions
         {
-            Select = ["Id"],
+            Select = [new SelectModel { Field = "Id" }],
             Expand =
             [
                 new IncludeNode
@@ -233,7 +233,7 @@ public class CacheKeyCorrectnessTests
 
         var options2 = new QueryOptions
         {
-            Select = ["Id"],
+            Select = [new SelectModel { Field = "Id" }],
             Expand =
             [
                 new IncludeNode
@@ -259,7 +259,7 @@ public class CacheKeyCorrectnessTests
     {
         var options1 = new QueryOptions
         {
-            Select = ["Id"],
+            Select = [new SelectModel { Field = "Id" }],
             Includes = ["Orders"],
             Filter = new FilterGroup
             {
@@ -270,7 +270,7 @@ public class CacheKeyCorrectnessTests
 
         var options2 = new QueryOptions
         {
-            Select = ["Id", "Name"],
+            Select = [new SelectModel { Field = "Id" }, new SelectModel { Field = "Name" }],
             Includes = ["Orders"],
             Filter = new FilterGroup
             {
@@ -303,3 +303,4 @@ public class CacheKeyCorrectnessTests
         key1.Should().NotBe(key2);
     }
 }
+

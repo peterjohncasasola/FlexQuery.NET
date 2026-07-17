@@ -6,6 +6,7 @@ using FlexQuery.NET.Exceptions;
 using FlexQuery.NET;
 using FlexQuery.NET.Execution;
 using FlexQuery.NET.Models.Aggregates;
+using FlexQuery.NET.Models.Projection;
 using FlexQuery.NET.Options;
 using FlexQuery.NET.Security;
 using FlexQuery.NET.Validation.Rules;
@@ -210,9 +211,9 @@ public class FieldSecurityTests
         // But SSN should be removed from select
         options.Select.Should().NotBeNull();
         options.Select.Should().HaveCount(2);
-        options.Select.Should().Contain("Id");
-        options.Select.Should().Contain("Name");
-        options.Select.Should().NotContain("SSN");
+        options.Select.Should().ContainEquivalentOf(new SelectModel { Field = "Id" });
+        options.Select.Should().ContainEquivalentOf(new SelectModel { Field = "Name" });
+        options.Select.Should().NotContainEquivalentOf(new SelectModel { Field = "SSN" });
     }
 
     [Fact]
@@ -595,8 +596,8 @@ public class FieldSecurityTests
 
         options.Select.Should().NotBeNull();
         options.Select.Should().HaveCount(2);
-        options.Select.Should().Contain("Id");
-        options.Select.Should().Contain("Name");
+        options.Select.Should().ContainEquivalentOf(new SelectModel { Field = "Id" });
+        options.Select.Should().ContainEquivalentOf(new SelectModel { Field = "Name" });
     }
 
     [Fact]
@@ -612,7 +613,7 @@ public class FieldSecurityTests
 
         options.Select.Should().NotBeNull();
         options.Select.Should().HaveCount(1);
-        options.Select.Should().Contain("Name");
+        options.Select.Should().ContainEquivalentOf(new SelectModel { Field = "Name" });
     }
 
     [Fact]
@@ -627,9 +628,9 @@ public class FieldSecurityTests
         options.Validate(typeof(Customer), execOptions);
 
         options.Select.Should().NotBeNull();
-        options.Select.Should().Contain("Id");
-        options.Select.Should().Contain("Name");
-        options.Select.Should().NotContain("SSN");
+        options.Select.Should().ContainEquivalentOf(new SelectModel { Field = "Id" });
+        options.Select.Should().ContainEquivalentOf(new SelectModel { Field = "Name" });
+        options.Select.Should().NotContainEquivalentOf(new SelectModel { Field = "SSN" });
     }
 
     [Fact]
@@ -644,8 +645,8 @@ public class FieldSecurityTests
         options.ValidateOrThrow<Customer>(execOptions);
 
         options.Select.Should().HaveCount(1);
-        options.Select.Should().Contain("Id");
-        options.Select.Should().NotContain("Name");
+        options.Select.Should().ContainEquivalentOf(new SelectModel { Field = "Id" });
+        options.Select.Should().NotContainEquivalentOf(new SelectModel { Field = "Name" });
     }
 
     // ──────────────────────────────────────────────────────────────────
@@ -763,8 +764,8 @@ public class FieldSecurityTests
 
         options.Select.Should().NotBeNull();
         options.Select.Should().HaveCount(2);
-        options.Select.Should().Contain("Id");
-        options.Select.Should().Contain("Name");
+        options.Select.Should().ContainEquivalentOf(new SelectModel { Field = "Id" });
+        options.Select.Should().ContainEquivalentOf(new SelectModel { Field = "Name" });
     }
 
     [Fact]
@@ -802,8 +803,8 @@ public class FieldSecurityTests
         options.Validate(typeof(Customer), execOptions);
 
         options.Select.Should().NotBeNull();
-        options.Select.Should().Contain("Id");
-        options.Select.Should().NotContain("Name");
+        options.Select.Should().ContainEquivalentOf(new SelectModel { Field = "Id" });
+        options.Select.Should().NotContainEquivalentOf(new SelectModel { Field = "Name" });
     }
 
     // ──────────────────────────────────────────────────────────────────
@@ -822,9 +823,9 @@ public class FieldSecurityTests
         options.Validate(typeof(Customer), execOptions);
 
         options.Select.Should().NotBeNull();
-        options.Select.Should().Contain("Id");
-        options.Select.Should().Contain("Orders.Total");
-        options.Select.Should().Contain("Orders.Status");
+        options.Select.Should().ContainEquivalentOf(new SelectModel { Field = "Id" });
+        options.Select.Should().ContainEquivalentOf(new SelectModel { Field = "Orders.Total" });
+        options.Select.Should().ContainEquivalentOf(new SelectModel { Field = "Orders.Status" });
     }
 
     [Fact]
@@ -839,9 +840,9 @@ public class FieldSecurityTests
         options.Validate(typeof(Customer), execOptions);
 
         options.Select.Should().NotBeNull();
-        options.Select.Should().Contain("Id");
-        options.Select.Should().Contain("Orders.Total");
-        options.Select.Should().Contain("Orders.Status");
+        options.Select.Should().ContainEquivalentOf(new SelectModel { Field = "Id" });
+        options.Select.Should().ContainEquivalentOf(new SelectModel { Field = "Orders.Total" });
+        options.Select.Should().ContainEquivalentOf(new SelectModel { Field = "Orders.Status" });
     }
 
     [Fact]
@@ -850,9 +851,9 @@ public class FieldSecurityTests
         var result = DefaultProjectionHelper.ExpandWildcardFields(
             new[] { "Id", "Name", "*" }, typeof(Customer));
 
-        result.Should().Contain("Id");
-        result.Should().Contain("Name");
-        result.Should().Contain("SSN"); // scalar from *
+        result.Should().ContainEquivalentOf(new SelectModel { Field = "Id" });
+        result.Should().ContainEquivalentOf(new SelectModel { Field = "Name" });
+        result.Should().ContainEquivalentOf(new SelectModel { Field = "SSN" }); // scalar from *
     }
 
     // ──────────────────────────────────────────────────────────────────
@@ -864,7 +865,7 @@ public class FieldSecurityTests
     {
         var options = new QueryOptions
         {
-            Select = new List<string> { "SSN" }
+            Select = new List<SelectModel> { new SelectModel { Field = "SSN" } }
         };
         var execOptions = new QueryExecutionOptions
         {
@@ -876,9 +877,9 @@ public class FieldSecurityTests
 
         result.IsValid.Should().BeFalse(); // SSN was denied
         options.Select.Should().NotBeNull();
-        options.Select.Should().Contain("Id");
-        options.Select.Should().Contain("Name");
-        options.Select.Should().NotContain("SSN");
+        options.Select.Should().ContainEquivalentOf(new SelectModel { Field = "Id" });
+        options.Select.Should().ContainEquivalentOf(new SelectModel { Field = "Name" });
+        options.Select.Should().NotContainEquivalentOf(new SelectModel { Field = "SSN" });
     }
 
     [Fact]
@@ -886,7 +887,7 @@ public class FieldSecurityTests
     {
         var options = new QueryOptions
         {
-            Select = new List<string> { "SSN", "Email" }
+            Select = new List<SelectModel> { new SelectModel { Field = "SSN" }, new SelectModel { Field = "Email" } }
         };
         var execOptions = new QueryExecutionOptions
         {
@@ -898,10 +899,10 @@ public class FieldSecurityTests
 
         result.IsValid.Should().BeFalse(); // SSN, Email were denied
         options.Select.Should().NotBeNull();
-        options.Select.Should().Contain("Id");
-        options.Select.Should().Contain("Name");
-        options.Select.Should().NotContain("SSN");
-        options.Select.Should().NotContain("Email");
+        options.Select.Should().ContainEquivalentOf(new SelectModel { Field = "Id" });
+        options.Select.Should().ContainEquivalentOf(new SelectModel { Field = "Name" });
+        options.Select.Should().NotContainEquivalentOf(new SelectModel { Field = "SSN" });
+        options.Select.Should().NotContainEquivalentOf(new SelectModel { Field = "Email" });
     }
 
     [Fact]
@@ -909,7 +910,7 @@ public class FieldSecurityTests
     {
         var options = new QueryOptions
         {
-            Select = new List<string> { "SSN" }
+            Select = new List<SelectModel> { new SelectModel { Field = "SSN" } }
         };
         var execOptions = new QueryExecutionOptions
         {
@@ -1171,9 +1172,9 @@ public class FieldSecurityTests
         // Then FieldAccessValidator checks all Select fields against AllowedFields
         // Email is denied (not in AllowedFields), removed in non-strict mode
         Assert.False(result.IsValid);
-        Assert.Contains("Id", options.Select);
-        Assert.Contains("Name", options.Select);
-        Assert.DoesNotContain("Email", options.Select);
+        options.Select.Should().ContainEquivalentOf(new SelectModel { Field = "Id" });
+        options.Select.Should().ContainEquivalentOf(new SelectModel { Field = "Name" });
+        options.Select.Should().NotContainEquivalentOf(new SelectModel { Field = "Email" });
     }
 
     [Fact]
@@ -1195,7 +1196,7 @@ public class FieldSecurityTests
         options.Select.Should().NotBeNull();
         // RoleAllowedFields used for injection: no SSN
         options.Select.Should().HaveCount(2);
-        options.Select.Should().NotContain("SSN");
+        options.Select.Should().NotContainEquivalentOf(new SelectModel { Field = "SSN" });
     }
 
     private class MockResolver : IFieldAccessResolver

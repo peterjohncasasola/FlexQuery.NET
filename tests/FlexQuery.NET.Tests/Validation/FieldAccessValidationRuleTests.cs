@@ -3,6 +3,7 @@ using FlexQuery.NET.Execution;
 using FlexQuery.NET.Internal;
 using FlexQuery.NET.Models;
 using FlexQuery.NET.Models.Aggregates;
+using FlexQuery.NET.Models.Projection;
 using FlexQuery.NET.Models.Filters;
 using FlexQuery.NET.Models.Paging;
 using FlexQuery.NET.Options;
@@ -190,7 +191,7 @@ public class FieldAccessValidationRuleTests
             StrictFieldValidation = true,
             BlockedFields = ["Name"]
         };
-        var options = new QueryOptions { Select = ["Name"] };
+        var options = new QueryOptions { Select = [new SelectModel { Field = "Name" }] };
         var rule = new FieldAccessValidationRule();
 
         var act = () => rule.Validate(options, Context(execOptions: execOptions), ValidationResult.Success());
@@ -207,14 +208,14 @@ public class FieldAccessValidationRuleTests
             BlockedFields = ["Name"],
             SelectableFields = ["Id", "Age"]
         };
-        var options = new QueryOptions { Select = ["Name"] };
+        var options = new QueryOptions { Select = [new SelectModel { Field = "Name" }] };
         var rule = new FieldAccessValidationRule();
         var result = ValidationResult.Success();
 
         rule.Validate(options, Context(execOptions: execOptions), result);
 
         options.Select.Should().NotBeEmpty();
-        options.Select.Should().NotContain("Name");
+        options.Select.Should().NotContainEquivalentOf(new SelectModel { Field = "Name" });
     }
 
     [Fact]
@@ -347,7 +348,7 @@ public class FieldAccessValidationRuleTests
             StrictFieldValidation = true,
             SelectableFields = ["Id"]
         };
-        var options = new QueryOptions { Select = ["Name"] };
+        var options = new QueryOptions { Select = [new SelectModel { Field = "Name" }] };
         var rule = new FieldAccessValidationRule();
 
         var act = () => rule.Validate(options, Context(execOptions: execOptions), ValidationResult.Success());
@@ -397,7 +398,7 @@ public class FieldAccessValidationRuleTests
             StrictFieldValidation = true,
             AllowedFields = ["Id", "Age"]
         };
-        var options = new QueryOptions { Select = ["Name"] };
+        var options = new QueryOptions { Select = [new SelectModel { Field = "Name" }] };
         var rule = new FieldAccessValidationRule();
 
         var act = () => rule.Validate(options, Context(execOptions: execOptions), ValidationResult.Success());
@@ -415,7 +416,7 @@ public class FieldAccessValidationRuleTests
             StrictFieldValidation = true,
             MaxFieldDepth = 1
         };
-        var options = new QueryOptions { Select = ["Children.Label"] };
+        var options = new QueryOptions { Select = [new SelectModel { Field = "Children.Label" }] };
         var rule = new FieldAccessValidationRule();
 
         var act = () => rule.Validate(options, Context(execOptions: execOptions), ValidationResult.Success());
@@ -431,13 +432,13 @@ public class FieldAccessValidationRuleTests
             StrictFieldValidation = false,
             MaxFieldDepth = 1
         };
-        var options = new QueryOptions { Select = ["Children.Label", "Id"] };
+        var options = new QueryOptions { Select = [new SelectModel { Field = "Children.Label" }, new SelectModel { Field = "Id" }] };
         var rule = new FieldAccessValidationRule();
         var result = ValidationResult.Success();
 
         rule.Validate(options, Context(execOptions: execOptions), result);
 
-        options.Select.Should().BeEquivalentTo(["Id"]);
+        options.Select.Should().BeEquivalentTo(new[] { new SelectModel { Field = "Id" } });
     }
 
     // --- Custom Resolver ---
@@ -450,7 +451,7 @@ public class FieldAccessValidationRuleTests
             StrictFieldValidation = true,
             FieldAccessResolver = new DenyAllResolver()
         };
-        var options = new QueryOptions { Select = ["Id"] };
+        var options = new QueryOptions { Select = [new SelectModel { Field = "Id" }] };
         var rule = new FieldAccessValidationRule();
 
         var act = () => rule.Validate(options, Context(execOptions: execOptions), ValidationResult.Success());
@@ -466,7 +467,7 @@ public class FieldAccessValidationRuleTests
             StrictFieldValidation = false,
             FieldAccessResolver = new DenyAllResolver()
         };
-        var options = new QueryOptions { Select = ["Id", "Name"] };
+        var options = new QueryOptions { Select = [new SelectModel { Field = "Id" }, new SelectModel { Field = "Name" }] };
         var rule = new FieldAccessValidationRule();
         var result = ValidationResult.Success();
 
@@ -486,7 +487,7 @@ public class FieldAccessValidationRuleTests
             RoleAllowedFields = new() { ["admin"] = ["Id"] },
             CurrentRole = "admin"
         };
-        var options = new QueryOptions { Select = ["Name"] };
+        var options = new QueryOptions { Select = [new SelectModel { Field = "Name" }] };
         var rule = new FieldAccessValidationRule();
 
         var act = () => rule.Validate(options, Context(execOptions: execOptions), ValidationResult.Success());
@@ -503,13 +504,13 @@ public class FieldAccessValidationRuleTests
             RoleAllowedFields = new() { ["admin"] = ["Id"] },
             CurrentRole = "admin"
         };
-        var options = new QueryOptions { Select = ["Id", "Name"] };
+        var options = new QueryOptions { Select = [new SelectModel { Field = "Id" }, new SelectModel { Field = "Name" }] };
         var rule = new FieldAccessValidationRule();
         var result = ValidationResult.Success();
 
         rule.Validate(options, Context(execOptions: execOptions), result);
 
-        options.Select.Should().BeEquivalentTo(["Id"]);
+        options.Select.Should().BeEquivalentTo(new[] { new SelectModel { Field = "Id" } });
     }
 
     // --- Navigation Traversal by Includes ---
@@ -550,7 +551,7 @@ public class FieldAccessValidationRuleTests
             AllowedFields = ["Id"],
             AllowedIncludes = ["Children"]
         };
-        var options = new QueryOptions { Select = ["Name"] };
+        var options = new QueryOptions { Select = [new SelectModel { Field = "Name" }] };
         var rule = new FieldAccessValidationRule();
 
         var act = () => rule.Validate(options, Context(execOptions: execOptions), ValidationResult.Success());

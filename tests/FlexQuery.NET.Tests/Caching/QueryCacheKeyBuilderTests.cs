@@ -86,7 +86,7 @@ public class QueryCacheKeyBuilderTests
     {
         var options = new QueryOptions
         {
-            Select = ["Id", "Name"]
+            Select = [new SelectModel { Field = "Id" }, new SelectModel { Field = "Name" }]
         };
 
         var key = QueryCacheKeyBuilder.Build(options, typeof(Customer), "query");

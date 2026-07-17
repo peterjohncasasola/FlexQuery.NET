@@ -136,7 +136,12 @@ public class FluentQueryBuilderTests
             .Select("Id", "Name", "Email")
             .Build();
 
-        options.Select.Should().BeEquivalentTo(new[] { "Id", "Name", "Email" });
+        options.Select.Should().BeEquivalentTo(new[]
+        {
+            new SelectModel { Field = "Id" },
+            new SelectModel { Field = "Name" },
+            new SelectModel { Field = "Email" }
+        });
     }
 
     [Fact]
