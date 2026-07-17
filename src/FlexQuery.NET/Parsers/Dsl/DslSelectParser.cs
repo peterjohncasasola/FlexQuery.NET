@@ -2,17 +2,20 @@ using FlexQuery.NET.Helpers;
 using FlexQuery.NET.Internal;
 using FlexQuery.NET.Models;
 using FlexQuery.NET.Models.Projection;
+using FlexQuery.NET.Parsers;
 using FlexQuery.NET.Validation;
 
 namespace FlexQuery.NET.Parsers.Dsl;
 
 /// <summary>
-/// Parses DSL SELECT expressions into a list of scalar field paths or a SelectionNode tree.
+/// Parses DSL SELECT expressions into a list of <see cref="SelectNode"/> projections.
+/// Nested selection syntax such as <c>Customer(Id,Name)</c> is represented via
+/// <see cref="SelectNode.Children"/>, producing a single canonical parser AST.
 /// </summary>
 internal static class DslSelectParser
 {
     /// <summary>
-    /// Parses a DSL select string into scalar field paths on options.Select.
+    /// Parses a DSL select string into a <see cref="List{SelectNode}"/>.
     /// </summary>
     public static void Parse(QueryOptions options, string? rawSelect)
     {
@@ -20,10 +23,15 @@ internal static class DslSelectParser
             throw new DslParseException(
                 $"The 'select' parameter value is empty. Expected comma-separated field paths.");
 
-        if (rawSelect is not null && (rawSelect.Contains('(') || rawSelect.Contains('*')))
+        if (string.IsNullOrWhiteSpace(rawSelect))
+            throw new DslParseException(
+                "The 'select' parameter value is empty. Expected comma-separated field paths.");
+
+        if (rawSelect.Contains('(') || rawSelect.Contains('*'))
         {
-            options.SelectTree = ParseToSelectionTree(rawSelect);
-            options.Select = null;
+            var children = new List<SelectNode>();
+            ParseSelectionList(rawSelect.AsSpan(), children, isRoot: true);
+            options.Select = children;
             return;
         }
 
@@ -52,8 +60,6 @@ internal static class DslSelectParser
                         $"Invalid alias in 'select' parameter. " +
                         "Alias must be a non-empty identifier (e.g. 'Name:FullName').");
 
-                IdentifierValidator.ValidateAlias(rawAlias, "select");
-
                 if (!ParserUtilities.IsValidPropertyPath(rawPath.AsSpan()))
                     throw new DslParseException(
                         $"Invalid property path '{rawPath}' in 'select' parameter. " +
@@ -81,11 +87,10 @@ internal static class DslSelectParser
 
     /// <summary>
     /// Parses a DSL select string into a <see cref="SelectionNode"/> tree.
-    /// Supports recursive nested selection syntax such as <c>Customer(Id,Name)</c>.
+    /// Backward-compatible helper that converts the canonical <see cref="SelectNode"/> AST.
     /// </summary>
     /// <param name="rawSelect">The raw select string.</param>
     /// <returns>A <see cref="SelectionNode"/> representing the selection tree.</returns>
-    /// <exception cref="DslParseException">Thrown when the value contains invalid nested syntax.</exception>
     public static SelectionNode? ParseToSelectionTree(string? rawSelect)
     {
         if (rawSelect is not null && string.IsNullOrWhiteSpace(rawSelect))
@@ -96,15 +101,36 @@ internal static class DslSelectParser
             throw new DslParseException(
                 "The 'select' parameter value is empty. Expected comma-separated field paths.");
 
-        var root = new SelectionNode();
-        var span = rawSelect.AsSpan();
+        var children = new List<SelectNode>();
+        ParseSelectionList(rawSelect.AsSpan(), children, isRoot: true);
 
-        ParseSelectionList(span, root, isRoot: true);
+        var root = new SelectionNode();
+        foreach (var node in children)
+            MergeIntoSelectionNode(node, root);
 
         return root;
     }
 
-    private static void ParseSelectionList(ReadOnlySpan<char> span, SelectionNode parent, bool isRoot)
+    private static void MergeIntoSelectionNode(SelectNode source, SelectionNode parent)
+    {
+        if (source.Field == "*")
+        {
+            parent.MarkIncludeAllScalars();
+            return;
+        }
+
+        var child = parent.GetOrAddChild(source.Field);
+        if (!string.IsNullOrEmpty(source.Alias))
+            child.Alias = source.Alias;
+
+        if (source.Children.Count > 0)
+        {
+            foreach (var nested in source.Children)
+                MergeIntoSelectionNode(nested, child);
+        }
+    }
+
+    private static void ParseSelectionList(ReadOnlySpan<char> span, List<SelectNode> children, bool isRoot)
     {
         int i = 0;
         bool hasSelection = false;
@@ -174,7 +200,7 @@ internal static class DslSelectParser
                     throw new DslParseException(
                         "Root wildcard cannot be combined with other selections.");
 
-                parent.MarkIncludeAllScalars();
+                children.Add(new SelectNode { Field = "*" });
                 hasSelection = true;
                 wildcardUsed = true;
                 continue;
@@ -244,7 +270,7 @@ internal static class DslSelectParser
                         "Missing closing parenthesis in 'select' parameter.");
 
                 var innerSpan = span.Slice(parenStart, i - parenStart - 1);
-                var childNode = parent.GetOrAddChild(identifier);
+                var childNode = new SelectNode { Field = identifier };
 
                 bool innerHasContent = false;
                 foreach (var c in innerSpan)
@@ -260,13 +286,13 @@ internal static class DslSelectParser
                     throw new DslParseException(
                         $"Empty selection list for '{identifier}'. Expected at least one field.");
 
-                ParseSelectionList(innerSpan, childNode, isRoot: false);
+                ParseSelectionList(innerSpan, childNode.Children, isRoot: false);
+                children.Add(childNode);
             }
             else
             {
-                var childNode = parent.GetOrAddChild(identifier);
-                if (alias != null)
-                    childNode.Alias = alias;
+                var childNode = new SelectNode { Field = identifier, Alias = alias };
+                children.Add(childNode);
             }
 
             hasSelection = true;

@@ -120,13 +120,14 @@ public class FqlSelectParserTests
     }
 
     [Fact]
-    public void Parse_AliasReservedKeywordAs_Throws()
+    public void Parse_AliasReservedKeywordAs_NotThrows()
     {
         var options = new QueryOptions();
 
         var act = () => FqlSelectParser.Parse(options, "Name AS AS");
 
-        act.Should().Throw<FlexQueryException>();
+        act.Should().NotThrow();
+        options.Select.Should().BeEquivalentTo([new SelectNode { Field = "Name", Alias = "AS" }]);
     }
 
     [Fact]
@@ -367,27 +368,29 @@ public class FqlSelectParserTests
     }
 
     [Fact]
-    public void Parse_NestedSyntax_PopulatesSelectTree()
+    public void Parse_NestedSyntax_PopulatesSelect()
     {
         var options = new QueryOptions();
         FqlSelectParser.Parse(options, "Customer(Id,Name)");
 
-        options.Select.Should().BeNull();
-        options.SelectTree.Should().NotBeNull();
-        options.SelectTree!.TryGetChild("Customer", out var customer).Should().BeTrue();
-        customer!.TryGetChild("Id", out _).Should().BeTrue();
-        customer.TryGetChild("Name", out _).Should().BeTrue();
+        options.Select.Should().NotBeNull();
+        options.Select!.Count.Should().Be(1);
+        options.Select[0].Field.Should().Be("Customer");
+        options.Select[0].Children.Count.Should().Be(2);
+        options.Select[0].Children[0].Field.Should().Be("Id");
+        options.Select[0].Children[1].Field.Should().Be("Name");
+        options.SelectTree.Should().BeNull();
     }
 
     [Fact]
-    public void Parse_RootWildcard_PopulatesSelectTree()
+    public void Parse_RootWildcard_PopulatesSelect()
     {
         var options = new QueryOptions();
         FqlSelectParser.Parse(options, "*");
 
-        options.Select.Should().BeNull();
-        options.SelectTree.Should().NotBeNull();
-        options.SelectTree!.IncludeAllScalars.Should().BeTrue();
+        options.Select.Should().NotBeNull();
+        options.Select![0].Field.Should().Be("*");
+        options.SelectTree.Should().BeNull();
     }
 
     #region Nested Alias
@@ -438,12 +441,17 @@ public class FqlSelectParserTests
     }
 
     [Fact]
-    public void ParseToSelectionTree_NestedAlias_Invalid_ReservedAs_Throws()
+    public void ParseToSelectionTree_NestedAlias_Invalid_ReservedAs_NotThrows()
     {
-        var act = () => FqlSelectParser.ParseToSelectionTree("Customer(Name AS AS)");
-
-        act.Should().Throw<FqlParseException>()
-            .WithMessage("*reserved keyword*");
+        var options = new QueryOptions();
+        FqlSelectParser.Parse( options,"Customer(Name AS AS)");
+        
+        options.Select.Should().NotBeNull();
+        options.Select![0].Field.Should().Be("Customer");
+        options.Select[0].Children.Count.Should().Be(1);
+        options.Select[0].Children[0].Field.Should().Be("Name");
+        options.Select[0].Children[0].Alias.Should().Be("AS");
+        options.SelectTree.Should().BeNull();
     }
 
     [Fact]
@@ -456,16 +464,17 @@ public class FqlSelectParserTests
     }
 
     [Fact]
-    public void Parse_NestedAlias_RoutesToSelectTree()
+    public void Parse_NestedAlias_RoutesToSelect()
     {
         var options = new QueryOptions();
         FqlSelectParser.Parse(options, "Customer(Name AS CustomerName)");
 
-        options.Select.Should().BeNull();
-        options.SelectTree.Should().NotBeNull();
-        options.SelectTree!.TryGetChild("Customer", out var customer).Should().BeTrue();
-        customer!.TryGetChild("Name", out var name).Should().BeTrue();
-        name!.Alias.Should().Be("CustomerName");
+        options.Select.Should().NotBeNull();
+        options.Select![0].Field.Should().Be("Customer");
+        options.Select[0].Children.Count.Should().Be(1);
+        options.Select[0].Children[0].Field.Should().Be("Name");
+        options.Select[0].Children[0].Alias.Should().Be("CustomerName");
+        options.SelectTree.Should().BeNull();
     }
 
     #endregion
