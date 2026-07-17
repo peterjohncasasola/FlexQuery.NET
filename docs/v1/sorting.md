@@ -39,8 +39,8 @@ You can sort parent entities based on aggregated values of their child collectio
 | `min(field)` | Sort by the minimum value |
 
 **Examples:**
-- `?sort=orders.sum(total):desc` (Customers with highest total order volume first)
-- `?sort=orders.count():desc` (Customers with the most orders first)
+- `?sort=sum:orders.total:desc` (Customers with highest total order volume first)
+- `?sort=count:orders:desc` (Customers with the most orders first)
 
 > [!NOTE]
 > Direct collection sorting (e.g., `?sort=orders.total`) is **not** supported; you must use an aggregate function to reduce the collection to a single value for comparison.

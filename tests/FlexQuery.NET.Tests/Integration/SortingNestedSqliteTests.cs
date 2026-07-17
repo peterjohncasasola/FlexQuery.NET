@@ -207,7 +207,7 @@ public sealed class SortingNestedSqliteTests : IDisposable
     {
         var query = new Dictionary<string, StringValues>
         {
-            ["sort"] = new("name:asc,orders.sum(total):desc")
+            ["sort"] = new("name:asc,sum:orders.total:desc")
         };
 
         var options = QueryOptionsParser.Parse(query);

@@ -69,11 +69,11 @@ GET /api/users?sort=name
 Sort by a computed aggregate over a related collection:
 
 ```
-GET /api/users?sort=orders.count():desc
-GET /api/users?sort=orders.sum(amount):desc
-GET /api/users?sort=orders.avg(amount):asc
-GET /api/users?sort=orders.max(amount):desc
-GET /api/users?sort=orders.min(amount):asc
+GET /api/users?sort=count:orders:desc
+GET /api/users?sort=sum:orders.amount:desc
+GET /api/users?sort=avg:orders.amount:asc
+GET /api/users?sort=max:orders.amount:desc
+GET /api/users?sort=min:orders.amount:asc
 ```
 
 ---

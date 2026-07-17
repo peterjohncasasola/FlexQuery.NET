@@ -245,7 +245,7 @@ GET /api/reports/revenue?filter=createdAt:between:2024-01-01,2024-12-31,status:e
                         &select=region,count(),sum(amount),avg(amount)
                         &groupBy=region
                         &having=sum(amount):gt:10000
-                        &sort=sum(amount):desc
+                         &sort=sum:amount:desc
 ```
 
 **Response:**
