@@ -20,17 +20,16 @@ internal static class SelectTreeBuilder
     {
         var root = new SelectionNode();
 
-        if (options.SelectTree != null)
-        {
-            MergeTree(root, options.SelectTree);
-        }
-
-        if (options.Select != null)
+        if (options.Select is { Count: > 0 })
         {
             foreach (var model in options.Select)
             {
                 MergePath(root, model, includeAllScalarsAtLeaf: false);
             }
+        }
+        else if (options.SelectTree != null)
+        {
+            MergeTree(root, options.SelectTree);
         }
 
         if (options.Includes != null)

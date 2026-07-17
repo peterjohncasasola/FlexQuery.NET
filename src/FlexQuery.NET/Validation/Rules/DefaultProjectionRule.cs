@@ -30,7 +30,6 @@ internal static class DefaultProjectionHelper
     public static void InjectDefaultProjection(QueryOptions options, QueryContext ctx, QueryGovernanceOptions execOptions)
     {
         if (options.Select is { Count: > 0 }) return;
-        if (options.SelectTree != null) return;
         if (options.HasProjection()) return;
 
         if (execOptions.SelectableFields?.Count > 0)

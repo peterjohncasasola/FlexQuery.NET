@@ -1,5 +1,4 @@
 using FlexQuery.NET.Caching;
-using FlexQuery.NET.Internal;
 using FlexQuery.NET.Models;
 using FlexQuery.NET.Models.Filters;
 using FlexQuery.NET.Security;
@@ -7,9 +6,11 @@ using FlexQuery.NET.Exceptions;
 using System.Collections.Concurrent;
 using FlexQuery.NET.Constants;
 using FlexQuery.NET.Execution;
+using FlexQuery.NET.Internal;
 using FlexQuery.NET.Metadata;
 using FlexQuery.NET.Models.Paging;
 using FlexQuery.NET.Options;
+using FlexQuery.NET.Models.Projection;
 
 namespace FlexQuery.NET.Validation.Rules;
 
@@ -49,55 +50,30 @@ internal sealed class FieldAccessValidationRule : IValidationRule
         for (var i = options.Sort.Count - 1; i >= 0; i--)
         {
             var sort = options.Sort[i];
-            if (!string.IsNullOrWhiteSpace(sort.Field))
+            if (string.IsNullOrWhiteSpace(sort.Field)) continue;
+            var accessField = ResolveSortAccessField(options, sort.Field);
+            
+            if (CheckAccess(accessField, QueryOperation.Sort, context, result)) continue;
+            if (!execOptions.StrictFieldValidation)
             {
-                var accessField = ResolveSortAccessField(options, sort.Field);
-                if (!CheckAccess(accessField, QueryOperation.Sort, context, result))
-                {
-                    if (!execOptions.StrictFieldValidation)
-                    {
-                        options.Sort.RemoveAt(i);
-                    }
-                }
+                options.Sort.RemoveAt(i);
             }
         }
 
         // 5. Process Selection - remove unauthorized in non-strict mode
-        if (options.Select != null)
+        if (options.Select is { Count: > 0 })
         {
-            for (int i = options.Select.Count - 1; i >= 0; i--)
-            {
-                var field = options.Select[i].Field;
-                if (!string.IsNullOrWhiteSpace(field))
-                {
-                    if (!CheckAccess(field, QueryOperation.Select, context, result))
-                    {
-                        if (!execOptions.StrictFieldValidation)
-                        {
-                            options.Select.RemoveAt(i);
-                        }
-                    }
-                }
-            }
+            ValidateSelect(options.Select, string.Empty, context.TargetType, context, result, execOptions);
 
             if (!execOptions.StrictFieldValidation && options.Select.Count == 0)
             {
                 DefaultProjectionHelper.InjectDefaultProjection(options, context, execOptions);
             }
         }
-
-        // 5b. Process SelectTree - remove unauthorized in non-strict mode
-        if (options.SelectTree != null)
+        else if (options.SelectTree != null)
         {
-            ValidateSelectTree(
-                options.SelectTree,
-                string.Empty,
-                context.TargetType,
-                context,
-                result,
-                execOptions);
+            ValidateSelectTree(options.SelectTree, string.Empty, context.TargetType, context, result, execOptions);
 
-            // Mirror flat-Select behavior: inject default projection when tree is emptied
             if (!execOptions.StrictFieldValidation &&
                 options.SelectTree is { HasChildren: false, IncludeAllScalars: false })
             {
@@ -109,18 +85,14 @@ internal sealed class FieldAccessValidationRule : IValidationRule
         // 6. Process GroupBy - remove unauthorized in non-strict mode
         if (options.GroupBy != null)
         {
-            for (int i = options.GroupBy.Count - 1; i >= 0; i--)
+            for (var i = options.GroupBy.Count - 1; i >= 0; i--)
             {
                 var field = options.GroupBy[i];
-                if (!string.IsNullOrWhiteSpace(field))
+                if (string.IsNullOrWhiteSpace(field)) continue;
+                if (CheckAccess(field, QueryOperation.Group, context, result)) continue;
+                if (!execOptions.StrictFieldValidation)
                 {
-                    if (!CheckAccess(field, QueryOperation.Group, context, result))
-                    {
-                        if (!execOptions.StrictFieldValidation)
-                        {
-                            options.GroupBy.RemoveAt(i);
-                        }
-                    }
+                    options.GroupBy.RemoveAt(i);
                 }
             }
         }
@@ -129,15 +101,13 @@ internal sealed class FieldAccessValidationRule : IValidationRule
         for (var i = options.Aggregates.Count - 1; i >= 0; i--)
         {
             var aggregate = options.Aggregates[i];
-            if (!string.IsNullOrWhiteSpace(aggregate.Field))
+            if (string.IsNullOrWhiteSpace(aggregate.Field)) continue;
+            
+            if (CheckAccess(aggregate.Field, QueryOperation.Aggregate, context, result)) continue;
+            
+            if (!execOptions.StrictFieldValidation)
             {
-                if (!CheckAccess(aggregate.Field, QueryOperation.Aggregate, context, result))
-                {
-                    if (!execOptions.StrictFieldValidation)
-                    {
-                        options.Aggregates.RemoveAt(i);
-                    }
-                }
+                options.Aggregates.RemoveAt(i);
             }
         }
 
@@ -173,6 +143,43 @@ internal sealed class FieldAccessValidationRule : IValidationRule
         return string.IsNullOrWhiteSpace(aggregate?.Field)
             ? sortField
             : aggregate.Field;
+    }
+
+    private void ValidateSelect(
+        List<SelectNode> siblings,
+        string prefix,
+        Type? currentType,
+        QueryContext context,
+        ValidationResult result,
+        QueryGovernanceOptions execOptions)
+    {
+        for (var i = siblings.Count - 1; i >= 0; i--)
+        {
+            var node = siblings[i];
+            var fieldPath = string.IsNullOrEmpty(prefix) ? node.Field : $"{prefix}.{node.Field}";
+
+            var accessGranted = true;
+            if (node.Field != "*")
+            {
+                accessGranted = CheckAccess(fieldPath, QueryOperation.Select, context, result);
+            }
+
+            if (!accessGranted && !execOptions.StrictFieldValidation)
+            {
+                siblings.RemoveAt(i);
+                continue;
+            }
+
+            if (node.Children.Count <= 0) continue;
+            
+            var childType = ResolveSelectNodeChildType(currentType, node.Field);
+            ValidateSelect(node.Children, fieldPath, childType, context, result, execOptions);
+
+            if (!execOptions.StrictFieldValidation && node.Children.Count == 0)
+            {
+                node.Children.Clear();
+            }
+        }
     }
 
     private void ValidateSelectTree(
@@ -221,7 +228,7 @@ internal sealed class FieldAccessValidationRule : IValidationRule
         foreach (var kvp in children)
         {
             var childPath = string.IsNullOrEmpty(prefix) ? kvp.Key : $"{prefix}.{kvp.Key}";
-            var childType = ResolveSelectTreeChildType(currentType, kvp.Key);
+            var childType = ResolveSelectNodeChildType(currentType, kvp.Key);
 
             if (kvp.Value.HasChildren || kvp.Value.IncludeAllScalars)
             {
@@ -234,18 +241,17 @@ internal sealed class FieldAccessValidationRule : IValidationRule
             }
             else
             {
-                if (!CheckAccess(childPath, QueryOperation.Select, context, result))
+                if (CheckAccess(childPath, QueryOperation.Select, context, result)) continue;
+                
+                if (!execOptions.StrictFieldValidation)
                 {
-                    if (!execOptions.StrictFieldValidation)
-                    {
-                        node.RemoveChild(kvp.Key);
-                    }
+                    node.RemoveChild(kvp.Key);
                 }
             }
         }
     }
 
-    private static Type? ResolveSelectTreeChildType(Type? parentType, string childKey)
+    private static Type? ResolveSelectNodeChildType(Type? parentType, string childKey)
     {
         if (parentType == null) return null;
 
@@ -305,7 +311,7 @@ internal sealed class FieldAccessValidationRule : IValidationRule
         }
 
         // Process nested groups (backwards to allow removal)
-        for (int i = group.Groups.Count - 1; i >= 0; i--)
+        for (var i = group.Groups.Count - 1; i >= 0; i--)
         {
             ValidateFilterGroup(group.Groups[i], context, result, execOptions, prefix);
         }
@@ -378,7 +384,7 @@ internal sealed class FieldAccessValidationRule : IValidationRule
         }
 
         // Step 6: Operation-Level Rules
-        HashSet<string>? opList = operation switch
+        var opList = operation switch
         {
             QueryOperation.Filter => execOptions.FilterableFields,
             QueryOperation.Sort => execOptions.SortableFields,
@@ -399,16 +405,12 @@ internal sealed class FieldAccessValidationRule : IValidationRule
         }
 
         // Step 7: Global AllowedFields
-        if (execOptions.AllowedFields != null)
-        {
-            if (!WildcardMatcher.IsMatch(field, execOptions.AllowedFields))
-            {
-                AddDenied(result, execOptions, field, $"Field '{field}' is not in the global allowed list.");
-                return false;
-            }
-        }
+        if (execOptions.AllowedFields == null) return true;
+        if (WildcardMatcher.IsMatch(field, execOptions.AllowedFields)) return true;
+        
+        AddDenied(result, execOptions, field, $"Field '{field}' is not in the global allowed list.");
+        return false;
 
-        return true;
     }
 
     /// <summary>
@@ -418,7 +420,7 @@ internal sealed class FieldAccessValidationRule : IValidationRule
     /// </summary>
     /// <remarks>
     /// This is the single navigation governance point described by the design:
-    /// "includeable ⇒ traversable". A bare navigation (e.g. <c>Orders</c> used by a
+    /// "includeable => traversable". A bare navigation (e.g. <c>Orders</c> used by a
     /// collection scoped filter) is authorized when it is itself an allowed include;
     /// a dotted path (e.g. <c>customerGroup.groupName</c>) is authorized when its
     /// navigation prefix (<c>customerGroup</c>) is an allowed include. The prefix must
@@ -505,13 +507,11 @@ internal sealed class FieldAccessValidationRule : IValidationRule
         }
 
         // Check against AllowedFields (global whitelist)
-        if (execOptions.AllowedFields?.Count > 0)
+        if (!(execOptions.AllowedFields?.Count > 0)) return;
+        if (!WildcardMatcher.IsMatch(field, execOptions.AllowedFields))
         {
-            if (!WildcardMatcher.IsMatch(field, execOptions.AllowedFields))
-            {
-                throw new QueryValidationException(
-                    $"DefaultSortField '{field}' is not in AllowedFields and will be rejected by the global allowlist.");
-            }
+            throw new QueryValidationException(
+                $"DefaultSortField '{field}' is not in AllowedFields and will be rejected by the global allowlist.");
         }
     }
 
