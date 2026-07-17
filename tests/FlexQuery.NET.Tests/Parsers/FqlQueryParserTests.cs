@@ -873,7 +873,7 @@ public class FqlQueryParserTests
         result.Sort[1].Descending.Should().BeFalse();
 
         // Select
-        result.Select.Should().BeEquivalentTo([new SelectModel { Field = "Id" }, new SelectModel { Field = "Name" }, new SelectModel { Field = "CustomerName" }]);
+        result.Select.Should().BeEquivalentTo([new SelectNode { Field = "Id" }, new SelectNode { Field = "Name" }, new SelectNode { Field = "CustomerName" }]);
 
         // Include
         result.Includes.Should().BeEquivalentTo(["Orders", "Profile"]);

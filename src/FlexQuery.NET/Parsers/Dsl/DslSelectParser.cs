@@ -28,7 +28,7 @@ internal static class DslSelectParser
         }
 
         var fields = ParserUtilities.SplitCsv(rawSelect);
-        var validated = new List<SelectModel>(fields.Count);
+        var validated = new List<SelectNode>(fields.Count);
         foreach (var field in fields)
         {
             var colonIndex = field.IndexOf(':');
@@ -64,7 +64,7 @@ internal static class DslSelectParser
                         $"Invalid alias '{rawAlias}' in 'select' parameter. " +
                         "Aliases must be valid identifiers (e.g. 'FullName').");
 
-                validated.Add(new SelectModel { Field = rawPath, Alias = rawAlias });
+                validated.Add(new SelectNode { Field = rawPath, Alias = rawAlias });
                 continue;
             }
 
@@ -73,7 +73,7 @@ internal static class DslSelectParser
                     $"Invalid property path '{field}' in 'select' parameter. " +
                     "Property paths must be dot-separated identifiers (e.g. 'Id' or 'Customer.Name').");
 
-            validated.Add(new SelectModel { Field = field });
+            validated.Add(new SelectNode { Field = field });
         }
 
         options.Select = validated;

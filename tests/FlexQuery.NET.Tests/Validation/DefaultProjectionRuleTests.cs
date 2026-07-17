@@ -46,13 +46,13 @@ public class DefaultProjectionRuleTests
     public void SelectAlreadySet_SkipsInjection()
     {
         var execOptions = new TestGovernanceOptions { SelectableFields = ["Id", "Name"] };
-        var options = new QueryOptions { Select = [new SelectModel { Field = "Id" }] };
+        var options = new QueryOptions { Select = [new SelectNode { Field = "Id" }] };
         var rule = new DefaultProjectionRule();
         var result = ValidationResult.Success();
 
         rule.Validate(options, Context(execOptions: execOptions), result);
 
-        options.Select.Should().BeEquivalentTo([new SelectModel { Field = "Id" }]);
+        options.Select.Should().BeEquivalentTo([new SelectNode { Field = "Id" }]);
     }
 
     [Fact]
@@ -92,7 +92,7 @@ public class DefaultProjectionRuleTests
 
         rule.Validate(options, Context(execOptions: execOptions), result);
 
-        options.Select.Should().BeEquivalentTo([new SelectModel { Field = "Id" }, new SelectModel { Field = "Name" }]);
+        options.Select.Should().BeEquivalentTo([new SelectNode { Field = "Id" }, new SelectNode { Field = "Name" }]);
     }
 
     [Fact]
@@ -109,7 +109,7 @@ public class DefaultProjectionRuleTests
 
         rule.Validate(options, Context(execOptions: execOptions), result);
 
-        options.Select.Should().BeEquivalentTo([new SelectModel { Field = "Id" }, new SelectModel { Field = "Name" }, new SelectModel { Field = "Age" }]);
+        options.Select.Should().BeEquivalentTo([new SelectNode { Field = "Id" }, new SelectNode { Field = "Name" }, new SelectNode { Field = "Age" }]);
     }
 
     [Fact]
@@ -126,7 +126,7 @@ public class DefaultProjectionRuleTests
 
         rule.Validate(options, Context(execOptions: execOptions), result);
 
-        options.Select.Should().BeEquivalentTo([new SelectModel { Field = "Id" }]);
+        options.Select.Should().BeEquivalentTo([new SelectNode { Field = "Id" }]);
     }
 
     [Fact]
@@ -139,7 +139,7 @@ public class DefaultProjectionRuleTests
 
         rule.Validate(options, Context(execOptions: execOptions), result);
 
-        options.Select.Should().BeEquivalentTo([new SelectModel { Field = "Id" }, new SelectModel { Field = "Name" }]);
+        options.Select.Should().BeEquivalentTo([new SelectNode { Field = "Id" }, new SelectNode { Field = "Name" }]);
     }
 
     [Fact]
@@ -152,10 +152,10 @@ public class DefaultProjectionRuleTests
 
         rule.Validate(options, Context(execOptions: execOptions), result);
 
-        options.Select.Should().ContainEquivalentOf(new SelectModel { Field = "Id" });
-        options.Select.Should().ContainEquivalentOf(new SelectModel { Field = "Name" });
-        options.Select.Should().ContainEquivalentOf(new SelectModel { Field = "Age" });
-        options.Select.Should().NotContainEquivalentOf(new SelectModel { Field = "Description" });
+        options.Select.Should().ContainEquivalentOf(new SelectNode { Field = "Id" });
+        options.Select.Should().ContainEquivalentOf(new SelectNode { Field = "Name" });
+        options.Select.Should().ContainEquivalentOf(new SelectNode { Field = "Age" });
+        options.Select.Should().NotContainEquivalentOf(new SelectNode { Field = "Description" });
     }
 
     [Fact]
@@ -168,10 +168,10 @@ public class DefaultProjectionRuleTests
 
         rule.Validate(options, Context(execOptions: execOptions), result);
 
-        options.Select.Should().ContainEquivalentOf(new SelectModel { Field = "Id" });
-        options.Select.Should().ContainEquivalentOf(new SelectModel { Field = "Name" });
-        options.Select.Should().ContainEquivalentOf(new SelectModel { Field = "Age" });
-        options.Select.Should().ContainEquivalentOf(new SelectModel { Field = "Description" });
+        options.Select.Should().ContainEquivalentOf(new SelectNode { Field = "Id" });
+        options.Select.Should().ContainEquivalentOf(new SelectNode { Field = "Name" });
+        options.Select.Should().ContainEquivalentOf(new SelectNode { Field = "Age" });
+        options.Select.Should().ContainEquivalentOf(new SelectNode { Field = "Description" });
     }
 
     [Fact]
@@ -188,7 +188,7 @@ public class DefaultProjectionRuleTests
 
         rule.Validate(options, Context(execOptions: execOptions), result);
 
-        options.Select.Should().BeEquivalentTo([new SelectModel { Field = "Id" }]);
+        options.Select.Should().BeEquivalentTo([new SelectNode { Field = "Id" }]);
     }
 }
 

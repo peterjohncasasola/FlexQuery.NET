@@ -16,13 +16,13 @@ internal static class ODataSelectParser
     /// <exception cref="MiniODataParseException">
     /// Thrown when the value is empty, contains an empty field, or an invalid property path.
     /// </exception>
-    public static List<SelectModel> Parse(string? select)
+    public static List<SelectNode> Parse(string? select)
     {
         if (string.IsNullOrWhiteSpace(select))
             throw new MiniODataParseException(
                 "$select value is empty. Expected comma-separated field paths.");
 
-        var result = new List<SelectModel>();
+        var result = new List<SelectNode>();
 
         foreach (var part in select.Split(','))
         {
@@ -39,7 +39,7 @@ internal static class ODataSelectParser
                     $"Invalid property path '{field}' in $select. " +
                     "Property paths must be dot-separated identifiers (e.g. 'Customer.Region').");
 
-            result.Add(new SelectModel { Field = field });
+            result.Add(new SelectNode { Field = field });
         }
 
         return result;

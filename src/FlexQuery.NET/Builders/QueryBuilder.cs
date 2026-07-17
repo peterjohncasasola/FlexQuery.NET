@@ -94,7 +94,7 @@ internal static class QueryBuilder
                 var defaultSortProp = allProps
                     .FirstOrDefault(p => p.Name.Equals("Id", StringComparison.OrdinalIgnoreCase) || p.Name.Equals("Key", StringComparison.OrdinalIgnoreCase))
                     ?? allProps.FirstOrDefault();
-                fieldName = defaultSortProp is null ? null : new SelectModel { Field = defaultSortProp.Name };
+                fieldName = defaultSortProp is null ? null : new SelectNode { Field = defaultSortProp.Name };
             }
 
             if (fieldName != null)

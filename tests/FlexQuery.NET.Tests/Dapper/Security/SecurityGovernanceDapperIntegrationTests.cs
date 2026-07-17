@@ -343,7 +343,7 @@ public class SecurityGovernanceDapperIntegrationTests
     {
         var options = new QueryOptions
         {
-            Select = new List<SelectModel> { new SelectModel { Field = "Name" }, new SelectModel { Field = "Id" } },
+            Select = new List<SelectNode> { new SelectNode { Field = "Name" }, new SelectNode { Field = "Id" } },
             Paging = { Page = 2, PageSize = 2 }
         };
         options.Items[ContextKeys.EntityType] = typeof(GovEntity);
@@ -369,7 +369,7 @@ public class SecurityGovernanceDapperIntegrationTests
         var options = new QueryOptions
         {
             Paging = { Page = 2, PageSize = 2 },
-            Select = new List<SelectModel> { new SelectModel { Field = "SSN" } }
+            Select = new List<SelectNode> { new SelectNode { Field = "SSN" } }
         };
         options.Items[ContextKeys.EntityType] = typeof(GovEntity);
 
@@ -466,8 +466,8 @@ public class SecurityGovernanceDapperIntegrationTests
 
         options.Validate(typeof(Customer), execOptions);
 
-        options.Select.Should().ContainEquivalentOf(new SelectModel { Field = "Name" });
-        options.Select.Should().NotContainEquivalentOf(new SelectModel { Field = "Id" });
+        options.Select.Should().ContainEquivalentOf(new SelectNode { Field = "Name" });
+        options.Select.Should().NotContainEquivalentOf(new SelectNode { Field = "Id" });
     }
 
     [Fact]

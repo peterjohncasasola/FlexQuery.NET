@@ -22,7 +22,7 @@ public sealed class QueryOptions
     public List<SortNode> Sort { get; set; } = [];
 
     /// <summary>Flat projection models produced by the SELECT parser.</summary>
-    public List<SelectModel>? Select { get; set; }
+    public List<SelectNode>? Select { get; set; }
 
     /// <summary>Navigation properties to include with all scalars.</summary>
     public List<string>? Includes { get; set; }

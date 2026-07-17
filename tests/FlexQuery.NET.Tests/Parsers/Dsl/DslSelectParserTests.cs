@@ -28,9 +28,9 @@ public class DslSelectParserTests
 
         options.Select.Should().BeEquivalentTo(new[]
         {
-            new SelectModel { Field = "Id" },
-            new SelectModel { Field = "Name" },
-            new SelectModel { Field = "Profile.AvatarUrl" }
+            new SelectNode { Field = "Id" },
+            new SelectNode { Field = "Name" },
+            new SelectNode { Field = "Profile.AvatarUrl" }
         });
     }
 
@@ -53,8 +53,8 @@ public class DslSelectParserTests
 
         options.Select.Should().BeEquivalentTo(new[]
         {
-            new SelectModel { Field = "Id" },
-            new SelectModel { Field = "Name" }
+            new SelectNode { Field = "Id" },
+            new SelectNode { Field = "Name" }
         });
     }
 
@@ -65,7 +65,7 @@ public class DslSelectParserTests
 
         DslSelectParser.Parse(options, "DateOfBirth:BirthDate");
 
-        options.Select.Should().ContainEquivalentOf(new SelectModel { Field = "DateOfBirth", Alias = "BirthDate" });
+        options.Select.Should().ContainEquivalentOf(new SelectNode { Field = "DateOfBirth", Alias = "BirthDate" });
     }
 
     [Fact]
@@ -75,7 +75,7 @@ public class DslSelectParserTests
 
         DslSelectParser.Parse(options, "Customer.Name:CustomerName");
 
-        options.Select.Should().ContainEquivalentOf(new SelectModel { Field = "Customer.Name", Alias = "CustomerName" });
+        options.Select.Should().ContainEquivalentOf(new SelectNode { Field = "Customer.Name", Alias = "CustomerName" });
     }
 
     [Fact]
@@ -185,7 +185,7 @@ public class DslSelectParserTests
 
         DslSelectParser.Parse(options, "Name : FullName");
 
-        options.Select.Should().ContainEquivalentOf(new SelectModel { Field = "Name", Alias = "FullName" });
+        options.Select.Should().ContainEquivalentOf(new SelectNode { Field = "Name", Alias = "FullName" });
     }
 
     [Fact]
@@ -195,7 +195,7 @@ public class DslSelectParserTests
 
         DslSelectParser.Parse(options, "Name,Customer.Name");
 
-        options.Select.Should().BeEquivalentTo([new SelectModel { Field = "Name" }, new SelectModel { Field = "Customer.Name" }]);
+        options.Select.Should().BeEquivalentTo([new SelectNode { Field = "Name" }, new SelectNode { Field = "Customer.Name" }]);
     }
 
     [Fact]
@@ -205,7 +205,7 @@ public class DslSelectParserTests
 
         DslSelectParser.Parse(options, "Name:Name");
 
-        options.Select.Should().ContainEquivalentOf(new SelectModel { Field = "Name", Alias = "Name" });
+        options.Select.Should().ContainEquivalentOf(new SelectNode { Field = "Name", Alias = "Name" });
     }
 
     #region Nested Select

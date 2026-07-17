@@ -54,7 +54,7 @@ public static class FlexQueryRequestExtensions
             Distinct = request.Distinct,
             Expand = request.Expand,
             Paging = request.Paging,
-            Select = request.Select?.Select(f => new SelectModel { Field = f }).ToList(),
+            Select = request.Select?.Select(f => new SelectNode { Field = f }).ToList(),
             IncludeCount = request.IncludeCount,
             Includes = request.Include,
             GroupBy = request.GroupBy,

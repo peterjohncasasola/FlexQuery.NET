@@ -43,7 +43,7 @@ internal static class ProjectionBuilder
 
     public static Expression BuildFromSelectionFields(
         Type entityType,
-        IReadOnlyList<SelectModel> selectionFields,
+        IReadOnlyList<SelectNode> selectionFields,
         QueryOptions options)
     {
         var tree = new SelectionNode();
@@ -175,7 +175,7 @@ internal static class ProjectionBuilder
         return Expression.MemberInit(newExpr, bindings);
     }
 
-    private static void MergeFieldPath(SelectionNode current, SelectModel? model)
+    private static void MergeFieldPath(SelectionNode current, SelectNode? model)
     {
         if (model == null) return;
 

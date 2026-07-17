@@ -20,7 +20,7 @@ public class WildcardProjectionTests : IDisposable
     {
         // Arrange
         var options = new QueryOptions();
-        options.Select = new List<SelectModel> { new SelectModel { Field = "Id" }, new SelectModel { Field = "Orders.*" } };
+        options.Select = new List<SelectNode> { new SelectNode { Field = "Id" }, new SelectNode { Field = "Orders.*" } };
 
         // Act
         var result = await _db.Customers
@@ -55,7 +55,7 @@ public class WildcardProjectionTests : IDisposable
         // Arrange
         var options = new QueryOptions();
         // Alice -> Orders -> OrderItems (all scalars)
-        options.Select = new List<SelectModel> { new SelectModel { Field = "Id" }, new SelectModel { Field = "Orders.Number" }, new SelectModel { Field = "Orders.OrderItems.*" } };
+        options.Select = new List<SelectNode> { new SelectNode { Field = "Id" }, new SelectNode { Field = "Orders.Number" }, new SelectNode { Field = "Orders.OrderItems.*" } };
 
         // Act
         var result = await _db.Customers
@@ -124,7 +124,7 @@ public class WildcardProjectionTests : IDisposable
             SelectableFields = new HashSet<string> { "Id" },
             StrictFieldValidation = true
         };
-        options.Select = new List<SelectModel> { new SelectModel { Field = "Id" }, new SelectModel { Field = "Name" } }; // Name is forbidden
+        options.Select = new List<SelectNode> { new SelectNode { Field = "Id" }, new SelectNode { Field = "Name" } }; // Name is forbidden
 
         // Act
         var act = () => options.ValidateOrThrow<Customer>(execOptions);

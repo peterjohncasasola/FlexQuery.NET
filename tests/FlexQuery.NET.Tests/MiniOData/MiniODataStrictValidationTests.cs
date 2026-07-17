@@ -136,7 +136,7 @@ public class MiniODataStrictValidationTests
     {
         var result = ODataQueryParameterParser.Parse(new MiniODataRequest { Select = "Id,Name,Email" });
 
-        result.Select.Should().BeEquivalentTo(new[] { new SelectModel { Field = "Id" }, new SelectModel { Field = "Name" }, new SelectModel { Field = "Email" } });
+        result.Select.Should().BeEquivalentTo(new[] { new SelectNode { Field = "Id" }, new SelectNode { Field = "Name" }, new SelectNode { Field = "Email" } });
     }
 
     [Fact]
@@ -144,7 +144,7 @@ public class MiniODataStrictValidationTests
     {
         var result = ODataQueryParameterParser.Parse(new MiniODataRequest { Select = "Customer/Name" });
 
-        result.Select.Should().ContainEquivalentOf(new SelectModel { Field = "Customer.Name" });
+        result.Select.Should().ContainEquivalentOf(new SelectNode { Field = "Customer.Name" });
     }
 
     [Fact]

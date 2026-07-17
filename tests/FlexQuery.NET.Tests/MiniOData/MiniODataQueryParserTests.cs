@@ -91,7 +91,7 @@ public class MiniODataQueryParserTests
 
         var result = ODataQueryParameterParser.Parse(request);
 
-        result.Select.Should().BeEquivalentTo(new[] { new SelectModel { Field = "id" }, new SelectModel { Field = "name" }, new SelectModel { Field = "email" } });
+        result.Select.Should().BeEquivalentTo(new[] { new SelectNode { Field = "id" }, new SelectNode { Field = "name" }, new SelectNode { Field = "email" } });
     }
 
     [Fact]
@@ -104,8 +104,8 @@ public class MiniODataQueryParserTests
 
         var result = ODataQueryParameterParser.Parse(request);
 
-        result.Select.Should().ContainEquivalentOf(new SelectModel { Field = "profile.name" });
-        result.Select.Should().ContainEquivalentOf(new SelectModel { Field = "address.city" });
+        result.Select.Should().ContainEquivalentOf(new SelectNode { Field = "profile.name" });
+        result.Select.Should().ContainEquivalentOf(new SelectNode { Field = "address.city" });
     }
 
     [Fact]

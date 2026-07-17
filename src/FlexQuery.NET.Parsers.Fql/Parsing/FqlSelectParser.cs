@@ -30,7 +30,7 @@ internal static class FqlSelectParser
         }
 
         var fields = ParserUtilities.SplitCsv(rawSelect);
-        var selectedFields = new List<SelectModel>(fields.Count);
+        var selectedFields = new List<SelectNode>(fields.Count);
         foreach (var field in fields)
         {
             var asIndex = field.IndexOf(" AS ", StringComparison.OrdinalIgnoreCase);
@@ -61,7 +61,7 @@ internal static class FqlSelectParser
                         $"Invalid alias '{rawAlias}' in 'select' parameter. " +
                         "Aliases must be valid identifiers (e.g. 'FullName').");
 
-                selectedFields.Add(new SelectModel { Field = rawPath, Alias = rawAlias });
+                selectedFields.Add(new SelectNode { Field = rawPath, Alias = rawAlias });
                 continue;
             }
 
@@ -75,7 +75,7 @@ internal static class FqlSelectParser
                     $"Invalid property path '{field}' in 'select' parameter. " +
                     "Property paths must be dot-separated identifiers (e.g. 'Id' or 'Customer.Name').");
 
-            selectedFields.Add(new SelectModel { Field = field });
+            selectedFields.Add(new SelectNode { Field = field });
         }
 
         options.Select = selectedFields;

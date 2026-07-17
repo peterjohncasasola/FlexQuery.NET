@@ -96,7 +96,7 @@ internal sealed class SqlSelectBuilder(IMappingRegistry mappingRegistry, ISqlDia
         return $"SELECT {distinctPrefix}{string.Join(", ", selectParts)}";
     }
 
-    private void TraverseSelectTree(SelectionNode node, IEntityMapping currentMapping, string? currentAlias, string prefix, List<string> selectParts, IReadOnlyList<SelectModel>? governedSelectFields = null)
+    private void TraverseSelectTree(SelectionNode node, IEntityMapping currentMapping, string? currentAlias, string prefix, List<string> selectParts, IReadOnlyList<SelectNode>? governedSelectFields = null)
     {
         bool hasSpecificFields = false;
 
@@ -142,7 +142,7 @@ internal sealed class SqlSelectBuilder(IMappingRegistry mappingRegistry, ISqlDia
         }
     }
 
-    private static IEnumerable<string> GetGovernedProperties(IEntityMapping mapping, IReadOnlyList<SelectModel>? governedSelectFields)
+    private static IEnumerable<string> GetGovernedProperties(IEntityMapping mapping, IReadOnlyList<SelectNode>? governedSelectFields)
     {
         var rootFields = GetRootGovernedPropertyNames(governedSelectFields);
         if (rootFields != null)
@@ -257,7 +257,7 @@ internal sealed class SqlSelectBuilder(IMappingRegistry mappingRegistry, ISqlDia
 
     private (List<string> navPath, List<FlatField> fields) DecomposeFlatSelection(
         SelectionNode node, IEntityMapping mapping, bool allowRootScalars, int level = 0,
-        IReadOnlyList<SelectModel>? governedSelectFields = null)
+        IReadOnlyList<SelectNode>? governedSelectFields = null)
     {
         var navPath = new List<string>();
         var fields = new List<FlatField>();
@@ -330,7 +330,7 @@ internal sealed class SqlSelectBuilder(IMappingRegistry mappingRegistry, ISqlDia
         return (navPath, fields);
     }
 
-    private static HashSet<string>? GetRootGovernedPropertyNames(IReadOnlyList<SelectModel>? governedSelectFields)
+    private static HashSet<string>? GetRootGovernedPropertyNames(IReadOnlyList<SelectNode>? governedSelectFields)
     {
         if (governedSelectFields is not { Count: > 0 })
             return null;

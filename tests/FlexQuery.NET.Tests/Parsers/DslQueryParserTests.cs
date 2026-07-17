@@ -449,7 +449,7 @@ public class DslQueryParserTests
             ["select"] = "Id,Name,Email"
         });
 
-        opts.Select.Should().BeEquivalentTo([new SelectModel { Field = "Id" }, new SelectModel { Field = "Name" }, new SelectModel { Field = "Email" }]);
+        opts.Select.Should().BeEquivalentTo([new SelectNode { Field = "Id" }, new SelectNode { Field = "Name" }, new SelectNode { Field = "Email" }]);
     }
 
     [Fact]
@@ -471,7 +471,7 @@ public class DslQueryParserTests
             ["select"] = "Name"
         });
 
-        opts.Select.Should().BeEquivalentTo([new SelectModel { Field = "Name" }]);
+        opts.Select.Should().BeEquivalentTo([new SelectNode { Field = "Name" }]);
     }
 
     // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
@@ -490,7 +490,7 @@ public class DslQueryParserTests
         });
 
         opts.GroupBy.Should().BeEquivalentTo("category", "status");
-        opts.Select.Should().BeEquivalentTo([new SelectModel { Field = "category" }]);
+        opts.Select.Should().BeEquivalentTo([new SelectNode { Field = "category" }]);
         opts.Aggregates.Should().HaveCount(2);
         opts.Aggregates.Should().Contain(a => a.Function == AggregateFunction.Sum && a.Field == "total");
         opts.Aggregates.Should().Contain(a => a.Function == AggregateFunction.Count && a.Field == "id");
@@ -961,7 +961,7 @@ public class DslQueryParserTests
         opts.Sort[1].Descending.Should().BeFalse();
 
         // Select
-        opts.Select.Should().BeEquivalentTo([new SelectModel { Field = "Id" }, new SelectModel { Field = "Name" }, new SelectModel { Field = "CustomerName" }]);
+        opts.Select.Should().BeEquivalentTo([new SelectNode { Field = "Id" }, new SelectNode { Field = "Name" }, new SelectNode { Field = "CustomerName" }]);
 
         // Include
         opts.Includes.Should().BeEquivalentTo("Orders", "Profile");

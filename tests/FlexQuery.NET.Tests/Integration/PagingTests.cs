@@ -148,7 +148,7 @@ public class PagingTests : IDisposable
         var opts = new QueryOptions
         {
             Paging = { Page = 2, PageSize = 3 },
-            Select = new List<SelectModel> { new SelectModel { Field = "Name" } }
+            Select = new List<SelectNode> { new SelectNode { Field = "Name" } }
         };
 
         var result = _db.Customers

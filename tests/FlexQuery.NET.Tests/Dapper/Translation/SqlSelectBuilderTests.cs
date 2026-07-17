@@ -183,7 +183,7 @@ public class SqlSelectBuilderTests
         var builder = new SqlSelectBuilder(_registry, Dialect);
         var options = new QueryOptions
         {
-            Select = [new SelectModel { Field = "Name" }, new SelectModel { Field = "Score" }]
+            Select = [new SelectNode { Field = "Name" }, new SelectNode { Field = "Score" }]
         };
         var tree = new SelectionNode();
         tree.GetOrAddChild("Name");
@@ -201,7 +201,7 @@ public class SqlSelectBuilderTests
         var builder = new SqlSelectBuilder(_registry, Dialect);
         var options = new QueryOptions
         {
-            Select = [new SelectModel { Field = "Name" }]
+            Select = [new SelectNode { Field = "Name" }]
         };
         var tree = new SelectionNode();
         tree.GetOrAddChild("Name");
@@ -351,7 +351,7 @@ public class SqlSelectBuilderTests
         var options = new QueryOptions
         {
             ProjectionMode = ProjectionMode.Flat,
-            Select = [new SelectModel { Field = "Name" }, new SelectModel { Field = "Email" }]
+            Select = [new SelectNode { Field = "Name" }, new SelectNode { Field = "Email" }]
         };
         var tree = new SelectionNode();
         tree.GetOrAddChild("Name");
@@ -373,7 +373,7 @@ public class SqlSelectBuilderTests
         var options = new QueryOptions
         {
             ProjectionMode = ProjectionMode.Flat,
-            Select = [new SelectModel { Field = "Orders.Total" }]
+            Select = [new SelectNode { Field = "Orders.Total" }]
         };
         var tree = new SelectionNode();
         var ordersNode = tree.GetOrAddChild("Orders");
@@ -396,7 +396,7 @@ public class SqlSelectBuilderTests
         var options = new QueryOptions
         {
             ProjectionMode = ProjectionMode.Flat,
-            Select = [new SelectModel { Field = "Orders.OrderItems.Sku" }]
+            Select = [new SelectNode { Field = "Orders.OrderItems.Sku" }]
         };
         var tree = new SelectionNode();
         var ordersNode = tree.GetOrAddChild("Orders");
@@ -421,7 +421,7 @@ public class SqlSelectBuilderTests
         var options = new QueryOptions
         {
             ProjectionMode = ProjectionMode.FlatMixed,
-            Select = [new SelectModel { Field = "Name" }, new SelectModel { Field = "Orders.Total" }]
+            Select = [new SelectNode { Field = "Name" }, new SelectNode { Field = "Orders.Total" }]
         };
         var tree = new SelectionNode();
         tree.GetOrAddChild("Name");
@@ -445,7 +445,7 @@ public class SqlSelectBuilderTests
         var options = new QueryOptions
         {
             ProjectionMode = ProjectionMode.Flat,
-            Select = [new SelectModel { Field = "Orders.Total" }]
+            Select = [new SelectNode { Field = "Orders.Total" }]
         };
         var tree = new SelectionNode();
         var ordersNode = tree.GetOrAddChild("Orders");
@@ -486,7 +486,7 @@ public class SqlSelectBuilderTests
         var options = new QueryOptions
         {
             ProjectionMode = ProjectionMode.Flat,
-            Select = [new SelectModel { Field = "Orders.Total" }]
+            Select = [new SelectNode { Field = "Orders.Total" }]
         };
         var tree = new SelectionNode();
         var ordersNode = tree.GetOrAddChild("Orders");
@@ -507,7 +507,7 @@ public class SqlSelectBuilderTests
         var options = new QueryOptions
         {
             ProjectionMode = ProjectionMode.Flat,
-            Select = [new SelectModel { Field = "Orders.Total" }]
+            Select = [new SelectNode { Field = "Orders.Total" }]
         };
         var tree = new SelectionNode();
         var ordersNode = tree.GetOrAddChild("Orders");

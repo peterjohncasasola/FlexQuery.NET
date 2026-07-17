@@ -232,7 +232,7 @@ public class SqlTranslatorTests
     {
         var options = NoPaging(new QueryOptions
         {
-            Select = [new SelectModel { Field = "Id" }, new SelectModel { Field = "Name" }, new SelectModel { Field = "Age" }]
+            Select = [new SelectNode { Field = "Id" }, new SelectNode { Field = "Name" }, new SelectNode { Field = "Age" }]
         });
         options.Items[ContextKeys.EntityType] = typeof(Customer);
 
@@ -489,7 +489,7 @@ public class SqlTranslatorTests
         var options = new QueryOptions
         {
             ProjectionMode = ProjectionMode.Flat,
-            Select = [new SelectModel { Field = "Orders.Total" }],
+            Select = [new SelectNode { Field = "Orders.Total" }],
             Paging = { Disabled = true }
         };
         options.Items[ContextKeys.EntityType] = typeof(Customer);
@@ -510,7 +510,7 @@ public class SqlTranslatorTests
         var options = new QueryOptions
         {
             ProjectionMode = ProjectionMode.FlatMixed,
-            Select = [new SelectModel { Field = "Name" }, new SelectModel { Field = "Orders.Total" }],
+            Select = [new SelectNode { Field = "Name" }, new SelectNode { Field = "Orders.Total" }],
             Paging = { Disabled = true }
         };
         options.Items[ContextKeys.EntityType] = typeof(Customer);
@@ -531,7 +531,7 @@ public class SqlTranslatorTests
         var options = new QueryOptions
         {
             ProjectionMode = ProjectionMode.Flat,
-            Select = [new SelectModel { Field = "Orders.OrderItems.Sku" }, new SelectModel { Field = "Orders.OrderItems.Id" }],
+            Select = [new SelectNode { Field = "Orders.OrderItems.Sku" }, new SelectNode { Field = "Orders.OrderItems.Id" }],
             Paging = { Disabled = true }
         };
         options.Items[ContextKeys.EntityType] = typeof(Customer);

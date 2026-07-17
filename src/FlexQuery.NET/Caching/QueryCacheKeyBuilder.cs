@@ -69,7 +69,7 @@ internal static class QueryCacheKeyBuilder
             ? string.Empty
             : string.Join(",", values.Select(Escape).OrderBy(v => v, StringComparer.Ordinal));
 
-    private static string SelectModelListKey(IEnumerable<SelectModel>? values)
+    private static string SelectModelListKey(IEnumerable<SelectNode>? values)
         => values is null
             ? string.Empty
             : string.Join(",", values.Select(m => $"{Escape(m.Field)}:{Escape(m.Alias)}").OrderBy(v => v, StringComparer.Ordinal));

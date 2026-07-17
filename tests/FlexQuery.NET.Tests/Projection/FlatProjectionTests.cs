@@ -17,7 +17,7 @@ public class FlatProjectionTests : IDisposable
         var options = new QueryOptions
         {
             ProjectionMode = ProjectionMode.Flat,
-            Select = [new SelectModel { Field = "Orders.Total" }, new SelectModel { Field = "Orders.Status", Alias = "OrderStatus" }]
+            Select = [new SelectNode { Field = "Orders.Total" }, new SelectNode { Field = "Orders.Status", Alias = "OrderStatus" }]
         };
 
         var list = await _db.Customers.Where(x => x.Id == 1).ApplySelect(options).ToListAsync();
@@ -47,7 +47,7 @@ public class FlatProjectionTests : IDisposable
         var options = new QueryOptions
         {
             ProjectionMode = ProjectionMode.Flat,
-            Select = [new SelectModel { Field = "Orders.OrderItems.Quantity", Alias = "Qty" }, new SelectModel { Field = "Orders.OrderItems.Price" }]
+            Select = [new SelectNode { Field = "Orders.OrderItems.Quantity", Alias = "Qty" }, new SelectNode { Field = "Orders.OrderItems.Price" }]
         };
 
         var list = await _db.Customers.Where(x => x.Id == 1).ApplySelect(options).ToListAsync();
@@ -75,7 +75,7 @@ public class FlatProjectionTests : IDisposable
         var options = new QueryOptions
         {
             ProjectionMode = ProjectionMode.Flat,
-            Select = [new SelectModel { Field = "Orders.Total" }, new SelectModel { Field = "Profile.Bio" }]
+            Select = [new SelectNode { Field = "Orders.Total" }, new SelectNode { Field = "Profile.Bio" }]
         };
 
         Action action = () => _db.Customers.ApplySelect(options);
@@ -90,7 +90,7 @@ public class FlatProjectionTests : IDisposable
         var options = new QueryOptions
         {
             ProjectionMode = ProjectionMode.Flat,
-            Select = [new SelectModel { Field = "Name" }, new SelectModel { Field = "Orders.Total" }]
+            Select = [new SelectNode { Field = "Name" }, new SelectNode { Field = "Orders.Total" }]
         };
 
         Action action = () => _db.Customers.ApplySelect(options);
@@ -107,7 +107,7 @@ public class FlatProjectionTests : IDisposable
         var options = new QueryOptions
         {
             ProjectionMode = ProjectionMode.FlatMixed,
-            Select = [new SelectModel { Field = "Name", Alias = "customerName" }, new SelectModel { Field = "Orders.Status", Alias = "OrderStatus" }, new SelectModel { Field = "Orders.Total" }]
+            Select = [new SelectNode { Field = "Name", Alias = "customerName" }, new SelectNode { Field = "Orders.Status", Alias = "OrderStatus" }, new SelectNode { Field = "Orders.Total" }]
         };
 
         var list = await _db.Customers.Where(x => x.Id == 1).ApplySelect(options).ToListAsync();
@@ -137,7 +137,7 @@ public class FlatProjectionTests : IDisposable
         var options = new QueryOptions
         {
             ProjectionMode = ProjectionMode.FlatMixed,
-            Select = [new SelectModel { Field = "Id", Alias = "customerId" }, new SelectModel { Field = "Orders.Status", Alias = "orderStatus" }, new SelectModel { Field = "Orders.OrderItems.Quantity", Alias = "qty" }]
+            Select = [new SelectNode { Field = "Id", Alias = "customerId" }, new SelectNode { Field = "Orders.Status", Alias = "orderStatus" }, new SelectNode { Field = "Orders.OrderItems.Quantity", Alias = "qty" }]
         };
 
         var list = await _db.Customers.Where(x => x.Id == 1).ApplySelect(options).ToListAsync();
@@ -173,7 +173,7 @@ public class FlatProjectionTests : IDisposable
     {
         var options = new QueryOptions
         {
-            Select = [new SelectModel { Field = "Id", Alias = "customerId" }, new SelectModel { Field = "Name" }]
+            Select = [new SelectNode { Field = "Id", Alias = "customerId" }, new SelectNode { Field = "Name" }]
         };
 
         var list = await _db.Customers.Where(x => x.Id == 1).ApplySelect(options).ToListAsync();
@@ -195,7 +195,7 @@ public class FlatProjectionTests : IDisposable
     {
         var options = new QueryOptions
         {
-            Select = [new SelectModel { Field = "Id" }, new SelectModel { Field = "Orders.Status", Alias = "OrderStatus" }, new SelectModel { Field = "Orders.Total" }]
+            Select = [new SelectNode { Field = "Id" }, new SelectNode { Field = "Orders.Status", Alias = "OrderStatus" }, new SelectNode { Field = "Orders.Total" }]
         };
 
         var list = await _db.Customers.Where(x => x.Id == 1).ApplySelect(options).ToListAsync();

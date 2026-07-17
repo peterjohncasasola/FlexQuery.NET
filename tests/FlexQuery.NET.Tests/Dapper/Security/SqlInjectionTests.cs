@@ -152,7 +152,7 @@ public class SqlInjectionTests
     {
         var options = new QueryOptions
         {
-            Select = [new SelectModel { Field = "Id" }, new SelectModel { Field = "Name" }, new SelectModel { Field = "(SELECT * FROM Users)" }],
+            Select = [new SelectNode { Field = "Id" }, new SelectNode { Field = "Name" }, new SelectNode { Field = "(SELECT * FROM Users)" }],
             Paging = { Disabled = true }
         };
         options.Items[ContextKeys.EntityType] = typeof(Customer);
@@ -169,7 +169,7 @@ public class SqlInjectionTests
     {
         var options = new QueryOptions
         {
-            Select = [new SelectModel { Field = "Id); DROP TABLE Users; --" }],
+            Select = [new SelectNode { Field = "Id); DROP TABLE Users; --" }],
             Paging = { Disabled = true }
         };
         options.Items[ContextKeys.EntityType] = typeof(Customer);
@@ -333,7 +333,7 @@ public class SqlInjectionTests
     {
         var options = new QueryOptions
         {
-            Select = [new SelectModel { Field = "Order" }], // "Order" is a SQL keyword
+            Select = [new SelectNode { Field = "Order" }], // "Order" is a SQL keyword
             Paging = { Disabled = true }
         };
         options.Items[ContextKeys.EntityType] = typeof(Customer);
@@ -369,7 +369,7 @@ public class SqlInjectionTests
     {
         var options = new QueryOptions
         {
-            Select = [new SelectModel { Field = "Id" }, new SelectModel { Field = "UNION SELECT * FROM Users" }],
+            Select = [new SelectNode { Field = "Id" }, new SelectNode { Field = "UNION SELECT * FROM Users" }],
             Paging = { Disabled = true }
         };
         options.Items[ContextKeys.EntityType] = typeof(Customer);
@@ -386,7 +386,7 @@ public class SqlInjectionTests
     {
         var options = new QueryOptions
         {
-            Select = [new SelectModel { Field = "(SELECT @@VERSION)" }],
+            Select = [new SelectNode { Field = "(SELECT @@VERSION)" }],
             Paging = { Disabled = true }
         };
         options.Items[ContextKeys.EntityType] = typeof(Customer);

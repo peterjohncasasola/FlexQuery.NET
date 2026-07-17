@@ -4,7 +4,7 @@ namespace FlexQuery.NET.Models.Projection;
 /// Strongly-typed representation of a single projection in a SELECT clause.
 /// Produced by both DSL and FQL parsers as a normalized AST.
 /// </summary>
-public sealed class SelectModel
+public sealed class SelectNode
 {
     /// <summary>
     /// Property path being projected.
@@ -25,5 +25,5 @@ public sealed class SelectModel
     /// <summary>
     /// Nested projections.
     /// </summary>
-    public List<SelectModel> Children { get; } = [];
+    public List<SelectNode> Children { get; } = [];
 }

@@ -9,7 +9,7 @@ public class ProjectionMetadataBuilderTests
     [Fact]
     public void Build_ReturnsProjectionMetadata()
     {
-        var options = new QueryOptions { Select = [new SelectModel { Field = "Id" }, new SelectModel { Field = "Name" }] };
+        var options = new QueryOptions { Select = [new SelectNode { Field = "Id" }, new SelectNode { Field = "Name" }] };
 
         var result = ProjectionMetadataBuilder.Build(typeof(Customer), options);
 

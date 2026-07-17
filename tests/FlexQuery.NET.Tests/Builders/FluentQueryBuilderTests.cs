@@ -138,9 +138,9 @@ public class FluentQueryBuilderTests
 
         options.Select.Should().BeEquivalentTo(new[]
         {
-            new SelectModel { Field = "Id" },
-            new SelectModel { Field = "Name" },
-            new SelectModel { Field = "Email" }
+            new SelectNode { Field = "Id" },
+            new SelectNode { Field = "Name" },
+            new SelectNode { Field = "Email" }
         });
     }
 

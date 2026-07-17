@@ -78,7 +78,7 @@ public sealed class SecurityGovernanceEfCoreIntegrationTests : IDisposable
     {
         var options = new QueryOptions
         {
-            Select = new List<SelectModel> { new SelectModel { Field = "SSN" } }
+            Select = new List<SelectNode> { new SelectNode { Field = "SSN" } }
         };
         var execOptions = new EfCoreQueryOptions
         {
@@ -192,7 +192,7 @@ public sealed class SecurityGovernanceEfCoreIntegrationTests : IDisposable
     {
         var options = new QueryOptions
         {
-            Select = new List<SelectModel> { new SelectModel { Field = "Name" }, new SelectModel { Field = "SSN" } }
+            Select = new List<SelectNode> { new SelectNode { Field = "Name" }, new SelectNode { Field = "SSN" } }
         };
         var execOptions = new EfCoreQueryOptions
         {
@@ -202,8 +202,8 @@ public sealed class SecurityGovernanceEfCoreIntegrationTests : IDisposable
 
         options.Validate(typeof(Customer), execOptions);
 
-        options.Select.Should().ContainEquivalentOf(new SelectModel { Field = "Name" });
-        options.Select.Should().NotContainEquivalentOf(new SelectModel { Field = "SSN" });
+        options.Select.Should().ContainEquivalentOf(new SelectNode { Field = "Name" });
+        options.Select.Should().NotContainEquivalentOf(new SelectNode { Field = "SSN" });
     }
 
     // ──────────────────────────────────────────────────────────────
@@ -375,7 +375,7 @@ public sealed class SecurityGovernanceEfCoreIntegrationTests : IDisposable
     {
         var options = new QueryOptions { IncludeCount = true };
         // Use flat Select (NOT SelectTree) — the normal code path
-        options.Select = new List<SelectModel> { new SelectModel { Field = "SSN" } };
+        options.Select = new List<SelectNode> { new SelectNode { Field = "SSN" } };
 
         var execOptions = new EfCoreQueryOptions
         {

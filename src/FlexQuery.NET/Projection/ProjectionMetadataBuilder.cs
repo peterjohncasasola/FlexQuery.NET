@@ -50,7 +50,7 @@ internal static class ProjectionMetadataBuilder
         Type sourceType,
         SelectionNode node,
         Dictionary<string, Type> fields,
-        IReadOnlyList<SelectModel>? governedSelectFields,
+        IReadOnlyList<SelectNode>? governedSelectFields,
         bool isRoot)
     {
         var effective = NormalizeSelection(sourceType, node, isRoot ? governedSelectFields : null);
@@ -90,7 +90,7 @@ internal static class ProjectionMetadataBuilder
     public static SelectionNode NormalizeSelection(
         Type sourceType,
         SelectionNode selectTree,
-        IReadOnlyList<SelectModel>? governedSelectFields = null)
+        IReadOnlyList<SelectNode>? governedSelectFields = null)
     {
         var effective = new SelectionNode();
 
@@ -119,7 +119,7 @@ internal static class ProjectionMetadataBuilder
     private static void ExpandScalarFields(
         Type sourceType,
         SelectionNode target,
-        IReadOnlyList<SelectModel>? governedSelectFields)
+        IReadOnlyList<SelectNode>? governedSelectFields)
     {
         if (governedSelectFields is { Count: > 0 })
         {

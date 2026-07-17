@@ -22,7 +22,7 @@ public class SelectTests : IDisposable
     {
         var options = new QueryOptions
         {
-            Select = [new SelectModel { Field = "Name" }, new SelectModel { Field = "Orders.Total" }, new SelectModel { Field = "Orders.Customer.Name" }]
+            Select = [new SelectNode { Field = "Name" }, new SelectNode { Field = "Orders.Total" }, new SelectNode { Field = "Orders.Customer.Name" }]
         };
 
         var tree = SelectTreeBuilder.Build(options);
@@ -59,7 +59,7 @@ public class SelectTests : IDisposable
     [Fact]
     public async Task Select_FlatFields_ProjectsOnlyRequestedFields()
     {
-        var options = new QueryOptions { Select = [new SelectModel { Field = "Id" }, new SelectModel { Field = "Name" }] };
+        var options = new QueryOptions { Select = [new SelectNode { Field = "Id" }, new SelectNode { Field = "Name" }] };
         var query = _db.Customers.ApplySelect(options);
         
         var list = await query.ToListAsync();
@@ -78,7 +78,7 @@ public class SelectTests : IDisposable
     [Fact]
     public async Task Select_NestedProperties_ResolvesAndProjects()
     {
-        var options = new QueryOptions { Select = [new SelectModel { Field = "Id" }, new SelectModel { Field = "Profile.Bio" }] };
+        var options = new QueryOptions { Select = [new SelectNode { Field = "Id" }, new SelectNode { Field = "Profile.Bio" }] };
         var query = _db.Customers.ApplySelect(options);
         
         var list = await query.ToListAsync();
@@ -101,7 +101,7 @@ public class SelectTests : IDisposable
     public async Task Select_NestedProperties_HandlesNullRelationsGracefully()
     {
         // Diana Prince (Id=4) has null Profile
-        var options = new QueryOptions { Select = [new SelectModel { Field = "Id" }, new SelectModel { Field = "Profile.Bio" }] };
+        var options = new QueryOptions { Select = [new SelectNode { Field = "Id" }, new SelectNode { Field = "Profile.Bio" }] };
         var query = _db.Customers.Where(e => e.Id == 4).ApplySelect(options);
         
         var list = await query.ToListAsync();
@@ -114,7 +114,7 @@ public class SelectTests : IDisposable
     [Fact]
     public async Task Select_CollectionProperties_ProjectsCollectionElements()
     {
-        var options = new QueryOptions { Select = [new SelectModel { Field = "Id" }, new SelectModel { Field = "Orders.Total" }] };
+        var options = new QueryOptions { Select = [new SelectNode { Field = "Id" }, new SelectNode { Field = "Orders.Total" }] };
         var query = _db.Customers.Where(e => e.Id == 1).ApplySelect(options);
         
         var list = await query.ToListAsync();
@@ -191,7 +191,7 @@ public class SelectTests : IDisposable
     [Fact]
     public async Task Select_InvalidField_IsIgnoredAndDoesNotThrow()
     {
-        var options = new QueryOptions { Select = [new SelectModel { Field = "Id" }, new SelectModel { Field = "NonExistentField" }, new SelectModel { Field = "Profile.Fake" }] };
+        var options = new QueryOptions { Select = [new SelectNode { Field = "Id" }, new SelectNode { Field = "NonExistentField" }, new SelectNode { Field = "Profile.Fake" }] };
         var query = _db.Customers.ApplySelect(options);
         
         var list = await query.ToListAsync();
@@ -213,7 +213,7 @@ public class SelectTests : IDisposable
 
         var options = new QueryOptions
         {
-            Select = [new SelectModel { Field = "Name" }, new SelectModel { Field = "Email" }, new SelectModel { Field = "Orders.Number" }, new SelectModel { Field = "Orders.Customer.Name" }]
+            Select = [new SelectNode { Field = "Name" }, new SelectNode { Field = "Email" }, new SelectNode { Field = "Orders.Number" }, new SelectNode { Field = "Orders.Customer.Name" }]
         };
 
         var baseQuery = db.Customers
@@ -547,7 +547,7 @@ public class SelectTests : IDisposable
         var options = new QueryOptions
         {
             SelectTree = tree,
-            Select = new List<SelectModel> { new SelectModel { Field = "Profile.Bio", Alias = "ProfileBio" } }
+            Select = new List<SelectNode> { new SelectNode { Field = "Profile.Bio", Alias = "ProfileBio" } }
         };
 
         var result = SelectTreeBuilder.Build(options);
@@ -566,7 +566,7 @@ public class SelectTests : IDisposable
         var options = new QueryOptions
         {
             SelectTree = tree,
-            Select = new List<SelectModel> { new SelectModel { Field = "Profile.Bio", Alias = "LastBio" } }
+            Select = new List<SelectNode> { new SelectNode { Field = "Profile.Bio", Alias = "LastBio" } }
         };
 
         var act = () => SelectTreeBuilder.Build(options);
@@ -580,7 +580,7 @@ public class SelectTests : IDisposable
     {
         var options = new QueryOptions
         {
-            Select = new List<SelectModel> { new SelectModel { Field = "Customer.Name", Alias = "CustomerName" }, new SelectModel { Field = "Customer.Email", Alias = "CustomerEmail" }, new SelectModel { Field = "Customer.Name", Alias = "CustomerName" }, new SelectModel { Field = "Customer.Email", Alias = "CustomerEmail" } }
+            Select = new List<SelectNode> { new SelectNode { Field = "Customer.Name", Alias = "CustomerName" }, new SelectNode { Field = "Customer.Email", Alias = "CustomerEmail" }, new SelectNode { Field = "Customer.Name", Alias = "CustomerName" }, new SelectNode { Field = "Customer.Email", Alias = "CustomerEmail" } }
         };
 
         var result = SelectTreeBuilder.Build(options);
@@ -596,7 +596,7 @@ public class SelectTests : IDisposable
     {
         var options = new QueryOptions
         {
-            Select = new List<SelectModel> { new SelectModel { Field = "Profile.Bio", Alias = "ProfileBio" }, new SelectModel { Field = "Profile.Id" } }
+            Select = new List<SelectNode> { new SelectNode { Field = "Profile.Bio", Alias = "ProfileBio" }, new SelectNode { Field = "Profile.Id" } }
         };
 
         var result = SelectTreeBuilder.Build(options);
@@ -609,8 +609,8 @@ public class SelectTests : IDisposable
     [Fact]
     public void Select_Alias_CacheKey_DifferentFromBareField()
     {
-        var optionsWithAlias = new QueryOptions { Select = new List<SelectModel> { new SelectModel { Field = "Profile.Bio", Alias = "ProfileBio" } } };
-        var optionsWithoutAlias = new QueryOptions { Select = new List<SelectModel> { new SelectModel { Field = "Profile.Bio" } } };
+        var optionsWithAlias = new QueryOptions { Select = new List<SelectNode> { new SelectNode { Field = "Profile.Bio", Alias = "ProfileBio" } } };
+        var optionsWithoutAlias = new QueryOptions { Select = new List<SelectNode> { new SelectNode { Field = "Profile.Bio" } } };
 
         var keyWithAlias = QueryCacheKeyBuilder.Build(optionsWithAlias, typeof(Customer), "query");
         var keyWithoutAlias = QueryCacheKeyBuilder.Build(optionsWithoutAlias, typeof(Customer), "query");
@@ -621,8 +621,8 @@ public class SelectTests : IDisposable
     [Fact]
     public void Select_Alias_CacheKey_SameAlias_IdenticalKeys()
     {
-        var options1 = new QueryOptions { Select = new List<SelectModel> { new SelectModel { Field = "Profile.Bio", Alias = "ProfileBio" } } };
-        var options2 = new QueryOptions { Select = new List<SelectModel> { new SelectModel { Field = "Profile.Bio", Alias = "ProfileBio" } } };
+        var options1 = new QueryOptions { Select = new List<SelectNode> { new SelectNode { Field = "Profile.Bio", Alias = "ProfileBio" } } };
+        var options2 = new QueryOptions { Select = new List<SelectNode> { new SelectNode { Field = "Profile.Bio", Alias = "ProfileBio" } } };
 
         var key1 = QueryCacheKeyBuilder.Build(options1, typeof(Customer), "query");
         var key2 = QueryCacheKeyBuilder.Build(options2, typeof(Customer), "query");

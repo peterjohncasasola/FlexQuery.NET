@@ -62,7 +62,7 @@ internal static class SelectTreeBuilder
         return root;
     }
 
-    private static void MergePath(SelectionNode current, SelectModel model, bool includeAllScalarsAtLeaf)
+    private static void MergePath(SelectionNode current, SelectNode? model, bool includeAllScalarsAtLeaf)
     {
         if (model == null) return;
         

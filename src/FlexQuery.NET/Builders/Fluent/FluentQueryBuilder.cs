@@ -40,7 +40,7 @@ public sealed class FluentQueryBuilder
     {
         if (fields.Length > 0)
         {
-            _options.Select = [.. fields.Select(f => new SelectModel { Field = f })];
+            _options.Select = [.. fields.Select(f => new SelectNode { Field = f })];
         }
         else
         {

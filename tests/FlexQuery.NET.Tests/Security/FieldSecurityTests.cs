@@ -211,9 +211,9 @@ public class FieldSecurityTests
         // But SSN should be removed from select
         options.Select.Should().NotBeNull();
         options.Select.Should().HaveCount(2);
-        options.Select.Should().ContainEquivalentOf(new SelectModel { Field = "Id" });
-        options.Select.Should().ContainEquivalentOf(new SelectModel { Field = "Name" });
-        options.Select.Should().NotContainEquivalentOf(new SelectModel { Field = "SSN" });
+        options.Select.Should().ContainEquivalentOf(new SelectNode { Field = "Id" });
+        options.Select.Should().ContainEquivalentOf(new SelectNode { Field = "Name" });
+        options.Select.Should().NotContainEquivalentOf(new SelectNode { Field = "SSN" });
     }
 
     [Fact]
@@ -596,8 +596,8 @@ public class FieldSecurityTests
 
         options.Select.Should().NotBeNull();
         options.Select.Should().HaveCount(2);
-        options.Select.Should().ContainEquivalentOf(new SelectModel { Field = "Id" });
-        options.Select.Should().ContainEquivalentOf(new SelectModel { Field = "Name" });
+        options.Select.Should().ContainEquivalentOf(new SelectNode { Field = "Id" });
+        options.Select.Should().ContainEquivalentOf(new SelectNode { Field = "Name" });
     }
 
     [Fact]
@@ -613,7 +613,7 @@ public class FieldSecurityTests
 
         options.Select.Should().NotBeNull();
         options.Select.Should().HaveCount(1);
-        options.Select.Should().ContainEquivalentOf(new SelectModel { Field = "Name" });
+        options.Select.Should().ContainEquivalentOf(new SelectNode { Field = "Name" });
     }
 
     [Fact]
@@ -628,9 +628,9 @@ public class FieldSecurityTests
         options.Validate(typeof(Customer), execOptions);
 
         options.Select.Should().NotBeNull();
-        options.Select.Should().ContainEquivalentOf(new SelectModel { Field = "Id" });
-        options.Select.Should().ContainEquivalentOf(new SelectModel { Field = "Name" });
-        options.Select.Should().NotContainEquivalentOf(new SelectModel { Field = "SSN" });
+        options.Select.Should().ContainEquivalentOf(new SelectNode { Field = "Id" });
+        options.Select.Should().ContainEquivalentOf(new SelectNode { Field = "Name" });
+        options.Select.Should().NotContainEquivalentOf(new SelectNode { Field = "SSN" });
     }
 
     [Fact]
@@ -645,8 +645,8 @@ public class FieldSecurityTests
         options.ValidateOrThrow<Customer>(execOptions);
 
         options.Select.Should().HaveCount(1);
-        options.Select.Should().ContainEquivalentOf(new SelectModel { Field = "Id" });
-        options.Select.Should().NotContainEquivalentOf(new SelectModel { Field = "Name" });
+        options.Select.Should().ContainEquivalentOf(new SelectNode { Field = "Id" });
+        options.Select.Should().NotContainEquivalentOf(new SelectNode { Field = "Name" });
     }
 
     // ──────────────────────────────────────────────────────────────────
@@ -764,8 +764,8 @@ public class FieldSecurityTests
 
         options.Select.Should().NotBeNull();
         options.Select.Should().HaveCount(2);
-        options.Select.Should().ContainEquivalentOf(new SelectModel { Field = "Id" });
-        options.Select.Should().ContainEquivalentOf(new SelectModel { Field = "Name" });
+        options.Select.Should().ContainEquivalentOf(new SelectNode { Field = "Id" });
+        options.Select.Should().ContainEquivalentOf(new SelectNode { Field = "Name" });
     }
 
     [Fact]
@@ -803,8 +803,8 @@ public class FieldSecurityTests
         options.Validate(typeof(Customer), execOptions);
 
         options.Select.Should().NotBeNull();
-        options.Select.Should().ContainEquivalentOf(new SelectModel { Field = "Id" });
-        options.Select.Should().NotContainEquivalentOf(new SelectModel { Field = "Name" });
+        options.Select.Should().ContainEquivalentOf(new SelectNode { Field = "Id" });
+        options.Select.Should().NotContainEquivalentOf(new SelectNode { Field = "Name" });
     }
 
     // ──────────────────────────────────────────────────────────────────
@@ -823,9 +823,9 @@ public class FieldSecurityTests
         options.Validate(typeof(Customer), execOptions);
 
         options.Select.Should().NotBeNull();
-        options.Select.Should().ContainEquivalentOf(new SelectModel { Field = "Id" });
-        options.Select.Should().ContainEquivalentOf(new SelectModel { Field = "Orders.Total" });
-        options.Select.Should().ContainEquivalentOf(new SelectModel { Field = "Orders.Status" });
+        options.Select.Should().ContainEquivalentOf(new SelectNode { Field = "Id" });
+        options.Select.Should().ContainEquivalentOf(new SelectNode { Field = "Orders.Total" });
+        options.Select.Should().ContainEquivalentOf(new SelectNode { Field = "Orders.Status" });
     }
 
     [Fact]
@@ -840,9 +840,9 @@ public class FieldSecurityTests
         options.Validate(typeof(Customer), execOptions);
 
         options.Select.Should().NotBeNull();
-        options.Select.Should().ContainEquivalentOf(new SelectModel { Field = "Id" });
-        options.Select.Should().ContainEquivalentOf(new SelectModel { Field = "Orders.Total" });
-        options.Select.Should().ContainEquivalentOf(new SelectModel { Field = "Orders.Status" });
+        options.Select.Should().ContainEquivalentOf(new SelectNode { Field = "Id" });
+        options.Select.Should().ContainEquivalentOf(new SelectNode { Field = "Orders.Total" });
+        options.Select.Should().ContainEquivalentOf(new SelectNode { Field = "Orders.Status" });
     }
 
     [Fact]
@@ -851,9 +851,9 @@ public class FieldSecurityTests
         var result = DefaultProjectionHelper.ExpandWildcardFields(
             new[] { "Id", "Name", "*" }, typeof(Customer));
 
-        result.Should().ContainEquivalentOf(new SelectModel { Field = "Id" });
-        result.Should().ContainEquivalentOf(new SelectModel { Field = "Name" });
-        result.Should().ContainEquivalentOf(new SelectModel { Field = "SSN" }); // scalar from *
+        result.Should().ContainEquivalentOf(new SelectNode { Field = "Id" });
+        result.Should().ContainEquivalentOf(new SelectNode { Field = "Name" });
+        result.Should().ContainEquivalentOf(new SelectNode { Field = "SSN" }); // scalar from *
     }
 
     // ──────────────────────────────────────────────────────────────────
@@ -865,7 +865,7 @@ public class FieldSecurityTests
     {
         var options = new QueryOptions
         {
-            Select = new List<SelectModel> { new SelectModel { Field = "SSN" } }
+            Select = new List<SelectNode> { new SelectNode { Field = "SSN" } }
         };
         var execOptions = new QueryExecutionOptions
         {
@@ -877,9 +877,9 @@ public class FieldSecurityTests
 
         result.IsValid.Should().BeFalse(); // SSN was denied
         options.Select.Should().NotBeNull();
-        options.Select.Should().ContainEquivalentOf(new SelectModel { Field = "Id" });
-        options.Select.Should().ContainEquivalentOf(new SelectModel { Field = "Name" });
-        options.Select.Should().NotContainEquivalentOf(new SelectModel { Field = "SSN" });
+        options.Select.Should().ContainEquivalentOf(new SelectNode { Field = "Id" });
+        options.Select.Should().ContainEquivalentOf(new SelectNode { Field = "Name" });
+        options.Select.Should().NotContainEquivalentOf(new SelectNode { Field = "SSN" });
     }
 
     [Fact]
@@ -887,7 +887,7 @@ public class FieldSecurityTests
     {
         var options = new QueryOptions
         {
-            Select = new List<SelectModel> { new SelectModel { Field = "SSN" }, new SelectModel { Field = "Email" } }
+            Select = new List<SelectNode> { new SelectNode { Field = "SSN" }, new SelectNode { Field = "Email" } }
         };
         var execOptions = new QueryExecutionOptions
         {
@@ -899,10 +899,10 @@ public class FieldSecurityTests
 
         result.IsValid.Should().BeFalse(); // SSN, Email were denied
         options.Select.Should().NotBeNull();
-        options.Select.Should().ContainEquivalentOf(new SelectModel { Field = "Id" });
-        options.Select.Should().ContainEquivalentOf(new SelectModel { Field = "Name" });
-        options.Select.Should().NotContainEquivalentOf(new SelectModel { Field = "SSN" });
-        options.Select.Should().NotContainEquivalentOf(new SelectModel { Field = "Email" });
+        options.Select.Should().ContainEquivalentOf(new SelectNode { Field = "Id" });
+        options.Select.Should().ContainEquivalentOf(new SelectNode { Field = "Name" });
+        options.Select.Should().NotContainEquivalentOf(new SelectNode { Field = "SSN" });
+        options.Select.Should().NotContainEquivalentOf(new SelectNode { Field = "Email" });
     }
 
     [Fact]
@@ -910,7 +910,7 @@ public class FieldSecurityTests
     {
         var options = new QueryOptions
         {
-            Select = new List<SelectModel> { new SelectModel { Field = "SSN" } }
+            Select = new List<SelectNode> { new SelectNode { Field = "SSN" } }
         };
         var execOptions = new QueryExecutionOptions
         {
@@ -1172,9 +1172,9 @@ public class FieldSecurityTests
         // Then FieldAccessValidator checks all Select fields against AllowedFields
         // Email is denied (not in AllowedFields), removed in non-strict mode
         Assert.False(result.IsValid);
-        options.Select.Should().ContainEquivalentOf(new SelectModel { Field = "Id" });
-        options.Select.Should().ContainEquivalentOf(new SelectModel { Field = "Name" });
-        options.Select.Should().NotContainEquivalentOf(new SelectModel { Field = "Email" });
+        options.Select.Should().ContainEquivalentOf(new SelectNode { Field = "Id" });
+        options.Select.Should().ContainEquivalentOf(new SelectNode { Field = "Name" });
+        options.Select.Should().NotContainEquivalentOf(new SelectNode { Field = "Email" });
     }
 
     [Fact]
@@ -1196,7 +1196,7 @@ public class FieldSecurityTests
         options.Select.Should().NotBeNull();
         // RoleAllowedFields used for injection: no SSN
         options.Select.Should().HaveCount(2);
-        options.Select.Should().NotContainEquivalentOf(new SelectModel { Field = "SSN" });
+        options.Select.Should().NotContainEquivalentOf(new SelectNode { Field = "SSN" });
     }
 
     private class MockResolver : IFieldAccessResolver

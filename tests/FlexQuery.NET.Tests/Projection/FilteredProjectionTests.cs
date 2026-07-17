@@ -29,7 +29,7 @@ public sealed class FilteredProjectionTests : IDisposable
                     }
                 ]
             },
-            Select = [new SelectModel { Field = "Id" }, new SelectModel { Field = "Orders.Number" }]
+            Select = [new SelectNode { Field = "Id" }, new SelectNode { Field = "Orders.Number" }]
         };
 
         var rows = await _db.Customers
@@ -62,7 +62,7 @@ public sealed class FilteredProjectionTests : IDisposable
                     new FilterCondition { Field = "Orders.Total", Operator = FilterOperators.GreaterThan, Value = "100" }
                 ]
             },
-            Select = [new SelectModel { Field = "Id" }, new SelectModel { Field = "Orders.Number" }, new SelectModel { Field = "Orders.Total" }]
+            Select = [new SelectNode { Field = "Id" }, new SelectNode { Field = "Orders.Number" }, new SelectNode { Field = "Orders.Total" }]
         };
 
         var rows = await _db.Customers
@@ -95,7 +95,7 @@ public sealed class FilteredProjectionTests : IDisposable
                     new FilterCondition { Field = "Orders.Number", Operator = FilterOperators.Equal, Value = "SO-002" }
                 ]
             },
-            Select = [new SelectModel { Field = "Id" }, new SelectModel { Field = "Orders.Number" }]
+            Select = [new SelectNode { Field = "Id" }, new SelectNode { Field = "Orders.Number" }]
         };
 
         var rows = await _db.Customers
@@ -157,7 +157,7 @@ public sealed class FilteredProjectionTests : IDisposable
                     new FilterCondition { Field = "Orders.OrderItems.Sku", Operator = FilterOperators.Equal, Value = "SKU-AAA" }
                 ]
             },
-            Select = [new SelectModel { Field = "Id" }, new SelectModel { Field = "Orders.Number" }, new SelectModel { Field = "Orders.OrderItems.Sku" }]
+            Select = [new SelectNode { Field = "Id" }, new SelectNode { Field = "Orders.Number" }, new SelectNode { Field = "Orders.OrderItems.Sku" }]
         };
 
         var rows = await _db.Customers
@@ -195,7 +195,7 @@ public sealed class FilteredProjectionTests : IDisposable
                     new FilterCondition { Field = "Orders.Number", Operator = FilterOperators.Equal, Value = "SO-001" }
                 ]
             },
-            Select = [new SelectModel { Field = "Id" }, new SelectModel { Field = "Orders.Number" }]
+            Select = [new SelectNode { Field = "Id" }, new SelectNode { Field = "Orders.Number" }]
         };
 
         var query = _db.Customers
