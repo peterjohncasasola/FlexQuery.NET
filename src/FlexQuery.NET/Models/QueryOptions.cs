@@ -21,8 +21,8 @@ public sealed class QueryOptions
     /// <summary>The sorting expressions.</summary>
     public List<SortNode> Sort { get; set; } = [];
 
-    /// <summary>Flat dot-notation selection paths (e.g. "Id", "Profile.Name").</summary>
-    public List<string>? Select { get; set; }
+    /// <summary>Flat projection models produced by the SELECT parser.</summary>
+    public List<SelectModel>? Select { get; set; }
 
     /// <summary>Navigation properties to include with all scalars.</summary>
     public List<string>? Includes { get; set; }
