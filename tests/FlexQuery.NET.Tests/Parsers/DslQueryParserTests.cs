@@ -382,7 +382,7 @@ public class DslQueryParserTests
     {
         var opts = Parse(new Dictionary<string, string>
         {
-            ["sort"] = "orders.sum(total):desc,orders.count():asc"
+            ["sort"] = "sum:orders.total:desc,count:orders:asc"
         });
 
         opts.Sort.Should().HaveCount(2);
