@@ -46,37 +46,7 @@ internal static class DslAggregateParser
                     $"Unable to parse aggregate expression '{rawAggregates}'. " +
                     $"Expected format: Function:Field[:Alias]. Too many parts in '{trimmed}'.");
 
-            string? aggregateField;
-            AggregateFunction function;
-            string functionName;
-
-            try
-            {
-                functionName = parts[0].ToLowerInvariant();
-                if (functionName == "average") functionName = "avg";
-                function = AggregateFunctionConverter.Parse(functionName);
-            }
-            catch
-            {
-                throw new DslParseException(
-                    $"Unable to parse aggregate expression '{rawAggregates}'. " +
-                    $"Unrecognized aggregate function '{parts[0]}' at '{trimmed}'.");
-            }
-
-            var field = parts[1];
-            if (function == AggregateFunction.Count && field == "*")
-            {
-                throw new DslParseException(
-                    $"Unable to parse aggregate expression '{rawAggregates}'. " +
-                    $"count:* is not supported. Use count:<collection> or another aggregate over a property instead.");
-            }
-
-            if (field != "*" && !ParserUtilities.IsValidPropertyPath(field.AsSpan()))
-                throw new DslParseException(
-                    $"Invalid field '{field}' in aggregate expression '{rawAggregates}'. " +
-                    "Field must be a valid property path.");
-
-            aggregateField = field;
+            var aggregateRef = AggregateGrammar.ParseFunctionField($"{parts[0]}:{parts[1]}");
 
             if (parts.Length == 3)
             {
@@ -90,8 +60,8 @@ internal static class DslAggregateParser
 
                 result.Add(new AggregateModel
                 {
-                    Function = function,
-                    Field = aggregateField,
+                    Function = aggregateRef.Function,
+                    Field = aggregateRef.Field,
                     Alias = aliasPart
                 });
             }
@@ -99,9 +69,9 @@ internal static class DslAggregateParser
             {
                 result.Add(new AggregateModel
                 {
-                    Function = function,
-                    Field = aggregateField,
-                    Alias = ParserUtilities.BuildAggregateAlias(functionName, aggregateField)
+                    Function = aggregateRef.Function,
+                    Field = aggregateRef.Field,
+                    Alias = ParserUtilities.BuildAggregateAlias(aggregateRef.FunctionName, aggregateRef.Field)
                 });
             }
         }
