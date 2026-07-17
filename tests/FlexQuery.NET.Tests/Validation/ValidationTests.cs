@@ -99,7 +99,7 @@ public class ValidationTests
     {
         var options = new QueryOptions
         {
-            Having = new HavingCondition { Function = AggregateFunction.Count, Field = null, Operator = "gt", Value = "5" }
+            Having = new HavingCondition { Function = AggregateFunction.Count, Field = "Id", Operator = "gt", Value = "5" }
         };
 
         Action act = () => options.ValidateOrThrow<Customer>();
@@ -114,7 +114,8 @@ public class ValidationTests
         var options = new QueryOptions
         {
             GroupBy = ["Status"],
-            Having = new HavingCondition { Function = AggregateFunction.Count, Field = null, Operator = "gt", Value = "5" }
+            Aggregates = [new AggregateModel { Function = AggregateFunction.Count, Field = "Id", Alias = "idCount" }],
+            Having = new HavingCondition { Function = AggregateFunction.Count, Field = "Id", Operator = "gt", Value = "5" }
         };
 
         Action act = () => options.ValidateOrThrow<Customer>();
@@ -148,7 +149,7 @@ public class ValidationTests
         Action act = () => options.ValidateOrThrow<Customer>();
 
         act.Should().Throw<QueryValidationException>()
-           .Which.Result.Errors.Should().Contain(e => e.Code == ValidationErrorCodes.HavingAliasMismatch);
+           .Which.Result.Errors.Should().Contain(e => e.Code == ValidationErrorCodes.AggregateNotDeclared);
     }
 
     [Fact]

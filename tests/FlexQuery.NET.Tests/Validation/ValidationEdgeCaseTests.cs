@@ -382,7 +382,7 @@ public class ValidationEdgeCaseTests
         var options = new QueryOptions
         {
             GroupBy = ["City"],
-            Having = new HavingCondition { Function = AggregateFunction.Count, Field = null, Operator = "gt", Value = "5" }
+            Having = new HavingCondition { Function = AggregateFunction.Count, Field = "Id", Operator = "gt", Value = "5" }
         };
         var rule = new HavingWithoutGroupByRule();
         var result = ValidationResult.Success();
