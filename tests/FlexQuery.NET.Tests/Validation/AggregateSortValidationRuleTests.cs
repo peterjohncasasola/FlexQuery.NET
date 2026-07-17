@@ -11,13 +11,13 @@ namespace FlexQuery.NET.Tests.Validation;
 public class AggregateSortValidationRuleTests
 {
     private static QueryContext Context(Type? targetType = null, QueryGovernanceOptions? execOptions = null) =>
-        new() { TargetType = targetType ?? typeof(Order), ExecutionOptions = execOptions };
+        new() { TargetType = targetType, ExecutionOptions = execOptions };
 
-    private static ValidationResult Validate(QueryOptions options)
+    private static ValidationResult Validate(QueryOptions options, Type? targetType = null)
     {
         var rule = new AggregateSortValidationRule();
         var result = ValidationResult.Success();
-        rule.Validate(options, Context(), result);
+        rule.Validate(options, Context(targetType), result);
         return result;
     }
 
@@ -150,7 +150,7 @@ public class AggregateSortValidationRuleTests
             Aggregates = [new AggregateModel { Function = AggregateFunction.Count, Field = "Orders", Alias = "TotalCount" }],
             Sort = [new SortNode { Field = "Orders", Aggregate = AggregateFunction.Count, AggregateField = null, Descending = true }]
         };
-        var result = Validate(options);
+        var result = Validate(options, typeof(Customer));
 
         result.IsValid.Should().BeTrue();
     }
@@ -173,6 +173,73 @@ public class AggregateSortValidationRuleTests
             ]
         };
         var result = Validate(options);
+
+        result.IsValid.Should().BeTrue();
+    }
+
+    [Fact]
+    public void AggregateSort_Count_CollectionTarget_Valid()
+    {
+        var options = new QueryOptions
+        {
+            Aggregates = [new AggregateModel { Function = AggregateFunction.Count, Field = "Orders", Alias = "TotalCount" }],
+            Sort = [new SortNode { Field = "Orders", Aggregate = AggregateFunction.Count, AggregateField = null, Descending = true }]
+        };
+        var result = Validate(options, typeof(Customer));
+
+        result.IsValid.Should().BeTrue();
+    }
+
+    [Fact]
+    public void AggregateSort_Count_AlternateCollectionTarget_Valid()
+    {
+        var options = new QueryOptions
+        {
+            Aggregates = [new AggregateModel { Function = AggregateFunction.Count, Field = "Addresses", Alias = "AddressCount" }],
+            Sort = [new SortNode { Field = "Addresses", Aggregate = AggregateFunction.Count, AggregateField = null, Descending = false }]
+        };
+        var result = Validate(options, typeof(Customer));
+
+        result.IsValid.Should().BeTrue();
+    }
+
+    [Fact]
+    public void AggregateSort_Count_ScalarTarget_Fails()
+    {
+        var options = new QueryOptions
+        {
+            Aggregates = [new AggregateModel { Function = AggregateFunction.Count, Field = "Orders.Total", Alias = "InvalidCount" }],
+            Sort = [new SortNode { Field = "Orders.Total", Aggregate = AggregateFunction.Count, AggregateField = null, Descending = true }]
+        };
+        var result = Validate(options, typeof(Customer));
+
+        result.IsValid.Should().BeFalse();
+        result.Errors.Should().ContainSingle(e => e.Code == ValidationErrorCodes.InvalidCountTarget);
+    }
+
+    [Fact]
+    public void AggregateSort_Count_ScalarNavigationTarget_Fails()
+    {
+        var options = new QueryOptions
+        {
+            Aggregates = [new AggregateModel { Function = AggregateFunction.Count, Field = "Profile", Alias = "InvalidCount" }],
+            Sort = [new SortNode { Field = "Profile", Aggregate = AggregateFunction.Count, AggregateField = null, Descending = true }]
+        };
+        var result = Validate(options, typeof(Customer));
+
+        result.IsValid.Should().BeFalse();
+        result.Errors.Should().ContainSingle(e => e.Code == ValidationErrorCodes.InvalidCountTarget);
+    }
+
+    [Fact]
+    public void AggregateSort_Count_NoTargetType_SkipsValidation()
+    {
+        var options = new QueryOptions
+        {
+            Aggregates = [new AggregateModel { Function = AggregateFunction.Count, Field = "Orders", Alias = "TotalCount" }],
+            Sort = [new SortNode { Field = "Orders", Aggregate = AggregateFunction.Count, AggregateField = null, Descending = true }]
+        };
+        var result = Validate(options, targetType: null);
 
         result.IsValid.Should().BeTrue();
     }
