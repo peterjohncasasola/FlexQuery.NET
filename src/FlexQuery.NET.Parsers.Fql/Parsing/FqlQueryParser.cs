@@ -75,7 +75,7 @@ internal sealed class FqlQueryParser : IQueryParser
         {
             try
             {
-                options.GroupBy = FqlGroupByParser.Parse(parameters.GroupBy);
+                options.GroupBy = GroupByParser.Parse(parameters.GroupBy);
             }
             catch (FqlParseException ex)
             {

@@ -23,18 +23,8 @@ internal static class QueryOptionsFactory
             Distinct = parameters.Distinct ?? false
         };
 
-        if (!string.IsNullOrWhiteSpace(parameters.GroupBy))
-        {
-            var groups = ParserUtilities.SplitCsv(parameters.GroupBy);
-            foreach (var g in groups)
-            {
-                if (!ParserUtilities.IsValidPropertyPath(g.AsSpan()))
-                    throw new DslParseException(
-                        $"Invalid property path '{g}' in 'group' parameter. " +
-                        "Property paths must be dot-separated identifiers (e.g. 'Category' or 'Customer.Region').");
-            }
-            options.GroupBy = groups;
-        }
+        var groupBy = GroupByParser.Parse(parameters.GroupBy);
+        options.GroupBy = groupBy;
 
         options.IsKeysetMode = isKeyset;
         options.OffsetExplicitlyRequested = parameters.Page != null;
