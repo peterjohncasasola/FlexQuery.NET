@@ -1,6 +1,5 @@
 using FlexQuery.NET.Helpers;
 using FlexQuery.NET.Models.Aggregates;
-using FlexQuery.NET.Validation;
 
 namespace FlexQuery.NET.Parsers.Fql;
 
@@ -122,7 +121,10 @@ internal static class FqlAggregateParser
 
             if (alias is not null)
             {
-                IdentifierValidator.ValidateAlias(alias, "aggregate");
+                if (!ParserUtilities.IsValidIdentifier(alias.AsSpan()))
+                    throw new FqlParseException(
+                        $"Invalid alias '{alias}' in aggregate expression. " +
+                        "Aliases must be valid identifiers (e.g. 'TotalSales').");
             }
 
             result.Add(new AggregateModel
