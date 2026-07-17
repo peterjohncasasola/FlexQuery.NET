@@ -141,6 +141,76 @@ public class FqlSelectParserTests
     }
 
     [Fact]
+    public void Parse_PropertyPath_StartsWithUnderscore_Throws()
+    {
+        var options = new QueryOptions();
+
+        var act = () => FqlSelectParser.Parse(options, "_FullName");
+
+        act.Should().Throw<FlexQueryException>();
+    }
+
+    [Fact]
+    public void Parse_PropertyPath_StartsWithDigit_Throws()
+    {
+        var options = new QueryOptions();
+
+        var act = () => FqlSelectParser.Parse(options, "1Name");
+
+        act.Should().Throw<FlexQueryException>();
+    }
+
+    [Fact]
+    public void Parse_PropertyPath_SegmentStartsWithUnderscore_Throws()
+    {
+        var options = new QueryOptions();
+
+        var act = () => FqlSelectParser.Parse(options, "Customer._Name");
+
+        act.Should().Throw<FlexQueryException>();
+    }
+
+    [Fact]
+    public void Parse_PropertyPath_SegmentStartsWithDigit_Throws()
+    {
+        var options = new QueryOptions();
+
+        var act = () => FqlSelectParser.Parse(options, "Customer.1Name");
+
+        act.Should().Throw<FlexQueryException>();
+    }
+
+    [Fact]
+    public void Parse_PropertyPath_DoubleDot_Throws()
+    {
+        var options = new QueryOptions();
+
+        var act = () => FqlSelectParser.Parse(options, "Customer..Name");
+
+        act.Should().Throw<FlexQueryException>();
+    }
+
+    [Fact]
+    public void Parse_PropertyPath_LeadingDot_Throws()
+    {
+        var options = new QueryOptions();
+
+        var act = () => FqlSelectParser.Parse(options, ".Customer");
+
+        act.Should().Throw<FlexQueryException>();
+    }
+
+    [Fact]
+    public void Parse_PropertyPath_TrailingDot_Throws()
+    {
+        var options = new QueryOptions();
+
+        var act = () => FqlSelectParser.Parse(options, "Customer.");
+
+        act.Should().Throw<FlexQueryException>();
+    }
+
+    [Fact]
     public void Parse_WhitespaceAroundAs_Valid()
     {
         var options = new QueryOptions();
@@ -363,6 +433,42 @@ public class FqlSelectParserTests
     public void ParseToSelectionTree_InvalidIdentifier_Throws()
     {
         var act = () => FqlSelectParser.ParseToSelectionTree("Customer(Id-Name)");
+
+        act.Should().Throw<FlexQueryException>();
+    }
+
+    [Fact]
+    public void ParseToSelectionTree_NestedField_StartsWithUnderscore_Throws()
+    {
+        var act = () => FqlSelectParser.ParseToSelectionTree("Customer(_Name)");
+
+        act.Should().Throw<FlexQueryException>();
+    }
+
+    [Fact]
+    public void ParseToSelectionTree_NestedField_StartsWithDigit_Throws()
+    {
+        var act = () => FqlSelectParser.ParseToSelectionTree("Customer(1Name)");
+
+        act.Should().Throw<FlexQueryException>();
+    }
+
+    [Fact]
+    public void ParseToSelectionTree_NestedField_ContainsHyphen_Throws()
+    {
+        var act = () => FqlSelectParser.ParseToSelectionTree("Customer(Full-Name)");
+
+        act.Should().Throw<FlexQueryException>();
+    }
+    
+    [Theory]
+    [InlineData("Customer(1Name)")]
+    [InlineData("Customer(_Name)")]
+    [InlineData("Customer(Full Name)")]
+    [InlineData("Customer(Full-Name)")]
+    public void ParseToSelectionTree_InvalidNestedIdentifier_Throws(string select)
+    {
+        Action act = () => FqlSelectParser.ParseToSelectionTree(select);
 
         act.Should().Throw<FlexQueryException>();
     }

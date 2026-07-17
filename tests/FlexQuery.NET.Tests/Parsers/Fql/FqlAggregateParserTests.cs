@@ -212,20 +212,57 @@ public class FqlAggregateParserTests
     }
 
     [Fact]
+    public void Parse_Alias_StartsWithUnderscore_ThrowsFqlParseException()
+    {
+        var ex = Record.Exception(() => Parse("SUM(Amount) AS _Total"));
+
+        ex.Should().BeOfType<FqlParseException>();
+        ex.Message.Should().Contain("Invalid alias");
+    }
+
+    [Fact]
+    public void Parse_Alias_StartsWithDigit_ThrowsFqlParseException()
+    {
+        var ex = Record.Exception(() => Parse("SUM(Amount) AS 1Total"));
+
+        ex.Should().BeOfType<FqlParseException>();
+        ex.Message.Should().Contain("Invalid alias");
+    }
+
+    [Fact]
+    public void Parse_Alias_ContainsSpace_ThrowsFqlParseException()
+    {
+        var ex = Record.Exception(() => Parse("SUM(Amount) AS Total Sales"));
+
+        ex.Should().BeOfType<FqlParseException>();
+        ex.Message.Should().Contain("Invalid alias");
+    }
+
+    [Fact]
+    public void Parse_Alias_ContainsHyphen_ThrowsFqlParseException()
+    {
+        var ex = Record.Exception(() => Parse("SUM(Amount) AS Total-Sales"));
+
+        ex.Should().BeOfType<FqlParseException>();
+        ex.Message.Should().Contain("Invalid alias");
+    }
+
+    [Fact]
+    public void Parse_Alias_ReservedKeyword_AcceptedAtParserLevel()
+    {
+        var result = Parse("SUM(Amount) AS SELECT");
+
+        result.Should().ContainSingle();
+        result[0].Alias.Should().Be("SELECT");
+    }
+
+    [Fact]
     public void Parse_Alias_WhitespaceAroundAs_Handled()
     {
         var result = Parse("SUM(Amount)  AS  TotalSales");
 
         result.Should().ContainSingle();
         result[0].Alias.Should().Be("TotalSales");
-    }
-
-    [Fact]
-    public void Parse_Alias_ReservedKeyword_ThrowsQueryValidationException()
-    {
-        var ex = Record.Exception(() => Parse("SUM(Amount) AS SELECT"));
-
-        ex.Should().BeOfType<QueryValidationException>();
     }
 
     [Fact]
