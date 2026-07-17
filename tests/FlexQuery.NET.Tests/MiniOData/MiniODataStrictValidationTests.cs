@@ -1,4 +1,5 @@
 using FlexQuery.NET.Models;
+using FlexQuery.NET.Models.Projection;
 using FlexQuery.NET.Parsers.MiniOData;
 using FlexQuery.NET.Parsers.MiniOData.Models;
 
@@ -135,7 +136,7 @@ public class MiniODataStrictValidationTests
     {
         var result = ODataQueryParameterParser.Parse(new MiniODataRequest { Select = "Id,Name,Email" });
 
-        result.Select.Should().BeEquivalentTo(new[] { "Id", "Name", "Email" });
+        result.Select.Should().BeEquivalentTo(new[] { new SelectModel { Field = "Id" }, new SelectModel { Field = "Name" }, new SelectModel { Field = "Email" } });
     }
 
     [Fact]
@@ -143,7 +144,7 @@ public class MiniODataStrictValidationTests
     {
         var result = ODataQueryParameterParser.Parse(new MiniODataRequest { Select = "Customer/Name" });
 
-        result.Select.Should().Contain("Customer.Name");
+        result.Select.Should().ContainEquivalentOf(new SelectModel { Field = "Customer.Name" });
     }
 
     [Fact]

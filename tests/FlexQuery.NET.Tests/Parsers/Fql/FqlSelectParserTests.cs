@@ -1,6 +1,7 @@
-using FlexQuery.NET.Exceptions;
+﻿using FlexQuery.NET.Exceptions;
 using FlexQuery.NET.Internal;
 using FlexQuery.NET.Models;
+using FlexQuery.NET.Models.Projection;
 using FlexQuery.NET.Parsers.Fql;
 using Xunit;
 
@@ -15,7 +16,7 @@ public class FqlSelectParserTests
 
         FqlSelectParser.Parse(options, "Id,Name,Profile.AvatarUrl");
 
-        options.Select.Should().BeEquivalentTo(new[] { "Id", "Name", "Profile.AvatarUrl" });
+        options.Select.Should().BeEquivalentTo([new SelectModel { Field = "Id" }, new SelectModel { Field = "Name" }, new SelectModel { Field = "Profile.AvatarUrl" }]);
     }
 
     [Fact]
@@ -25,7 +26,7 @@ public class FqlSelectParserTests
 
         FqlSelectParser.Parse(options, "Name AS FullName");
 
-        options.Select.Should().BeEquivalentTo(new[] { "Name AS FullName" });
+        options.Select.Should().BeEquivalentTo([new SelectModel { Field = "Name", Alias = "FullName" }]);
     }
 
     [Fact]
@@ -35,7 +36,7 @@ public class FqlSelectParserTests
 
         FqlSelectParser.Parse(options, "Customer.Name AS CustomerName");
 
-        options.Select.Should().BeEquivalentTo(new[] { "Customer.Name AS CustomerName" });
+        options.Select.Should().BeEquivalentTo([new SelectModel { Field = "Customer.Name", Alias = "CustomerName" }]);
     }
 
     [Fact]
@@ -45,7 +46,7 @@ public class FqlSelectParserTests
 
         FqlSelectParser.Parse(options, "Id,Name AS FullName,Age,Customer.Name AS CustomerName");
 
-        options.Select.Should().BeEquivalentTo(new[] { "Id", "Name AS FullName", "Age", "Customer.Name AS CustomerName" });
+        options.Select.Should().BeEquivalentTo([new SelectModel { Field = "Id" }, new SelectModel { Field = "Name", Alias = "FullName" }, new SelectModel { Field = "Age" }, new SelectModel { Field = "Customer.Name", Alias = "CustomerName" }]);
     }
 
     [Fact]
@@ -145,7 +146,7 @@ public class FqlSelectParserTests
 
         FqlSelectParser.Parse(options, "Name  AS  FullName");
 
-        options.Select.Should().BeEquivalentTo(new[] { "Name AS FullName" });
+        options.Select.Should().BeEquivalentTo([new SelectModel { Field = "Name", Alias = "FullName" }]);
     }
 
     [Fact]
@@ -155,7 +156,7 @@ public class FqlSelectParserTests
 
         FqlSelectParser.Parse(options, "Name  AS  Full_Name");
 
-        options.Select.Should().BeEquivalentTo(new[] { "Name AS Full_Name" });
+        options.Select.Should().BeEquivalentTo([new SelectModel { Field = "Name", Alias = "Full_Name" }]);
     }
 
     [Fact]
@@ -165,7 +166,7 @@ public class FqlSelectParserTests
 
         FqlSelectParser.Parse(options, "Name AS Name");
 
-        options.Select.Should().BeEquivalentTo(new[] { "Name AS Name" });
+        options.Select.Should().BeEquivalentTo([new SelectModel { Field = "Name", Alias = "Name" }]);
     }
 
     #region Nested Select

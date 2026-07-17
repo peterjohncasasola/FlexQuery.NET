@@ -1,5 +1,6 @@
-using FlexQuery.NET.Exceptions;
+﻿using FlexQuery.NET.Exceptions;
 using FlexQuery.NET.Models;
+using FlexQuery.NET.Models.Projection;
 using FlexQuery.NET.Models.Aggregates;
 using FlexQuery.NET.Models.Filters;
 using FlexQuery.NET.Parsers;
@@ -292,9 +293,9 @@ public class DslQueryParserTests
             && f.Value == "gt:5");
     }
 
-    // ════════════════════════════════════════════════════════════════════
+    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
     // Sort
-    // ════════════════════════════════════════════════════════════════════
+    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
     [Fact]
     public void Sort_SingleField_Ascending()
@@ -409,9 +410,9 @@ public class DslQueryParserTests
         opts.Sort.Should().BeEmpty();
     }
 
-    // ════════════════════════════════════════════════════════════════════
+    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
     // Pagination
-    // ════════════════════════════════════════════════════════════════════
+    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
     [Fact]
     public void Paging_PageAndPageSize_ParsedCorrectly()
@@ -436,9 +437,9 @@ public class DslQueryParserTests
         opts.Paging.Disabled.Should().BeFalse();
     }
 
-    // ════════════════════════════════════════════════════════════════════
+    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
     // Projection
-    // ════════════════════════════════════════════════════════════════════
+    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
     [Fact]
     public void Select_CommaSeparatedFields_ParsedCorrectly()
@@ -448,7 +449,7 @@ public class DslQueryParserTests
             ["select"] = "Id,Name,Email"
         });
 
-        opts.Select.Should().BeEquivalentTo("Id", "Name", "Email");
+        opts.Select.Should().BeEquivalentTo([new SelectModel { Field = "Id" }, new SelectModel { Field = "Name" }, new SelectModel { Field = "Email" }]);
     }
 
     [Fact]
@@ -470,12 +471,12 @@ public class DslQueryParserTests
             ["select"] = "Name"
         });
 
-        opts.Select.Should().BeEquivalentTo("Name");
+        opts.Select.Should().BeEquivalentTo([new SelectModel { Field = "Name" }]);
     }
 
-    // ════════════════════════════════════════════════════════════════════
+    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
     // Grouping / Aggregates / Having
-    // ════════════════════════════════════════════════════════════════════
+    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
     [Fact]
     public void GroupAndAggregateSelect_ParsedCorrectly()
@@ -489,7 +490,7 @@ public class DslQueryParserTests
         });
 
         opts.GroupBy.Should().BeEquivalentTo("category", "status");
-        opts.Select.Should().BeEquivalentTo("category");
+        opts.Select.Should().BeEquivalentTo([new SelectModel { Field = "category" }]);
         opts.Aggregates.Should().HaveCount(2);
         opts.Aggregates.Should().Contain(a => a.Function == AggregateFunction.Sum && a.Field == "total");
         opts.Aggregates.Should().Contain(a => a.Function == AggregateFunction.Count && a.Field == "id");
@@ -604,9 +605,9 @@ public class DslQueryParserTests
         opts.Having.Value.Should().Be("500");
     }
 
-    // ════════════════════════════════════════════════════════════════════
+    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
     // Aggregates
-    // ════════════════════════════════════════════════════════════════════
+    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
     [Fact]
     public void DslAggregate_SingleField_ParsedCorrectly()
@@ -869,9 +870,9 @@ public class DslQueryParserTests
             .Which.ParameterName.Should().Be("aggregate");
     }
 
-    // ════════════════════════════════════════════════════════════════════
-    // Filter — Additional Operators
-    // ════════════════════════════════════════════════════════════════════
+    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+    // Filter â€” Additional Operators
+    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
     [Fact]
     public void DslFilter_LikeOperator_ParsedCorrectly()
@@ -912,9 +913,9 @@ public class DslQueryParserTests
             f.Field == "email" && f.Operator == FilterOperators.EndsWith && f.Value == ".com");
     }
 
-    // ════════════════════════════════════════════════════════════════════
-    // Integration — All Parameters
-    // ════════════════════════════════════════════════════════════════════
+    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+    // Integration â€” All Parameters
+    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
     [Fact]
     public void DslIntegration_AllParameters_ParsedCorrectly()
@@ -933,7 +934,7 @@ public class DslQueryParserTests
             ["pageSize"] = "25"
         });
 
-        // Filter — ((status = Open OR status = Pending) AND amount > 100) OR customer.name contains john
+        // Filter â€” ((status = Open OR status = Pending) AND amount > 100) OR customer.name contains john
         opts.Filter.Should().NotBeNull();
         opts.Filter!.Logic.Should().Be(LogicOperator.Or);
         opts.Filter.Filters.Should().ContainSingle(f => f.Field == "customer.name"
@@ -960,7 +961,7 @@ public class DslQueryParserTests
         opts.Sort[1].Descending.Should().BeFalse();
 
         // Select
-        opts.Select.Should().BeEquivalentTo("Id", "Name", "CustomerName");
+        opts.Select.Should().BeEquivalentTo([new SelectModel { Field = "Id" }, new SelectModel { Field = "Name" }, new SelectModel { Field = "CustomerName" }]);
 
         // Include
         opts.Includes.Should().BeEquivalentTo("Orders", "Profile");
@@ -995,9 +996,9 @@ public class DslQueryParserTests
         opts.Paging.PageSize.Should().Be(25);
     }
 
-    // ════════════════════════════════════════════════════════════════════
+    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
     // Empty / Default Input
-    // ════════════════════════════════════════════════════════════════════
+    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
     [Fact]
     public void EmptyInput_ReturnsDefaultOptions()

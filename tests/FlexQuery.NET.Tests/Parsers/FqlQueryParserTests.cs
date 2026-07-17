@@ -1,6 +1,7 @@
-using FlexQuery.NET.Exceptions;
+﻿using FlexQuery.NET.Exceptions;
 using FlexQuery.NET.Models;
 using FlexQuery.NET.Models.Aggregates;
+using FlexQuery.NET.Models.Projection;
 using FlexQuery.NET.Models.Filters;
 using FlexQuery.NET.Parsers.Fql;
 
@@ -390,7 +391,7 @@ public class FqlQueryParserTests
         filter.Filters[0].ScopedFilter.Should().BeNull();
     }
 
-    // ─── Sort Parser Tests ────────────────────────────────────────────
+    // â”€â”€â”€ Sort Parser Tests â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
     [Fact]
     public void FqlSort_SingleAsc_ParsedCorrectly()
@@ -545,7 +546,7 @@ public class FqlQueryParserTests
         act.Should().Throw<QueryParseException>();
     }
 
-    // ─── Aggregate Parser Tests ───────────────────────────────────────
+    // â”€â”€â”€ Aggregate Parser Tests â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
     [Fact]
     public void FqlAggregate_SumWithAlias_ParsedCorrectly()
@@ -735,7 +736,7 @@ public class FqlQueryParserTests
             .Which.ParameterName.Should().Be("aggregate");
     }
 
-    // ─── GroupBy Parser Tests ─────────────────────────────────────────
+    // â”€â”€â”€ GroupBy Parser Tests â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
     [Fact]
     public void FqlGroupBy_SingleField_ParsedCorrectly()
@@ -764,7 +765,7 @@ public class FqlQueryParserTests
         result.GroupBy[0].Should().Be("Customer.Region");
     }
 
-    // ─── Having Parser Tests ──────────────────────────────────────────
+    // â”€â”€â”€ Having Parser Tests â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
     [Fact]
     public void FqlHaving_CountGreaterThan_ParsedCorrectly()
@@ -829,7 +830,7 @@ public class FqlQueryParserTests
         result.Having.Should().BeNull();
     }
 
-    // ─── Integration Tests ────────────────────────────────────────────
+    // â”€â”€â”€ Integration Tests â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
     [Fact]
     public void FqlIntegration_AllParameters_ParsedCorrectly()
@@ -847,7 +848,7 @@ public class FqlQueryParserTests
             pageSize: 25
         );
 
-        // Filter — ((status = Open OR status = Pending) AND amount > 100) OR customer.name contains john
+        // Filter â€” ((status = Open OR status = Pending) AND amount > 100) OR customer.name contains john
         result.Filter.Should().NotBeNull();
         result.Filter!.Logic.Should().Be(LogicOperator.Or);
         result.Filter.Filters.Should().ContainSingle(f => f.Field == "customer.name"
@@ -872,7 +873,7 @@ public class FqlQueryParserTests
         result.Sort[1].Descending.Should().BeFalse();
 
         // Select
-        result.Select.Should().BeEquivalentTo(["Id", "Name", "CustomerName"]);
+        result.Select.Should().BeEquivalentTo([new SelectModel { Field = "Id" }, new SelectModel { Field = "Name" }, new SelectModel { Field = "CustomerName" }]);
 
         // Include
         result.Includes.Should().BeEquivalentTo(["Orders", "Profile"]);

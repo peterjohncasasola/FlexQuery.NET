@@ -1,5 +1,6 @@
-using FlexQuery.NET.Exceptions;
+﻿using FlexQuery.NET.Exceptions;
 using FlexQuery.NET.Models;
+using FlexQuery.NET.Models.Projection;
 using FlexQuery.NET.Parsers.Dsl;
 using Xunit;
 
@@ -25,7 +26,12 @@ public class DslSelectParserTests
 
         DslSelectParser.Parse(options, "Id,Name,Profile.AvatarUrl");
 
-        options.Select.Should().BeEquivalentTo(new[] { "Id", "Name", "Profile.AvatarUrl" });
+        options.Select.Should().BeEquivalentTo(new[]
+        {
+            new SelectModel { Field = "Id" },
+            new SelectModel { Field = "Name" },
+            new SelectModel { Field = "Profile.AvatarUrl" }
+        });
     }
 
     [Fact]
@@ -45,7 +51,11 @@ public class DslSelectParserTests
 
         DslSelectParser.Parse(options, "Id, , Name");
 
-        options.Select.Should().BeEquivalentTo(new[] { "Id", "Name" });
+        options.Select.Should().BeEquivalentTo(new[]
+        {
+            new SelectModel { Field = "Id" },
+            new SelectModel { Field = "Name" }
+        });
     }
 
     [Fact]
@@ -55,7 +65,7 @@ public class DslSelectParserTests
 
         DslSelectParser.Parse(options, "DateOfBirth:BirthDate");
 
-        options.Select.Should().Contain("DateOfBirth AS BirthDate");
+        options.Select.Should().ContainEquivalentOf(new SelectModel { Field = "DateOfBirth", Alias = "BirthDate" });
     }
 
     [Fact]
@@ -65,7 +75,7 @@ public class DslSelectParserTests
 
         DslSelectParser.Parse(options, "Customer.Name:CustomerName");
 
-        options.Select.Should().Contain("Customer.Name AS CustomerName");
+        options.Select.Should().ContainEquivalentOf(new SelectModel { Field = "Customer.Name", Alias = "CustomerName" });
     }
 
     [Fact]
@@ -175,7 +185,7 @@ public class DslSelectParserTests
 
         DslSelectParser.Parse(options, "Name : FullName");
 
-        options.Select.Should().Contain("Name AS FullName");
+        options.Select.Should().ContainEquivalentOf(new SelectModel { Field = "Name", Alias = "FullName" });
     }
 
     [Fact]
@@ -185,7 +195,7 @@ public class DslSelectParserTests
 
         DslSelectParser.Parse(options, "Name,Customer.Name");
 
-        options.Select.Should().BeEquivalentTo(new[] { "Name", "Customer.Name" });
+        options.Select.Should().BeEquivalentTo([new SelectModel { Field = "Name" }, new SelectModel { Field = "Customer.Name" }]);
     }
 
     [Fact]
@@ -195,7 +205,7 @@ public class DslSelectParserTests
 
         DslSelectParser.Parse(options, "Name:Name");
 
-        options.Select.Should().Contain("Name AS Name");
+        options.Select.Should().ContainEquivalentOf(new SelectModel { Field = "Name", Alias = "Name" });
     }
 
     #region Nested Select
