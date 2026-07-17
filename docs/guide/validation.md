@@ -208,7 +208,7 @@ By default, if a field is not configured in `AllowedOperators`, all supported op
 
 ## Strict vs. Lenient Validation
 
-### StrictFieldValidation = true (default recommended)
+### StrictFieldValidation = true (default)
 
 Throws on the **first** violation. Faster, fail-fast behavior.
 

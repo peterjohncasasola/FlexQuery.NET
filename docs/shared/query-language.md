@@ -139,7 +139,7 @@ sort=field:direction,field:direction
 | `sort=name:asc,createdAt:desc` | Multi-field sort |
 | `sort=name` | Ascending (direction optional) |
 | `sort=orders.count():desc` | Sort by collection count |
-| `sort=orders.sum(amount):desc` | Sort by collection sum |
+| `sort=sum:orders.amount:desc` | Sort by collection sum |
 
 ---
 
@@ -175,7 +175,7 @@ having=function(field):operator:value
 
 | Example | Meaning |
 | :--- | :--- |
-| `having=count():gt:5` | Groups with count > 5 |
+| `having=count(Orders):gt:5` | Groups with count > 5 |
 | `having=sum(amount):gte:1000` | Groups with sum >= 1000 |
 | `having=avg(amount):between:100,500` | Groups with avg in range |
 
