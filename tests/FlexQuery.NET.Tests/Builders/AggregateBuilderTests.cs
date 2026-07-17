@@ -15,15 +15,15 @@ public class AggregateBuilderTests
     }
 
     [Fact]
-    public void Count_WithoutField_SetsFieldNull()
+    public void Count_WithField_SetsFieldCorrectly()
     {
         var builder = new AggregateBuilder();
-        builder.Count("Total");
+        builder.Count("Id", "Total");
         var result = builder.Build();
 
         result.Should().ContainSingle();
         result[0].Function.Should().Be(AggregateFunction.Count);
-        result[0].Field.Should().BeNull();
+        result[0].Field.Should().Be("Id");
         result[0].Alias.Should().Be("Total");
     }
 

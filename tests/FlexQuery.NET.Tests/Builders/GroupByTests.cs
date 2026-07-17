@@ -512,9 +512,10 @@ public class GroupByTests : IDisposable
         var options = new QueryOptions
         {
             GroupBy = ["CustomerId"],
-            Aggregates = [new AggregateModel { Function = AggregateFunction.Count, Alias = "Count" }],
+            Aggregates = [new AggregateModel { Function = AggregateFunction.Count, Field = "Id", Alias = "Count" }],
             Having = new HavingCondition
             {
+                Field = "Id",
                 Function = AggregateFunction.Count,
                 Operator = FilterOperators.GreaterThan,
                 Value = "1"
@@ -622,9 +623,10 @@ public class GroupByTests : IDisposable
         var options = new QueryOptions
         {
             GroupBy = ["CustomerId"],
-            Aggregates = [new AggregateModel { Function = AggregateFunction.Count, Alias = "Count" }],
+            Aggregates = [new AggregateModel { Function = AggregateFunction.Count, Field = "Id", Alias = "Count" }],
             Having = new HavingCondition
             {
+                Field = "Id",
                 Function = AggregateFunction.Count,
                 Operator = FilterOperators.GreaterThanOrEq,
                 Value = "2"
@@ -648,9 +650,10 @@ public class GroupByTests : IDisposable
         var options = new QueryOptions
         {
             GroupBy = ["CustomerId"],
-            Aggregates = [new AggregateModel { Function = AggregateFunction.Count, Alias = "Count" }],
+            Aggregates = [new AggregateModel { Function = AggregateFunction.Count, Field = "Id", Alias = "Count" }],
             Having = new HavingCondition
             {
+                Field = "Id",
                 Function = AggregateFunction.Count,
                 Operator = FilterOperators.GreaterThanOrEq,
                 Value = "1"
@@ -669,9 +672,10 @@ public class GroupByTests : IDisposable
         var options = new QueryOptions
         {
             GroupBy = ["CustomerId"],
-            Aggregates = [new AggregateModel { Function = AggregateFunction.Count, Alias = "Count" }],
+            Aggregates = [new AggregateModel { Function = AggregateFunction.Count, Field = "Id", Alias = "Count" }],
             Having = new HavingCondition
             {
+                Field = "Id",
                 Function = AggregateFunction.Count,
                 Operator = FilterOperators.GreaterThan,
                 Value = "1"
@@ -693,9 +697,10 @@ public class GroupByTests : IDisposable
         var options = new QueryOptions
         {
             GroupBy = ["CustomerId"],
-            Aggregates = [new AggregateModel { Function = AggregateFunction.Count, Alias = "Count" }],
+            Aggregates = [new AggregateModel { Function = AggregateFunction.Count, Field = "Id", Alias = "Count" }],
             Having = new HavingCondition
             {
+                Field = "Id",
                 Function = AggregateFunction.Count,
                 Operator = FilterOperators.GreaterThan,
                 Value = "999"

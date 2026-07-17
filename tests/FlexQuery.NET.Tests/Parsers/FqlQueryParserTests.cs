@@ -469,6 +469,82 @@ public class FqlQueryParserTests
         result.Sort.Should().BeEmpty();
     }
 
+    [Fact]
+    public void FqlSort_AggregateSum_Desc_ParsedCorrectly()
+    {
+        var result = FqlParse(sort: "SUM(Orders.Total) DESC");
+
+        result.Sort.Should().ContainSingle();
+        result.Sort[0].Field.Should().Be("Orders");
+        result.Sort[0].Aggregate.Should().Be(AggregateFunction.Sum);
+        result.Sort[0].AggregateField.Should().Be("Total");
+        result.Sort[0].Descending.Should().BeTrue();
+    }
+
+    [Fact]
+    public void FqlSort_AggregateSum_DefaultAsc_ParsedCorrectly()
+    {
+        var result = FqlParse(sort: "SUM(Orders.Total)");
+
+        result.Sort.Should().ContainSingle();
+        result.Sort[0].Field.Should().Be("Orders");
+        result.Sort[0].Aggregate.Should().Be(AggregateFunction.Sum);
+        result.Sort[0].AggregateField.Should().Be("Total");
+        result.Sort[0].Descending.Should().BeFalse();
+    }
+
+    [Fact]
+    public void FqlSort_AggregateCount_NoField_ParsedCorrectly()
+    {
+        var result = FqlParse(sort: "COUNT(Orders) ASC");
+
+        result.Sort.Should().ContainSingle();
+        result.Sort[0].Field.Should().Be("Orders");
+        result.Sort[0].Aggregate.Should().Be(AggregateFunction.Count);
+        result.Sort[0].AggregateField.Should().BeNull();
+        result.Sort[0].Descending.Should().BeFalse();
+    }
+
+    [Fact]
+    public void FqlSort_Aggregate_CaseInsensitive_ParsedCorrectly()
+    {
+        var result = FqlParse(sort: "sum(Orders.Total) desc, AVG(Orders.Price) ASC");
+
+        result.Sort.Should().HaveCount(2);
+        result.Sort[0].Field.Should().Be("Orders");
+        result.Sort[0].Aggregate.Should().Be(AggregateFunction.Sum);
+        result.Sort[0].AggregateField.Should().Be("Total");
+        result.Sort[0].Descending.Should().BeTrue();
+        result.Sort[1].Field.Should().Be("Orders");
+        result.Sort[1].Aggregate.Should().Be(AggregateFunction.Avg);
+        result.Sort[1].AggregateField.Should().Be("Price");
+        result.Sort[1].Descending.Should().BeFalse();
+    }
+
+    [Fact]
+    public void FqlSort_Aggregate_InvalidDirection_Throws()
+    {
+        var act = () => FqlParse(sort: "SUM(Orders.Total) SIDEWAYS");
+
+        act.Should().Throw<QueryParseException>();
+    }
+
+    [Fact]
+    public void FqlSort_Aggregate_UnknownFunction_Throws()
+    {
+        var act = () => FqlParse(sort: "UNKNOWN(Orders.Total) DESC");
+
+        act.Should().Throw<QueryParseException>();
+    }
+
+    [Fact]
+    public void FqlSort_Aggregate_MissingField_Throws()
+    {
+        var act = () => FqlParse(sort: "SUM() DESC");
+
+        act.Should().Throw<QueryParseException>();
+    }
+
     // ─── Aggregate Parser Tests ───────────────────────────────────────
 
     [Fact]
@@ -485,18 +561,18 @@ public class FqlQueryParserTests
     [Fact]
     public void FqlAggregate_CountStar_ParsedCorrectly()
     {
-        var result = FqlParse(aggregates: "COUNT(*)");
+        var result = FqlParse(aggregates: "COUNT(Orders)");
 
         result.Aggregates.Should().ContainSingle();
         result.Aggregates[0].Function.Should().Be(AggregateFunction.Count);
-        result.Aggregates[0].Field.Should().BeNull();
-        result.Aggregates[0].Alias.Should().Be("Count");
+        result.Aggregates[0].Field.Should().Be("Orders");
+        result.Aggregates[0].Alias.Should().Be("OrdersCount");
     }
 
     [Fact]
     public void FqlAggregate_MultipleAggregates_ParsedCorrectly()
     {
-        var result = FqlParse(aggregates: "SUM(Amount), AVG(Price), COUNT(*) AS Orders");
+        var result = FqlParse(aggregates: "SUM(Amount), AVG(Price), COUNT(Orders) AS OrderCount");
 
         result.Aggregates.Should().HaveCount(3);
         result.Aggregates[0].Function.Should().Be(AggregateFunction.Sum);
@@ -504,8 +580,8 @@ public class FqlQueryParserTests
         result.Aggregates[1].Function.Should().Be(AggregateFunction.Avg);
         result.Aggregates[1].Field.Should().Be("Price");
         result.Aggregates[2].Function.Should().Be(AggregateFunction.Count);
-        result.Aggregates[2].Field.Should().BeNull();
-        result.Aggregates[2].Alias.Should().Be("Orders");
+        result.Aggregates[2].Field.Should().Be("Orders");
+        result.Aggregates[2].Alias.Should().Be("OrderCount");
     }
 
     [Fact]
@@ -526,14 +602,14 @@ public class FqlQueryParserTests
 
         result.Aggregates.Should().ContainSingle();
         result.Aggregates[0].Function.Should().Be(AggregateFunction.Sum);
-        result.Aggregates[0].Field.Should().Be("Orders.Total");
+        result.Aggregates[0].Field.Should().Be("Orders");
         result.Aggregates[0].Alias.Should().Be("OrdersTotalSum");
     }
 
     [Fact]
     public void FqlAggregate_CaseInsensitiveFunctions_ParsedCorrectly()
     {
-        var result = FqlParse(aggregates: "sum(Amount), COUNT(*), Avg(Price)");
+        var result = FqlParse(aggregates: "sum(Amount), COUNT(Id), Avg(Price)");
 
         result.Aggregates.Should().HaveCount(3);
         result.Aggregates[0].Function.Should().Be(AggregateFunction.Sum);
@@ -596,7 +672,7 @@ public class FqlQueryParserTests
     [Fact]
     public void FqlAggregate_MultipleWithMixedAliases_ParsedCorrectly()
     {
-        var result = FqlParse(aggregates: "SUM(Amount) AS TotalSales, COUNT(*) AS OrderCount, AVG(Price)");
+        var result = FqlParse(aggregates: "SUM(Amount) AS TotalSales, COUNT(Orders) AS OrderCount, AVG(Price)");
 
         result.Aggregates.Should().HaveCount(3);
         result.Aggregates[0].Alias.Should().Be("TotalSales");
@@ -607,12 +683,12 @@ public class FqlQueryParserTests
     [Fact]
     public void FqlAggregate_CountStar_NoAlias_ParsedCorrectly()
     {
-        var result = FqlParse(aggregates: "COUNT(*)");
+        var result = FqlParse(aggregates: "COUNT(Orders)");
 
         result.Aggregates.Should().ContainSingle();
         result.Aggregates[0].Function.Should().Be(AggregateFunction.Count);
-        result.Aggregates[0].Field.Should().BeNull();
-        result.Aggregates[0].Alias.Should().Be("Count");
+        result.Aggregates[0].Field.Should().Be("Orders");
+        result.Aggregates[0].Alias.Should().Be("OrdersCount");
     }
 
     [Fact]
@@ -693,11 +769,11 @@ public class FqlQueryParserTests
     [Fact]
     public void FqlHaving_CountGreaterThan_ParsedCorrectly()
     {
-        var result = FqlParse(having: "COUNT(*) > 5");
+        var result = FqlParse(having: "COUNT(Orders) > 5");
 
         result.Having.Should().NotBeNull();
         result.Having!.Function.Should().Be(AggregateFunction.Count);
-        result.Having.Field.Should().BeNull();
+        result.Having.Field.Should().Be("Orders");
         result.Having.Operator.Should().Be("gt");
         result.Having.Value.Should().Be("5");
     }
@@ -717,12 +793,12 @@ public class FqlQueryParserTests
     [Fact]
     public void FqlHaving_AllOperators_ParsedCorrectly()
     {
-        AssertHaving("COUNT(*) > 5", "gt", "5");
+        AssertHaving("COUNT(Orders) > 5", "gt", "5");
         AssertHaving("SUM(Amount) >= 1000", "gte", "1000");
         AssertHaving("AVG(Price) < 50", "lt", "50");
         AssertHaving("SUM(Amount) <= 100", "lte", "100");
-        AssertHaving("COUNT(*) = 0", "eq", "0");
-        AssertHaving("COUNT(*) != 0", "neq", "0");
+        AssertHaving("COUNT(Orders) = 0", "eq", "0");
+        AssertHaving("COUNT(Orders) != 0", "neq", "0");
     }
 
     private void AssertHaving(string havingExpr, string expectedOp, string expectedValue)

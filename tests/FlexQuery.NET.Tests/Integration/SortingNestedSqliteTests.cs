@@ -1,4 +1,5 @@
 using FlexQuery.NET.Models;
+using FlexQuery.NET.Models.Aggregates;
 using FlexQuery.NET.Models.Paging;
 using FlexQuery.NET.Parsers;
 
@@ -101,7 +102,7 @@ public sealed class SortingNestedSqliteTests : IDisposable
                 new SortNode
                 {
                     Field = "Orders",
-                    Aggregate = "count",
+                    Aggregate = AggregateFunction.Count,
                     Descending = false
                 }
             ],
@@ -127,7 +128,7 @@ public sealed class SortingNestedSqliteTests : IDisposable
                 new SortNode
                 {
                     Field = "Orders",
-                    Aggregate = "max",
+                    Aggregate = AggregateFunction.Max,
                     AggregateField = "Total",
                     Descending = true
                 }
@@ -155,7 +156,7 @@ public sealed class SortingNestedSqliteTests : IDisposable
                 new SortNode
                 {
                     Field = "Orders",
-                    Aggregate = "min",
+                    Aggregate = AggregateFunction.Min,
                     AggregateField = "Total",
                     Descending = false
                 }
@@ -183,7 +184,7 @@ public sealed class SortingNestedSqliteTests : IDisposable
                 new SortNode
                 {
                     Field = "Orders",
-                    Aggregate = "avg",
+                    Aggregate = AggregateFunction.Avg,
                     AggregateField = "Total",
                     Descending = true
                 }

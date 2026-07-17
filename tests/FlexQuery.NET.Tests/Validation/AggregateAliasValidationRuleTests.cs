@@ -7,7 +7,7 @@ using FlexQuery.NET.Validation.Rules;
 
 namespace FlexQuery.NET.Tests.Validation;
 
-public class AggregateAliasValidationRuleTests
+public class AggregateValidationRuleTests
 {
     
     private static QueryContext Context(Type? targetType = null, QueryGovernanceOptions? execOptions = null) =>
@@ -15,7 +15,7 @@ public class AggregateAliasValidationRuleTests
 
     private static ValidationResult Validate(QueryOptions options)
     {
-        var rule = new AggregateAliasValidationRule();
+        var rule = new AggregateValidationRule();
         var result = ValidationResult.Success();
         rule.Validate(options, Context(), result);
         return result;
@@ -260,15 +260,16 @@ public class AggregateAliasValidationRuleTests
     }
 
     [Fact]
-    public void ValidAggregateTarget_CountWildcard_Passes()
+    public void ValidAggregateTarget_CountWildcard_Rejected()
     {
         var options = new QueryOptions
         {
-            Aggregates = [new AggregateModel { Function = AggregateFunction.Count, Field = null, Alias = "TotalCount" }]
+            Aggregates = [new AggregateModel { Function = AggregateFunction.Count, Field = "*", Alias = "TotalCount" }]
         };
         var result = Validate(options);
 
-        result.IsValid.Should().BeTrue();
+        result.IsValid.Should().BeFalse();
+        result.Errors.Should().ContainSingle(e => e.Code == ValidationErrorCodes.InvalidAggregateTarget);
     }
 
     [Fact]
@@ -301,5 +302,88 @@ public class AggregateAliasValidationRuleTests
         result.Errors.Should().Contain(e => e.Code == ValidationErrorCodes.ReservedAlias);
         result.Errors.Should().Contain(e => e.Code == ValidationErrorCodes.DuplicateAlias);
         result.Errors.Should().Contain(e => e.Code == ValidationErrorCodes.InvalidAggregateTarget);
+    }
+
+    [Fact]
+    public void DuplicateAggregateDefinition_SameFunctionAndField_Fails()
+    {
+        var options = new QueryOptions
+        {
+            Aggregates =
+            [
+                new AggregateModel { Function = AggregateFunction.Sum, Field = "Total", Alias = "TotalSum" },
+                new AggregateModel { Function = AggregateFunction.Sum, Field = "Total", Alias = "TotalSum2" }
+            ]
+        };
+        var result = Validate(options);
+
+        result.IsValid.Should().BeFalse();
+        result.Errors.Should().ContainSingle(e => e.Code == ValidationErrorCodes.DuplicateAggregateDefinition);
+    }
+
+    [Fact]
+    public void DuplicateAggregateDefinition_DifferentAliases_Fails()
+    {
+        var options = new QueryOptions
+        {
+            Aggregates =
+            [
+                new AggregateModel { Function = AggregateFunction.Sum, Field = "Total", Alias = "Sales" },
+                new AggregateModel { Function = AggregateFunction.Sum, Field = "Total", Alias = "Revenue" }
+            ]
+        };
+        var result = Validate(options);
+
+        result.IsValid.Should().BeFalse();
+        result.Errors.Should().ContainSingle(e => e.Code == ValidationErrorCodes.DuplicateAggregateDefinition);
+    }
+
+    [Fact]
+    public void DuplicateAggregateDefinition_DifferentFunction_Passes()
+    {
+        var options = new QueryOptions
+        {
+            Aggregates =
+            [
+                new AggregateModel { Function = AggregateFunction.Sum, Field = "Total", Alias = "TotalSum" },
+                new AggregateModel { Function = AggregateFunction.Avg, Field = "Total", Alias = "AvgTotal" }
+            ]
+        };
+        var result = Validate(options);
+
+        result.IsValid.Should().BeTrue();
+    }
+
+    [Fact]
+    public void DuplicateAggregateDefinition_DifferentField_Passes()
+    {
+        var options = new QueryOptions
+        {
+            Aggregates =
+            [
+                new AggregateModel { Function = AggregateFunction.Sum, Field = "Total", Alias = "TotalSum" },
+                new AggregateModel { Function = AggregateFunction.Sum, Field = "Price", Alias = "PriceSum" }
+            ]
+        };
+        var result = Validate(options);
+
+        result.IsValid.Should().BeTrue();
+    }
+
+    [Fact]
+    public void DuplicateAggregateDefinition_CaseInsensitiveField_Fails()
+    {
+        var options = new QueryOptions
+        {
+            Aggregates =
+            [
+                new AggregateModel { Function = AggregateFunction.Sum, Field = "Total", Alias = "TotalSum" },
+                new AggregateModel { Function = AggregateFunction.Sum, Field = "total", Alias = "TotalSum2" }
+            ]
+        };
+        var result = Validate(options);
+
+        result.IsValid.Should().BeFalse();
+        result.Errors.Should().ContainSingle(e => e.Code == ValidationErrorCodes.DuplicateAggregateDefinition);
     }
 }

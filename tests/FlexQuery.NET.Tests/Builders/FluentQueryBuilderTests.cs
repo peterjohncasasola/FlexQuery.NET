@@ -248,7 +248,7 @@ public class FluentQueryBuilderTests
             .Aggregate(a => a
                 .Sum("Amount", "TotalAmount")
                 .Count("Id", "OrderCount")
-                .Count("TotalCount")
+                .Count("TotalCount", "TotalCount")
                 .Avg("Price", "AvgPrice")
                 .Min("Date", "Earliest")
                 .Max("Date", "Latest"))
@@ -257,7 +257,7 @@ public class FluentQueryBuilderTests
         options.Aggregates.Should().HaveCount(6);
         options.Aggregates[0].Should().Match<AggregateModel>(a => a.Function == AggregateFunction.Sum && a.Field == "Amount" && a.Alias == "TotalAmount");
         options.Aggregates[1].Should().Match<AggregateModel>(a => a.Function == AggregateFunction.Count && a.Field == "Id" && a.Alias == "OrderCount");
-        options.Aggregates[2].Should().Match<AggregateModel>(a => a.Function == AggregateFunction.Count && a.Field == null && a.Alias == "TotalCount");
+        options.Aggregates[2].Should().Match<AggregateModel>(a => a.Function == AggregateFunction.Count && a.Field == "TotalCount" && a.Alias == "TotalCount");
         options.Aggregates[3].Should().Match<AggregateModel>(a => a.Function == AggregateFunction.Avg && a.Field == "Price" && a.Alias == "AvgPrice");
         options.Aggregates[4].Should().Match<AggregateModel>(a => a.Function == AggregateFunction.Min && a.Field == "Date" && a.Alias == "Earliest");
         options.Aggregates[5].Should().Match<AggregateModel>(a => a.Function == AggregateFunction.Max && a.Field == "Date" && a.Alias == "Latest");

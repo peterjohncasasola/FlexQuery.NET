@@ -1,3 +1,4 @@
+using FlexQuery.NET.Models.Aggregates;
 using FlexQuery.NET.Models.Paging;
 using FlexQuery.NET.Parsers;
 using FlexQuery.NET.Parsers.Dsl;
@@ -70,7 +71,7 @@ public class DslSortParserTests
 
         result.Should().ContainSingle();
         result[0].Field.Should().Be("Orders");
-        result[0].Aggregate.Should().Be("sum");
+        result[0].Aggregate.Should().Be(AggregateFunction.Sum);
         result[0].AggregateField.Should().Be("total");
         result[0].Descending.Should().BeTrue();
     }
@@ -80,8 +81,43 @@ public class DslSortParserTests
     {
         var result = DslSortParser.Parse("Orders.count():asc");
 
-        result[0].Aggregate.Should().Be("count");
+        result[0].Aggregate.Should().Be(AggregateFunction.Count);
+        result[0].AggregateField.Should().BeNull();
+        result[0].Field.Should().Be("Orders");
+        result[0].Descending.Should().BeFalse();
+    }
+    
+    [Fact]
+    public void Parse_AggregateSort_DefaultsToAscending()
+    {
+        var result = DslSortParser.Parse("Orders.count()");
+
+        result.Should().ContainSingle();
+        result[0].Aggregate.Should().Be(AggregateFunction.Count);
+        result[0].Field.Should().Be("Orders");
         result[0].AggregateField.Should().BeNull();
         result[0].Descending.Should().BeFalse();
+    }
+    
+    [Fact]
+    public void Parse_AggregateSort_WithAscendingDirection()
+    {
+        var result = DslSortParser.Parse("Orders.count():asc");
+
+        result[0].Aggregate.Should().Be(AggregateFunction.Count);
+        result[0].Field.Should().Be("Orders");
+        result[0].AggregateField.Should().BeNull();
+        result[0].Descending.Should().BeFalse();
+    }
+    
+    [Fact]
+    public void Parse_AggregateSort_WithDescendingDirection()
+    {
+        var result = DslSortParser.Parse("Orders.count():desc");
+
+        result[0].Aggregate.Should().Be(AggregateFunction.Count);
+        result[0].Field.Should().Be("Orders");
+        result[0].AggregateField.Should().BeNull();
+        result[0].Descending.Should().BeTrue();
     }
 }

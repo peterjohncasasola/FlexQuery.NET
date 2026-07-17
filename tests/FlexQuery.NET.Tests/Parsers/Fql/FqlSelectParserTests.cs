@@ -1,3 +1,4 @@
+using FlexQuery.NET.Exceptions;
 using FlexQuery.NET.Internal;
 using FlexQuery.NET.Models;
 using FlexQuery.NET.Parsers.Fql;
@@ -54,7 +55,7 @@ public class FqlSelectParserTests
 
         var act = () => FqlSelectParser.Parse(options, "Name:FullName");
 
-        act.Should().Throw<FqlParseException>();
+        act.Should().Throw<FlexQueryException>();
     }
 
     [Fact]
@@ -64,7 +65,7 @@ public class FqlSelectParserTests
 
         var act = () => FqlSelectParser.Parse(options, "Name.");
 
-        act.Should().Throw<FqlParseException>();
+        act.Should().Throw<FlexQueryException>();
     }
 
     [Fact]
@@ -74,7 +75,7 @@ public class FqlSelectParserTests
 
         var act = () => FqlSelectParser.Parse(options, "   ");
 
-        act.Should().Throw<FqlParseException>();
+        act.Should().Throw<FlexQueryException>();
     }
 
     [Fact]
@@ -84,7 +85,7 @@ public class FqlSelectParserTests
 
         var act = () => FqlSelectParser.Parse(options, "Name AS ");
 
-        act.Should().Throw<FqlParseException>();
+        act.Should().Throw<FlexQueryException>();
     }
 
     [Fact]
@@ -94,7 +95,7 @@ public class FqlSelectParserTests
 
         var act = () => FqlSelectParser.Parse(options, "Name AS 123Alias");
 
-        act.Should().Throw<FqlParseException>();
+        act.Should().Throw<FlexQueryException>();
     }
 
     [Fact]
@@ -104,7 +105,7 @@ public class FqlSelectParserTests
 
         var act = () => FqlSelectParser.Parse(options, "Name AS Full Name");
 
-        act.Should().Throw<FqlParseException>();
+        act.Should().Throw<FlexQueryException>();
     }
 
     [Fact]
@@ -114,7 +115,7 @@ public class FqlSelectParserTests
 
         var act = () => FqlSelectParser.Parse(options, "Name AS Full.Name");
 
-        act.Should().Throw<FqlParseException>();
+        act.Should().Throw<FlexQueryException>();
     }
 
     [Fact]
@@ -124,7 +125,7 @@ public class FqlSelectParserTests
 
         var act = () => FqlSelectParser.Parse(options, "Name AS AS");
 
-        act.Should().Throw<FqlParseException>();
+        act.Should().Throw<FlexQueryException>();
     }
 
     [Fact]
@@ -134,7 +135,7 @@ public class FqlSelectParserTests
 
         var act = () => FqlSelectParser.Parse(options, "Name AS _FullName");
 
-        act.Should().Throw<FqlParseException>();
+        act.Should().Throw<FlexQueryException>();
     }
 
     [Fact]
@@ -361,7 +362,7 @@ public class FqlSelectParserTests
     {
         var act = () => FqlSelectParser.ParseToSelectionTree("Customer(Id-Name)");
 
-        act.Should().Throw<FqlParseException>();
+        act.Should().Throw<FlexQueryException>();
     }
 
     [Fact]

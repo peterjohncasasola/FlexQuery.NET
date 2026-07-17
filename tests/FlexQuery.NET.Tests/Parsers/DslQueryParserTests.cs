@@ -3,6 +3,7 @@ using FlexQuery.NET.Models;
 using FlexQuery.NET.Models.Aggregates;
 using FlexQuery.NET.Models.Filters;
 using FlexQuery.NET.Parsers;
+using FlexQuery.NET.Parsers.Dsl;
 
 namespace FlexQuery.NET.Tests.Parsers;
 
@@ -387,12 +388,12 @@ public class DslQueryParserTests
         opts.Sort.Should().HaveCount(2);
 
         opts.Sort[0].Field.Should().Be("orders");
-        opts.Sort[0].Aggregate.Should().Be("sum");
+        opts.Sort[0].Aggregate.Should().Be(AggregateFunction.Sum);
         opts.Sort[0].AggregateField.Should().Be("total");
         opts.Sort[0].Descending.Should().BeTrue();
 
         opts.Sort[1].Field.Should().Be("orders");
-        opts.Sort[1].Aggregate.Should().Be("count");
+        opts.Sort[1].Aggregate.Should().Be(AggregateFunction.Count);
         opts.Sort[1].AggregateField.Should().BeNull();
         opts.Sort[1].Descending.Should().BeFalse();
     }
@@ -527,13 +528,13 @@ public class DslQueryParserTests
         {
             ["groupBy"] = "status",
             ["select"] = "status",
-            ["aggregate"] = "count:*",
-            ["having"] = "count:gt:20"
+            ["aggregate"] = "count:Orders",
+            ["having"] = "count:Orders:gt:20"
         });
 
         opts.Having.Should().NotBeNull();
         opts.Having!.Function.Should().Be(AggregateFunction.Count);
-        opts.Having.Field.Should().BeNull();
+        opts.Having.Field.Should().Be("Orders");
         opts.Having.Operator.Should().Be(FilterOperators.GreaterThan);
         opts.Having.Value.Should().Be("20");
     }
@@ -712,17 +713,25 @@ public class DslQueryParserTests
     }
 
     [Fact]
-    public void DslAggregate_CountStar_ParsedCorrectly()
+    public void DslAggregate_CountStar_NotSupported_Throws()
     {
-        var opts = Parse(new Dictionary<string, string>
+        QueryParseException? ex = null;
+        try
         {
-            ["aggregate"] = "count:*"
-        });
+            Parse(new Dictionary<string, string>
+            {
+                ["aggregate"] = "count:*"
+            });
+        }
+        catch (QueryParseException e)
+        {
+            ex = e;
+        }
 
-        opts.Aggregates.Should().ContainSingle();
-        opts.Aggregates[0].Function.Should().Be(AggregateFunction.Count);
-        opts.Aggregates[0].Field.Should().BeNull();
-        opts.Aggregates[0].Alias.Should().Be("Count");
+        ex.Should().NotBeNull();
+        ex!.Message.Should().Contain("aggregate");
+        ex.InnerException.Should().NotBeNull();
+        ex.InnerException!.Message.Should().Contain("count:* is not supported");
     }
 
     [Fact]
@@ -755,17 +764,25 @@ public class DslQueryParserTests
     }
 
     [Fact]
-    public void DslAggregate_CountAsterisk_ParsedCorrectly()
+    public void DslAggregate_CountAsterisk_NotSupported_Throws()
     {
-        var opts = Parse(new Dictionary<string, string>
+        QueryParseException? ex = null;
+        try
         {
-            ["aggregate"] = "count:*"
-        });
+            Parse(new Dictionary<string, string>
+            {
+                ["aggregate"] = "count:*"
+            });
+        }
+        catch (QueryParseException e)
+        {
+            ex = e;
+        }
 
-        opts.Aggregates.Should().ContainSingle();
-        opts.Aggregates[0].Function.Should().Be(AggregateFunction.Count);
-        opts.Aggregates[0].Field.Should().BeNull();
-        opts.Aggregates[0].Alias.Should().Be("Count");
+        ex.Should().NotBeNull();
+        ex!.Message.Should().Contain("aggregate");
+        ex.InnerException.Should().NotBeNull();
+        ex.InnerException!.Message.Should().Contain("count:* is not supported");
     }
 
     [Fact]

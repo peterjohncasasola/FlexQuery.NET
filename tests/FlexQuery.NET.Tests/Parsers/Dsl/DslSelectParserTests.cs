@@ -1,3 +1,4 @@
+using FlexQuery.NET.Exceptions;
 using FlexQuery.NET.Models;
 using FlexQuery.NET.Parsers.Dsl;
 using Xunit;
@@ -134,7 +135,7 @@ public class DslSelectParserTests
 
         var act = () => DslSelectParser.Parse(options, "Name:AS");
 
-        act.Should().Throw<DslParseException>();
+        act.Should().Throw<QueryValidationException>();
     }
 
     [Fact]
@@ -144,7 +145,7 @@ public class DslSelectParserTests
 
         var act = () => DslSelectParser.Parse(options, "Name:as");
 
-        act.Should().Throw<DslParseException>();
+        act.Should().Throw<QueryValidationException>();
     }
 
     [Fact]
