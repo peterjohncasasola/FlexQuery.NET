@@ -1,6 +1,7 @@
 using FlexQuery.NET.Helpers;
 using FlexQuery.NET.Internal;
 using FlexQuery.NET.Models;
+using FlexQuery.NET.Models.Projection;
 using FlexQuery.NET.Parsers;
 using FlexQuery.NET.Validation;
 
@@ -29,7 +30,7 @@ internal static class FqlSelectParser
         }
 
         var fields = ParserUtilities.SplitCsv(rawSelect);
-        var selectedFields = new List<string>(fields.Count);
+        var selectedFields = new List<SelectModel>(fields.Count);
         foreach (var field in fields)
         {
             var asIndex = field.IndexOf(" AS ", StringComparison.OrdinalIgnoreCase);
@@ -60,7 +61,7 @@ internal static class FqlSelectParser
                         $"Invalid alias '{rawAlias}' in 'select' parameter. " +
                         "Aliases must be valid identifiers (e.g. 'FullName').");
 
-                selectedFields.Add($"{rawPath} AS {rawAlias}");
+                selectedFields.Add(new SelectModel { Field = rawPath, Alias = rawAlias });
                 continue;
             }
 
@@ -74,7 +75,7 @@ internal static class FqlSelectParser
                     $"Invalid property path '{field}' in 'select' parameter. " +
                     "Property paths must be dot-separated identifiers (e.g. 'Id' or 'Customer.Name').");
 
-            selectedFields.Add(field);
+            selectedFields.Add(new SelectModel { Field = field });
         }
 
         options.Select = selectedFields;

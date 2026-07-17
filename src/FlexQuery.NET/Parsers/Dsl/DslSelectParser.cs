@@ -1,6 +1,7 @@
 using FlexQuery.NET.Helpers;
 using FlexQuery.NET.Internal;
 using FlexQuery.NET.Models;
+using FlexQuery.NET.Models.Projection;
 using FlexQuery.NET.Validation;
 
 namespace FlexQuery.NET.Parsers.Dsl;
@@ -27,7 +28,7 @@ internal static class DslSelectParser
         }
 
         var fields = ParserUtilities.SplitCsv(rawSelect);
-        var validated = new List<string>(fields.Count);
+        var validated = new List<SelectModel>(fields.Count);
         foreach (var field in fields)
         {
             var colonIndex = field.IndexOf(':');
@@ -63,7 +64,7 @@ internal static class DslSelectParser
                         $"Invalid alias '{rawAlias}' in 'select' parameter. " +
                         "Aliases must be valid identifiers (e.g. 'FullName').");
 
-                validated.Add($"{rawPath} AS {rawAlias}");
+                validated.Add(new SelectModel { Field = rawPath, Alias = rawAlias });
                 continue;
             }
 
@@ -72,7 +73,7 @@ internal static class DslSelectParser
                     $"Invalid property path '{field}' in 'select' parameter. " +
                     "Property paths must be dot-separated identifiers (e.g. 'Id' or 'Customer.Name').");
 
-            validated.Add(field);
+            validated.Add(new SelectModel { Field = field });
         }
 
         options.Select = validated;

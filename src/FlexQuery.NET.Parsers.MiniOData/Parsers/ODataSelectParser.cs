@@ -1,3 +1,5 @@
+using FlexQuery.NET.Models.Projection;
+
 namespace FlexQuery.NET.Parsers.MiniOData;
 
 /// <summary>
@@ -14,13 +16,13 @@ internal static class ODataSelectParser
     /// <exception cref="MiniODataParseException">
     /// Thrown when the value is empty, contains an empty field, or an invalid property path.
     /// </exception>
-    public static List<string> Parse(string? select)
+    public static List<SelectModel> Parse(string? select)
     {
         if (string.IsNullOrWhiteSpace(select))
             throw new MiniODataParseException(
                 "$select value is empty. Expected comma-separated field paths.");
 
-        var result = new List<string>();
+        var result = new List<SelectModel>();
 
         foreach (var part in select.Split(','))
         {
@@ -37,7 +39,7 @@ internal static class ODataSelectParser
                     $"Invalid property path '{field}' in $select. " +
                     "Property paths must be dot-separated identifiers (e.g. 'Customer.Region').");
 
-            result.Add(field);
+            result.Add(new SelectModel { Field = field });
         }
 
         return result;
