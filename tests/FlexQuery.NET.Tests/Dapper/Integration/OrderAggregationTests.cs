@@ -41,7 +41,7 @@ public class OrderAggregationTests : DapperApiTestBase
     public async Task Should_Apply_Having_Clause()
     {
         // Act - Group by customer and only return those with total sum > 100
-        var response = await Client.GetAsync("/api/orders?groupBy=customerId&having=count(id):gt:1&select=customerId&aggregate=count:id");
+        var response = await Client.GetAsync("/api/orders?groupBy=customerId&having=count:id:gt:1&select=customerId&aggregate=count:id");
 
         // Assert
         response.EnsureSuccessStatusCode();
