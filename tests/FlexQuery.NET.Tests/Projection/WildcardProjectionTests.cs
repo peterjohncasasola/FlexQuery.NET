@@ -3,6 +3,7 @@ using FlexQuery.NET.Models;
 using FlexQuery.NET.Exceptions;
 using FlexQuery.NET.Models.Filters;
 using FlexQuery.NET.Models.Paging;
+using FlexQuery.NET.Models.Projection;
 using FlexQuery.NET.Options;
 using Microsoft.EntityFrameworkCore;
 
@@ -19,7 +20,7 @@ public class WildcardProjectionTests : IDisposable
     {
         // Arrange
         var options = new QueryOptions();
-        options.Select = new List<string> { "Id", "Orders.*" };
+        options.Select = new List<SelectModel> { new SelectModel { Field = "Id" }, new SelectModel { Field = "Orders.*" } };
 
         // Act
         var result = await _db.Customers
@@ -54,7 +55,7 @@ public class WildcardProjectionTests : IDisposable
         // Arrange
         var options = new QueryOptions();
         // Alice -> Orders -> OrderItems (all scalars)
-        options.Select = new List<string> { "Id", "Orders.Number", "Orders.OrderItems.*" };
+        options.Select = new List<SelectModel> { new SelectModel { Field = "Id" }, new SelectModel { Field = "Orders.Number" }, new SelectModel { Field = "Orders.OrderItems.*" } };
 
         // Act
         var result = await _db.Customers
@@ -123,7 +124,7 @@ public class WildcardProjectionTests : IDisposable
             SelectableFields = new HashSet<string> { "Id" },
             StrictFieldValidation = true
         };
-        options.Select = new List<string> { "Id", "Name" }; // Name is forbidden
+        options.Select = new List<SelectModel> { new SelectModel { Field = "Id" }, new SelectModel { Field = "Name" } }; // Name is forbidden
 
         // Act
         var act = () => options.ValidateOrThrow<Customer>(execOptions);

@@ -60,3 +60,4 @@ public class FlexQueryBaseTests
         parameters.PageSize.Should().Be(10);
     }
 }
+

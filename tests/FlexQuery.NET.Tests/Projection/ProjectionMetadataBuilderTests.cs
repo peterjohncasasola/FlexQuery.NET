@@ -1,4 +1,5 @@
 using FlexQuery.NET.Models;
+using FlexQuery.NET.Models.Projection;
 using FlexQuery.NET.Projection;
 
 namespace FlexQuery.NET.Tests.Projection;
@@ -8,7 +9,7 @@ public class ProjectionMetadataBuilderTests
     [Fact]
     public void Build_ReturnsProjectionMetadata()
     {
-        var options = new QueryOptions { Select = ["Id", "Name"] };
+        var options = new QueryOptions { Select = [new SelectModel { Field = "Id" }, new SelectModel { Field = "Name" }] };
 
         var result = ProjectionMetadataBuilder.Build(typeof(Customer), options);
 
@@ -49,3 +50,5 @@ public class ProjectionMetadataBuilderTests
         result.Should().BeFalse();
     }
 }
+
+

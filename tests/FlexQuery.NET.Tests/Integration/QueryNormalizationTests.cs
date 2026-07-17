@@ -115,12 +115,12 @@ public class QueryNormalizationTests
 
         var first = Parse(raw);
         first.Filter!.Filters[0].Field = "Mutated";
-        first.Select!.Add("Secret");
+        first.Select!.Add(new SelectModel { Field = "Secret" });
 
         var second = Parse(raw);
 
         second.Filter!.Filters[0].Field.Should().Be("Name");
-        second.Select.Should().BeEquivalentTo(["Id", "Name"]);
+        second.Select.Should().BeEquivalentTo(new[] { new SelectModel { Field = "Id" }, new SelectModel { Field = "Name" } });
     }
 
     [Fact]
@@ -195,7 +195,7 @@ public class QueryNormalizationTests
     [Fact]
     public void HasProjection_ReturnsTrueForAllProjectionShapes()
     {
-        new QueryOptions { Select = ["Id"] }.HasProjection().Should().BeTrue();
+        new QueryOptions { Select = [new SelectModel { Field = "Id" }] }.HasProjection().Should().BeTrue();
         new QueryOptions { Includes = ["Orders"] }.HasProjection().Should().BeTrue();
         new QueryOptions { Expand = [new IncludeNode { Path = "Orders" }] }.HasProjection().Should().BeTrue();
         new QueryOptions { GroupBy = ["Status"] }.HasProjection().Should().BeTrue();
@@ -259,3 +259,4 @@ public class QueryNormalizationTests
         options.Paging.PageSize.Should().Be(25);
     }
 }
+

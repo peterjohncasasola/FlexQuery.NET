@@ -1,4 +1,5 @@
 using FlexQuery.NET.Models;
+using FlexQuery.NET.Models.Projection;
 using Microsoft.EntityFrameworkCore;
 using System.Text.RegularExpressions;
 using FlexQuery.NET.Models.Filters;
@@ -28,7 +29,7 @@ public sealed class FilteredProjectionTests : IDisposable
                     }
                 ]
             },
-            Select = ["Id", "Orders.Number"]
+            Select = [new SelectModel { Field = "Id" }, new SelectModel { Field = "Orders.Number" }]
         };
 
         var rows = await _db.Customers
@@ -61,7 +62,7 @@ public sealed class FilteredProjectionTests : IDisposable
                     new FilterCondition { Field = "Orders.Total", Operator = FilterOperators.GreaterThan, Value = "100" }
                 ]
             },
-            Select = ["Id", "Orders.Number", "Orders.Total"]
+            Select = [new SelectModel { Field = "Id" }, new SelectModel { Field = "Orders.Number" }, new SelectModel { Field = "Orders.Total" }]
         };
 
         var rows = await _db.Customers
@@ -94,7 +95,7 @@ public sealed class FilteredProjectionTests : IDisposable
                     new FilterCondition { Field = "Orders.Number", Operator = FilterOperators.Equal, Value = "SO-002" }
                 ]
             },
-            Select = ["Id", "Orders.Number"]
+            Select = [new SelectModel { Field = "Id" }, new SelectModel { Field = "Orders.Number" }]
         };
 
         var rows = await _db.Customers
@@ -156,7 +157,7 @@ public sealed class FilteredProjectionTests : IDisposable
                     new FilterCondition { Field = "Orders.OrderItems.Sku", Operator = FilterOperators.Equal, Value = "SKU-AAA" }
                 ]
             },
-            Select = ["Id", "Orders.Number", "Orders.OrderItems.Sku"]
+            Select = [new SelectModel { Field = "Id" }, new SelectModel { Field = "Orders.Number" }, new SelectModel { Field = "Orders.OrderItems.Sku" }]
         };
 
         var rows = await _db.Customers
@@ -194,7 +195,7 @@ public sealed class FilteredProjectionTests : IDisposable
                     new FilterCondition { Field = "Orders.Number", Operator = FilterOperators.Equal, Value = "SO-001" }
                 ]
             },
-            Select = ["Id", "Orders.Number"]
+            Select = [new SelectModel { Field = "Id" }, new SelectModel { Field = "Orders.Number" }]
         };
 
         var query = _db.Customers
@@ -211,4 +212,6 @@ public sealed class FilteredProjectionTests : IDisposable
         Regex.Matches(sql, "\"Orders\"").Count.Should().BeLessOrEqualTo(3);
     }
 }
+
+
 

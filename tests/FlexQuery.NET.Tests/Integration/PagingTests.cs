@@ -1,5 +1,6 @@
 using FlexQuery.NET.Models;
 using FlexQuery.NET.Models.Paging;
+using FlexQuery.NET.Models.Projection;
 
 namespace FlexQuery.NET.Tests.Integration;
 
@@ -147,7 +148,7 @@ public class PagingTests : IDisposable
         var opts = new QueryOptions
         {
             Paging = { Page = 2, PageSize = 3 },
-            Select = new List<string> { "Name" }
+            Select = new List<SelectModel> { new SelectModel { Field = "Name" } }
         };
 
         var result = _db.Customers

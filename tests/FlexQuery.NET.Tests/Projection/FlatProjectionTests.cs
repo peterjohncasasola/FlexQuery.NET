@@ -1,4 +1,4 @@
-using FlexQuery.NET.Models;
+﻿using FlexQuery.NET.Models;
 using FlexQuery.NET.Models.Projection;
 using Microsoft.EntityFrameworkCore;
 
@@ -9,7 +9,7 @@ public class FlatProjectionTests : IDisposable
     private readonly TestDbContext _db = TestDbContext.CreateSeeded();
     public void Dispose() => _db.Dispose();
 
-    // ── Flat mode ────────────────────────────────────────────────────────
+    // â”€â”€ Flat mode â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
     [Fact]
     public async Task FlatMode_FlattensSingleLevelCollection_WithAlias()
@@ -17,7 +17,7 @@ public class FlatProjectionTests : IDisposable
         var options = new QueryOptions
         {
             ProjectionMode = ProjectionMode.Flat,
-            Select = ["Orders.Total", "Orders.Status as OrderStatus"]
+            Select = [new SelectModel { Field = "Orders.Total" }, new SelectModel { Field = "Orders.Status", Alias = "OrderStatus" }]
         };
 
         var list = await _db.Customers.Where(x => x.Id == 1).ApplySelect(options).ToListAsync();
@@ -28,9 +28,9 @@ public class FlatProjectionTests : IDisposable
         var first = list.First();
         var type = first.GetType();
 
-        // 'Total' has no alias → should be 'Total'
+        // 'Total' has no alias â†’ should be 'Total'
         type.GetProperty("Total").Should().NotBeNull();
-        // 'Status as OrderStatus' → should be 'OrderStatus' not 'Status'
+        // 'Status as OrderStatus' â†’ should be 'OrderStatus' not 'Status'
         type.GetProperty("OrderStatus").Should().NotBeNull();
         type.GetProperty("Status").Should().BeNull("original name should be hidden by alias");
 
@@ -47,12 +47,12 @@ public class FlatProjectionTests : IDisposable
         var options = new QueryOptions
         {
             ProjectionMode = ProjectionMode.Flat,
-            Select = ["Orders.OrderItems.Quantity as Qty", "Orders.OrderItems.Price"]
+            Select = [new SelectModel { Field = "Orders.OrderItems.Quantity", Alias = "Qty" }, new SelectModel { Field = "Orders.OrderItems.Price" }]
         };
 
         var list = await _db.Customers.Where(x => x.Id == 1).ApplySelect(options).ToListAsync();
 
-        // Order 101 has 2 items, Order 102 has 1 item → 3 total
+        // Order 101 has 2 items, Order 102 has 1 item â†’ 3 total
         list.Should().HaveCount(3);
 
         var first = list.First();
@@ -75,7 +75,7 @@ public class FlatProjectionTests : IDisposable
         var options = new QueryOptions
         {
             ProjectionMode = ProjectionMode.Flat,
-            Select = ["Orders.Total", "Profile.Bio"]
+            Select = [new SelectModel { Field = "Orders.Total" }, new SelectModel { Field = "Profile.Bio" }]
         };
 
         Action action = () => _db.Customers.ApplySelect(options);
@@ -90,7 +90,7 @@ public class FlatProjectionTests : IDisposable
         var options = new QueryOptions
         {
             ProjectionMode = ProjectionMode.Flat,
-            Select = ["Name", "Orders.Total"]
+            Select = [new SelectModel { Field = "Name" }, new SelectModel { Field = "Orders.Total" }]
         };
 
         Action action = () => _db.Customers.ApplySelect(options);
@@ -99,7 +99,7 @@ public class FlatProjectionTests : IDisposable
             .WithMessage("Flat mode does not support mixing scalar properties*");
     }
 
-    // ── FlatMixed mode ───────────────────────────────────────────────────
+    // â”€â”€ FlatMixed mode â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
     [Fact]
     public async Task FlatMixedMode_CombinesRootScalarsWithDeepCollectionFields()
@@ -107,16 +107,12 @@ public class FlatProjectionTests : IDisposable
         var options = new QueryOptions
         {
             ProjectionMode = ProjectionMode.FlatMixed,
-            Select = [
-                "Name as customerName",
-                "Orders.Status as OrderStatus",
-                "Orders.Total"
-            ]
+            Select = [new SelectModel { Field = "Name", Alias = "customerName" }, new SelectModel { Field = "Orders.Status", Alias = "OrderStatus" }, new SelectModel { Field = "Orders.Total" }]
         };
 
         var list = await _db.Customers.Where(x => x.Id == 1).ApplySelect(options).ToListAsync();
 
-        // Entity Id=1 has 2 orders → 2 flat rows
+        // Entity Id=1 has 2 orders â†’ 2 flat rows
         list.Should().HaveCount(2);
 
         var first = list.First();
@@ -141,17 +137,13 @@ public class FlatProjectionTests : IDisposable
         var options = new QueryOptions
         {
             ProjectionMode = ProjectionMode.FlatMixed,
-            Select = [
-                "Id as customerId",
-                "Orders.Status as orderStatus",
-                "Orders.OrderItems.Quantity as qty"
-            ]
+            Select = [new SelectModel { Field = "Id", Alias = "customerId" }, new SelectModel { Field = "Orders.Status", Alias = "orderStatus" }, new SelectModel { Field = "Orders.OrderItems.Quantity", Alias = "qty" }]
         };
 
         var list = await _db.Customers.Where(x => x.Id == 1).ApplySelect(options).ToListAsync();
 
         // Entity Id=1: Order 101 (Shipped) has 2 items, Order 102 (Pending) has 1 item
-        // → 3 flat rows total
+        // â†’ 3 flat rows total
         list.Should().HaveCount(3);
 
         var first = list.First();
@@ -174,14 +166,14 @@ public class FlatProjectionTests : IDisposable
         qty.Should().BeGreaterThan(0);
     }
 
-    // ── Nested mode alias ────────────────────────────────────────────────
+    // â”€â”€ Nested mode alias â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
     [Fact]
     public async Task NestedMode_AliasOnScalarField_ReplacesPropertyNameInOutput()
     {
         var options = new QueryOptions
         {
-            Select = ["Id as customerId", "Name"]
+            Select = [new SelectModel { Field = "Id", Alias = "customerId" }, new SelectModel { Field = "Name" }]
         };
 
         var list = await _db.Customers.Where(x => x.Id == 1).ApplySelect(options).ToListAsync();
@@ -203,7 +195,7 @@ public class FlatProjectionTests : IDisposable
     {
         var options = new QueryOptions
         {
-            Select = ["Id", "Orders.Status as OrderStatus", "Orders.Total"]
+            Select = [new SelectModel { Field = "Id" }, new SelectModel { Field = "Orders.Status", Alias = "OrderStatus" }, new SelectModel { Field = "Orders.Total" }]
         };
 
         var list = await _db.Customers.Where(x => x.Id == 1).ApplySelect(options).ToListAsync();
@@ -230,3 +222,4 @@ public class FlatProjectionTests : IDisposable
         status.Should().Be("Shipped");
     }
 }
+

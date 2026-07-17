@@ -8,6 +8,7 @@ using Microsoft.EntityFrameworkCore;
 using System.Reflection;
 using FlexQuery.NET.Internal;
 using FlexQuery.NET.Models.Aggregates;
+using FlexQuery.NET.Models.Projection;
 using FlexQuery.NET.Options;
 
 namespace FlexQuery.NET.Tests.Integration;
@@ -77,7 +78,7 @@ public sealed class SecurityGovernanceEfCoreIntegrationTests : IDisposable
     {
         var options = new QueryOptions
         {
-            Select = new List<string> { "SSN" }
+            Select = new List<SelectModel> { new SelectModel { Field = "SSN" } }
         };
         var execOptions = new EfCoreQueryOptions
         {
@@ -191,7 +192,7 @@ public sealed class SecurityGovernanceEfCoreIntegrationTests : IDisposable
     {
         var options = new QueryOptions
         {
-            Select = new List<string> { "Name", "SSN" }
+            Select = new List<SelectModel> { new SelectModel { Field = "Name" }, new SelectModel { Field = "SSN" } }
         };
         var execOptions = new EfCoreQueryOptions
         {
@@ -201,8 +202,8 @@ public sealed class SecurityGovernanceEfCoreIntegrationTests : IDisposable
 
         options.Validate(typeof(Customer), execOptions);
 
-        options.Select.Should().Contain("Name");
-        options.Select.Should().NotContain("SSN");
+        options.Select.Should().ContainEquivalentOf(new SelectModel { Field = "Name" });
+        options.Select.Should().NotContainEquivalentOf(new SelectModel { Field = "SSN" });
     }
 
     // ──────────────────────────────────────────────────────────────
@@ -374,7 +375,7 @@ public sealed class SecurityGovernanceEfCoreIntegrationTests : IDisposable
     {
         var options = new QueryOptions { IncludeCount = true };
         // Use flat Select (NOT SelectTree) — the normal code path
-        options.Select = new List<string> { "SSN" };
+        options.Select = new List<SelectModel> { new SelectModel { Field = "SSN" } };
 
         var execOptions = new EfCoreQueryOptions
         {
