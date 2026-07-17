@@ -181,6 +181,76 @@ public class DslSelectParserTests
     }
 
     [Fact]
+    public void Parse_PropertyPath_StartsWithUnderscore_Throws()
+    {
+        var options = new QueryOptions();
+
+        var act = () => DslSelectParser.Parse(options, "_FullName");
+
+        act.Should().Throw<DslParseException>();
+    }
+
+    [Fact]
+    public void Parse_PropertyPath_StartsWithDigit_Throws()
+    {
+        var options = new QueryOptions();
+
+        var act = () => DslSelectParser.Parse(options, "1Name");
+
+        act.Should().Throw<DslParseException>();
+    }
+
+    [Fact]
+    public void Parse_PropertyPath_SegmentStartsWithUnderscore_Throws()
+    {
+        var options = new QueryOptions();
+
+        var act = () => DslSelectParser.Parse(options, "Customer._Name");
+
+        act.Should().Throw<DslParseException>();
+    }
+
+    [Fact]
+    public void Parse_PropertyPath_SegmentStartsWithDigit_Throws()
+    {
+        var options = new QueryOptions();
+
+        var act = () => DslSelectParser.Parse(options, "Customer.1Name");
+
+        act.Should().Throw<DslParseException>();
+    }
+
+    [Fact]
+    public void Parse_PropertyPath_DoubleDot_Throws()
+    {
+        var options = new QueryOptions();
+
+        var act = () => DslSelectParser.Parse(options, "Customer..Name");
+
+        act.Should().Throw<DslParseException>();
+    }
+
+    [Fact]
+    public void Parse_PropertyPath_LeadingDot_Throws()
+    {
+        var options = new QueryOptions();
+
+        var act = () => DslSelectParser.Parse(options, ".Customer");
+
+        act.Should().Throw<DslParseException>();
+    }
+
+    [Fact]
+    public void Parse_PropertyPath_TrailingDot_Throws()
+    {
+        var options = new QueryOptions();
+
+        var act = () => DslSelectParser.Parse(options, "Customer.");
+
+        act.Should().Throw<DslParseException>();
+    }
+
+    [Fact]
     public void Parse_WhitespaceAroundColon_Valid()
     {
         var options = new QueryOptions();
@@ -403,6 +473,50 @@ public class DslSelectParserTests
     public void ParseToSelectionTree_InvalidIdentifier_Throws()
     {
         var act = () => DslSelectParser.ParseToSelectionTree("Customer(Id-Name)");
+
+        act.Should().Throw<DslParseException>();
+    }
+
+    [Fact]
+    public void ParseToSelectionTree_NestedField_StartsWithUnderscore_Throws()
+    {
+        var act = () => DslSelectParser.ParseToSelectionTree("Customer(_Name)");
+
+        act.Should().Throw<DslParseException>();
+    }
+
+    [Fact]
+    public void ParseToSelectionTree_NestedField_StartsWithDigit_Throws()
+    {
+        var act = () => DslSelectParser.ParseToSelectionTree("Customer(1Name)");
+
+        act.Should().Throw<DslParseException>();
+    }
+
+    [Fact]
+    public void ParseToSelectionTree_NestedField_ContainsHyphen_Throws()
+    {
+        var act = () => DslSelectParser.ParseToSelectionTree("Customer(Full-Name)");
+
+        act.Should().Throw<DslParseException>();
+    }
+
+    [Fact]
+    public void ParseToSelectionTree_NestedField_ContainsSpace_Throws()
+    {
+        var act = () => DslSelectParser.ParseToSelectionTree("Customer(Full Name)");
+
+        act.Should().Throw<DslParseException>();
+    }
+
+    [Theory]
+    [InlineData("Customer(1Name)")]
+    [InlineData("Customer(_Name)")]
+    [InlineData("Customer(Full Name)")]
+    [InlineData("Customer(Full-Name)")]
+    public void ParseToSelectionTree_InvalidNestedIdentifier_Throws(string select)
+    {
+        Action act = () => DslSelectParser.ParseToSelectionTree(select);
 
         act.Should().Throw<DslParseException>();
     }

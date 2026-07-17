@@ -191,11 +191,48 @@ public class DslAggregateParserTests
     }
 
     [Fact]
-    public void Parse_Alias_ReservedKeyword_ThrowsQueryValidationException()
+    public void Parse_Alias_StartsWithUnderscore_ThrowsDslParseException()
     {
-        var ex = Record.Exception(() => Parse("sum:Amount:select"));
+        var ex = Record.Exception(() => Parse("sum:Amount:_Total"));
 
-        ex.Should().BeOfType<QueryValidationException>();
+        ex.Should().BeOfType<DslParseException>();
+        ex.Message.Should().Contain("Invalid alias");
+    }
+
+    [Fact]
+    public void Parse_Alias_StartsWithDigit_ThrowsDslParseException()
+    {
+        var ex = Record.Exception(() => Parse("sum:Amount:1Total"));
+
+        ex.Should().BeOfType<DslParseException>();
+        ex.Message.Should().Contain("Invalid alias");
+    }
+
+    [Fact]
+    public void Parse_Alias_ContainsSpace_ThrowsDslParseException()
+    {
+        var ex = Record.Exception(() => Parse("sum:Amount:Total Sales"));
+
+        ex.Should().BeOfType<DslParseException>();
+        ex.Message.Should().Contain("Invalid alias");
+    }
+
+    [Fact]
+    public void Parse_Alias_ContainsHyphen_ThrowsDslParseException()
+    {
+        var ex = Record.Exception(() => Parse("sum:Amount:Total-Sales"));
+
+        ex.Should().BeOfType<DslParseException>();
+        ex.Message.Should().Contain("Invalid alias");
+    }
+
+    [Fact]
+    public void Parse_Alias_ReservedKeyword_AcceptedAtParserLevel()
+    {
+        var result = Parse("sum:Amount:select");
+
+        result.Should().ContainSingle();
+        result[0].Alias.Should().Be("select");
     }
 
     [Fact]
