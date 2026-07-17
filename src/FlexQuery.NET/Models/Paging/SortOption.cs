@@ -1,3 +1,5 @@
+using FlexQuery.NET.Models.Aggregates;
+
 namespace FlexQuery.NET.Models.Paging;
 
 /// <summary>
@@ -9,7 +11,7 @@ public sealed class SortNode
     public string Field { get; set; } = string.Empty;
 
     /// <summary>Aggregate function for collection sorting (sum, count, max, min, avg).</summary>
-    public string? Aggregate { get; set; }
+    public AggregateFunction? Aggregate { get; set; }
 
     /// <summary>Aggregate target field for collection sorting (e.g. total).</summary>
     public string? AggregateField { get; set; }

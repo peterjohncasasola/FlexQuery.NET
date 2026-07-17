@@ -61,8 +61,7 @@ internal static class SortBuilder
         }
         else
         {
-            if (string.IsNullOrWhiteSpace(sort.Aggregate)
-                || !SafePropertyResolver.TryResolveChain(parameter.Type, sort.Field, out var chain)
+            if (!SafePropertyResolver.TryResolveChain(parameter.Type, sort.Field, out var chain)
                 || chain.Count == 0)
             {
                 return false;
@@ -85,8 +84,8 @@ internal static class SortBuilder
                 return false;
         }
 
-        var aggregate = sort.Aggregate!.Trim().ToLowerInvariant();
-        if (aggregate == "count")
+        var aggregate = sort.Aggregate!.Value;
+        if (aggregate == AggregateFunction.Count)
         {
             if (!string.IsNullOrWhiteSpace(sort.AggregateField))
                 return false;
@@ -104,9 +103,8 @@ internal static class SortBuilder
         if (selectorType == typeof(string))
             return false;
 
-        var aggFunction = AggregateFunctionConverter.Parse(aggregate);
         var builtAggregate = BuildSelectorAggregateExpression(
-            aggFunction,
+            aggregate,
             collectionAccess,
             elementType,
             selectorLambda,

@@ -22,18 +22,6 @@ public sealed class AggregateBuilder
         return this;
     }
 
-    /// <summary>Adds a COUNT(*) aggregate with an optional alias.</summary>
-    public AggregateBuilder Count(string? alias)
-    {
-        _aggregates.Add(new AggregateModel
-        {
-            Function = AggregateFunction.Count,
-            Field = null,
-            Alias = alias is null || alias == "" ? ParserUtilities.BuildAggregateAlias("count", null) : alias
-        });
-        return this;
-    }
-
     /// <summary>Adds a COUNT(field) aggregate with an optional alias.</summary>
     public AggregateBuilder Count(string field, string? alias)
     {

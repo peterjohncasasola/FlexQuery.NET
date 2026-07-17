@@ -73,7 +73,7 @@ internal static class QueryCacheKeyBuilder
         => sorts is null
             ? string.Empty
             : string.Join(",", sorts.Select(s =>
-                $"{Escape(s.Field)}:{s.Descending}:{Escape(s.Aggregate)}:{Escape(s.AggregateField)}"));
+                $"{Escape(s.Field)}:{s.Descending}:{Escape(s.Aggregate.HasValue ? s.Aggregate.Value.ToKeyword() : null)}:{Escape(s.AggregateField)}"));
 
     private static string AggregateKey(IEnumerable<AggregateModel>? aggregates)
         => aggregates is null

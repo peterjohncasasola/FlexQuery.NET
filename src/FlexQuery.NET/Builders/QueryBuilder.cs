@@ -187,7 +187,7 @@ internal static class QueryBuilder
     }
 
     private static bool HasAggregate(SortNode sort)
-        => !string.IsNullOrWhiteSpace(sort.Aggregate);
+        => sort.Aggregate.HasValue;
 
     private static bool IsCollectionType(Type type)
         => SafePropertyResolver.TryGetCollectionElementType(type, out _);

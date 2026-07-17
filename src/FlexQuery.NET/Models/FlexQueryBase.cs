@@ -24,7 +24,7 @@ public abstract class FlexQueryBase
     /// <summary>The HAVING clause for grouped queries.</summary>
     public string? Having { get; set; }
 
-    /// <summary>The aggregate expressions (e.g., "SUM(Amount) AS Total, COUNT(*)").</summary>
+    /// <summary>The aggregate expressions (e.g., "SUM(Amount) AS Total, COUNT(Orders)").</summary>
     public string? Aggregate { get; set; }
 
     /// <summary>The page number (1-indexed).</summary>
