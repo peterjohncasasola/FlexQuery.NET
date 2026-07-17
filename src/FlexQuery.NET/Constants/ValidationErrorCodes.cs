@@ -24,6 +24,7 @@ internal static class ValidationErrorCodes
     public const string InvalidAlias = "INVALID_ALIAS";
     public const string ReservedAlias = "RESERVED_ALIAS";
     public const string DuplicateAlias = "DUPLICATE_ALIAS";
+    public const string DuplicateWildcard = "DUPLICATE_WILDCARD";
     public const string InvalidAggregateTarget = "INVALID_AGGREGATE_TARGET";
     public const string InvalidCountTarget = "INVALID_COUNT_TARGET";
     public const string AggregateNotDeclared = "AGGREGATE_NOT_DECLARED";

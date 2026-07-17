@@ -18,6 +18,7 @@ internal sealed class QueryValidator : IQueryValidator
     {
         _rules.Add(new GovernanceConfigValidationRule());
         _rules.Add(new DefaultProjectionRule());
+        _rules.Add(new SelectValidationRule());
         _rules.Add(new FieldAccessValidationRule());
         _rules.Add(new IncludeAccessValidationRule());
         _rules.Add(new FieldExistenceRule());
