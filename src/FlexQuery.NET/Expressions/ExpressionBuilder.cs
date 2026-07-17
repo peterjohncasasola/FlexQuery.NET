@@ -127,7 +127,7 @@ internal static class ExpressionBuilder
     {
         if (string.IsNullOrWhiteSpace(condition.Field)) return null;
         var op = FilterOperators.Normalize(condition.Operator);
-        if (!OperatorRegistry.IsAllowed(op)) return null;
+        if (!FilterOperators.IsSupported(op)) return null;
         if (!FieldRegistry.IsAllowed(entityType, condition.Field)) return null;
 
         if (FieldResolver.TryResolveMappedExpression(param, condition.Field, options, out var resolvedExpr, out var resolvedType))
