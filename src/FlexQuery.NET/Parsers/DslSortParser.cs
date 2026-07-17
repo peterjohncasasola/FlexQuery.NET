@@ -1,5 +1,5 @@
-using System.Text.RegularExpressions;
 using FlexQuery.NET.Constants;
+using FlexQuery.NET.Helpers;
 using FlexQuery.NET.Models.Aggregates;
 using FlexQuery.NET.Models.Paging;
 using FlexQuery.NET.Parsers;
@@ -9,17 +9,14 @@ namespace FlexQuery.NET.Parsers;
 
 /// <summary>
 /// Parses sort expressions including aggregate sorts.
-/// Supports string format (field:asc,field:desc).
+/// Supports string format (field:asc,field:desc) and aggregate format (function:target:direction).
 /// </summary>
 internal static class DslSortParser
 {
-    private static readonly Regex AggregateSortPattern = new(
-        @"^(?<collection>[A-Za-z_][A-Za-z0-9_\.]*)\.(?<fn>sum|count|max|min|avg)\((?<field>[A-Za-z_][A-Za-z0-9_\.]*)?\)$",
-        RegexOptions.Compiled | RegexOptions.IgnoreCase);
-
+    
     /// <summary>
     /// Parses a sort string into a list of SortNodes.
-    /// Format: field[:asc|:desc] or collection.aggregate(field)[:asc|:desc]
+    /// Format: field[:direction] or function:target[:direction]
     /// </summary>
     private static List<SortNode> ParseFromString(string? sortRaw)
     {
@@ -47,10 +44,35 @@ internal static class DslSortParser
         return result;
     }
 
-    // Alias for backward compatibility
     public static List<SortNode> Parse(string? sortRaw) => ParseFromString(sortRaw);
 
     private static void ParseSortItem(ReadOnlySpan<char> item, List<SortNode> result, string rawInput)
+    {
+        var firstColon = item.IndexOf(':');
+
+        if (firstColon < 0)
+        {
+            ParseFieldSort(item, result, rawInput);
+            return;
+        }
+
+        var firstSegment = item[..firstColon].Trim();
+        var remaining = item[(firstColon + 1)..];
+
+        if (firstSegment.IsEmpty)
+            throw new DslParseException(
+                $"Unable to parse sort expression '{rawInput}'. Empty sort item found.");
+
+        if (AggregateFunctionHelper.IsSupported(firstSegment.ToString()))
+        {
+            ParseAggregateSort(firstSegment, remaining, result, rawInput);
+            return;
+        }
+
+        ParseFieldSort(item, result, rawInput);
+    }
+
+    private static void ParseFieldSort(ReadOnlySpan<char> item, List<SortNode> result, string rawInput)
     {
         var colon = item.IndexOf(':');
         var fieldSpan = colon < 0 ? item : item[..colon];
@@ -69,41 +91,103 @@ internal static class DslSortParser
                 $"Unable to parse sort expression '{rawInput}'. Invalid sort direction '{direction}' at '{field}'. " +
                 $"Expected 'asc' or 'desc'.");
 
+        if (!ParserUtilities.IsValidPropertyPath(field.AsSpan()))
+            throw new DslParseException(
+                $"Unable to parse sort expression '{rawInput}'. Invalid field path '{field}'.");
+
         var isDesc = direction.Equals(QueryOptionKeys.Desc, StringComparison.OrdinalIgnoreCase);
 
-            var aggregateMatch = AggregateSortPattern.Match(field);
-            if (aggregateMatch.Success)
-            {
-                var functionName = aggregateMatch.Groups[QueryOptionKeys.Fn].Value;
-                var aggregateFunction = AggregateFunctionConverter.Parse(functionName);
-                var collection = aggregateMatch.Groups[QueryOptionKeys.Collection].Value;
-                var aggregateField = aggregateMatch.Groups[QueryOptionKeys.Field].Success
-                    ? aggregateMatch.Groups[QueryOptionKeys.Field].Value
-                    : null;
+        result.Add(new SortNode
+        {
+            Field = field,
+            Descending = isDesc
+        });
+    }
 
-                if (!ParserUtilities.IsValidPropertyPath(collection.AsSpan()))
-                    throw new DslParseException(
-                        $"Unable to parse sort expression '{rawInput}'. Invalid collection path '{collection}'.");
+    private static void ParseAggregateSort(
+        ReadOnlySpan<char> functionSpan,
+        ReadOnlySpan<char> remaining,
+        List<SortNode> result,
+        string rawInput)
+    {
+        var functionName = functionSpan.ToString();
+        var secondColon = remaining.IndexOf(':');
 
-                result.Add(new SortNode
-                {
-                    Field = collection,
-                    Descending = isDesc,
-                    Aggregate = aggregateFunction,
-                    AggregateField = aggregateFunction == AggregateFunction.Count ? null : aggregateField
-                });
-            }
+        ReadOnlySpan<char> targetSpan;
+        ReadOnlySpan<char> directionSpan;
+
+        if (secondColon >= 0)
+        {
+            targetSpan = remaining[..secondColon].Trim();
+            directionSpan = remaining[(secondColon + 1)..].Trim();
+        }
         else
         {
-            if (!ParserUtilities.IsValidPropertyPath(field.AsSpan()))
-                throw new DslParseException(
-                    $"Unable to parse sort expression '{rawInput}'. Invalid field path '{field}'.");
-
-            result.Add(new SortNode
-            {
-                Field = field,
-                Descending = isDesc
-            });
+            targetSpan = remaining.Trim();
+            directionSpan = [];
         }
+
+        if (targetSpan.IsEmpty)
+            throw new DslParseException(
+                $"Unable to parse sort expression '{rawInput}'. Missing aggregate target in '{functionSpan.ToString()}:...'.");
+
+        var target = targetSpan.ToString();
+
+        if (!ParserUtilities.IsValidPropertyPath(target.AsSpan()))
+            throw new DslParseException(
+                $"Unable to parse sort expression '{rawInput}'. Invalid target '{target}' in aggregate sort '{functionName}:{target}'.");
+
+        AggregateFunction aggregateFunction;
+        try
+        {
+            aggregateFunction = AggregateFunctionConverter.Parse(functionName);
+        }
+        catch
+        {
+            throw new DslParseException(
+                $"Unable to parse sort expression '{rawInput}'. Unrecognized aggregate function '{functionName}'. " +
+                $"Expected one of: sum, count, avg, min, max.");
+        }
+
+        var direction = directionSpan.IsEmpty ? QueryOptionKeys.Asc : directionSpan.ToString();
+
+        if (!direction.Equals(QueryOptionKeys.Asc, StringComparison.OrdinalIgnoreCase) &&
+            !direction.Equals(QueryOptionKeys.Desc, StringComparison.OrdinalIgnoreCase))
+            throw new DslParseException(
+                $"Unable to parse sort expression '{rawInput}'. Invalid sort direction '{direction}' in '{functionName}:{target}:{direction}'. " +
+                $"Expected 'asc' or 'desc'.");
+
+        var isDesc = direction.Equals(QueryOptionKeys.Desc, StringComparison.OrdinalIgnoreCase);
+
+        string field;
+        string? aggregateField;
+
+        if (aggregateFunction == AggregateFunction.Count)
+        {
+            field = target;
+            aggregateField = null;
+        }
+        else
+        {
+            var lastDot = target.LastIndexOf('.');
+            if (lastDot >= 0)
+            {
+                field = target[..lastDot];
+                aggregateField = target[(lastDot + 1)..];
+            }
+            else
+            {
+                field = target;
+                aggregateField = null;
+            }
+        }
+
+        result.Add(new SortNode
+        {
+            Field = field,
+            Descending = isDesc,
+            Aggregate = aggregateFunction,
+            AggregateField = aggregateField
+        });
     }
 }
