@@ -1,33 +1,34 @@
-using System.Linq.Expressions;
+using FlexQuery.NET.Constants;
 using FlexQuery.NET.Security;
+using Xunit;
 
 namespace FlexQuery.NET.Tests.Security;
 
 public class OperatorRegistryTests
 {
     [Fact]
-    public void IsAllowed_SupportedOperators_ReturnsTrue()
+    public void FilterOperators_SupportedOperators_ReturnsTrue()
     {
         var supported = new[] { "eq", "neq", "gt", "gte", "lt", "lte", "contains", "startswith", "endswith",
                                 "like", "in", "notin", "between", "isnull", "isnotnull", "any", "all", "count" };
 
         foreach (var op in supported)
         {
-            OperatorRegistry.IsAllowed(op).Should().BeTrue($"operator '{op}' should be allowed");
+            FilterOperators.IsSupported(op).Should().BeTrue($"operator '{op}' should be supported");
         }
     }
 
     [Fact]
-    public void IsAllowed_UnsupportedOperator_ReturnsFalse()
+    public void FilterOperators_UnsupportedOperator_ReturnsFalse()
     {
-        OperatorRegistry.IsAllowed("unsupported_op").Should().BeFalse();
+        FilterOperators.IsSupported("unsupported_op").Should().BeFalse();
     }
 
     [Fact]
-    public void IsAllowed_NullOrEmpty_ReturnsFalse()
+    public void FilterOperators_NullOrEmpty_ReturnsFalse()
     {
-        OperatorRegistry.IsAllowed(null!).Should().BeFalse();
-        OperatorRegistry.IsAllowed("").Should().BeFalse();
+        FilterOperators.IsSupported(null!).Should().BeFalse();
+        FilterOperators.IsSupported("").Should().BeFalse();
     }
 
     [Fact]
@@ -44,12 +45,12 @@ public class OperatorRegistryTests
     [Fact]
     public void BinaryFactories_ProduceCorrectExpressions()
     {
-        var left = Expression.Constant(1);
-        var right = Expression.Constant(2);
+        var left = System.Linq.Expressions.Expression.Constant(1);
+        var right = System.Linq.Expressions.Expression.Constant(2);
 
-        OperatorRegistry.BinaryFactories["eq"](left, right).Should().BeAssignableTo<BinaryExpression>()
-            .Which.NodeType.Should().Be(ExpressionType.Equal);
-        OperatorRegistry.BinaryFactories["gt"](left, right).Should().BeAssignableTo<BinaryExpression>()
-            .Which.NodeType.Should().Be(ExpressionType.GreaterThan);
+        OperatorRegistry.BinaryFactories["eq"](left, right).Should().BeAssignableTo<System.Linq.Expressions.BinaryExpression>()
+            .Which.NodeType.Should().Be(System.Linq.Expressions.ExpressionType.Equal);
+        OperatorRegistry.BinaryFactories["gt"](left, right).Should().BeAssignableTo<System.Linq.Expressions.BinaryExpression>()
+            .Which.NodeType.Should().Be(System.Linq.Expressions.ExpressionType.GreaterThan);
     }
 }
