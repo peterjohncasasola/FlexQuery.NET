@@ -80,6 +80,11 @@ internal sealed class FqlTokenizer
                         tokens.Add(new FqlToken(FqlTokenType.Lte, "<=", start));
                         _position += 2;
                     }
+                    else if (Peek('>'))
+                    {
+                        tokens.Add(new FqlToken(FqlTokenType.Neq, "<>", start));
+                        _position += 2;
+                    }
                     else
                     {
                         tokens.Add(new FqlToken(FqlTokenType.Lt, "<", start));
