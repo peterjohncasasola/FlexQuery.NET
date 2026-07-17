@@ -50,11 +50,19 @@ internal static class DslHavingParser
                 $"COUNT(*) is not supported. Use COUNT(<collection>) or another aggregate over a property instead.");
         }
 
+        var rawOp = match.Groups["op"].Value;
+        var normalizedOp = FilterOperators.Normalize(rawOp);
+        if (!FilterOperators.IsSupported(normalizedOp))
+            throw new DslParseException(
+                $"Unable to parse HAVING expression '{rawHaving}'. " +
+                $"Unsupported operator '{rawOp}'. " +
+                $"Expected one of: eq, neq, gt, gte, lt, lte, contains, startswith, endswith, like, isnull, isnotnull, in, notin, between, any, all, count.");
+
         return new HavingCondition
         {
             Function = function,
             Field = string.IsNullOrWhiteSpace(field) ? null : field,
-            Operator = FilterOperators.Normalize(match.Groups["op"].Value),
+            Operator = normalizedOp,
             Value = match.Groups[QueryOptionKeys.Value].Value
         };
     }
