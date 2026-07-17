@@ -559,14 +559,13 @@ public class SelectTests : IDisposable
     [Fact]
     public void Select_Alias_Conflicting_Throws()
     {
-        var tree = new SelectionNode();
-        var profile = tree.GetOrAddChild("Profile");
-        profile.GetOrAddChild("Bio").Alias = "FirstBio";
-
         var options = new QueryOptions
         {
-            SelectTree = tree,
-            Select = new List<SelectNode> { new SelectNode { Field = "Profile.Bio", Alias = "LastBio" } }
+            Select =
+            [
+                new SelectNode { Field = "Profile.Bio", Alias = "FirstBio" },
+                new SelectNode { Field = "Profile.Bio", Alias = "LastBio" }
+            ]
         };
 
         var act = () => SelectTreeBuilder.Build(options);
