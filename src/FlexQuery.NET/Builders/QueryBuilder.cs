@@ -87,19 +87,19 @@ internal static class QueryBuilder
 
         if (options.Paging.Skip > 0 && query is not IOrderedQueryable<T>)
         {
-            var fieldName = options.Select?.FirstOrDefault(f => !string.IsNullOrWhiteSpace(f) && !f.Contains('.'));
+            var fieldName = options.Select?.FirstOrDefault(f => !string.IsNullOrWhiteSpace(f.Field) && !f.Field.Contains('.'));
             if (fieldName == null)
             {
                 var allProps = ReflectionCache.GetProperties(typeof(T));
                 var defaultSortProp = allProps
                     .FirstOrDefault(p => p.Name.Equals("Id", StringComparison.OrdinalIgnoreCase) || p.Name.Equals("Key", StringComparison.OrdinalIgnoreCase))
                     ?? allProps.FirstOrDefault();
-                fieldName = defaultSortProp?.Name;
+                fieldName = defaultSortProp is null ? null : new SelectModel { Field = defaultSortProp.Name };
             }
 
             if (fieldName != null)
             {
-                var defaultSortProp = ReflectionCache.GetProperty(typeof(T), fieldName);
+                var defaultSortProp = ReflectionCache.GetProperty(typeof(T), fieldName.Field);
                 if (defaultSortProp != null && !IsCollectionType(defaultSortProp.PropertyType))
                 {
                     var parameter = Expression.Parameter(typeof(T), "x");

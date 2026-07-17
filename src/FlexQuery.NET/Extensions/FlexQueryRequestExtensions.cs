@@ -1,4 +1,5 @@
 using FlexQuery.NET.Models;
+using FlexQuery.NET.Models.Projection;
 
 namespace FlexQuery.NET;
 
@@ -53,7 +54,7 @@ public static class FlexQueryRequestExtensions
             Distinct = request.Distinct,
             Expand = request.Expand,
             Paging = request.Paging,
-            Select = request.Select,
+            Select = request.Select?.Select(f => new SelectModel { Field = f }).ToList(),
             IncludeCount = request.IncludeCount,
             Includes = request.Include,
             GroupBy = request.GroupBy,

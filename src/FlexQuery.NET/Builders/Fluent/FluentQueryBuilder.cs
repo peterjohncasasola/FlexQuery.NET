@@ -38,7 +38,14 @@ public sealed class FluentQueryBuilder
     /// <summary>Sets the selected fields (replaces any previous selection).</summary>
     public FluentQueryBuilder Select(params string[] fields)
     {
-        _options.Select = fields.Length > 0 ? [..fields] : null;
+        if (fields.Length > 0)
+        {
+            _options.Select = [.. fields.Select(f => new SelectModel { Field = f })];
+        }
+        else
+        {
+            _options.Select = null;
+        }
         return this;
     }
 

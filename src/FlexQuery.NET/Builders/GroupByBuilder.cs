@@ -89,7 +89,7 @@ internal static class GroupByBuilder
 
     private static List<string> BuildSelectedFieldList(QueryOptions options, List<string> groupFields)
     {
-        var selected = (options.Select ?? []).ToList();
+        var selected = (options.Select ?? []).Select(s => s.Field).ToList();
         if (selected.Count == 0)
             selected.AddRange(groupFields);
         return selected;
