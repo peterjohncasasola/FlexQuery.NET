@@ -1,6 +1,5 @@
 using FlexQuery.NET.Models.Aggregates;
 using FlexQuery.NET.Parsers.Dsl;
-using FlexQuery.NET.Validation;
 
 namespace FlexQuery.NET.Parsers;
 
@@ -56,7 +55,10 @@ internal static class DslAggregateParser
                         $"Unable to parse aggregate expression '{rawAggregates}'. " +
                         $"Expected format: Function:Field[:Alias]. Empty alias in '{trimmed}'.");
                 
-                IdentifierValidator.ValidateAlias(aliasPart, "aggregate");
+                if (!ParserUtilities.IsValidIdentifier(aliasPart.AsSpan()))
+                    throw new DslParseException(
+                        $"Invalid alias '{aliasPart}' in aggregate expression. " +
+                        "Aliases must be valid identifiers (e.g. 'TotalSales').");
 
                 result.Add(new AggregateModel
                 {

@@ -188,6 +188,11 @@ internal static class DslSelectParser
                         "Empty field in 'select' parameter. Expected identifier or '*'.");
 
                 identifier = span.Slice(start, i - start).ToString();
+
+                if (identifier != "*" && !ParserUtilities.IsValidIdentifier(identifier.AsSpan()))
+                    throw new DslParseException(
+                        $"Invalid identifier '{identifier}' in 'select' parameter. " +
+                        "Identifiers must start with a letter and contain only letters, digits, and underscores.");
             }
 
             if (identifier == "*")
@@ -242,6 +247,11 @@ internal static class DslSelectParser
 
             while (i < span.Length && char.IsWhiteSpace(span[i]))
                 i++;
+
+            if (i < span.Length && char.IsLetterOrDigit(span[i]))
+                throw new DslParseException(
+                    "Invalid identifier in 'select' parameter. " +
+                    "Identifiers must not contain whitespace or other separators.");
 
             if (i < span.Length && span[i] == '.')
                 throw new DslParseException(
