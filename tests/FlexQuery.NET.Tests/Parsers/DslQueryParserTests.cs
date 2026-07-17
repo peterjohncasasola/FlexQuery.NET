@@ -485,7 +485,7 @@ public class DslQueryParserTests
             ["groupBy"] = "category,status",
             ["select"] = "category",
             ["aggregate"] = "sum:total,count:id",
-            ["having"] = "sum(total):gt:10000"
+            ["having"] = "sum:total:gt:10000"
         });
 
         opts.GroupBy.Should().BeEquivalentTo("category", "status");
@@ -565,7 +565,7 @@ public class DslQueryParserTests
             ["group"] = "status",
             ["select"] = "status",
             ["aggregate"] = "sum:total",
-            ["having"] = "sum(total):gt:100"
+            ["having"] = "sum:total:gt:100"
         });
 
         opts.Having.Should().NotBeNull();
@@ -594,7 +594,7 @@ public class DslQueryParserTests
             ["group"] = "status",
             ["select"] = "status",
             ["aggregates"] = "sum:Orders.Total",
-            ["having"] = "sum(Orders.Total):gt:500"
+            ["having"] = "sum:Orders.Total:gt:500"
         });
 
         opts.Having.Should().NotBeNull();
@@ -927,7 +927,7 @@ public class DslQueryParserTests
             ["include"] = "Orders,Profile",
             ["groupBy"] = "customerId,category",
             ["aggregate"] = "sum:Amount:TotalSales,count:Id,avg:Price",
-            ["having"] = "sum(Amount):gt:1000",
+            ["having"] = "sum:Amount:gt:1000",
             ["distinct"] = "true",
             ["page"] = "2",
             ["pageSize"] = "25"

@@ -2,6 +2,7 @@ using FlexQuery.NET.Exceptions;
 using FlexQuery.NET.Models.Aggregates;
 using FlexQuery.NET.Parsers;
 using FlexQuery.NET.Parsers.Dsl;
+using Xunit;
 
 namespace FlexQuery.NET.Tests.Parsers.Dsl;
 
@@ -67,10 +68,10 @@ public class DslHavingParserTests
     [Fact]
     public void Parse_CountStar_ThrowsDslParseException()
     {
-        var act = () => Parse("count():gt:0");
+        var act = () => Parse("count:*:gt:0");
 
         act.Should().Throw<DslParseException>()
-            .WithMessage("*COUNT(*) is not supported*");
+            .WithMessage("*count:* is not supported*");
     }
 
     [Fact]
@@ -123,5 +124,59 @@ public class DslHavingParserTests
         result.Should().NotBeNull();
         result!.Operator.Should().Be("isnotnull");
         result.Value.Should().Be("1");
+    }
+
+    [Fact]
+    public void Parse_SqlStyleSyntax_ThrowsDslParseException()
+    {
+        var act = () => Parse("sum(total):gt:100");
+
+        act.Should().Throw<DslParseException>()
+            .WithMessage("*Expected format: FUNCTION:Field:OPERATOR:value*");
+    }
+
+    [Fact]
+    public void Parse_MissingField_ThrowsDslParseException()
+    {
+        var act = () => Parse("sum::gt:100");
+
+        act.Should().Throw<DslParseException>()
+            .WithMessage("*Missing field*");
+    }
+
+    [Fact]
+    public void Parse_MissingOperator_ThrowsDslParseException()
+    {
+        var act = () => Parse("sum:total::100");
+
+        act.Should().Throw<DslParseException>()
+            .WithMessage("*Unsupported operator*");
+    }
+
+    [Fact]
+    public void Parse_MissingValue_ThrowsDslParseException()
+    {
+        var act = () => Parse("sum:total:gt:");
+
+        act.Should().Throw<DslParseException>()
+            .WithMessage("*Missing value after operator*");
+    }
+
+    [Fact]
+    public void Parse_MissingFunction_ThrowsDslParseException()
+    {
+        var act = () => Parse(":total:gt:100");
+
+        act.Should().Throw<DslParseException>()
+            .WithMessage("*Expected format: FUNCTION:Field:OPERATOR:value*");
+    }
+
+    [Fact]
+    public void Parse_InvalidField_ThrowsDslParseException()
+    {
+        var act = () => Parse("sum:invalid field:gt:0");
+
+        act.Should().Throw<DslParseException>()
+            .WithMessage("*Invalid field*");
     }
 }
