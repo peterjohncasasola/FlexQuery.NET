@@ -71,16 +71,12 @@ internal static class ParserUtilities
             if (i == path.Length || path[i] == '.')
             {
                 if (i == segmentStart) return false;
-                for (int j = segmentStart; j < i; j++)
-                    if (!IsValidPropertyPathChar(path[j])) return false;
+                if (!IsValidIdentifier(path.Slice(segmentStart, i - segmentStart))) return false;
                 segmentStart = i + 1;
             }
         }
         return true;
     }
-
-    private static bool IsValidPropertyPathChar(char c)
-        => char.IsLetterOrDigit(c) || c == '_';
 
     /// <summary>
     /// Validates a single identifier (alias) grammar.
