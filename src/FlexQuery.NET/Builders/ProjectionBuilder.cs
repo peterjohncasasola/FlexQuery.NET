@@ -6,6 +6,7 @@ using FlexQuery.NET.Filters;
 using FlexQuery.NET.Internal;
 using FlexQuery.NET.Models;
 using FlexQuery.NET.Models.Filters;
+using FlexQuery.NET.Models.Projection;
 using FlexQuery.NET.Projection;
 using FlexQuery.NET.Resolvers;
 
@@ -42,14 +43,14 @@ internal static class ProjectionBuilder
 
     public static Expression BuildFromSelectionFields(
         Type entityType,
-        IReadOnlyList<string> selectionFields,
+        IReadOnlyList<SelectModel> selectionFields,
         QueryOptions options)
     {
         var tree = new SelectionNode();
 
-        foreach (var field in selectionFields)
+        foreach (var model in selectionFields)
         {
-            MergeFieldPath(tree, field);
+            MergeFieldPath(tree, model);
         }
 
         var param = Expression.Parameter(entityType, "x");
@@ -174,15 +175,15 @@ internal static class ProjectionBuilder
         return Expression.MemberInit(newExpr, bindings);
     }
 
-    private static void MergeFieldPath(SelectionNode current, string path)
+    private static void MergeFieldPath(SelectionNode current, SelectModel? model)
     {
-        if (string.IsNullOrWhiteSpace(path)) return;
+        if (model == null) return;
 
-        var aliasParts = System.Text.RegularExpressions.Regex.Split(path, @"\s+as\s+", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
-        var actualPath = aliasParts[0].Trim();
-        var alias = aliasParts.Length > 1 ? aliasParts[1].Trim() : null;
+        var field = model.Field;
+        if (string.IsNullOrWhiteSpace(field)) return;
 
-        var parts = actualPath.Split('.', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        var alias = model.Alias;
+        var parts = field.Split('.', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
         var node = current;
 
         for (int i = 0; i < parts.Length; i++)

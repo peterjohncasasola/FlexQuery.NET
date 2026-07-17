@@ -96,7 +96,7 @@ internal sealed class SqlSelectBuilder(IMappingRegistry mappingRegistry, ISqlDia
         return $"SELECT {distinctPrefix}{string.Join(", ", selectParts)}";
     }
 
-    private void TraverseSelectTree(SelectionNode node, IEntityMapping currentMapping, string? currentAlias, string prefix, List<string> selectParts, IReadOnlyList<string>? governedSelectFields = null)
+    private void TraverseSelectTree(SelectionNode node, IEntityMapping currentMapping, string? currentAlias, string prefix, List<string> selectParts, IReadOnlyList<SelectModel>? governedSelectFields = null)
     {
         bool hasSpecificFields = false;
 
@@ -105,16 +105,14 @@ internal sealed class SqlSelectBuilder(IMappingRegistry mappingRegistry, ISqlDia
             var rel = currentMapping.GetRelationship(child.Key);
             if (rel != null)
             {
-                // It's a navigation property
                 var targetMapping = mappingRegistry.GetMapping(rel.TargetType);
                 var nextPrefix = prefix + rel.NavigationPropertyName + "_";
-                var nextAlias = rel.NavigationPropertyName; // Dapper extensions use this
+                var nextAlias = rel.NavigationPropertyName;
 
                 TraverseSelectTree(child.Value, targetMapping, nextAlias, nextPrefix, selectParts, governedSelectFields);
             }
             else
             {
-                // It's a regular property
                 hasSpecificFields = true;
                 var col = currentMapping.GetColumnName(child.Key);
                 var outputName = child.Value.Alias ?? (prefix + col);
@@ -144,7 +142,7 @@ internal sealed class SqlSelectBuilder(IMappingRegistry mappingRegistry, ISqlDia
         }
     }
 
-    private static IEnumerable<string> GetGovernedProperties(IEntityMapping mapping, IReadOnlyList<string>? governedSelectFields)
+    private static IEnumerable<string> GetGovernedProperties(IEntityMapping mapping, IReadOnlyList<SelectModel>? governedSelectFields)
     {
         var rootFields = GetRootGovernedPropertyNames(governedSelectFields);
         if (rootFields != null)
@@ -259,7 +257,7 @@ internal sealed class SqlSelectBuilder(IMappingRegistry mappingRegistry, ISqlDia
 
     private (List<string> navPath, List<FlatField> fields) DecomposeFlatSelection(
         SelectionNode node, IEntityMapping mapping, bool allowRootScalars, int level = 0,
-        IReadOnlyList<string>? governedSelectFields = null)
+        IReadOnlyList<SelectModel>? governedSelectFields = null)
     {
         var navPath = new List<string>();
         var fields = new List<FlatField>();
@@ -332,7 +330,7 @@ internal sealed class SqlSelectBuilder(IMappingRegistry mappingRegistry, ISqlDia
         return (navPath, fields);
     }
 
-    private static HashSet<string>? GetRootGovernedPropertyNames(IReadOnlyList<string>? governedSelectFields)
+    private static HashSet<string>? GetRootGovernedPropertyNames(IReadOnlyList<SelectModel>? governedSelectFields)
     {
         if (governedSelectFields is not { Count: > 0 })
             return null;
@@ -340,7 +338,7 @@ internal sealed class SqlSelectBuilder(IMappingRegistry mappingRegistry, ISqlDia
         var rootFields = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         foreach (var field in governedSelectFields)
         {
-            var root = field.Split('.', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)[0];
+            var root = field.Field.Split('.', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)[0];
             rootFields.Add(root);
         }
         return rootFields;

@@ -1,5 +1,5 @@
-    using FlexQuery.NET.Internal;
-    using FlexQuery.NET.Models;
+using FlexQuery.NET.Internal;
+using FlexQuery.NET.Models;
 using FlexQuery.NET.Models.Projection;
 using FlexQuery.NET.Exceptions;
 
@@ -27,9 +27,9 @@ internal static class SelectTreeBuilder
 
         if (options.Select != null)
         {
-            foreach (var path in options.Select)
+            foreach (var model in options.Select)
             {
-                MergePath(root, path, includeAllScalarsAtLeaf: false);
+                MergePath(root, model, includeAllScalarsAtLeaf: false);
             }
         }
 
@@ -60,6 +60,65 @@ internal static class SelectTreeBuilder
         }
 
         return root;
+    }
+
+    private static void MergePath(SelectionNode current, SelectModel model, bool includeAllScalarsAtLeaf)
+    {
+        if (model == null) return;
+        
+        var field = model.Field;
+        if (string.IsNullOrWhiteSpace(field)) return;
+
+        if (field == "*")
+        {
+            current.MarkIncludeAllScalars();
+            return;
+        }
+
+        var alias = model.Alias;
+        bool isWildcard = field.EndsWith(".*");
+        if (isWildcard)
+        {
+            field = field.Substring(0, field.Length - 2);
+        }
+
+        var parts = field.Split('.', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+
+        var node = current;
+        for (int i = 0; i < parts.Length; i++)
+        {
+            var part = parts[i];
+            node = node.GetOrAddChild(part);
+            if (i == parts.Length - 1 && alias != null)
+            {
+                if (!string.IsNullOrWhiteSpace(node.Alias) &&
+                    !string.Equals(node.Alias, alias, StringComparison.Ordinal))
+                {
+                    throw new QueryValidationException(
+                        $"Conflicting aliases for field '{model.Field}': '{node.Alias}' and '{alias}'. " +
+                        "Use identical aliases for the same field or omit the alias.");
+                }
+                node.Alias = alias;
+            }
+        }
+
+        if (isWildcard)
+        {
+            node.MarkIncludeAllScalars();
+        }
+        else if (includeAllScalarsAtLeaf)
+        {
+            if (!node.HasChildren)
+            {
+                node.MarkIncludeAllScalars();
+            }
+        }
+
+        foreach (var child in model.Children)
+        {
+            var childNode = node.GetOrAddChild(child.Field);
+            MergePath(childNode, child, includeAllScalarsAtLeaf: false);
+        }
     }
 
     private static void MergePath(SelectionNode current, string path, bool includeAllScalarsAtLeaf)

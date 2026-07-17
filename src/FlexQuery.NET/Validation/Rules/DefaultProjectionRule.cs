@@ -1,6 +1,7 @@
 using FlexQuery.NET.Caching;
 using FlexQuery.NET.Execution;
 using FlexQuery.NET.Models;
+using FlexQuery.NET.Models.Projection;
 using FlexQuery.NET.Metadata;
 using FlexQuery.NET.Options;
 using FlexQuery.NET.Security;
@@ -60,38 +61,39 @@ internal static class DefaultProjectionHelper
                 .Select(p => p.Name);
             options.Select = allScalars
                 .Where(f => !WildcardMatcher.IsMatch(f, execOptions.BlockedFields))
+                .Select(f => new SelectModel { Field = f })
                 .ToList();
         }
     }
 
-    internal static List<string> ExpandWildcardFields(IEnumerable<string> fields, Type? targetType)
+    internal static List<SelectModel> ExpandWildcardFields(IEnumerable<string> fields, Type? targetType)
     {
-        var result = new List<string>();
+        var result = new List<SelectModel>();
         foreach (var field in fields)
         {
             if (field.Contains('*'))
             {
                 if (targetType == null)
                 {
-                    result.Add(field);
+                    result.Add(new SelectModel { Field = field });
                     continue;
                 }
                 ExpandWildcard(field, targetType, result);
             }
             else
             {
-                result.Add(field);
+                result.Add(new SelectModel { Field = field });
             }
         }
         return result;
     }
 
-    private static void ExpandWildcard(string pattern, Type type, List<string> result)
+    private static void ExpandWildcard(string pattern, Type type, List<SelectModel> result)
     {
         var starIndex = pattern.IndexOf('*', StringComparison.Ordinal);
         if (starIndex < 0)
         {
-            result.Add(pattern);
+            result.Add(new SelectModel { Field = pattern });
             return;
         }
 
@@ -123,7 +125,7 @@ internal static class DefaultProjectionHelper
         }
     }
 
-    private static void ExpandUnderType(Type type, string prefix, List<string> result, HashSet<Type> visited)
+    private static void ExpandUnderType(Type type, string prefix, List<SelectModel> result, HashSet<Type> visited)
     {
         if (!visited.Add(type))
             return;
@@ -135,7 +137,7 @@ internal static class DefaultProjectionHelper
             if (TypeClassification.IsScalarType(prop.PropertyType))
             {
                 var fieldPath = string.IsNullOrEmpty(prefix) ? prop.Name : $"{prefix}.{prop.Name}";
-                result.Add(fieldPath);
+                result.Add(new SelectModel { Field = fieldPath });
             }
         }
 

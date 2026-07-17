@@ -4,6 +4,7 @@ using FlexQuery.NET.Helpers;
 using FlexQuery.NET.Metadata;
 using FlexQuery.NET.Internal;
 using FlexQuery.NET.Models;
+using FlexQuery.NET.Models.Projection;
 using FlexQuery.NET.Security;
 
 namespace FlexQuery.NET.Projection;
@@ -49,7 +50,7 @@ internal static class ProjectionMetadataBuilder
         Type sourceType,
         SelectionNode node,
         Dictionary<string, Type> fields,
-        IReadOnlyList<string>? governedSelectFields,
+        IReadOnlyList<SelectModel>? governedSelectFields,
         bool isRoot)
     {
         var effective = NormalizeSelection(sourceType, node, isRoot ? governedSelectFields : null);
@@ -89,7 +90,7 @@ internal static class ProjectionMetadataBuilder
     public static SelectionNode NormalizeSelection(
         Type sourceType,
         SelectionNode selectTree,
-        IReadOnlyList<string>? governedSelectFields = null)
+        IReadOnlyList<SelectModel>? governedSelectFields = null)
     {
         var effective = new SelectionNode();
 
@@ -118,14 +119,14 @@ internal static class ProjectionMetadataBuilder
     private static void ExpandScalarFields(
         Type sourceType,
         SelectionNode target,
-        IReadOnlyList<string>? governedSelectFields)
+        IReadOnlyList<SelectModel>? governedSelectFields)
     {
         if (governedSelectFields is { Count: > 0 })
         {
             var rootFields = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             foreach (var field in governedSelectFields)
             {
-                var rootField = field.Split('.', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)[0];
+                var rootField = field.Field.Split('.', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)[0];
                 rootFields.Add(rootField);
             }
             foreach (var prop in ReflectionCache.GetProperties(sourceType))

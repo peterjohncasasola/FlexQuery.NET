@@ -85,7 +85,7 @@ public static class ProjectionEfCoreExtensions
 
         if (options.Select != null)
         {
-            fields.AddRange(options.Select.Select(s => s.Split(' ').First()));
+            fields.AddRange(options.Select.Select(s => s.Field));
         }
 
         if (options.Includes != null)

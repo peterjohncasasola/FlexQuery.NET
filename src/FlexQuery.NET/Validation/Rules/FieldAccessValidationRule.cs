@@ -67,7 +67,7 @@ internal sealed class FieldAccessValidationRule : IValidationRule
         {
             for (int i = options.Select.Count - 1; i >= 0; i--)
             {
-                var field = options.Select[i];
+                var field = options.Select[i].Field;
                 if (!string.IsNullOrWhiteSpace(field))
                 {
                     if (!CheckAccess(field, QueryOperation.Select, context, result))
@@ -80,7 +80,6 @@ internal sealed class FieldAccessValidationRule : IValidationRule
                 }
             }
 
-            // Re-apply default projection if all fields were removed in non-strict mode
             if (!execOptions.StrictFieldValidation && options.Select.Count == 0)
             {
                 DefaultProjectionHelper.InjectDefaultProjection(options, context, execOptions);

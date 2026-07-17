@@ -1,4 +1,4 @@
-using System.Linq.Expressions;
+﻿using System.Linq.Expressions;
 using System.Text;
 using FlexQuery.NET.Constants;
 using FlexQuery.NET.Filters;
@@ -23,7 +23,7 @@ internal static class QueryCacheKeyBuilder
             .Append(options.CaseInsensitive ? "ci" : "cs").Append('|')
             .Append("filter=").Append(FilterNormalizer.GenerateCacheKey(options.Filter)).Append('|')
             .Append("sort=").Append(SortKey(options.Sort)).Append('|')
-            .Append("select=").Append(ListKey(options.Select)).Append('|')
+            .Append("select=").Append(SelectModelListKey(options.Select)).Append('|')
             .Append("tree=").Append(SelectionKey(options.SelectTree)).Append('|')
             .Append("includes=").Append(ListKey(options.Includes)).Append('|')
             .Append("filteredIncludes=").Append(IncludeKey(options.Expand)).Append('|')
@@ -68,6 +68,11 @@ internal static class QueryCacheKeyBuilder
         => values is null
             ? string.Empty
             : string.Join(",", values.Select(Escape).OrderBy(v => v, StringComparer.Ordinal));
+
+    private static string SelectModelListKey(IEnumerable<SelectModel>? values)
+        => values is null
+            ? string.Empty
+            : string.Join(",", values.Select(m => $"{Escape(m.Field)}:{Escape(m.Alias)}").OrderBy(v => v, StringComparer.Ordinal));
 
     private static string SortKey(IEnumerable<SortNode>? sorts)
         => sorts is null
