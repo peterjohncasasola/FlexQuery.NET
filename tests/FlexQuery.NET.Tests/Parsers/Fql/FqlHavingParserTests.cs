@@ -1,6 +1,10 @@
 using FlexQuery.NET.Exceptions;
+using FlexQuery.NET.Execution;
+using FlexQuery.NET.Models;
 using FlexQuery.NET.Models.Aggregates;
 using FlexQuery.NET.Parsers.Fql;
+using FlexQuery.NET.Validation;
+using FlexQuery.NET.Validation.Rules;
 using Xunit;
 
 namespace FlexQuery.NET.Tests.Parsers.Fql;
@@ -249,5 +253,79 @@ public class FqlHavingParserTests
         result.Should().NotBeNull();
         result!.Operator.Should().Be("between");
         result.Value.Should().Be("10,20");
+    }
+
+    [Fact]
+    public void FqlQuery_ValidAggregateHaving_PassesValidation()
+    {
+        var parameters = new FlexQueryParameters
+        {
+            Aggregate = "SUM(Total)",
+            Having = "SUM(Total) > 100"
+        };
+
+        var options = new FqlQueryParser().Parse(parameters);
+        var rule = new HavingAliasIntegrityRule();
+        var result = ValidationResult.Success();
+
+        rule.Validate(options, new QueryContext { TargetType = typeof(Order) }, result);
+
+        result.IsValid.Should().BeTrue();
+    }
+
+    [Fact]
+    public void FqlQuery_EmptyAggregates_FailsValidation()
+    {
+        var parameters = new FlexQueryParameters
+        {
+            Having = "SUM(Total) > 100"
+        };
+
+        var options = new FqlQueryParser().Parse(parameters);
+        var rule = new HavingAliasIntegrityRule();
+        var result = ValidationResult.Success();
+
+        rule.Validate(options, new QueryContext { TargetType = typeof(Order) }, result);
+
+        result.IsValid.Should().BeFalse();
+        result.Errors.Should().ContainSingle(e => e.Code == ValidationErrorCodes.AggregateNotDeclared);
+    }
+
+    [Fact]
+    public void FqlQuery_MismatchedFunction_FailsValidation()
+    {
+        var parameters = new FlexQueryParameters
+        {
+            Aggregate = "COUNT(Id)",
+            Having = "SUM(Total) > 100"
+        };
+
+        var options = new FqlQueryParser().Parse(parameters);
+        var rule = new HavingAliasIntegrityRule();
+        var result = ValidationResult.Success();
+
+        rule.Validate(options, new QueryContext { TargetType = typeof(Order) }, result);
+
+        result.IsValid.Should().BeFalse();
+        result.Errors.Should().ContainSingle(e => e.Code == ValidationErrorCodes.AggregateNotDeclared);
+    }
+
+    [Fact]
+    public void FqlQuery_MismatchedField_FailsValidation()
+    {
+        var parameters = new FlexQueryParameters
+        {
+            Aggregate = "SUM(Amount)",
+            Having = "SUM(Total) > 100"
+        };
+
+        var options = new FqlQueryParser().Parse(parameters);
+        var rule = new HavingAliasIntegrityRule();
+        var result = ValidationResult.Success();
+
+        rule.Validate(options, new QueryContext { TargetType = typeof(Order) }, result);
+
+        result.IsValid.Should().BeFalse();
+        result.Errors.Should().ContainSingle(e => e.Code == ValidationErrorCodes.AggregateNotDeclared);
     }
 }

@@ -1,7 +1,12 @@
 using FlexQuery.NET.Exceptions;
+using FlexQuery.NET.Execution;
+using FlexQuery.NET.Models;
 using FlexQuery.NET.Models.Aggregates;
 using FlexQuery.NET.Parsers;
 using FlexQuery.NET.Parsers.Dsl;
+using FlexQuery.NET.Validation;
+using FlexQuery.NET.Validation.Rules;
+using Microsoft.AspNetCore.Http;
 using Xunit;
 
 namespace FlexQuery.NET.Tests.Parsers.Dsl;
@@ -10,6 +15,15 @@ public class DslHavingParserTests
 {
     private static HavingCondition? Parse(string? raw) =>
         DslHavingParser.Parse(raw);
+
+    private static QueryOptions ParseDsl(Dictionary<string, string> raw)
+    {
+        var kvps = raw.ToDictionary(
+            kv => kv.Key,
+            kv => new StringValues(kv.Value),
+            StringComparer.OrdinalIgnoreCase);
+        return QueryOptionsParser.Parse(kvps);
+    }
 
     [Fact]
     public void Parse_Null_ReturnsNull()
@@ -178,5 +192,75 @@ public class DslHavingParserTests
 
         act.Should().Throw<DslParseException>()
             .WithMessage("*Invalid field*");
+    }
+
+    [Fact]
+    public void DslQuery_ValidAggregateHaving_PassesValidation()
+    {
+        var options = ParseDsl(new Dictionary<string, string>
+        {
+            ["aggregate"] = "sum:total",
+            ["having"] = "sum:total:gt:100"
+        });
+
+        var rule = new HavingAliasIntegrityRule();
+        var result = ValidationResult.Success();
+
+        rule.Validate(options, new QueryContext { TargetType = typeof(Order) }, result);
+
+        result.IsValid.Should().BeTrue();
+    }
+
+    [Fact]
+    public void DslQuery_EmptyAggregates_FailsValidation()
+    {
+        var options = ParseDsl(new Dictionary<string, string>
+        {
+            ["having"] = "sum:total:gt:100"
+        });
+
+        var rule = new HavingAliasIntegrityRule();
+        var result = ValidationResult.Success();
+
+        rule.Validate(options, new QueryContext { TargetType = typeof(Order) }, result);
+
+        result.IsValid.Should().BeFalse();
+        result.Errors.Should().ContainSingle(e => e.Code == ValidationErrorCodes.AggregateNotDeclared);
+    }
+
+    [Fact]
+    public void DslQuery_MismatchedFunction_FailsValidation()
+    {
+        var options = ParseDsl(new Dictionary<string, string>
+        {
+            ["aggregate"] = "count:id",
+            ["having"] = "sum:total:gt:100"
+        });
+
+        var rule = new HavingAliasIntegrityRule();
+        var result = ValidationResult.Success();
+
+        rule.Validate(options, new QueryContext { TargetType = typeof(Order) }, result);
+
+        result.IsValid.Should().BeFalse();
+        result.Errors.Should().ContainSingle(e => e.Code == ValidationErrorCodes.AggregateNotDeclared);
+    }
+
+    [Fact]
+    public void DslQuery_MismatchedField_FailsValidation()
+    {
+        var options = ParseDsl(new Dictionary<string, string>
+        {
+            ["aggregate"] = "sum:amount",
+            ["having"] = "sum:total:gt:100"
+        });
+
+        var rule = new HavingAliasIntegrityRule();
+        var result = ValidationResult.Success();
+
+        rule.Validate(options, new QueryContext { TargetType = typeof(Order) }, result);
+
+        result.IsValid.Should().BeFalse();
+        result.Errors.Should().ContainSingle(e => e.Code == ValidationErrorCodes.AggregateNotDeclared);
     }
 }
