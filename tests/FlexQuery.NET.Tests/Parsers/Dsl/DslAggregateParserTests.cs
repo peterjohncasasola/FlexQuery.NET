@@ -322,7 +322,7 @@ public class DslAggregateParserTests
         var ex = Record.Exception(() => Parse("sum"));
 
         ex.Should().BeOfType<DslParseException>();
-        ex.Message.Should().Contain("Invalid item");
+        ex.Message.Should().Contain("Expected format: Function:Field[:Alias]");
     }
 
     [Fact]

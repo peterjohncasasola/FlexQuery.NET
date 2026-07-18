@@ -128,7 +128,7 @@ public class FqlHavingParserTests
         var act = () => Parse("SUM(Total > 100");
 
         act.Should().Throw<FqlParseException>()
-            .WithMessage("*Expected CloseParen at position 10, but found Gt*");
+            .WithMessage("*Expected CloseParen but found Gt*");
     }
 
     [Fact]

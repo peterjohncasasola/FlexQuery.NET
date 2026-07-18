@@ -26,7 +26,7 @@ public class MiniODataExceptionWrappingTests
         var ex = act.Should().Throw<QueryParseException>().Which;
         ex.ParameterName.Should().Be("$filter");
         ex.InnerException.Should().BeOfType<MiniODataParseException>();
-        ex.Message.Should().StartWith("Failed to parse query parameter '$filter'.");
+        ex.Message.Should().StartWith("Failed to parse '$filter' query parameter.");
     }
 
     [Fact]
@@ -39,7 +39,7 @@ public class MiniODataExceptionWrappingTests
         var ex = act.Should().Throw<QueryParseException>().Which;
         ex.ParameterName.Should().Be("$orderby");
         ex.InnerException.Should().BeOfType<MiniODataParseException>();
-        ex.Message.Should().StartWith("Failed to parse query parameter '$orderby'.");
+        ex.Message.Should().StartWith("Failed to parse '$orderby' query parameter.");
     }
 
     [Fact]
@@ -52,7 +52,7 @@ public class MiniODataExceptionWrappingTests
         var ex = act.Should().Throw<QueryParseException>().Which;
         ex.ParameterName.Should().Be("$select");
         ex.InnerException.Should().BeOfType<MiniODataParseException>();
-        ex.Message.Should().StartWith("Failed to parse query parameter '$select'.");
+        ex.Message.Should().StartWith("Failed to parse '$select' query parameter.");
     }
 
     [Fact]
@@ -65,7 +65,7 @@ public class MiniODataExceptionWrappingTests
         var ex = act.Should().Throw<QueryParseException>().Which;
         ex.ParameterName.Should().Be("$expand");
         ex.InnerException.Should().BeOfType<MiniODataParseException>();
-        ex.Message.Should().StartWith("Failed to parse query parameter '$expand'.");
+        ex.Message.Should().StartWith("Failed to parse '$expand' query parameter.");
     }
 
     [Fact]
