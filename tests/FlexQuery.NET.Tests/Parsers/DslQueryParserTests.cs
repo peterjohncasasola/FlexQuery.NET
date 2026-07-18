@@ -1,10 +1,13 @@
 ﻿using FlexQuery.NET.Exceptions;
+using FlexQuery.NET.Execution;
 using FlexQuery.NET.Models;
 using FlexQuery.NET.Models.Projection;
 using FlexQuery.NET.Models.Aggregates;
 using FlexQuery.NET.Models.Filters;
 using FlexQuery.NET.Parsers;
 using FlexQuery.NET.Parsers.Dsl;
+using FlexQuery.NET.Validation;
+using FlexQuery.NET.Validation.Rules;
 
 namespace FlexQuery.NET.Tests.Parsers;
 
@@ -473,11 +476,7 @@ public class DslQueryParserTests
 
         opts.Select.Should().BeEquivalentTo([new SelectNode { Field = "Name" }]);
     }
-
-    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-    // Grouping / Aggregates / Having
-    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-
+    
     [Fact]
     public void GroupAndAggregateSelect_ParsedCorrectly()
     {
@@ -495,9 +494,10 @@ public class DslQueryParserTests
         opts.Aggregates.Should().Contain(a => a.Function == AggregateFunction.Sum && a.Field == "total");
         opts.Aggregates.Should().Contain(a => a.Function == AggregateFunction.Count && a.Field == "id");
         opts.Having.Should().NotBeNull();
-        opts.Having!.Function.Should().Be(AggregateFunction.Sum);
-        opts.Having.Operator.Should().Be(FilterOperators.GreaterThan);
-        opts.Having.Value.Should().Be("10000");
+        var having = (HavingConditionNode)opts.Having!;
+        having.Function.Should().Be(AggregateFunction.Sum);
+        having.Operator.Should().Be(FilterOperators.GreaterThan);
+        having.Value.Should().Be("10000");
     }
 
     [Fact]
@@ -534,10 +534,11 @@ public class DslQueryParserTests
         });
 
         opts.Having.Should().NotBeNull();
-        opts.Having!.Function.Should().Be(AggregateFunction.Count);
-        opts.Having.Field.Should().Be("Orders");
-        opts.Having.Operator.Should().Be(FilterOperators.GreaterThan);
-        opts.Having.Value.Should().Be("20");
+        var having = (HavingConditionNode)opts.Having!;
+        having.Function.Should().Be(AggregateFunction.Count);
+        having.Field.Should().Be("Orders");
+        having.Operator.Should().Be(FilterOperators.GreaterThan);
+        having.Value.Should().Be("20");
     }
 
     [Fact]
@@ -552,10 +553,11 @@ public class DslQueryParserTests
         });
 
         opts.Having.Should().NotBeNull();
-        opts.Having!.Function.Should().Be(AggregateFunction.Sum);
-        opts.Having.Field.Should().Be("total");
-        opts.Having.Operator.Should().Be(FilterOperators.GreaterThan);
-        opts.Having.Value.Should().Be("100");
+        var having = (HavingConditionNode)opts.Having!;
+        having.Function.Should().Be(AggregateFunction.Sum);
+        having.Field.Should().Be("total");
+        having.Operator.Should().Be(FilterOperators.GreaterThan);
+        having.Value.Should().Be("100");
     }
 
     [Fact]
@@ -570,10 +572,11 @@ public class DslQueryParserTests
         });
 
         opts.Having.Should().NotBeNull();
-        opts.Having!.Function.Should().Be(AggregateFunction.Sum);
-        opts.Having.Field.Should().Be("total");
-        opts.Having.Operator.Should().Be(FilterOperators.GreaterThan);
-        opts.Having.Value.Should().Be("100");
+        var having = (HavingConditionNode)opts.Having!;
+        having.Function.Should().Be(AggregateFunction.Sum);
+        having.Field.Should().Be("total");
+        having.Operator.Should().Be(FilterOperators.GreaterThan);
+        having.Value.Should().Be("100");
     }
 
     [Fact]
@@ -599,16 +602,13 @@ public class DslQueryParserTests
         });
 
         opts.Having.Should().NotBeNull();
-        opts.Having!.Function.Should().Be(AggregateFunction.Sum);
-        opts.Having.Field.Should().Be("Orders.Total");
-        opts.Having.Operator.Should().Be(FilterOperators.GreaterThan);
-        opts.Having.Value.Should().Be("500");
+        var having = (HavingConditionNode)opts.Having!;
+        having.Function.Should().Be(AggregateFunction.Sum);
+        having.Field.Should().Be("Orders.Total");
+        having.Operator.Should().Be(FilterOperators.GreaterThan);
+        having.Value.Should().Be("500");
     }
-
-    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-    // Aggregates
-    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-
+    
     [Fact]
     public void DslAggregate_SingleField_ParsedCorrectly()
     {
@@ -869,11 +869,7 @@ public class DslQueryParserTests
         act.Should().Throw<QueryParseException>()
             .Which.ParameterName.Should().Be("aggregate");
     }
-
-    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-    // Filter â€” Additional Operators
-    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-
+    
     [Fact]
     public void DslFilter_LikeOperator_ParsedCorrectly()
     {
@@ -912,11 +908,7 @@ public class DslQueryParserTests
         opts.Filter!.Filters.Should().ContainSingle(f =>
             f.Field == "email" && f.Operator == FilterOperators.EndsWith && f.Value == ".com");
     }
-
-    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-    // Integration â€” All Parameters
-    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-
+    
     [Fact]
     public void DslIntegration_AllParameters_ParsedCorrectly()
     {
@@ -983,10 +975,11 @@ public class DslQueryParserTests
 
         // Having
         opts.Having.Should().NotBeNull();
-        opts.Having!.Function.Should().Be(AggregateFunction.Sum);
-        opts.Having.Field.Should().Be("Amount");
-        opts.Having.Operator.Should().Be("gt");
-        opts.Having.Value.Should().Be("1000");
+        var having = (HavingConditionNode)opts.Having!;
+        having.Function.Should().Be(AggregateFunction.Sum);
+        having.Field.Should().Be("Amount");
+        having.Operator.Should().Be("gt");
+        having.Value.Should().Be("1000");
 
         // Distinct
         opts.Distinct.Should().BeTrue();
@@ -995,11 +988,7 @@ public class DslQueryParserTests
         opts.Paging.Page.Should().Be(2);
         opts.Paging.PageSize.Should().Be(25);
     }
-
-    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-    // Empty / Default Input
-    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-
+    
     [Fact]
     public void EmptyInput_ReturnsDefaultOptions()
     {
@@ -1010,5 +999,197 @@ public class DslQueryParserTests
         opts.Select.Should().BeNull();
         opts.Paging.Page.Should().Be(1);
         opts.Paging.PageSize.Should().Be(20);
+    }
+    
+    [Fact]
+    public void DslQuery_ValidAggregateHaving_PassesValidation()
+    {
+        var parameters = new FlexQueryParameters
+        {
+            Aggregate = "sum:Total",
+            Having = "sum:Total:gt:100"
+        };
+
+        var options = new DslQueryParser().Parse(parameters);
+        var rule = new HavingAggregateExistenceRule();
+        var result = ValidationResult.Success();
+
+        rule.Validate(options, new QueryContext { TargetType = typeof(Order) }, result);
+
+        result.IsValid.Should().BeTrue();
+    }
+    
+    [Fact]
+    public void DslQuery_ValidAggregateHavingWithAnd_PassesValidation()
+    {
+        var parameters = new FlexQueryParameters
+        {
+            Aggregate = "sum:Total,count:Id",
+            Having = "sum:Total:gt:100 AND count:Id:gte:5"
+        };
+
+        var options = new DslQueryParser().Parse(parameters);
+        var rule = new HavingAggregateExistenceRule();
+        var result = ValidationResult.Success();
+
+        rule.Validate(options, new QueryContext { TargetType = typeof(Order) }, result);
+
+        result.IsValid.Should().BeTrue();
+    }
+    
+    [Fact]
+    public void DslQuery_ValidAggregateHavingWithOr_PassesValidation()
+    {
+        var parameters = new FlexQueryParameters
+        {
+            Aggregate = "sum:Total,avg:Price",
+            Having = "sum:Total:gt:100 OR avg:Price:lt:50"
+        };
+
+        var options = new DslQueryParser().Parse(parameters);
+        var rule = new HavingAggregateExistenceRule();
+        var result = ValidationResult.Success();
+
+        rule.Validate(options, new QueryContext { TargetType = typeof(Order) }, result);
+
+        result.IsValid.Should().BeTrue();
+    }
+    
+    [Fact]
+    public void DslQuery_ValidNestedAggregateHaving_PassesValidation()
+    {
+        var parameters = new FlexQueryParameters
+        {
+            Aggregate = "sum:total, count:Id, avg:price",
+            Having = "(sum:total:gt:100 OR count:Id:gte:5) AND avg:price:lt:50"
+        };
+
+        var options = new DslQueryParser().Parse(parameters);
+        var rule = new HavingAggregateExistenceRule();
+        var result = ValidationResult.Success();
+
+        rule.Validate(options, new QueryContext { TargetType = typeof(Order) }, result);
+
+        result.IsValid.Should().BeTrue();
+    }
+    
+    
+    
+    [Fact]
+    public void DslQuery_InvalidAggregateHaving_FailsValidation()
+    {
+        var parameters = new FlexQueryParameters
+        {
+            Aggregate = "sum:Total",
+            Having = "avg:Price:gt:100"
+        };
+
+        var options = new DslQueryParser().Parse(parameters);
+        var rule = new HavingAggregateExistenceRule();
+        var result = ValidationResult.Success();
+
+        rule.Validate(options, new QueryContext { TargetType = typeof(Order) }, result);
+
+        result.IsValid.Should().BeFalse();
+    }
+    
+    [Fact]
+    public void DslQuery_InvalidAggregateHavingWithAnd_FailsValidation()
+    {
+        var parameters = new FlexQueryParameters
+        {
+            Aggregate = "sum:Total",
+            Having = "sum:Total:gt:100 AND count:Id:gte:5"
+        };
+
+        var options = new DslQueryParser().Parse(parameters);
+        var rule = new HavingAggregateExistenceRule();
+        var result = ValidationResult.Success();
+
+        rule.Validate(options, new QueryContext { TargetType = typeof(Order) }, result);
+
+        result.IsValid.Should().BeFalse();
+    }
+    
+    [Fact]
+    public void DslQuery_InvalidAggregateHavingWithOr_FailsValidation()
+    {
+        var parameters = new FlexQueryParameters
+        {
+            Aggregate = "sum:Total",
+            Having = "sum:Total:gt:100 OR avg:price:lt:50"
+        };
+
+        var options = new DslQueryParser().Parse(parameters);
+        var rule = new HavingAggregateExistenceRule();
+        var result = ValidationResult.Success();
+
+        rule.Validate(options, new QueryContext { TargetType = typeof(Order) }, result);
+
+        result.IsValid.Should().BeFalse();
+    }
+    
+    [Fact]
+    public void DslQuery_InvalidNestedAggregateHaving_FailsValidation()
+    {
+        var parameters = new FlexQueryParameters
+        {
+            Aggregate = "sum:Total,count:Id",
+            
+            Having = "(sum:Total:gt:100 OR avg:price:lt:50) AND count:Id:gte:5"
+        };
+
+        var options = new DslQueryParser().Parse(parameters);
+        var rule = new HavingAggregateExistenceRule();
+        var result = ValidationResult.Success();
+
+        rule.Validate(options, new QueryContext { TargetType = typeof(Order) }, result);
+
+        result.IsValid.Should().BeFalse();
+    }
+    
+    [Fact]
+    public void DslQuery_CountStarAggregate_ThrowsParseException()
+    {
+        var parameters = new FlexQueryParameters
+        {
+            Aggregate = "count:*"
+        };
+
+        var action = () => new DslQueryParser().Parse(parameters);
+
+        action.Should().Throw<QueryParseException>();
+    }
+    
+    [Fact]
+    public void DslQuery_CountStarAggregateAndHaving_ThrowsParseException()
+    {
+        var parameters = new FlexQueryParameters
+        {
+            Aggregate = "count:*",
+            Having = "count:*"
+        };
+
+        var action = () => new DslQueryParser().Parse(parameters);
+
+        action.Should().Throw<QueryParseException>();
+    }
+    
+    [Fact]
+    public void DslQuery_NestedHavingWithDeclaredAggregates_PassesValidation()
+    {
+        var parameters = new FlexQueryParameters
+        {
+            Aggregate = "count:id, sum:total",
+            Having = "(sum:total:gt:500 AND count:id:gte:5)"
+        };
+
+        var options = new DslQueryParser().Parse(parameters);
+        var rule = new HavingAggregateExistenceRule();
+        var result = ValidationResult.Success();
+
+        rule.Validate(options, new QueryContext { TargetType = typeof(Order) }, result);
+
+        result.IsValid.Should().BeTrue();
     }
 }

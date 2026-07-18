@@ -1,4 +1,3 @@
-using FlexQuery.NET.Exceptions;
 using FlexQuery.NET.Execution;
 using FlexQuery.NET.Models;
 using FlexQuery.NET.Models.Aggregates;
@@ -6,14 +5,12 @@ using FlexQuery.NET.Parsers;
 using FlexQuery.NET.Parsers.Dsl;
 using FlexQuery.NET.Validation;
 using FlexQuery.NET.Validation.Rules;
-using Microsoft.AspNetCore.Http;
-using Xunit;
 
 namespace FlexQuery.NET.Tests.Parsers.Dsl;
 
 public class DslHavingParserTests
 {
-    private static HavingCondition? Parse(string? raw) =>
+    private static HavingNode? Parse(string? raw) =>
         DslHavingParser.Parse(raw);
 
     private static QueryOptions ParseDsl(Dictionary<string, string> raw)
@@ -44,16 +41,21 @@ public class DslHavingParserTests
     }
 
     [Theory]
-    [InlineData("sum:field:isnull:1", "isnull")]
-    [InlineData("sum:field:ISNULL:1", "isnull")]
-    [InlineData("sum:field:isnotnull:1", "isnotnull")]
-    [InlineData("sum:field:ISNOTNULL:1", "isnotnull")]
+    [InlineData("sum:field:eq:1", "eq")]
+    [InlineData("sum:field:EQ:1", "eq")]
+    [InlineData("sum:field:neq:1", "neq")]
+    [InlineData("sum:field:NEQ:1", "neq")]
+    [InlineData("sum:field:gt:1", "gt")]
+    [InlineData("sum:field:gte:1", "gte")]
+    [InlineData("sum:field:lt:1", "lt")]
+    [InlineData("sum:field:lte:1", "lte")]
     public void Parse_ValidOperator_ReturnsNormalizedOperator(string input, string expectedOperator)
     {
         var result = Parse(input);
 
         result.Should().NotBeNull();
-        result!.Operator.Should().Be(expectedOperator);
+        var having = (HavingConditionNode)result!;
+        having.Operator.Should().Be(expectedOperator);
     }
 
     [Theory]
@@ -62,6 +64,12 @@ public class DslHavingParserTests
     [InlineData("avg:price:nope:50")]
     [InlineData("count:orders:doesnotexist:1,2,3")]
     [InlineData("sum:total:xyz:100")]
+    [InlineData("sum:field:isnull:1")]
+    [InlineData("sum:field:isnotnull:1")]
+    [InlineData("sum:total:between:10:20")]
+    [InlineData("count:orders:in:1,2,3")]
+    [InlineData("sum:total:contains:abc")]
+    [InlineData("sum:total:like:abc")]
     public void Parse_UnsupportedOperator_ThrowsDslParseException(string input)
     {
         var act = () => Parse(input);
@@ -85,7 +93,7 @@ public class DslHavingParserTests
         var act = () => Parse("count:*:gt:0");
 
         act.Should().Throw<DslParseException>()
-            .WithMessage("*count:* is not supported*");
+            .WithMessage("*Invalid field*");
     }
 
     [Fact]
@@ -94,50 +102,11 @@ public class DslHavingParserTests
         var result = Parse("sum:total:gt:100");
 
         result.Should().NotBeNull();
-        result!.Function.Should().Be(AggregateFunction.Sum);
-        result.Field.Should().Be("total");
-        result.Operator.Should().Be("gt");
-        result.Value.Should().Be("100");
-    }
-
-    [Fact]
-    public void Parse_ValidBetweenOperator_ReturnsCorrectValue()
-    {
-        var result = Parse("sum:total:between:10:20");
-
-        result.Should().NotBeNull();
-        result!.Operator.Should().Be("between");
-        result.Value.Should().Be("10:20");
-    }
-
-    [Fact]
-    public void Parse_ValidInOperator_ReturnsCorrectValue()
-    {
-        var result = Parse("count:orders:in:1,2,3");
-
-        result.Should().NotBeNull();
-        result!.Operator.Should().Be("in");
-        result.Value.Should().Be("1,2,3");
-    }
-
-    [Fact]
-    public void Parse_ValidIsNullOperator_ReturnsCorrectValue()
-    {
-        var result = Parse("sum:field:isnull:1");
-
-        result.Should().NotBeNull();
-        result!.Operator.Should().Be("isnull");
-        result.Value.Should().Be("1");
-    }
-
-    [Fact]
-    public void Parse_ValidIsNotNullOperator_ReturnsCorrectValue()
-    {
-        var result = Parse("sum:field:isnotnull:1");
-
-        result.Should().NotBeNull();
-        result!.Operator.Should().Be("isnotnull");
-        result.Value.Should().Be("1");
+        var having = (HavingConditionNode)result!;
+        having.Function.Should().Be(AggregateFunction.Sum);
+        having.Field.Should().Be("total");
+        having.Operator.Should().Be("gt");
+        having.Value.Should().Be("100");
     }
 
     [Fact]
@@ -188,7 +157,7 @@ public class DslHavingParserTests
     [Fact]
     public void Parse_InvalidField_ThrowsDslParseException()
     {
-        var act = () => Parse("sum:invalid field:gt:0");
+        var act = () => Parse("sum:123:gt:0");
 
         act.Should().Throw<DslParseException>()
             .WithMessage("*Invalid field*");
@@ -203,7 +172,7 @@ public class DslHavingParserTests
             ["having"] = "sum:total:gt:100"
         });
 
-        var rule = new HavingAliasIntegrityRule();
+        var rule = new HavingAggregateExistenceRule();
         var result = ValidationResult.Success();
 
         rule.Validate(options, new QueryContext { TargetType = typeof(Order) }, result);
@@ -219,13 +188,13 @@ public class DslHavingParserTests
             ["having"] = "sum:total:gt:100"
         });
 
-        var rule = new HavingAliasIntegrityRule();
+        var rule = new HavingAggregateExistenceRule();
         var result = ValidationResult.Success();
 
         rule.Validate(options, new QueryContext { TargetType = typeof(Order) }, result);
 
         result.IsValid.Should().BeFalse();
-        result.Errors.Should().ContainSingle(e => e.Code == ValidationErrorCodes.AggregateNotDeclared);
+        result.Errors.Should().ContainSingle(e => e.Code == ValidationErrorCodes.HavingAliasMismatch);
     }
 
     [Fact]
@@ -237,13 +206,13 @@ public class DslHavingParserTests
             ["having"] = "sum:total:gt:100"
         });
 
-        var rule = new HavingAliasIntegrityRule();
+        var rule = new HavingAggregateExistenceRule();
         var result = ValidationResult.Success();
 
         rule.Validate(options, new QueryContext { TargetType = typeof(Order) }, result);
 
         result.IsValid.Should().BeFalse();
-        result.Errors.Should().ContainSingle(e => e.Code == ValidationErrorCodes.AggregateNotDeclared);
+        result.Errors.Should().ContainSingle(e => e.Code == ValidationErrorCodes.HavingAliasMismatch);
     }
 
     [Fact]
@@ -255,12 +224,12 @@ public class DslHavingParserTests
             ["having"] = "sum:total:gt:100"
         });
 
-        var rule = new HavingAliasIntegrityRule();
+        var rule = new HavingAggregateExistenceRule();
         var result = ValidationResult.Success();
 
         rule.Validate(options, new QueryContext { TargetType = typeof(Order) }, result);
 
         result.IsValid.Should().BeFalse();
-        result.Errors.Should().ContainSingle(e => e.Code == ValidationErrorCodes.AggregateNotDeclared);
+        result.Errors.Should().ContainSingle(e => e.Code == ValidationErrorCodes.HavingAliasMismatch);
     }
 }

@@ -517,7 +517,7 @@ public class AgGridQueryParserTests
             GroupBy = ["category"],
             Aggregates =
             [
-                new AggregateModel
+                new Aggregate
                 {
                     Field = "quantity",
                     Function = AggregateFunction.Sum,
@@ -552,7 +552,7 @@ public class AgGridQueryParserTests
             GroupBy = ["oldGroup"],
             Aggregates =
             [
-                new AggregateModel { Field = "oldValue", Function = AggregateFunction.Max, Alias = "oldValueMax" }
+                new Aggregate { Field = "oldValue", Function = AggregateFunction.Max, Alias = "oldValueMax" }
             ]
         };
 

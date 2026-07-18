@@ -101,7 +101,7 @@ public sealed class SecurityGovernanceEfCoreIntegrationTests : IDisposable
         var options = new QueryOptions
         {
             GroupBy = new List<string> { "Salary" },
-            Aggregates = { new AggregateModel { Field = "Salary", Function = AggregateFunction.Sum, Alias = "salarySum" } },
+            Aggregates = { new Aggregate { Field = "Salary", Function = AggregateFunction.Sum, Alias = "salarySum" } },
             Paging = { Disabled = true }
         };
         var execOptions = new EfCoreQueryOptions
@@ -123,7 +123,7 @@ public sealed class SecurityGovernanceEfCoreIntegrationTests : IDisposable
     {
         var options = new QueryOptions
         {
-            Aggregates = { new AggregateModel { Field = "Salary", Function = AggregateFunction.Sum, Alias = "salarySum" } },
+            Aggregates = { new Aggregate { Field = "Salary", Function = AggregateFunction.Sum, Alias = "salarySum" } },
             Paging = { Disabled = true }
         };
         var execOptions = new EfCoreQueryOptions
@@ -146,8 +146,8 @@ public sealed class SecurityGovernanceEfCoreIntegrationTests : IDisposable
         var options = new QueryOptions
         {
             GroupBy = new List<string> { "Name" },
-            Aggregates = { new AggregateModel { Field = "Salary", Function = AggregateFunction.Sum, Alias = "salarySum" } },
-            Having = new HavingCondition { Field = "Salary", Function = AggregateFunction.Sum, Operator = "gt", Value = "0" },
+            Aggregates = { new Aggregate { Field = "Salary", Function = AggregateFunction.Sum, Alias = "salarySum" } },
+            Having = new HavingConditionNode { Field = "Salary", Function = AggregateFunction.Sum, Operator = "gt", Value = "0" },
             Paging = { Disabled = true }
         };
         var execOptions = new EfCoreQueryOptions

@@ -7,7 +7,7 @@ namespace FlexQuery.NET.Tests.Parsers.Fql;
 
 public class FqlAggregateParserTests
 {
-    private static List<AggregateModel> Parse(string? raw) =>
+    private static List<Aggregate> Parse(string? raw) =>
         FqlAggregateParser.Parse(raw);
 
     [Fact]
@@ -451,6 +451,14 @@ public class FqlAggregateParserTests
 
         ex.Should().BeOfType<FqlParseException>();
         ex.Message.Should().Contain("Invalid field");
+    }
+    
+    [Fact]
+    public void Parse_Field_CountStar_ThrowsFqlParseException()
+    {
+        var ex = Record.Exception(() => Parse("COUNT(*)"));
+
+        ex.Should().BeOfType<FqlParseException>();
     }
 
     [Fact]

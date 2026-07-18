@@ -735,7 +735,7 @@ public class DialectTests
     {
         var options = new QueryOptions
         {
-            Aggregates = [new AggregateModel { Function = AggregateFunction.Count, Alias = "TotalCount", Field = "*" }]
+            Aggregates = [new Aggregate { Function = AggregateFunction.Count, Alias = "TotalCount", Field = "*" }]
         };
         options.Items[ContextKeys.EntityType] = typeof(Customer);
 
@@ -1116,7 +1116,7 @@ public class DialectTests
         var options = new QueryOptions
         {
             GroupBy = ["Status"],
-            Aggregates = [new AggregateModel { Function = AggregateFunction.Count, Alias = "TotalCount", Field = "*" }]
+            Aggregates = [new Aggregate { Function = AggregateFunction.Count, Alias = "TotalCount", Field = "*" }]
         };
         options.Items[ContextKeys.EntityType] = typeof(Customer);
         return options;
@@ -1158,7 +1158,7 @@ public class DialectTests
         var options = new QueryOptions
         {
             GroupBy = ["Status"],
-            Having = new HavingCondition
+            Having = new HavingConditionNode
             {
                 Field = "Amount",
                 Operator = "gt",

@@ -26,7 +26,7 @@ public class AggregateSortValidationRuleTests
     {
         var options = new QueryOptions
         {
-            Aggregates = [new AggregateModel { Function = AggregateFunction.Sum, Field = "Total", Alias = "TotalSum" }],
+            Aggregates = [new Aggregate { Function = AggregateFunction.Sum, Field = "Total", Alias = "TotalSum" }],
             Sort = []
         };
         var result = Validate(options);
@@ -39,7 +39,7 @@ public class AggregateSortValidationRuleTests
     {
         var options = new QueryOptions
         {
-            Aggregates = [new AggregateModel { Function = AggregateFunction.Sum, Field = "Total", Alias = "TotalSum" }],
+            Aggregates = [new Aggregate { Function = AggregateFunction.Sum, Field = "Total", Alias = "TotalSum" }],
             Sort = [new SortNode { Field = "CustomerName", Descending = false }]
         };
         var result = Validate(options);
@@ -52,7 +52,7 @@ public class AggregateSortValidationRuleTests
     {
         var options = new QueryOptions
         {
-            Aggregates = [new AggregateModel { Function = AggregateFunction.Sum, Field = "Total", Alias = "TotalSum" }],
+            Aggregates = [new Aggregate { Function = AggregateFunction.Sum, Field = "Total", Alias = "TotalSum" }],
             Sort = [new SortNode { Field = "Orders", Aggregate = AggregateFunction.Sum, AggregateField = "Total", Descending = true }]
         };
         var result = Validate(options);
@@ -65,7 +65,7 @@ public class AggregateSortValidationRuleTests
     {
         var options = new QueryOptions
         {
-            Aggregates = [new AggregateModel { Function = AggregateFunction.Sum, Field = "Total", Alias = "TotalSum" }],
+            Aggregates = [new Aggregate { Function = AggregateFunction.Sum, Field = "Total", Alias = "TotalSum" }],
             Sort = [new SortNode { Field = "Orders", Aggregate = AggregateFunction.Sum, AggregateField = "total", Descending = true }]
         };
         var result = Validate(options);
@@ -78,7 +78,7 @@ public class AggregateSortValidationRuleTests
     {
         var options = new QueryOptions
         {
-            Aggregates = [new AggregateModel { Function = AggregateFunction.Sum, Field = "Total", Alias = "TotalSum" }],
+            Aggregates = [new Aggregate { Function = AggregateFunction.Sum, Field = "Total", Alias = "TotalSum" }],
             Sort = [new SortNode { Field = "Orders", Aggregate = AggregateFunction.Sum, AggregateField = "Total", Descending = true }]
         };
         var result = Validate(options);
@@ -91,7 +91,7 @@ public class AggregateSortValidationRuleTests
     {
         var options = new QueryOptions
         {
-            Aggregates = [new AggregateModel { Function = AggregateFunction.Sum, Field = "Total", Alias = "TotalSum" }],
+            Aggregates = [new Aggregate { Function = AggregateFunction.Sum, Field = "Total", Alias = "TotalSum" }],
             Sort = [new SortNode { Field = "Orders", Aggregate = AggregateFunction.Avg, AggregateField = "Total", Descending = true }]
         };
         var result = Validate(options);
@@ -105,7 +105,7 @@ public class AggregateSortValidationRuleTests
     {
         var options = new QueryOptions
         {
-            Aggregates = [new AggregateModel { Function = AggregateFunction.Sum, Field = "Total", Alias = "TotalSum" }],
+            Aggregates = [new Aggregate { Function = AggregateFunction.Sum, Field = "Total", Alias = "TotalSum" }],
             Sort = [new SortNode { Field = "Orders", Aggregate = AggregateFunction.Sum, AggregateField = "Subtotal", Descending = true }]
         };
         var result = Validate(options);
@@ -119,7 +119,7 @@ public class AggregateSortValidationRuleTests
     {
         var options = new QueryOptions
         {
-            Aggregates = [new AggregateModel { Function = AggregateFunction.Sum, Field = "Total", Alias = "TotalSum" }],
+            Aggregates = [new Aggregate { Function = AggregateFunction.Sum, Field = "Total", Alias = "TotalSum" }],
             Sort = [new SortNode { Field = "Orders", Aggregate = AggregateFunction.Sum, AggregateField = "Price", Descending = true }]
         };
         var result = Validate(options);
@@ -147,7 +147,7 @@ public class AggregateSortValidationRuleTests
     {
         var options = new QueryOptions
         {
-            Aggregates = [new AggregateModel { Function = AggregateFunction.Count, Field = "Orders", Alias = "TotalCount" }],
+            Aggregates = [new Aggregate { Function = AggregateFunction.Count, Field = "Orders", Alias = "TotalCount" }],
             Sort = [new SortNode { Field = "Orders", Aggregate = AggregateFunction.Count, AggregateField = null, Descending = true }]
         };
         var result = Validate(options, typeof(Customer));
@@ -162,8 +162,8 @@ public class AggregateSortValidationRuleTests
         {
             Aggregates =
             [
-                new AggregateModel { Function = AggregateFunction.Sum, Field = "Total", Alias = "TotalSum" },
-                new AggregateModel { Function = AggregateFunction.Avg, Field = "Price", Alias = "AvgPrice" }
+                new Aggregate { Function = AggregateFunction.Sum, Field = "Total", Alias = "TotalSum" },
+                new Aggregate { Function = AggregateFunction.Avg, Field = "Price", Alias = "AvgPrice" }
             ],
             Sort =
             [
@@ -182,7 +182,7 @@ public class AggregateSortValidationRuleTests
     {
         var options = new QueryOptions
         {
-            Aggregates = [new AggregateModel { Function = AggregateFunction.Count, Field = "Orders", Alias = "TotalCount" }],
+            Aggregates = [new Aggregate { Function = AggregateFunction.Count, Field = "Orders", Alias = "TotalCount" }],
             Sort = [new SortNode { Field = "Orders", Aggregate = AggregateFunction.Count, AggregateField = null, Descending = true }]
         };
         var result = Validate(options, typeof(Customer));
@@ -195,7 +195,7 @@ public class AggregateSortValidationRuleTests
     {
         var options = new QueryOptions
         {
-            Aggregates = [new AggregateModel { Function = AggregateFunction.Count, Field = "Addresses", Alias = "AddressCount" }],
+            Aggregates = [new Aggregate { Function = AggregateFunction.Count, Field = "Addresses", Alias = "AddressCount" }],
             Sort = [new SortNode { Field = "Addresses", Aggregate = AggregateFunction.Count, AggregateField = null, Descending = false }]
         };
         var result = Validate(options, typeof(Customer));
@@ -208,7 +208,7 @@ public class AggregateSortValidationRuleTests
     {
         var options = new QueryOptions
         {
-            Aggregates = [new AggregateModel { Function = AggregateFunction.Count, Field = "Orders.Total", Alias = "InvalidCount" }],
+            Aggregates = [new Aggregate { Function = AggregateFunction.Count, Field = "Orders.Total", Alias = "InvalidCount" }],
             Sort = [new SortNode { Field = "Orders.Total", Aggregate = AggregateFunction.Count, AggregateField = null, Descending = true }]
         };
         var result = Validate(options, typeof(Customer));
@@ -222,7 +222,7 @@ public class AggregateSortValidationRuleTests
     {
         var options = new QueryOptions
         {
-            Aggregates = [new AggregateModel { Function = AggregateFunction.Count, Field = "Profile", Alias = "InvalidCount" }],
+            Aggregates = [new Aggregate { Function = AggregateFunction.Count, Field = "Profile", Alias = "InvalidCount" }],
             Sort = [new SortNode { Field = "Profile", Aggregate = AggregateFunction.Count, AggregateField = null, Descending = true }]
         };
         var result = Validate(options, typeof(Customer));
@@ -236,7 +236,7 @@ public class AggregateSortValidationRuleTests
     {
         var options = new QueryOptions
         {
-            Aggregates = [new AggregateModel { Function = AggregateFunction.Count, Field = "Orders", Alias = "TotalCount" }],
+            Aggregates = [new Aggregate { Function = AggregateFunction.Count, Field = "Orders", Alias = "TotalCount" }],
             Sort = [new SortNode { Field = "Orders", Aggregate = AggregateFunction.Count, AggregateField = null, Descending = true }]
         };
         var result = Validate(options, targetType: null);

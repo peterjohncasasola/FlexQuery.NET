@@ -330,8 +330,8 @@ public class GroupByTests : IDisposable
             GroupBy = ["Profile.Bio"],
             Aggregates =
             [
-                new AggregateModel { Field = "Age", Function = AggregateFunction.Sum, Alias = "ageSum" },
-                new AggregateModel { Field = "Id", Function = AggregateFunction.Count, Alias = "idCount" }
+                new Aggregate { Field = "Age", Function = AggregateFunction.Sum, Alias = "ageSum" },
+                new Aggregate { Field = "Id", Function = AggregateFunction.Count, Alias = "idCount" }
             ],
             Filter = new FilterGroup
             {
@@ -512,8 +512,8 @@ public class GroupByTests : IDisposable
         var options = new QueryOptions
         {
             GroupBy = ["CustomerId"],
-            Aggregates = [new AggregateModel { Function = AggregateFunction.Count, Field = "Id", Alias = "Count" }],
-            Having = new HavingCondition
+            Aggregates = [new Aggregate { Function = AggregateFunction.Count, Field = "Id", Alias = "Count" }],
+            Having = new HavingConditionNode
             {
                 Field = "Id",
                 Function = AggregateFunction.Count,
@@ -535,8 +535,8 @@ public class GroupByTests : IDisposable
         var options = new QueryOptions
         {
             GroupBy = ["CustomerId"],
-            Aggregates = [new AggregateModel { Field = "Total", Function = AggregateFunction.Sum, Alias = "totalSum" }],
-            Having = new HavingCondition
+            Aggregates = [new Aggregate { Field = "Total", Function = AggregateFunction.Sum, Alias = "totalSum" }],
+            Having = new HavingConditionNode
             {
                 Field = "Total",
                 Function = AggregateFunction.Sum,
@@ -557,8 +557,8 @@ public class GroupByTests : IDisposable
         var options = new QueryOptions
         {
             GroupBy = ["CustomerId"],
-            Aggregates = [new AggregateModel { Field = "Total", Function = AggregateFunction.Avg, Alias = "totalAvg" }],
-            Having = new HavingCondition
+            Aggregates = [new Aggregate { Field = "Total", Function = AggregateFunction.Avg, Alias = "totalAvg" }],
+            Having = new HavingConditionNode
             {
                 Field = "Total",
                 Function = AggregateFunction.Avg,
@@ -578,8 +578,8 @@ public class GroupByTests : IDisposable
         var options = new QueryOptions
         {
             GroupBy = ["CustomerId"],
-            Aggregates = [new AggregateModel { Field = "Total", Function = AggregateFunction.Max, Alias = "totalMax" }],
-            Having = new HavingCondition
+            Aggregates = [new Aggregate { Field = "Total", Function = AggregateFunction.Max, Alias = "totalMax" }],
+            Having = new HavingConditionNode
             {
                 Field = "Total",
                 Function = AggregateFunction.Max,
@@ -599,8 +599,8 @@ public class GroupByTests : IDisposable
         var options = new QueryOptions
         {
             GroupBy = ["CustomerId"],
-            Aggregates = [new AggregateModel { Field = "Total", Function = AggregateFunction.Min, Alias = "totalMin" }],
-            Having = new HavingCondition
+            Aggregates = [new Aggregate { Field = "Total", Function = AggregateFunction.Min, Alias = "totalMin" }],
+            Having = new HavingConditionNode
             {
                 Field = "Total",
                 Function = AggregateFunction.Min,
@@ -623,8 +623,8 @@ public class GroupByTests : IDisposable
         var options = new QueryOptions
         {
             GroupBy = ["CustomerId"],
-            Aggregates = [new AggregateModel { Function = AggregateFunction.Count, Field = "Id", Alias = "Count" }],
-            Having = new HavingCondition
+            Aggregates = [new Aggregate { Function = AggregateFunction.Count, Field = "Id", Alias = "Count" }],
+            Having = new HavingConditionNode
             {
                 Field = "Id",
                 Function = AggregateFunction.Count,
@@ -650,8 +650,8 @@ public class GroupByTests : IDisposable
         var options = new QueryOptions
         {
             GroupBy = ["CustomerId"],
-            Aggregates = [new AggregateModel { Function = AggregateFunction.Count, Field = "Id", Alias = "Count" }],
-            Having = new HavingCondition
+            Aggregates = [new Aggregate { Function = AggregateFunction.Count, Field = "Id", Alias = "Count" }],
+            Having = new HavingConditionNode
             {
                 Field = "Id",
                 Function = AggregateFunction.Count,
@@ -672,8 +672,8 @@ public class GroupByTests : IDisposable
         var options = new QueryOptions
         {
             GroupBy = ["CustomerId"],
-            Aggregates = [new AggregateModel { Function = AggregateFunction.Count, Field = "Id", Alias = "Count" }],
-            Having = new HavingCondition
+            Aggregates = [new Aggregate { Function = AggregateFunction.Count, Field = "Id", Alias = "Count" }],
+            Having = new HavingConditionNode
             {
                 Field = "Id",
                 Function = AggregateFunction.Count,
@@ -697,8 +697,8 @@ public class GroupByTests : IDisposable
         var options = new QueryOptions
         {
             GroupBy = ["CustomerId"],
-            Aggregates = [new AggregateModel { Function = AggregateFunction.Count, Field = "Id", Alias = "Count" }],
-            Having = new HavingCondition
+            Aggregates = [new Aggregate { Function = AggregateFunction.Count, Field = "Id", Alias = "Count" }],
+            Having = new HavingConditionNode
             {
                 Field = "Id",
                 Function = AggregateFunction.Count,
@@ -720,7 +720,7 @@ public class GroupByTests : IDisposable
             GroupBy = ["CustomerId"],
             Aggregates =
             [
-                new AggregateModel
+                new Aggregate
                 {
                     Field = "Total",
                     Function = AggregateFunction.Sum,
@@ -738,11 +738,11 @@ public class GroupByTests : IDisposable
             GroupBy = ["CustomerId"],
             Aggregates =
             [
-                new AggregateModel { Field = "Total", Function = AggregateFunction.Sum, Alias = "totalSum" },
-                new AggregateModel { Field = "Total", Function = AggregateFunction.Avg, Alias = "totalAvg" },
-                new AggregateModel { Field = "Total", Function = AggregateFunction.Min, Alias = "totalMin" },
-                new AggregateModel { Field = "Total", Function = AggregateFunction.Max, Alias = "totalMax" },
-                new AggregateModel { Field = "Id", Function = AggregateFunction.Count, Alias = "idCount" }
+                new Aggregate { Field = "Total", Function = AggregateFunction.Sum, Alias = "totalSum" },
+                new Aggregate { Field = "Total", Function = AggregateFunction.Avg, Alias = "totalAvg" },
+                new Aggregate { Field = "Total", Function = AggregateFunction.Min, Alias = "totalMin" },
+                new Aggregate { Field = "Total", Function = AggregateFunction.Max, Alias = "totalMax" },
+                new Aggregate { Field = "Id", Function = AggregateFunction.Count, Alias = "idCount" }
             ],
             Paging = { Page = page, PageSize = pageSize }
         };
@@ -755,7 +755,7 @@ public class GroupByTests : IDisposable
             GroupBy = ["CustomerId", "OrderDate"],
             Aggregates =
             [
-                new AggregateModel
+                new Aggregate
                 {
                     Field = "Total",
                     Function = AggregateFunction.Sum,
@@ -769,7 +769,7 @@ public class GroupByTests : IDisposable
     private static QueryOptions GroupedOptionsWithHaving(int page, int pageSize, decimal minimumTotal)
     {
         var options = GroupedOptions(page, pageSize);
-        options.Having = new HavingCondition
+        options.Having = new HavingConditionNode
         {
             Field = "Total",
             Function = AggregateFunction.Sum,
@@ -891,8 +891,8 @@ public class GroupByTests : IDisposable
                 Filters = [new FilterCondition { Field = "Number", Operator = "startswith", Value = "ORDER-" }]
             },
             GroupBy = ["CustomerId"],
-            Aggregates = [new AggregateModel { Function = AggregateFunction.Sum, Field = "Total", Alias = "totalSum" }],
-            Having = new HavingCondition { Function = AggregateFunction.Sum, Field = "Total", Operator = "gt", Value = "0" },
+            Aggregates = [new Aggregate { Function = AggregateFunction.Sum, Field = "Total", Alias = "totalSum" }],
+            Having = new HavingConditionNode { Function = AggregateFunction.Sum, Field = "Total", Operator = "gt", Value = "0" },
             Sort = [new SortNode { Field = "totalSum", Descending = true }],
             Paging = { Page = 1, PageSize = 10 }
         };

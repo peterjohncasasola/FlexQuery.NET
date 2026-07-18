@@ -7,7 +7,7 @@ using FlexQuery.NET.Validation.Rules;
 
 namespace FlexQuery.NET.Tests.Validation;
 
-public class HavingAliasIntegrityRuleTests
+public class HavingAggregateExistenceRuleTests
 {
 
     private static QueryContext Context(Type? targetType = null, QueryGovernanceOptions? execOptions = null) =>
@@ -17,7 +17,7 @@ public class HavingAliasIntegrityRuleTests
     public void NullHaving_Passes()
     {
         var options = new QueryOptions { Having = null };
-        var rule = new HavingAliasIntegrityRule();
+        var rule = new HavingAggregateExistenceRule();
         var result = ValidationResult.Success();
 
         rule.Validate(options, Context(), result);
@@ -30,16 +30,16 @@ public class HavingAliasIntegrityRuleTests
     {
         var options = new QueryOptions
         {
-            Having = new HavingCondition { Function = AggregateFunction.Sum, Field = "Age", Operator = "gt", Value = "100" },
+            Having = new HavingConditionNode { Function = AggregateFunction.Sum, Field = "Age", Operator = "gt", Value = "100" },
             Aggregates = []
         };
-        var rule = new HavingAliasIntegrityRule();
+        var rule = new HavingAggregateExistenceRule();
         var result = ValidationResult.Success();
 
         rule.Validate(options, Context(), result);
 
         result.IsValid.Should().BeFalse();
-        result.Errors.Should().ContainSingle(e => e.Code == ValidationErrorCodes.AggregateNotDeclared);
+        result.Errors.Should().ContainSingle(e => e.Code == ValidationErrorCodes.HavingAliasMismatch);
     }
 
     [Fact]
@@ -47,10 +47,10 @@ public class HavingAliasIntegrityRuleTests
     {
         var options = new QueryOptions
         {
-            Aggregates = [new AggregateModel { Function = AggregateFunction.Sum, Field = "Age", Alias = "totalAge" }],
-            Having = new HavingCondition { Function = AggregateFunction.Sum, Field = "Age", Operator = "gt", Value = "100" }
+            Aggregates = [new Aggregate { Function = AggregateFunction.Sum, Field = "Age", Alias = "totalAge" }],
+            Having = new HavingConditionNode { Function = AggregateFunction.Sum, Field = "Age", Operator = "gt", Value = "100" }
         };
-        var rule = new HavingAliasIntegrityRule();
+        var rule = new HavingAggregateExistenceRule();
         var result = ValidationResult.Success();
 
         rule.Validate(options, Context(), result);
@@ -63,16 +63,16 @@ public class HavingAliasIntegrityRuleTests
     {
         var options = new QueryOptions
         {
-            Aggregates = [new AggregateModel { Function = AggregateFunction.Count, Field = "Id", Alias = "idCount" }],
-            Having = new HavingCondition { Function = AggregateFunction.Sum, Field = "Id", Operator = "gt", Value = "100" }
+            Aggregates = [new Aggregate { Function = AggregateFunction.Count, Field = "Id", Alias = "idCount" }],
+            Having = new HavingConditionNode { Function = AggregateFunction.Sum, Field = "Id", Operator = "gt", Value = "100" }
         };
-        var rule = new HavingAliasIntegrityRule();
+        var rule = new HavingAggregateExistenceRule();
         var result = ValidationResult.Success();
 
         rule.Validate(options, Context(), result);
 
         result.IsValid.Should().BeFalse();
-        result.Errors.Should().ContainSingle(e => e.Code == ValidationErrorCodes.AggregateNotDeclared);
+        result.Errors.Should().ContainSingle(e => e.Code == ValidationErrorCodes.HavingAliasMismatch);
     }
 
     [Fact]
@@ -80,16 +80,16 @@ public class HavingAliasIntegrityRuleTests
     {
         var options = new QueryOptions
         {
-            Aggregates = [new AggregateModel { Function = AggregateFunction.Sum, Field = "Age", Alias = "totalAge" }],
-            Having = new HavingCondition { Function = AggregateFunction.Sum, Field = "Name", Operator = "gt", Value = "100" }
+            Aggregates = [new Aggregate { Function = AggregateFunction.Sum, Field = "Age", Alias = "totalAge" }],
+            Having = new HavingConditionNode { Function = AggregateFunction.Sum, Field = "Name", Operator = "gt", Value = "100" }
         };
-        var rule = new HavingAliasIntegrityRule();
+        var rule = new HavingAggregateExistenceRule();
         var result = ValidationResult.Success();
 
         rule.Validate(options, Context(), result);
 
         result.IsValid.Should().BeFalse();
-        result.Errors.Should().ContainSingle(e => e.Code == ValidationErrorCodes.AggregateNotDeclared);
+        result.Errors.Should().ContainSingle(e => e.Code == ValidationErrorCodes.HavingAliasMismatch);
     }
 
     [Fact]
@@ -97,10 +97,10 @@ public class HavingAliasIntegrityRuleTests
     {
         var options = new QueryOptions
         {
-            Aggregates = [new AggregateModel { Function = AggregateFunction.Sum, Field = "Age", Alias = "totalAge" }],
-            Having = new HavingCondition { Function = AggregateFunction.Sum, Field = "age", Operator = "gt", Value = "100" }
+            Aggregates = [new Aggregate { Function = AggregateFunction.Sum, Field = "Age", Alias = "totalAge" }],
+            Having = new HavingConditionNode { Function = AggregateFunction.Sum, Field = "age", Operator = "gt", Value = "100" }
         };
-        var rule = new HavingAliasIntegrityRule();
+        var rule = new HavingAggregateExistenceRule();
         var result = ValidationResult.Success();
 
         rule.Validate(options, Context(), result);

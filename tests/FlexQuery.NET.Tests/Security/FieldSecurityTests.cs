@@ -329,7 +329,7 @@ public class FieldSecurityTests
     {
         var options = new QueryOptions
         {
-            Aggregates = new List<AggregateModel>
+            Aggregates = new List<Aggregate>
             {
                 new() { Function = AggregateFunction.Sum, Field = "SSN", Alias = "total_ssn" }
             }
@@ -350,7 +350,7 @@ public class FieldSecurityTests
     {
         var options = new QueryOptions
         {
-            Aggregates = new List<AggregateModel>
+            Aggregates = new List<Aggregate>
             {
                 new() { Function = AggregateFunction.Count, Field = "Id", Alias = "cnt" },
                 new() { Function = AggregateFunction.Sum, Field = "SSN", Alias = "total_ssn" }
@@ -374,7 +374,7 @@ public class FieldSecurityTests
     {
         var options = new QueryOptions
         {
-            Aggregates = new List<AggregateModel>
+            Aggregates = new List<Aggregate>
             {
                 new() { Function = AggregateFunction.Count, Field = "Id", Alias = "cnt" }
             }
@@ -394,7 +394,7 @@ public class FieldSecurityTests
     {
         var options = new QueryOptions
         {
-            Aggregates = new List<AggregateModel>
+            Aggregates = new List<Aggregate>
             {
                 new() { Function = AggregateFunction.Sum, Field = "Orders.Total", Alias = "total" }
             }
@@ -419,11 +419,11 @@ public class FieldSecurityTests
         var options = new QueryOptions
         {
             GroupBy = new List<string> { "Name" },
-            Aggregates = new List<AggregateModel>
+            Aggregates = new List<Aggregate>
             {
                 new() { Function = AggregateFunction.Count, Field = "Id", Alias = "cnt" }
             },
-            Having = new HavingCondition
+            Having = new HavingConditionNode
             {
                 Function = AggregateFunction.Count,
                 Field = "SSN",
@@ -448,7 +448,7 @@ public class FieldSecurityTests
     {
         var options = new QueryOptions
         {
-            Having = new HavingCondition
+            Having = new HavingConditionNode
             {
                 Function = AggregateFunction.Sum,
                 Field = "SSN",
@@ -474,11 +474,11 @@ public class FieldSecurityTests
         var options = new QueryOptions
         {
             GroupBy = new List<string> { "Name" },
-            Aggregates = new List<AggregateModel>
+            Aggregates = new List<Aggregate>
             {
                 new() { Function = AggregateFunction.Count, Field = "Id", Alias = "cnt" }
             },
-            Having = new HavingCondition
+            Having = new HavingConditionNode
             {
                 Function = AggregateFunction.Count,
                 Field = "Id",
@@ -659,11 +659,11 @@ public class FieldSecurityTests
         var options = new QueryOptions
         {
             GroupBy = new List<string> { "Name" },
-            Aggregates = new List<AggregateModel>
+            Aggregates = new List<Aggregate>
             {
                 new() { Function = AggregateFunction.Count, Field = "Id", Alias = "cnt" }
             },
-            Having = new HavingCondition { Function = AggregateFunction.Count, Field = "Id", Operator = "gt", Value = "0" }
+            Having = new HavingConditionNode { Function = AggregateFunction.Count, Field = "Id", Operator = "gt", Value = "0" }
         };
         var execOptions = new QueryExecutionOptions
         {
@@ -682,12 +682,12 @@ public class FieldSecurityTests
         var options = new QueryOptions
         {
             GroupBy = new List<string> { "Name", "SSN" },
-            Aggregates = new List<AggregateModel>
+            Aggregates = new List<Aggregate>
             {
                 new() { Function = AggregateFunction.Count, Field = "Id", Alias = "cnt" },
                 new() { Function = AggregateFunction.Sum, Field = "SSN", Alias = "total_ssn" }
             },
-            Having = new HavingCondition { Function = AggregateFunction.Count, Field = "Id", Operator = "gt", Value = "0" }
+            Having = new HavingConditionNode { Function = AggregateFunction.Count, Field = "Id", Operator = "gt", Value = "0" }
         };
         var execOptions = new QueryExecutionOptions
         {
@@ -995,7 +995,7 @@ public class FieldSecurityTests
     {
         var options = new QueryOptions
         {
-            Aggregates = new List<AggregateModel>
+            Aggregates = new List<Aggregate>
             {
                 new() { Function = AggregateFunction.Count, Field = "Id", Alias = "cnt" }
             }
