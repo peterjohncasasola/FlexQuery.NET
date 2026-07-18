@@ -1192,4 +1192,156 @@ public class DslQueryParserTests
 
         result.IsValid.Should().BeTrue();
     }
+
+    private static FilterGroup ParseFilter(string filter)
+    {
+        var parameters = new FlexQueryParameters { Filter = filter };
+        var options = new DslQueryParser().Parse(parameters);
+        return options.Filter!;
+    }
+
+    [Fact]
+    public void DslFilter_AndKeyword_ParsesLogicalAnd()
+    {
+        var filter = ParseFilter("name:eq:john AND age:gt:20");
+
+        filter.Logic.Should().Be(LogicOperator.And);
+        filter.Filters.Should().HaveCount(2);
+        filter.Filters.Should().Contain(f => f.Field == "name" && f.Operator == FilterOperators.Equal && f.Value == "john");
+        filter.Filters.Should().Contain(f => f.Field == "age" && f.Operator == FilterOperators.GreaterThan && f.Value == "20");
+    }
+
+    [Fact]
+    public void DslFilter_OrKeyword_ParsesLogicalOr()
+    {
+        var filter = ParseFilter("name:eq:john OR name:eq:doe");
+
+        filter.Logic.Should().Be(LogicOperator.Or);
+        filter.Filters.Should().HaveCount(2);
+        filter.Filters.Should().AllSatisfy(f => f.Field.Should().Be("name"));
+        filter.Filters.Should().AllSatisfy(f => f.Operator.Should().Be(FilterOperators.Equal));
+        filter.Filters.Select(f => f.Value).Should().BeEquivalentTo("john", "doe");
+    }
+
+    [Fact]
+    public void DslFilter_AndKeyword_BackwardCompatibleWithSymbolic()
+    {
+        var andFilter = ParseFilter("name:eq:john AND age:gt:20");
+        var ampFilter = ParseFilter("name:eq:john & age:gt:20");
+
+        andFilter.Logic.Should().Be(ampFilter.Logic);
+        andFilter.Filters.Should().HaveCount(ampFilter.Filters.Count);
+        andFilter.Groups.Should().HaveCount(ampFilter.Groups.Count);
+    }
+
+    [Fact]
+    public void DslFilter_OrKeyword_BackwardCompatibleWithSymbolic()
+    {
+        var orFilter = ParseFilter("name:eq:john OR name:eq:doe");
+        var pipeFilter = ParseFilter("name:eq:john | name:eq:doe");
+
+        orFilter.Logic.Should().Be(pipeFilter.Logic);
+        orFilter.Filters.Should().HaveCount(pipeFilter.Filters.Count);
+        orFilter.Groups.Should().HaveCount(pipeFilter.Groups.Count);
+    }
+
+    [Fact]
+    public void DslFilter_MixedKeywordAndSymbolicOperators()
+    {
+        var filter = ParseFilter("name:eq:john AND age:gt:20 | status:eq:active");
+
+        filter.Logic.Should().Be(LogicOperator.Or);
+        filter.Filters.Should().ContainSingle(f => f.Field == "status" && f.Value == "active");
+        filter.Groups.Should().HaveCount(1);
+        filter.Groups[0].Logic.Should().Be(LogicOperator.And);
+        filter.Groups[0].Filters.Should().HaveCount(2);
+        filter.Groups[0].Filters.Should().Contain(f => f.Field == "name" && f.Value == "john");
+        filter.Groups[0].Filters.Should().Contain(f => f.Field == "age" && f.Value == "20");
+    }
+
+    [Fact]
+    public void DslFilter_MultipleConsecutiveAnd()
+    {
+        var filter = ParseFilter("name:eq:john AND age:gt:20 AND status:eq:active");
+
+        filter.Logic.Should().Be(LogicOperator.And);
+        filter.Filters.Should().HaveCount(3);
+    }
+
+    [Fact]
+    public void DslFilter_MultipleConsecutiveOr()
+    {
+        var filter = ParseFilter("name:eq:john OR name:eq:doe OR status:eq:active");
+
+        filter.Logic.Should().Be(LogicOperator.Or);
+        filter.Filters.Should().HaveCount(3);
+    }
+
+    [Fact]
+    public void DslFilter_AndKeyword_CaseInsensitive()
+    {
+        var lowerFilter = ParseFilter("name:eq:john and age:gt:20");
+        var upperFilter = ParseFilter("name:eq:john AND age:gt:20");
+
+        lowerFilter.Logic.Should().Be(upperFilter.Logic);
+        lowerFilter.Filters.Should().HaveCount(upperFilter.Filters.Count);
+    }
+
+    [Fact]
+    public void DslFilter_OrKeyword_CaseInsensitive()
+    {
+        var lowerFilter = ParseFilter("name:eq:john or name:eq:doe");
+        var upperFilter = ParseFilter("name:eq:john OR name:eq:doe");
+
+        lowerFilter.Logic.Should().Be(upperFilter.Logic);
+        lowerFilter.Filters.Should().HaveCount(upperFilter.Filters.Count);
+    }
+
+    [Fact]
+    public void DslFilter_AndOrKeyword_WithParentheses()
+    {
+        var filter = ParseFilter("(name:eq:john OR name:eq:doe) AND age:gt:20");
+
+        filter.Logic.Should().Be(LogicOperator.And);
+        filter.Groups.Should().ContainSingle();
+        filter.Groups[0].Logic.Should().Be(LogicOperator.Or);
+        filter.Groups[0].Filters.Should().HaveCount(2);
+        filter.Filters.Should().ContainSingle(f => f.Field == "age");
+    }
+
+    [Fact]
+    public void DslFilter_AndKeyword_NotCombined()
+    {
+        var filter = ParseFilter("!(name:eq:john) AND age:gt:20");
+
+        filter.Logic.Should().Be(LogicOperator.And);
+        filter.Filters.Should().ContainSingle(f => f.Field == "age");
+        filter.Groups.Should().ContainSingle();
+        filter.Groups[0].IsNegated.Should().BeTrue();
+    }
+
+    [Fact]
+    public void DslFilter_Value_ContainsAndKeyword_ThrowsParseError()
+    {
+        var act = () => ParseFilter("name:eq:AND");
+        act.Should().Throw<QueryParseException>();
+    }
+
+    [Fact]
+    public void DslFilter_Value_ContainsOrKeyword()
+    {
+        var filter = ParseFilter("status:in:Active,OR,Pending");
+
+        filter.Filters.Should().ContainSingle();
+        filter.Filters[0].Value.Should().Be("Active,OR,Pending");
+    }
+
+    [Fact]
+    public void DslFilter_Value_LowercaseAndAsValue()
+    {
+        var filter = ParseFilter("name:eq:anderson");
+
+        filter.Filters.Should().ContainSingle();
+        filter.Filters[0].Value.Should().Be("anderson");
+    }
 }

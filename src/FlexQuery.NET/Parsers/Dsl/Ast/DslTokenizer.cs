@@ -111,6 +111,10 @@ internal sealed class DslTokenizer
         while (_position < _source.Length)
         {
             current = _source[_position];
+
+            if (IsAtLogicalKeyword(_source, _position))
+                break;
+
             if (current is '&' or '|' or ')' or '(')
             {
                 break;
@@ -141,6 +145,10 @@ internal sealed class DslTokenizer
         while (_position < _source.Length)
         {
             var current = _source[_position];
+
+            if (IsAtLogicalKeyword(_source, _position))
+                break;
+
             if (current is '&' or '|' or ')' or '(')
             {
                 break;
@@ -167,6 +175,39 @@ internal sealed class DslTokenizer
         return new DslToken(DslTokenKind.Identifier, s, tokenStart);
     }
 
+    private static bool IsAtLogicalKeyword(string source, int position)
+    {
+        if (position >= source.Length)
+            return false;
+
+        var remaining = source.Length - position;
+
+        if (remaining >= 3 &&
+            source[position] is 'A' or 'a' &&
+            source[position + 1] is 'N' or 'n' &&
+            source[position + 2] is 'D' or 'd')
+        {
+            var after = position + 3;
+            if (after >= source.Length)
+                return true;
+            var ch = source[after];
+            return ch is ':' or '&' or '|' or '(' or ')' || char.IsWhiteSpace(ch);
+        }
+
+        if (remaining >= 2 &&
+            source[position] is 'O' or 'o' &&
+            source[position + 1] is 'R' or 'r')
+        {
+            var after = position + 2;
+            if (after >= source.Length)
+                return true;
+            var ch = source[after];
+            return ch is ':' or '&' or '|' or '(' or ')' || char.IsWhiteSpace(ch);
+        }
+
+        return false;
+    }
+
     private DslToken ReadIdentifier()
     {
         var start = _position;
@@ -188,7 +229,13 @@ internal sealed class DslTokenizer
         if (_position == start)
             throw new DslParseException($"Unexpected character '{_source[_position]}' at position {_position}.");
 
-        return new DslToken(DslTokenKind.Identifier, _source[start.._position], start);
+        var raw = _source[start.._position];
+        if (raw.Equals("AND", StringComparison.OrdinalIgnoreCase))
+            return new DslToken(DslTokenKind.And, raw, start);
+        if (raw.Equals("OR", StringComparison.OrdinalIgnoreCase))
+            return new DslToken(DslTokenKind.Or, raw, start);
+
+        return new DslToken(DslTokenKind.Identifier, raw, start);
     }
 
     private DslToken ReadEscapedIdentifier(int tokenStart)
