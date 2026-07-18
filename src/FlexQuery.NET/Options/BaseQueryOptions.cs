@@ -1,6 +1,7 @@
 using System.Linq.Expressions;
 using FlexQuery.NET.Configuration;
 using FlexQuery.NET.Execution;
+using FlexQuery.NET.Parsers;
 using FlexQuery.NET.Security;
 
 namespace FlexQuery.NET.Options;
@@ -60,6 +61,18 @@ public abstract class BaseQueryOptions
     /// <summary>If true, field name matching during validation is case-insensitive.</summary>
     public bool CaseInsensitive { get; set; } = true;
     
+
+    /// <summary>
+    /// Optional per-request query syntax override.
+    /// When <c>null</c>, the global <see cref="Configuration.FlexQueryOptions.DefaultQuerySyntax"/> is used.
+    /// </summary>
+    public QuerySyntax? QuerySyntax { get; set; }
+
+    /// <summary>
+    /// When <c>true</c>, paging is disabled for this request.
+    /// Maps to <see cref="Models.Paging.PagingOptions.Disabled"/> during execution.
+    /// </summary>
+    public bool DisablePaging { get; set; }
 
     /// <summary>
     /// Optional listener that receives read-only execution events.

@@ -56,7 +56,8 @@ public static class FlexQueryDapperExtensions
         var dapperOptions = new DapperQueryOptions();
         configure?.Invoke(dapperOptions);
 
-        var options = parameters.ToQueryOptions();
+        var effectiveSyntax = dapperOptions.QuerySyntax ?? FlexQueryCore.DefaultOptions.DefaultQuerySyntax;
+        var options = parameters.ToQueryOptions(effectiveSyntax);
         return await DapperQueryExecutor.RunAsync<T>(connection, options, dapperOptions, cancellationToken);
     }
 

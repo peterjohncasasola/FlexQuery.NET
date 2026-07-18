@@ -58,8 +58,8 @@ public class FlexQueryCoreTests
     [Fact]
     public void Configure_SetsQuerySyntaxGlobally()
     {
-        FlexQueryCore.Configure(opts => opts.QuerySyntax = QuerySyntax.NativeDsl);
+        FlexQueryCore.Configure(opts => opts.DefaultQuerySyntax = QuerySyntax.NativeDsl);
 
-        FlexQueryCore.DefaultOptions.QuerySyntax.Should().Be(QuerySyntax.NativeDsl);
+        FlexQueryCore.DefaultOptions.DefaultQuerySyntax.Should().Be(QuerySyntax.NativeDsl);
     }
 }

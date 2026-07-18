@@ -49,7 +49,7 @@ public static class FlexQueryCore
             var options = new FlexQueryOptions();
             configure?.Invoke(options);
 
-            QueryOptionsParser.SetGlobalSyntax(options.QuerySyntax);
+            QueryOptionsParser.SetGlobalSyntax(options.DefaultQuerySyntax);
 
             _defaultOptions = options;
             _configured = true;

@@ -41,4 +41,17 @@ public static class FlexQueryParametersExtensions
         ArgumentNullException.ThrowIfNull(parameters);
         return QueryOptionsParser.Parse(parameters);
     }
+
+    /// <summary>
+    /// Converts the specified <see cref="FlexQueryParameters"/> into a
+    /// <see cref="QueryOptions"/> instance using the specified query syntax.
+    /// </summary>
+    /// <param name="parameters">The incoming query parameters.</param>
+    /// <param name="syntax">The query syntax to use for parsing.</param>
+    /// <returns>A <see cref="QueryOptions"/> instance representing the parsed query.</returns>
+    public static QueryOptions ToQueryOptions(this FlexQueryParameters parameters, QuerySyntax syntax)
+    {
+        ArgumentNullException.ThrowIfNull(parameters);
+        return QueryOptionsParser.Parse(parameters, syntax);
+    }
 }

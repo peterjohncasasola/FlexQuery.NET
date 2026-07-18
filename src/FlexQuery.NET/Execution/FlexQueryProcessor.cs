@@ -48,6 +48,9 @@ internal sealed class FlexQueryProcessor(FlexQueryOptions globalOptions) : IFlex
     {
         queryOptions = queryOptions.Normalize();
 
+        if (options.DisablePaging)
+            queryOptions.Paging.Disabled = true;
+
         var listener = options.Listener;
         
         var executionContext = listener is not null

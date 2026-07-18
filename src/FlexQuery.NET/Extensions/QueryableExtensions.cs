@@ -79,7 +79,8 @@ public static class QueryableExtensions
         var exec = new QueryExecutionOptions();
         configure?.Invoke(exec);
 
-        var options = parameters.ToQueryOptions();
+        var effectiveSyntax = exec.QuerySyntax ?? FlexQueryCore.DefaultOptions.DefaultQuerySyntax;
+        var options = parameters.ToQueryOptions(effectiveSyntax);
         return Processor.ExecuteAsync(query, options, exec)
             .GetAwaiter()
             .GetResult();

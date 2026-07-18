@@ -30,6 +30,10 @@ internal static class FlexQueryEfCoreExecutor
         QueryOptionsEfCoreExtensions.EnsureEfCoreOperatorsRegistered();
         
         queryOptions = queryOptions.Normalize();
+
+        if (options.DisablePaging)
+            queryOptions.Paging.Disabled = true;
+
         queryOptions.ValidateOrThrow<T>(options);
 
         var listener = options.Listener;

@@ -38,6 +38,10 @@ internal static class DapperQueryExecutor
         queryOptions.Items[ContextKeys.EntityType] = typeof(T);
 
         queryOptions = queryOptions.Normalize();
+
+        if (options.DisablePaging)
+            queryOptions.Paging.Disabled = true;
+
         queryOptions.ValidateOrThrow(typeof(T), options);
 
         var listener = options.Listener;

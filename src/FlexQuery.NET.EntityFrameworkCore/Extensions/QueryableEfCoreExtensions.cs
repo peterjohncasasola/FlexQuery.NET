@@ -62,7 +62,8 @@ public static class QueryableEfCoreExtensions
         where T : class
     {
         var options = ResolveOptions(configure);
-        var queryOptions = parameters.ToQueryOptions();
+        var effectiveSyntax = options.QuerySyntax ?? FlexQueryCore.DefaultOptions.DefaultQuerySyntax;
+        var queryOptions = parameters.ToQueryOptions(effectiveSyntax);
         ThrowIfNull(query, queryOptions, options);
 
         return await query.FlexQueryAsync(parameters, options, cancellationToken);
