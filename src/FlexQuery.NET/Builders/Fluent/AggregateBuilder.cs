@@ -6,14 +6,14 @@ namespace FlexQuery.NET.Builders.Fluent;
 /// <summary>Builds a list of AggregateModel entries for use with QueryBuilder.Aggregate.</summary>
 public sealed class AggregateBuilder
 {
-    private readonly List<AggregateModel> _aggregates = new();
+    private readonly List<Aggregate> _aggregates = new();
 
-    internal List<AggregateModel> Build() => _aggregates;
+    internal List<Aggregate> Build() => _aggregates;
 
     /// <summary>Adds a SUM(field) aggregate with an optional alias.</summary>
     public AggregateBuilder Sum(string field, string? alias)
     {
-        _aggregates.Add(new AggregateModel
+        _aggregates.Add(new Aggregate
         {
             Function = AggregateFunction.Sum,
             Field = field,
@@ -25,7 +25,7 @@ public sealed class AggregateBuilder
     /// <summary>Adds a COUNT(field) aggregate with an optional alias.</summary>
     public AggregateBuilder Count(string field, string? alias)
     {
-        _aggregates.Add(new AggregateModel
+        _aggregates.Add(new Aggregate
         {
             Function = AggregateFunction.Count,
             Field = field,
@@ -37,7 +37,7 @@ public sealed class AggregateBuilder
     /// <summary>Adds an AVG(field) aggregate with an optional alias.</summary>
     public AggregateBuilder Avg(string field, string? alias)
     {
-        _aggregates.Add(new AggregateModel
+        _aggregates.Add(new Aggregate
         {
             Function = AggregateFunction.Avg,
             Field = field,
@@ -49,7 +49,7 @@ public sealed class AggregateBuilder
     /// <summary>Adds a MIN(field) aggregate with an optional alias.</summary>
     public AggregateBuilder Min(string field, string? alias)
     {
-        _aggregates.Add(new AggregateModel
+        _aggregates.Add(new Aggregate
         {
             Function = AggregateFunction.Min,
             Field = field,
@@ -61,7 +61,7 @@ public sealed class AggregateBuilder
     /// <summary>Adds a MAX(field) aggregate with an optional alias.</summary>
     public AggregateBuilder Max(string field, string? alias)
     {
-        _aggregates.Add(new AggregateModel
+        _aggregates.Add(new Aggregate
         {
             Function = AggregateFunction.Max,
             Field = field,

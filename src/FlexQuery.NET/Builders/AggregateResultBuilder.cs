@@ -8,7 +8,7 @@ internal static class AggregateResultBuilder
 {
     public static Dictionary<string, Dictionary<string, object>>? Build(
         object? aggregateRow,
-        IReadOnlyCollection<AggregateModel> aggregates)
+        IReadOnlyCollection<Aggregate> aggregates)
     {
         if (aggregateRow == null)
         {
