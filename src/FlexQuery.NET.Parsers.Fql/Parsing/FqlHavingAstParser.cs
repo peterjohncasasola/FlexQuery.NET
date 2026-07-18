@@ -62,7 +62,7 @@ internal sealed class FqlHavingAstParser(IReadOnlyList<FqlToken> tokens)
         while (Match(FqlTokenType.Or))
         {
             var right = ParseAnd();
-            left = new FqlHavingLogicalNode(LogicOperator.And, Flatten("or", [left, right]));
+            left = new FqlHavingLogicalNode(LogicOperator.Or, Flatten("or", [left, right]));
         }
 
         return left;

@@ -3,6 +3,7 @@ using FlexQuery.NET.Dapper.Mapping;
 using FlexQuery.NET.Dapper.Sql.Builders;
 using FlexQuery.NET.Dapper.Sql.Models;
 using FlexQuery.NET.Models.Aggregates;
+using FlexQuery.NET.Models.Filters;
 
 namespace FlexQuery.NET.Tests.Dapper.Translation;
 
@@ -472,6 +473,122 @@ public class SqlHavingBuilderTests
         var result = SqlHavingBuilder.Build(Dialect, having, mapping, parameters);
 
         result.Should().Be("HAVING COUNT(*) custom_op @p0");
+    }
+
+    [Fact]
+    public void Build_OrLogicalNode_GeneratesOrSql()
+    {
+        var mapping = _registry.GetMapping(typeof(Employee));
+        var parameters = new SqlParameterContext(Dialect);
+
+        var having = new HavingLogicalNode
+        {
+            Logic = LogicOperator.Or,
+            Children =
+            [
+                new HavingConditionNode
+                {
+                    Function = AggregateFunction.Count,
+                    Field = null,
+                    Operator = "eq",
+                    Value = "627"
+                },
+                new HavingConditionNode
+                {
+                    Function = AggregateFunction.Avg,
+                    Field = "Score",
+                    Operator = "lte",
+                    Value = "25000"
+                }
+            ]
+        };
+
+        var result = SqlHavingBuilder.Build(Dialect, having, mapping, parameters);
+
+        result.Should().Be("HAVING (COUNT(*) = @p0 OR AVG([Score]) <= @p1)");
+    }
+
+    [Fact]
+    public void Build_AndLogicalNode_GeneratesAndSql()
+    {
+        var mapping = _registry.GetMapping(typeof(Employee));
+        var parameters = new SqlParameterContext(Dialect);
+
+        var having = new HavingLogicalNode
+        {
+            Logic = LogicOperator.And,
+            Children =
+            [
+                new HavingConditionNode
+                {
+                    Function = AggregateFunction.Count,
+                    Field = null,
+                    Operator = "eq",
+                    Value = "627"
+                },
+                new HavingConditionNode
+                {
+                    Function = AggregateFunction.Avg,
+                    Field = "Score",
+                    Operator = "lte",
+                    Value = "25000"
+                }
+            ]
+        };
+
+        var result = SqlHavingBuilder.Build(Dialect, having, mapping, parameters);
+
+        result.Should().Be("HAVING (COUNT(*) = @p0 AND AVG([Score]) <= @p1)");
+    }
+
+    [Fact]
+    public void Build_NestedLogicalNode_GeneratesNestedParentheses()
+    {
+        var mapping = _registry.GetMapping(typeof(Employee));
+        var parameters = new SqlParameterContext(Dialect);
+
+        var having = new HavingLogicalNode
+        {
+            Logic = LogicOperator.And,
+            Children =
+            [
+                new HavingGroupNode
+                {
+                    Inner = new HavingLogicalNode
+                    {
+                        Logic = LogicOperator.Or,
+                        Children =
+                        [
+                            new HavingConditionNode
+                            {
+                                Function = AggregateFunction.Count,
+                                Field = null,
+                                Operator = "eq",
+                                Value = "627"
+                            },
+                            new HavingConditionNode
+                            {
+                                Function = AggregateFunction.Avg,
+                                Field = "Score",
+                                Operator = "lte",
+                                Value = "25000"
+                            }
+                        ]
+                    }
+                },
+                new HavingConditionNode
+                {
+                    Function = AggregateFunction.Sum,
+                    Field = "Score",
+                    Operator = "gt",
+                    Value = "1000000"
+                }
+            ]
+        };
+
+        var result = SqlHavingBuilder.Build(Dialect, having, mapping, parameters);
+
+        result.Should().Be("HAVING (((COUNT(*) = @p0 OR AVG([Score]) <= @p1)) AND SUM([Score]) > @p2)");
     }
     
 }

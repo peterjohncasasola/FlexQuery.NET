@@ -1,6 +1,7 @@
 using FlexQuery.NET.Execution;
 using FlexQuery.NET.Models;
 using FlexQuery.NET.Models.Aggregates;
+using FlexQuery.NET.Models.Filters;
 using FlexQuery.NET.Parsers;
 using FlexQuery.NET.Parsers.Dsl;
 using FlexQuery.NET.Validation;
@@ -231,5 +232,84 @@ public class DslHavingParserTests
 
         result.IsValid.Should().BeFalse();
         result.Errors.Should().ContainSingle(e => e.Code == ValidationErrorCodes.HavingAliasMismatch);
+    }
+
+    [Fact]
+    public void Parse_OrCondition_ReturnsLogicalNodeWithOrLogic()
+    {
+        var result = Parse("sum:total:gt:100 OR avg:price:lt:50");
+
+        result.Should().NotBeNull();
+        result.Should().BeOfType<HavingLogicalNode>();
+        var logical = (HavingLogicalNode)result!;
+        logical.Logic.Should().Be(LogicOperator.Or);
+        logical.Children.Should().HaveCount(2);
+    }
+
+    [Fact]
+    public void Parse_AndCondition_ReturnsLogicalNodeWithAndLogic()
+    {
+        var result = Parse("sum:total:gt:100 AND count:id:gte:5");
+
+        result.Should().NotBeNull();
+        result.Should().BeOfType<HavingLogicalNode>();
+        var logical = (HavingLogicalNode)result!;
+        logical.Logic.Should().Be(LogicOperator.And);
+        logical.Children.Should().HaveCount(2);
+    }
+
+    [Fact]
+    public void Parse_ParenthesizedCondition_ReturnsGroupNode()
+    {
+        var result = Parse("(sum:total:gt:100 OR avg:price:lt:50)");
+
+        result.Should().NotBeNull();
+        result.Should().BeOfType<HavingGroupNode>();
+        var group = (HavingGroupNode)result!;
+        group.Inner.Should().BeOfType<HavingLogicalNode>();
+        var logical = (HavingLogicalNode)group.Inner;
+        logical.Logic.Should().Be(LogicOperator.Or);
+        logical.Children.Should().HaveCount(2);
+    }
+
+    [Fact]
+    public void Parse_NestedOrAnd_PreservesPrecedence()
+    {
+        var result = Parse("(sum:total:gt:100 OR avg:price:lt:50) AND count:id:gte:5");
+
+        result.Should().NotBeNull();
+        result.Should().BeOfType<HavingLogicalNode>();
+        var outer = (HavingLogicalNode)result!;
+        outer.Logic.Should().Be(LogicOperator.And);
+        outer.Children.Should().HaveCount(2);
+
+        outer.Children[0].Should().BeOfType<HavingGroupNode>();
+        var group = (HavingGroupNode)outer.Children[0];
+        group.Inner.Should().BeOfType<HavingLogicalNode>();
+        var inner = (HavingLogicalNode)group.Inner;
+        inner.Logic.Should().Be(LogicOperator.Or);
+        inner.Children.Should().HaveCount(2);
+    }
+
+    [Fact]
+    public void Parse_OrChildConditions_PreserveOrderAndValues()
+    {
+        var result = Parse("sum:total:gt:100 OR avg:price:lt:50");
+
+        result.Should().NotBeNull();
+        var logical = (HavingLogicalNode)result!;
+        logical.Children.Should().HaveCount(2);
+
+        var first = (HavingConditionNode)logical.Children[0];
+        first.Function.Should().Be(AggregateFunction.Sum);
+        first.Field.Should().Be("total");
+        first.Operator.Should().Be("gt");
+        first.Value.Should().Be("100");
+
+        var second = (HavingConditionNode)logical.Children[1];
+        second.Function.Should().Be(AggregateFunction.Avg);
+        second.Field.Should().Be("price");
+        second.Operator.Should().Be("lt");
+        second.Value.Should().Be("50");
     }
 }

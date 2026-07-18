@@ -16,7 +16,6 @@ public class FlatProjectionTests : IDisposable
     private readonly TestDbContext _db = TestDbContext.CreateSeeded();
     public void Dispose() => _db.Dispose();
 
-    // â”€â”€ Flat mode â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
     [Fact]
     public async Task FlatMode_FlattensSingleLevelCollection_WithAlias()
@@ -106,7 +105,6 @@ public class FlatProjectionTests : IDisposable
             .WithMessage("Flat mode does not support mixing scalar properties*");
     }
 
-    // â”€â”€ FlatMixed mode â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
     [Fact]
     public async Task FlatMixedMode_CombinesRootScalarsWithDeepCollectionFields()
@@ -173,7 +171,6 @@ public class FlatProjectionTests : IDisposable
         qty.Should().BeGreaterThan(0);
     }
 
-    // â”€â”€ Nested mode alias â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
     [Fact]
     public async Task NestedMode_AliasOnScalarField_ReplacesPropertyNameInOutput()

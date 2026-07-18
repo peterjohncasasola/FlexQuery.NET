@@ -2,6 +2,7 @@ using FlexQuery.NET.Exceptions;
 using FlexQuery.NET.Execution;
 using FlexQuery.NET.Models;
 using FlexQuery.NET.Models.Aggregates;
+using FlexQuery.NET.Models.Filters;
 using FlexQuery.NET.Parsers.Fql;
 using FlexQuery.NET.Validation;
 using FlexQuery.NET.Validation.Rules;
@@ -245,6 +246,98 @@ public class FqlHavingParserTests
         rule.Validate(options, new QueryContext { TargetType = typeof(Order) }, result);
 
         result.IsValid.Should().BeFalse();
+    }
+
+    [Fact]
+    public void Parse_OrCondition_ReturnsLogicalNodeWithOrLogic()
+    {
+        var result = Parse("COUNT(CustomerGroupId) = 627 OR AVG(CreditLimit) <= 25000");
+
+        result.Should().NotBeNull();
+        result.Should().BeOfType<HavingLogicalNode>();
+        var logical = (HavingLogicalNode)result!;
+        logical.Logic.Should().Be(LogicOperator.Or);
+        logical.Children.Should().HaveCount(2);
+    }
+
+    [Fact]
+    public void Parse_AndCondition_ReturnsLogicalNodeWithAndLogic()
+    {
+        var result = Parse("COUNT(CustomerGroupId) = 627 AND AVG(CreditLimit) <= 25000");
+
+        result.Should().NotBeNull();
+        result.Should().BeOfType<HavingLogicalNode>();
+        var logical = (HavingLogicalNode)result!;
+        logical.Logic.Should().Be(LogicOperator.And);
+        logical.Children.Should().HaveCount(2);
+    }
+
+    [Fact]
+    public void Parse_ParenthesizedOr_ReturnsGroupNode()
+    {
+        var result = Parse("(COUNT(CustomerGroupId) = 627 OR AVG(CreditLimit) <= 25000)");
+
+        result.Should().NotBeNull();
+        result.Should().BeOfType<HavingGroupNode>();
+        var group = (HavingGroupNode)result!;
+        group.Inner.Should().BeOfType<HavingLogicalNode>();
+        var logical = (HavingLogicalNode)group.Inner;
+        logical.Logic.Should().Be(LogicOperator.Or);
+        logical.Children.Should().HaveCount(2);
+    }
+
+    [Fact]
+    public void Parse_NestedOrAnd_PreservesPrecedence()
+    {
+        var result = Parse("(COUNT(CustomerGroupId) = 627 OR AVG(CreditLimit) <= 25000) AND SUM(CreditLimit) > 1000000");
+
+        result.Should().NotBeNull();
+        result.Should().BeOfType<HavingLogicalNode>();
+        var outer = (HavingLogicalNode)result!;
+        outer.Logic.Should().Be(LogicOperator.And);
+        outer.Children.Should().HaveCount(2);
+
+        outer.Children[0].Should().BeOfType<HavingGroupNode>();
+        var group = (HavingGroupNode)outer.Children[0];
+        group.Inner.Should().BeOfType<HavingLogicalNode>();
+        var inner = (HavingLogicalNode)group.Inner;
+        inner.Logic.Should().Be(LogicOperator.Or);
+        inner.Children.Should().HaveCount(2);
+    }
+
+    [Fact]
+    public void Parse_DoubleParentheses_ReturnsNestedGroupNode()
+    {
+        var result = Parse("((COUNT(CustomerGroupId) = 627))");
+
+        result.Should().NotBeNull();
+        result.Should().BeOfType<HavingGroupNode>();
+        var outer = (HavingGroupNode)result!;
+        outer.Inner.Should().BeOfType<HavingGroupNode>();
+        var inner = (HavingGroupNode)outer.Inner;
+        inner.Inner.Should().BeOfType<HavingConditionNode>();
+    }
+
+    [Fact]
+    public void Parse_OrChildConditions_PreserveOrderAndValues()
+    {
+        var result = Parse("COUNT(CustomerGroupId) = 627 OR AVG(CreditLimit) <= 25000");
+
+        result.Should().NotBeNull();
+        var logical = (HavingLogicalNode)result!;
+        logical.Children.Should().HaveCount(2);
+
+        var first = (HavingConditionNode)logical.Children[0];
+        first.Function.Should().Be(AggregateFunction.Count);
+        first.Field.Should().Be("CustomerGroupId");
+        first.Operator.Should().Be("eq");
+        first.Value.Should().Be("627");
+
+        var second = (HavingConditionNode)logical.Children[1];
+        second.Function.Should().Be(AggregateFunction.Avg);
+        second.Field.Should().Be("CreditLimit");
+        second.Operator.Should().Be("lte");
+        second.Value.Should().Be("25000");
     }
     
 }
