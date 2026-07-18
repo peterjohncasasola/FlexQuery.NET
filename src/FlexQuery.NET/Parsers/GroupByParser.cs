@@ -17,12 +17,14 @@ internal static class GroupByParser
             var trimmed = item.Trim();
             if (trimmed.Length == 0)
                 throw new FlexQueryParseException(
-                    $"Unable to parse groupBy expression '{groupByRaw}'. Empty group item found.");
+                    "Unable to parse groupBy expression. Empty group item found.",
+                    position: -1);
 
             if (!ParserUtilities.IsValidPropertyPath(trimmed.AsSpan()))
                 throw new FlexQueryParseException(
-                    $"Invalid property path '{trimmed}' in groupBy expression '{groupByRaw}'. " +
-                    "Property paths must be dot-separated identifiers (e.g. 'Category' or 'Customer.Region').");
+                    $"Invalid property path '{trimmed}' in groupBy expression. " +
+                    "Property paths must be dot-separated identifiers (e.g. 'Category' or 'Customer.Region').",
+                    position: -1);
 
             result.Add(trimmed);
         }
@@ -30,8 +32,8 @@ internal static class GroupByParser
         if (result.Count == 0)
         {
             throw new FlexQueryParseException(
-                $"Unable to parse groupBy expression '{groupByRaw}'. " +
-                "Expected comma-separated field paths.");
+                "Unable to parse groupBy expression. Expected comma-separated field paths.",
+                position: -1);
         }
 
         return result;

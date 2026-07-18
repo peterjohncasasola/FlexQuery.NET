@@ -18,32 +18,33 @@ internal static class DslAggregateParser
             var trimmed = item.Trim();
             if (trimmed.Length == 0)
                 throw new DslParseException(
-                    $"Unable to parse aggregate expression '{rawAggregates}'. Empty aggregate item found.");
+                    "Unable to parse aggregate expression. Empty aggregate item found.",
+                    position: -1);
 
             var parts = trimmed.Split(':');
 
             if (parts.Length < 2)
                 throw new DslParseException(
-                    $"Unable to parse aggregate expression '{rawAggregates}'. " +
-                    $"Expected format: Function:Field[:Alias]. Invalid item '{trimmed}'.");
+                    "Unable to parse aggregate expression. Expected format: Function:Field[:Alias].",
+                    position: -1);
 
             for (var i = 0; i < parts.Length; i++)
                 parts[i] = parts[i].Trim();
 
             if (parts[0].Length == 0)
                 throw new DslParseException(
-                    $"Unable to parse aggregate expression '{rawAggregates}'. " +
-                    $"Expected format: Function:Field[:Alias]. Missing function in '{trimmed}'.");
+                    "Unable to parse aggregate expression. Expected format: Function:Field[:Alias]. Missing function.",
+                    position: -1);
 
             if (parts[1].Length == 0)
                 throw new DslParseException(
-                    $"Unable to parse aggregate expression '{rawAggregates}'. " +
-                    $"Expected format: Function:Field[:Alias]. Missing field in '{trimmed}'.");
+                    "Unable to parse aggregate expression. Expected format: Function:Field[:Alias]. Missing field.",
+                    position: -1);
 
             if (parts.Length > 3)
                 throw new DslParseException(
-                    $"Unable to parse aggregate expression '{rawAggregates}'. " +
-                    $"Expected format: Function:Field[:Alias]. Too many parts in '{trimmed}'.");
+                    "Unable to parse aggregate expression. Expected format: Function:Field[:Alias]. Too many parts.",
+                    position: -1);
 
             var aggregateRef = AggregateGrammar.ParseFunctionField($"{parts[0]}:{parts[1]}");
 
@@ -52,13 +53,14 @@ internal static class DslAggregateParser
                 var aliasPart = parts[2];
                 if (string.IsNullOrWhiteSpace(aliasPart))
                     throw new DslParseException(
-                        $"Unable to parse aggregate expression '{rawAggregates}'. " +
-                        $"Expected format: Function:Field[:Alias]. Empty alias in '{trimmed}'.");
+                        "Unable to parse aggregate expression. Expected format: Function:Field[:Alias]. Empty alias.",
+                        position: -1);
                 
                 if (!ParserUtilities.IsValidIdentifier(aliasPart.AsSpan()))
                     throw new DslParseException(
                         $"Invalid alias '{aliasPart}' in aggregate expression. " +
-                        "Aliases must be valid identifiers (e.g. 'TotalSales').");
+                        "Aliases must be valid identifiers (e.g. 'TotalSales').",
+                        position: -1);
 
                 result.Add(new Aggregate
                 {
@@ -81,8 +83,8 @@ internal static class DslAggregateParser
         if (result.Count == 0)
         {
             throw new DslParseException(
-                $"Unable to parse aggregate expression '{rawAggregates}'. " +
-                $"Expected format: Function:Field[:Alias]. No valid aggregate expressions found.");
+                "Unable to parse aggregate expression. Expected format: Function:Field[:Alias]. No valid aggregate expressions found.",
+                position: -1);
         }
 
         return result;

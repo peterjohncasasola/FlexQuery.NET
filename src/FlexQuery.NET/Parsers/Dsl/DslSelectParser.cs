@@ -21,11 +21,13 @@ internal static class DslSelectParser
     {
         if (rawSelect is not null && string.IsNullOrWhiteSpace(rawSelect))
             throw new DslParseException(
-                $"The 'select' parameter value is empty. Expected comma-separated field paths.");
+                "The 'select' parameter value is empty. Expected comma-separated field paths.",
+                position: -1);
 
         if (string.IsNullOrWhiteSpace(rawSelect))
             throw new DslParseException(
-                "The 'select' parameter value is empty. Expected comma-separated field paths.");
+                "The 'select' parameter value is empty. Expected comma-separated field paths.",
+                position: -1);
 
         if (rawSelect.Contains('(') || rawSelect.Contains('*'))
         {
@@ -44,31 +46,36 @@ internal static class DslSelectParser
             {
                 if (field.IndexOf(':', colonIndex + 1) >= 0)
                     throw new DslParseException(
-                        $"Invalid alias in 'select' parameter. " +
-                        "Colon-separated aliases must contain exactly one colon (e.g. 'Name:FullName').");
+                        "Invalid alias in 'select' parameter. " +
+                        "Colon-separated aliases must contain exactly one colon (e.g. 'Name:FullName').",
+                        position: -1);
 
                 var rawPath = field[..colonIndex].Trim();
                 var rawAlias = field[(colonIndex + 1)..].Trim();
 
                 if (rawPath.Length == 0)
                     throw new DslParseException(
-                        $"Invalid property path in 'select' parameter. " +
-                        "Property path must not be empty (e.g. 'Name:FullName').");
+                        "Invalid property path in 'select' parameter. " +
+                        "Property path must not be empty (e.g. 'Name:FullName').",
+                        position: -1);
 
                 if (rawAlias.Length == 0)
                     throw new DslParseException(
-                        $"Invalid alias in 'select' parameter. " +
-                        "Alias must be a non-empty identifier (e.g. 'Name:FullName').");
+                        "Invalid alias in 'select' parameter. " +
+                        "Alias must be a non-empty identifier (e.g. 'Name:FullName').",
+                        position: -1);
 
                 if (!ParserUtilities.IsValidPropertyPath(rawPath.AsSpan()))
                     throw new DslParseException(
                         $"Invalid property path '{rawPath}' in 'select' parameter. " +
-                        "Property paths must be dot-separated identifiers (e.g. 'Id' or 'Customer.Name').");
+                        "Property paths must be dot-separated identifiers (e.g. 'Id' or 'Customer.Name').",
+                        position: -1);
 
                 if (!ParserUtilities.IsValidIdentifier(rawAlias.AsSpan()))
                     throw new DslParseException(
                         $"Invalid alias '{rawAlias}' in 'select' parameter. " +
-                        "Aliases must be valid identifiers (e.g. 'FullName').");
+                        "Aliases must be valid identifiers (e.g. 'FullName').",
+                        position: -1);
 
                 validated.Add(new SelectNode { Field = rawPath, Alias = rawAlias });
                 continue;
@@ -77,7 +84,8 @@ internal static class DslSelectParser
             if (!ParserUtilities.IsValidPropertyPath(field.AsSpan()))
                 throw new DslParseException(
                     $"Invalid property path '{field}' in 'select' parameter. " +
-                    "Property paths must be dot-separated identifiers (e.g. 'Id' or 'Customer.Name').");
+                    "Property paths must be dot-separated identifiers (e.g. 'Id' or 'Customer.Name').",
+                    position: -1);
 
             validated.Add(new SelectNode { Field = field });
         }
@@ -95,11 +103,13 @@ internal static class DslSelectParser
     {
         if (rawSelect is not null && string.IsNullOrWhiteSpace(rawSelect))
             throw new DslParseException(
-                "The 'select' parameter value is empty. Expected comma-separated field paths.");
+                "The 'select' parameter value is empty. Expected comma-separated field paths.",
+                position: -1);
 
         if (string.IsNullOrWhiteSpace(rawSelect))
             throw new DslParseException(
-                "The 'select' parameter value is empty. Expected comma-separated field paths.");
+                "The 'select' parameter value is empty. Expected comma-separated field paths.",
+                position: -1);
 
         var children = new List<SelectNode>();
         ParseSelectionList(rawSelect.AsSpan(), children, isRoot: true);
@@ -154,7 +164,8 @@ internal static class DslSelectParser
             {
                 if (!hasSelection)
                     throw new DslParseException(
-                        "Empty field in 'select' parameter. Expected identifier before comma.");
+                        "Empty field in 'select' parameter. Expected identifier before comma.",
+                        position: -1);
 
                 i++;
 
@@ -164,18 +175,21 @@ internal static class DslSelectParser
 
                 if (j >= span.Length)
                     throw new DslParseException(
-                        "Empty field in 'select' parameter. Trailing comma is not allowed.");
+                        "Empty field in 'select' parameter. Trailing comma is not allowed.",
+                        position: -1);
 
                 if (span[j] == ',')
                     throw new DslParseException(
-                        "Empty field in 'select' parameter. Expected identifier between commas.");
+                        "Empty field in 'select' parameter. Expected identifier between commas.",
+                        position: -1);
 
                 continue;
             }
 
             if (isRoot && span[i] == ')')
                 throw new DslParseException(
-                    "Unexpected closing parenthesis in 'select' parameter.");
+                    "Unexpected closing parenthesis in 'select' parameter.",
+                    position: -1);
 
             string identifier;
             if (span[i] == '*')
@@ -191,25 +205,29 @@ internal static class DslSelectParser
 
                 if (i == start)
                     throw new DslParseException(
-                        "Empty field in 'select' parameter. Expected identifier or '*'.");
+                        "Empty field in 'select' parameter. Expected identifier or '*'.",
+                        position: -1);
 
                 identifier = span.Slice(start, i - start).ToString();
 
                 if (identifier != "*" && !ParserUtilities.IsValidIdentifier(identifier.AsSpan()))
                     throw new DslParseException(
                         $"Invalid identifier '{identifier}' in 'select' parameter. " +
-                        "Identifiers must start with a letter and contain only letters, digits, and underscores.");
+                        "Identifiers must start with a letter and contain only letters, digits, and underscores.",
+                        position: -1);
             }
 
             if (identifier == "*")
             {
                 if (!isRoot)
                     throw new DslParseException(
-                        "Wildcard selection is only supported at the root level.");
+                        "Wildcard selection is only supported at the root level.",
+                        position: -1);
 
                 if (hasSelection)
                     throw new DslParseException(
-                        "Root wildcard cannot be combined with other selections.");
+                        "Root wildcard cannot be combined with other selections.",
+                        position: -1);
 
                 children.Add(new SelectNode { Field = "*" });
                 hasSelection = true;
@@ -219,7 +237,8 @@ internal static class DslSelectParser
 
             if (wildcardUsed)
                 throw new DslParseException(
-                    "Root wildcard cannot be combined with other selections.");
+                    "Root wildcard cannot be combined with other selections.",
+                    position: -1);
 
             // At the root level, continue reading dotted property paths
             // so that mixed flat-path and nested syntax can coexist.
@@ -232,7 +251,8 @@ internal static class DslSelectParser
                     if (i < span.Length && span[i] == '*')
                     {
                         throw new DslParseException(
-                            "Property wildcard syntax is not supported.");
+                            "Property wildcard syntax is not supported.",
+                            position: -1);
                     }
 
                     var segmentStart = i;
@@ -242,7 +262,8 @@ internal static class DslSelectParser
                     if (i == segmentStart)
                         throw new DslParseException(
                             "Empty path segment in 'select' parameter. " +
-                            "Property paths must be dot-separated identifiers.");
+                            "Property paths must be dot-separated identifiers.",
+                            position: -1);
 
                     identifier += "." + span.Slice(segmentStart, i - segmentStart).ToString();
                 }
@@ -263,19 +284,22 @@ internal static class DslSelectParser
 
                 if (i == aliasStart)
                     throw new DslParseException(
-                        "Empty alias in 'select' parameter. Alias must not be empty (e.g. 'Name:FullName').");
+                        "Empty alias in 'select' parameter. Alias must not be empty (e.g. 'Name:FullName').",
+                        position: -1);
 
                 alias = span.Slice(aliasStart, i - aliasStart).ToString();
 
                 if (string.Equals(alias, "AS", StringComparison.OrdinalIgnoreCase))
                     throw new DslParseException(
                         "Invalid alias in 'select' parameter. " +
-                        "The identifier 'AS' is a reserved keyword and cannot be used as an alias.");
+                        "The identifier 'AS' is a reserved keyword and cannot be used as an alias.",
+                        position: -1);
 
                 if (!ParserUtilities.IsValidIdentifier(alias.AsSpan()))
                     throw new DslParseException(
                         $"Invalid alias '{alias}' in 'select' parameter. " +
-                        "Aliases must be valid identifiers (e.g. 'FullName').");
+                        "Aliases must be valid identifiers (e.g. 'FullName').",
+                        position: -1);
             }
 
             while (i < span.Length && char.IsWhiteSpace(span[i]))
@@ -284,18 +308,21 @@ internal static class DslSelectParser
             if (i < span.Length && char.IsLetterOrDigit(span[i]))
                 throw new DslParseException(
                     "Invalid identifier in 'select' parameter. " +
-                    "Identifiers must not contain whitespace or other separators.");
+                    "Identifiers must not contain whitespace or other separators.",
+                    position: -1);
 
             if (!isRoot && i < span.Length && span[i] == '.')
                 throw new DslParseException(
-                    "Property wildcard syntax is not supported.");
+                    "Property wildcard syntax is not supported.",
+                    position: -1);
 
             if (i < span.Length && span[i] == '(')
             {
                 if (alias != null)
                     throw new DslParseException(
                         "Navigation alias is not supported. " +
-                        "Navigation nodes represent traversal and cannot be aliased.");
+                        "Navigation nodes represent traversal and cannot be aliased.",
+                        position: -1);
 
                 i++;
 
@@ -310,7 +337,8 @@ internal static class DslSelectParser
 
                 if (parenDepth > 0)
                     throw new DslParseException(
-                        "Missing closing parenthesis in 'select' parameter.");
+                        "Missing closing parenthesis in 'select' parameter.",
+                        position: -1);
 
                 var innerSpan = span.Slice(parenStart, i - parenStart - 1);
                 var childNode = new SelectNode { Field = identifier };
@@ -327,7 +355,8 @@ internal static class DslSelectParser
 
                 if (!innerHasContent)
                     throw new DslParseException(
-                        $"Empty selection list for '{identifier}'. Expected at least one field.");
+                        $"Empty selection list for '{identifier}'. Expected at least one field.",
+                        position: -1);
 
                 ParseSelectionList(innerSpan, childNode.Children, isRoot: false);
                 children.Add(childNode);
@@ -343,6 +372,7 @@ internal static class DslSelectParser
 
         if (isRoot && !hasSelection)
             throw new DslParseException(
-                "The 'select' parameter value is empty. Expected comma-separated field paths.");
+                "The 'select' parameter value is empty. Expected comma-separated field paths.",
+                position: -1);
     }
 }

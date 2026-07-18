@@ -98,7 +98,7 @@ internal sealed class DslTokenizer
 
         if (_position >= _source.Length)
         {
-            throw new DslParseException($"Missing DSL value at position {start}.");
+            throw new DslParseException("Missing DSL value.", position: start);
         }
 
         var current = _source[_position];
@@ -131,7 +131,7 @@ internal sealed class DslTokenizer
         var s = _source[valueStart.._position].Trim();
         if (s.Length == 0)
         {
-            throw new DslParseException($"Missing DSL value at position {start}.");
+            throw new DslParseException("Missing DSL value.", position: start);
         }
 
         return new DslToken(DslTokenKind.Identifier, s, start);
@@ -169,7 +169,7 @@ internal sealed class DslTokenizer
         var s = sb.ToString().Trim();
         if (s.Length == 0)
         {
-            throw new DslParseException($"Missing DSL value at position {tokenStart}.");
+            throw new DslParseException("Missing DSL value.", position: tokenStart);
         }
 
         return new DslToken(DslTokenKind.Identifier, s, tokenStart);
@@ -227,7 +227,7 @@ internal sealed class DslTokenizer
         }
 
         if (_position == start)
-            throw new DslParseException($"Unexpected character '{_source[_position]}' at position {_position}.");
+            throw new DslParseException($"Unexpected character '{_source[_position]}'.", position: _position, found: _source[_position].ToString());
 
         var raw = _source[start.._position];
         if (raw.Equals("AND", StringComparison.OrdinalIgnoreCase))
@@ -289,7 +289,7 @@ internal sealed class DslTokenizer
             _position++;
         }
 
-        throw new DslParseException($"Unterminated quoted value at position {tokenStart}.");
+        throw new DslParseException("Unterminated quoted value.", position: tokenStart);
     }
 
     private DslToken ReadEscapedQuoted(char quote, int tokenStart, int valueStart)
@@ -318,6 +318,6 @@ internal sealed class DslTokenizer
             _position++;
         }
 
-        throw new DslParseException($"Unterminated quoted value at position {tokenStart}.");
+        throw new DslParseException("Unterminated quoted value.", position: tokenStart);
     }
 }

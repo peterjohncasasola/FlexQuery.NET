@@ -29,7 +29,10 @@ internal sealed class DslQueryParser : IQueryParser
                 InferParameterName(parameters, ex),
                 QuerySyntax.NativeDsl,
                 InferParameterValue(parameters, ex),
-                ex);
+                ex,
+                position: ex.Position,
+                expected: ex.Expected,
+                found: ex.Found);
         }
 
         if (!string.IsNullOrWhiteSpace(parameters.Select))
@@ -40,7 +43,14 @@ internal sealed class DslQueryParser : IQueryParser
             }
             catch (DslParseException ex)
             {
-                throw new QueryParseException(QueryOptionKeys.Select, QuerySyntax.NativeDsl, parameters.Select, ex);
+                throw new QueryParseException(
+                    QueryOptionKeys.Select,
+                    QuerySyntax.NativeDsl,
+                    parameters.Select,
+                    ex,
+                    position: ex.Position,
+                    expected: ex.Expected,
+                    found: ex.Found);
             }
         }
 
@@ -55,7 +65,14 @@ internal sealed class DslQueryParser : IQueryParser
             }
             catch (DslParseException ex)
             {
-                throw new QueryParseException(QueryOptionKeys.Filter, QuerySyntax.NativeDsl, parameters.Filter, ex);
+                throw new QueryParseException(
+                    QueryOptionKeys.Filter,
+                    QuerySyntax.NativeDsl,
+                    parameters.Filter,
+                    ex,
+                    position: ex.Position,
+                    expected: ex.Expected,
+                    found: ex.Found);
             }
         }
 
@@ -67,7 +84,14 @@ internal sealed class DslQueryParser : IQueryParser
             }
             catch (DslParseException ex)
             {
-                throw new QueryParseException(QueryOptionKeys.Include, QuerySyntax.NativeDsl, parameters.Include, ex);
+                throw new QueryParseException(
+                    QueryOptionKeys.Include,
+                    QuerySyntax.NativeDsl,
+                    parameters.Include,
+                    ex,
+                    position: ex.Position,
+                    expected: ex.Expected,
+                    found: ex.Found);
             }
         }
 
@@ -80,7 +104,14 @@ internal sealed class DslQueryParser : IQueryParser
             }
             catch (DslParseException ex)
             {
-                throw new QueryParseException(QueryOptionKeys.Sort, QuerySyntax.NativeDsl, parameters.Sort, ex);
+                throw new QueryParseException(
+                    QueryOptionKeys.Sort,
+                    QuerySyntax.NativeDsl,
+                    parameters.Sort,
+                    ex,
+                    position: ex.Position,
+                    expected: ex.Expected,
+                    found: ex.Found);
             }
         }
 
@@ -93,7 +124,14 @@ internal sealed class DslQueryParser : IQueryParser
             }
             catch (DslParseException ex)
             {
-                throw new QueryParseException(QueryOptionKeys.Aggregate, QuerySyntax.NativeDsl, parameters.Aggregate, ex);
+                throw new QueryParseException(
+                    QueryOptionKeys.Aggregate,
+                    QuerySyntax.NativeDsl,
+                    parameters.Aggregate,
+                    ex,
+                    position: ex.Position,
+                    expected: ex.Expected,
+                    found: ex.Found);
             }
         }
 
@@ -105,7 +143,14 @@ internal sealed class DslQueryParser : IQueryParser
             }
             catch (DslParseException ex)
             {
-                throw new QueryParseException(QueryOptionKeys.Having, QuerySyntax.NativeDsl, parameters.Having, ex);
+                throw new QueryParseException(
+                    QueryOptionKeys.Having,
+                    QuerySyntax.NativeDsl,
+                    parameters.Having,
+                    ex,
+                    position: ex.Position,
+                    expected: ex.Expected,
+                    found: ex.Found);
             }
         }
 

@@ -68,7 +68,11 @@ internal sealed class DslAstParser
             _position++;
             if (!Match(DslTokenKind.OpenParen))
             {
-                throw new DslParseException($"Expected OpenParen at position {Current.Position}, but found {Current.Kind}.");
+                throw new DslParseException(
+                    $"Expected OpenParen but found {Current.Kind}.",
+                    position: Current.Position,
+                    expected: DslTokenKind.OpenParen.ToString(),
+                    found: Current.Kind.ToString());
             }
 
             var inner = ParseOr();
@@ -174,7 +178,10 @@ internal sealed class DslAstParser
             return _tokens[_position++];
 
         throw new DslParseException(
-            $"Expected {kind} at position {Current.Position}, but found {Current.Kind}.");
+            $"Expected {kind} but found {Current.Kind}.",
+            position: Current.Position,
+            expected: kind.ToString(),
+            found: Current.Kind.ToString());
     }
 
     private DslToken Current => _tokens[Math.Min(_position, _tokens.Count - 1)];

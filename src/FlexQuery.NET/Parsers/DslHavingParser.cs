@@ -31,7 +31,8 @@ internal static class DslHavingParser
 
         if (parser.CurrentToken != null)
             throw new DslParseException(
-                $"Unable to parse HAVING expression '{rawHaving}'. Unexpected token at position {parser.CurrentToken.Position}.");
+                "Unexpected token after HAVING condition.",
+                position: parser.CurrentToken.Position);
 
         return result;
     }
@@ -115,11 +116,15 @@ internal static class DslHavingParser
         private HavingToken Expect(string expected)
         {
             if (_position >= tokens.Count)
-                throw new DslParseException($"Expected '{expected}' but reached end of HAVING expression.");
+                throw new DslParseException($"Expected '{expected}' but reached end of HAVING expression.", position: -1);
 
             var token = tokens[_position];
             if (!string.Equals(token.Value, expected, StringComparison.OrdinalIgnoreCase))
-                throw new DslParseException($"Expected '{expected}' but found '{token.Value}' at position {token.Position}.");
+                throw new DslParseException(
+                    $"Expected '{expected}' but found '{token.Value}'.",
+                    position: token.Position,
+                    expected: expected,
+                    found: token.Value);
 
             _position++;
             return token;
@@ -135,7 +140,7 @@ internal static class DslHavingParser
 
         private HavingToken Consume()
         {
-            return _position >= tokens.Count ? throw new DslParseException($"Unexpected end of HAVING expression.") : tokens[_position++];
+            return _position >= tokens.Count ? throw new DslParseException("Unexpected end of HAVING expression.", position: -1) : tokens[_position++];
         }
 
         public HavingNode ParseExpression()
@@ -181,7 +186,7 @@ internal static class DslHavingParser
         private HavingNode ParseCondition()
         {
             if (_position >= tokens.Count)
-                throw new DslParseException("Expected HAVING condition but reached end of expression.");
+                throw new DslParseException("Expected HAVING condition but reached end of expression.", position: -1);
 
             var conditionParts = new List<string>();
             var startPos = tokens[_position].Position;
@@ -193,60 +198,59 @@ internal static class DslHavingParser
             }
 
             if (conditionParts.Count == 0)
-                throw new DslParseException("Expected HAVING condition but found logical operator.");
+                throw new DslParseException("Expected HAVING condition but found logical operator.", position: -1);
 
             var conditionToken = string.Join(':', conditionParts);
             var parts = conditionToken.Split(':', StringSplitOptions.TrimEntries);
 
             if (parts.Length < 4)
                 throw new DslParseException(
-                    $"Unable to parse HAVING condition '{conditionToken}'. " +
-                    "Expected format: FUNCTION:Field:Operator:value. " +
-                    "For example: sum:total:gt:100");
+                    "Unable to parse HAVING condition. Expected format: FUNCTION:Field:Operator:value. For example: sum:total:gt:100",
+                    position: startPos);
 
             var fnRaw = parts[0].ToLowerInvariant();
             if (fnRaw == "average") fnRaw = "avg";
 
             if (string.IsNullOrWhiteSpace(fnRaw))
                 throw new DslParseException(
-                    $"Unable to parse HAVING condition '{conditionToken}'. " +
-                    "Expected format: FUNCTION:Field:Operator:value. " +
-                    "For example: sum:total:gt:100");
+                    "Unable to parse HAVING condition. Expected format: FUNCTION:Field:Operator:value. For example: sum:total:gt:100",
+                    position: startPos);
 
             if (!Enum.TryParse<AggregateFunction>(fnRaw, true, out var function))
                 throw new DslParseException(
-                    $"Unsupported aggregate function '{parts[0]}' in HAVING condition '{conditionToken}'. " +
-                    "Supported functions: sum, count, avg, min, max.");
+                    $"Unsupported aggregate function '{parts[0]}' in HAVING condition. Supported functions: sum, count, avg, min, max.",
+                    position: startPos);
 
             var field = parts[1];
             if (string.IsNullOrWhiteSpace(field))
                 throw new DslParseException(
-                    $"Missing field in HAVING condition '{conditionToken}'. " +
-                    "Expected format: FUNCTION:Field:Operator:value.");
+                    "Missing field in HAVING condition. Expected format: FUNCTION:Field:Operator:value.",
+                    position: startPos);
 
             if (field == "*")
                 throw new DslParseException(
-                    $"Invalid field '{field}' in HAVING condition '{conditionToken}'. " +
-                    "COUNT(*) is not supported. Use COUNT(<field>) instead.");
+                    $"Invalid field '{field}' in HAVING condition. COUNT(*) is not supported. Use COUNT(<field>) instead.",
+                    position: startPos);
 
             if (!IsValidPropertyPath(field.AsSpan()))
                 throw new DslParseException(
-                    $"Invalid field '{field}' in HAVING condition '{conditionToken}'. " +
-                    "Field must be a valid property path.");
+                    $"Invalid field '{field}' in HAVING condition. Field must be a valid property path.",
+                    position: startPos);
 
             var opRaw = parts[2];
             var normalizedOp = FilterOperators.Normalize(opRaw);
             var allowedOps = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "eq", "neq", "gt", "gte", "lt", "lte" };
             if (!allowedOps.Contains(normalizedOp))
                 throw new DslParseException(
-                    $"Unsupported operator '{opRaw}' in HAVING condition '{conditionToken}'. " +
-                    "Supported operators: eq, neq, gt, gte, lt, lte.");
+                    $"Unsupported operator '{opRaw}' in HAVING condition. Supported operators: eq, neq, gt, gte, lt, lte.",
+                    position: startPos);
 
             var value = string.Join(':', parts[3..]);
 
             if (string.IsNullOrWhiteSpace(value))
                 throw new DslParseException(
-                    $"Missing value after operator in HAVING condition '{conditionToken}'.");
+                    "Missing value after operator in HAVING condition.",
+                    position: startPos);
 
             return new HavingConditionNode
             {

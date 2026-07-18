@@ -33,7 +33,8 @@ internal static class DslSortParser
 
             if (item.IsEmpty)
                 throw new DslParseException(
-                    $"Unable to parse sort expression '{sortRaw}'. Empty sort item found.");
+                    "Unable to parse sort expression. Empty sort item found.",
+                    position: -1);
 
             ParseSortItem(item, result, sortRaw);
 
@@ -65,7 +66,8 @@ internal static class DslSortParser
 
         if (firstSegment.IsEmpty)
             throw new DslParseException(
-                $"Unable to parse sort expression '{rawInput}'. Empty sort item found.");
+                "Unable to parse sort expression. Empty sort item found.",
+                position: -1);
 
         if (AggregateFunctionHelper.IsSupported(firstSegment.ToString()))
         {
@@ -87,7 +89,8 @@ internal static class DslSortParser
 
         if (fieldSpan.IsEmpty)
             throw new DslParseException(
-                $"Unable to parse sort expression '{rawInput}'. Empty or invalid field name.");
+                "Unable to parse sort expression. Empty or invalid field name.",
+                position: -1);
 
         var field = fieldSpan.ToString();
         var direction = colon < 0 ? QueryOptionKeys.Asc : item[(colon + 1)..].Trim().ToString();
@@ -95,12 +98,13 @@ internal static class DslSortParser
         if (!direction.Equals(QueryOptionKeys.Asc, StringComparison.OrdinalIgnoreCase) &&
             !direction.Equals(QueryOptionKeys.Desc, StringComparison.OrdinalIgnoreCase))
             throw new DslParseException(
-                $"Unable to parse sort expression '{rawInput}'. Invalid sort direction '{direction}' at '{field}'. " +
-                $"Expected 'asc' or 'desc'.");
+                "Unable to parse sort expression. Invalid sort direction. Expected 'asc' or 'desc'.",
+                position: -1);
 
         if (!ParserUtilities.IsValidPropertyPath(field.AsSpan()))
             throw new DslParseException(
-                $"Unable to parse sort expression '{rawInput}'. Invalid field path '{field}'.");
+                $"Unable to parse sort expression. Invalid field path '{field}'.",
+                position: -1);
 
         var isDesc = direction.Equals(QueryOptionKeys.Desc, StringComparison.OrdinalIgnoreCase);
 
@@ -141,13 +145,15 @@ internal static class DslSortParser
 
         if (targetSpan.IsEmpty)
             throw new DslParseException(
-                $"Unable to parse sort expression '{rawInput}'. Missing aggregate target in '{functionSpan.ToString()}:...'.");
+                "Unable to parse sort expression. Missing aggregate target.",
+                position: -1);
 
         var target = targetSpan.ToString();
 
         if (!ParserUtilities.IsValidPropertyPath(target.AsSpan()))
             throw new DslParseException(
-                $"Unable to parse sort expression '{rawInput}'. Invalid target '{target}' in aggregate sort '{functionName}:{target}'.");
+                $"Unable to parse sort expression. Invalid target '{target}' in aggregate sort.",
+                position: -1);
 
         AggregateFunction aggregateFunction;
         try
@@ -157,8 +163,9 @@ internal static class DslSortParser
         catch
         {
             throw new DslParseException(
-                $"Unable to parse sort expression '{rawInput}'. Unrecognized aggregate function '{functionName}'. " +
-                $"Expected one of: sum, count, avg, min, max.");
+                $"Unable to parse sort expression. Unrecognized aggregate function '{functionName}'. " +
+                $"Expected one of: sum, count, avg, min, max.",
+                position: -1);
         }
 
         var direction = directionSpan.IsEmpty ? QueryOptionKeys.Asc : directionSpan.ToString();
@@ -166,8 +173,8 @@ internal static class DslSortParser
         if (!direction.Equals(QueryOptionKeys.Asc, StringComparison.OrdinalIgnoreCase) &&
             !direction.Equals(QueryOptionKeys.Desc, StringComparison.OrdinalIgnoreCase))
             throw new DslParseException(
-                $"Unable to parse sort expression '{rawInput}'. Invalid sort direction '{direction}' in '{functionName}:{target}:{direction}'. " +
-                $"Expected 'asc' or 'desc'.");
+                "Unable to parse sort expression. Invalid sort direction. Expected 'asc' or 'desc'.",
+                position: -1);
 
         var isDesc = direction.Equals(QueryOptionKeys.Desc, StringComparison.OrdinalIgnoreCase);
 

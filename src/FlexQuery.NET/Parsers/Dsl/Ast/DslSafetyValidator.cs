@@ -16,10 +16,10 @@ internal static class DslSafetyValidator
     public static void ValidateSyntax(string source)
     {
         if (string.IsNullOrWhiteSpace(source))
-            throw new DslParseException("DSL filter expression is empty.");
+            throw new DslParseException("DSL filter expression is empty.", position: -1);
 
         if (!AllowedChars.IsMatch(source))
-            throw new DslParseException("DSL filter contains invalid characters.");
+            throw new DslParseException("DSL filter contains invalid characters.", position: -1);
 
         var depth = 0;
         foreach (var ch in source)
@@ -27,23 +27,23 @@ internal static class DslSafetyValidator
             if (ch == '(') depth++;
             if (ch == ')') depth--;
             if (depth < 0)
-                throw new DslParseException("DSL filter has unbalanced parentheses.");
+                throw new DslParseException("DSL filter has unbalanced parentheses.", position: -1);
         }
 
         if (depth != 0)
-            throw new DslParseException("DSL filter has unbalanced parentheses.");
+            throw new DslParseException("DSL filter has unbalanced parentheses.", position: -1);
     }
 
     public static void ValidateFieldToken(string field, int position)
     {
         if (!FieldPattern.IsMatch(field))
-            throw new DslParseException($"Invalid DSL field '{field}' at position {position}.");
+            throw new DslParseException($"Invalid DSL field '{field}'.", position: position, found: field);
     }
 
     public static void ValidateOperatorToken(string op, int position)
     {
         var normalized = FilterOperators.Normalize(op);
         if (!FilterOperators.IsSupported(normalized))
-            throw new DslParseException($"Unsupported DSL operator '{op}' at position {position}.");
+            throw new DslParseException($"Unsupported DSL operator '{op}'.", position: position, found: op);
     }
 }

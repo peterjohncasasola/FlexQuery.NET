@@ -21,24 +21,28 @@ internal static class AggregateGrammar
     {
         if (string.IsNullOrWhiteSpace(raw))
             throw new DslParseException(
-                "Unable to parse aggregate expression. Expected format: Function:Field.");
+                "Unable to parse aggregate expression. Expected format: Function:Field.",
+                position: -1);
 
         var parts = raw.Split(':');
 
         if (parts.Length != 2)
             throw new DslParseException(
-                $"Unable to parse aggregate expression '{raw}'. Expected format: Function:Field.");
+                "Unable to parse aggregate expression. Expected format: Function:Field.",
+                position: -1);
 
         var functionPart = parts[0].Trim();
         var fieldPart = parts[1].Trim();
 
         if (functionPart.Length == 0)
             throw new DslParseException(
-                $"Unable to parse aggregate expression '{raw}'. Missing function.");
+                "Unable to parse aggregate expression. Missing function.",
+                position: -1);
 
         if (fieldPart.Length == 0)
             throw new DslParseException(
-                $"Unable to parse aggregate expression '{raw}'. Missing field.");
+                "Unable to parse aggregate expression. Missing field.",
+                position: -1);
 
         string functionName;
         AggregateFunction function;
@@ -52,21 +56,22 @@ internal static class AggregateGrammar
         catch
         {
             throw new DslParseException(
-                $"Unable to parse aggregate expression '{raw}'. Unrecognized aggregate function '{functionPart}'.");
+                $"Unable to parse aggregate expression. Unrecognized aggregate function '{functionPart}'.",
+                position: -1);
         }
 
         if (function == AggregateFunction.Count && fieldPart == "*")
         {
             throw new DslParseException(
-                $"Unable to parse aggregate expression '{raw}'. " +
-                "count:* is not supported. Use count:<collection> or another aggregate over a property instead.");
+                "Unable to parse aggregate expression. count:* is not supported. Use count:<collection> or another aggregate over a property instead.",
+                position: -1);
         }
 
         if (fieldPart != "*" && !ParserUtilities.IsValidPropertyPath(fieldPart.AsSpan()))
         {
             throw new DslParseException(
-                $"Invalid field '{fieldPart}' in aggregate expression '{raw}'. " +
-                "Field must be a valid property path.");
+                $"Invalid field '{fieldPart}' in aggregate expression. Field must be a valid property path.",
+                position: -1);
         }
 
         return new AggregateFunctionField(function, fieldPart, functionName);
