@@ -6,6 +6,13 @@ namespace FlexQuery.NET.Tests.Projection;
 
 public class FlatProjectionTests : IDisposable
 {
+    private static SelectNode S(string field, string? alias = null, List<SelectNode>? children = null)
+    {
+        var node = new SelectNode { Field = field, Alias = alias };
+        if (children != null) node.Children.AddRange(children);
+        return node;
+    }
+
     private readonly TestDbContext _db = TestDbContext.CreateSeeded();
     public void Dispose() => _db.Dispose();
 
@@ -220,6 +227,37 @@ public class FlatProjectionTests : IDisposable
 
         var status = (string)orderType.GetProperty("OrderStatus")!.GetValue(firstOrder)!;
         status.Should().Be("Shipped");
+    }
+
+    [Fact]
+    public async Task FlatMode_NestedSelectSyntax_AliasOnCollectionItem_Applied()
+    {
+        var options = new QueryOptions
+        {
+            ProjectionMode = ProjectionMode.Flat,
+            Select = new List<SelectNode>
+            {
+                S("Orders", children: new List<SelectNode>
+                    {
+                        S("Total", "OrderTotal"),
+                        S("Status", "OrderStatus")
+                    } )
+            }
+        };
+
+        var list = await _db.Customers.Where(x => x.Id == 1).ApplySelect(options).ToListAsync();
+
+        list.Should().HaveCount(2);
+        var first = list.First();
+        var type = first.GetType();
+
+        type.GetProperty("OrderTotal").Should().NotBeNull();
+        type.GetProperty("Total").Should().BeNull("alias should replace original name");
+        type.GetProperty("OrderStatus").Should().NotBeNull();
+        type.GetProperty("Status").Should().BeNull("alias should replace original name");
+
+        var orderTotal = (decimal)type.GetProperty("OrderTotal")!.GetValue(first)!;
+        orderTotal.Should().Be(150.0m);
     }
 }
 

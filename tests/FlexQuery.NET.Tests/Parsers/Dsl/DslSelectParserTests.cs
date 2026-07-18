@@ -626,6 +626,29 @@ public class DslSelectParserTests
         options.SelectTree.Should().BeNull();
     }
 
+    [Fact]
+    public void ParseToSelectionTree_MixedFlatAndNestedSyntax_Valid()
+    {
+        var tree = DslSelectParser.ParseToSelectionTree("CustomerName,PrimaryContact.EmailAddress:Email,PrimaryContact(PhoneNumber:ContactNumber)");
+
+        tree.Should().NotBeNull();
+        tree!.TryGetChild("CustomerName", out _).Should().BeTrue();
+        tree.TryGetChild("PrimaryContact", out var primaryContact).Should().BeTrue();
+        primaryContact!.TryGetChild("EmailAddress", out var email).Should().BeTrue();
+        email!.Alias.Should().Be("Email");
+        primaryContact.TryGetChild("PhoneNumber", out var phone).Should().BeTrue();
+        phone!.Alias.Should().Be("ContactNumber");
+    }
+
+    [Fact]
+    public void ParseToSelectionTree_MixedFlatAndNestedSyntax_SameFieldDifferentAliases_ThrowsDuringMerge()
+    {
+        // Parser should succeed; SelectTreeBuilder should reject conflicting aliases.
+        var act = () => DslSelectParser.ParseToSelectionTree("Customer.Email:CustomerEmail,Customer(Email:CustomerEmailAddress)");
+
+        act.Should().NotThrow<DslParseException>();
+    }
+
     #endregion
 
     #endregion

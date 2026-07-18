@@ -119,14 +119,20 @@ internal static class DslSelectParser
             return;
         }
 
-        var child = parent.GetOrAddChild(source.Field);
+        var parts = source.Field.Split('.', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        var node = parent;
+        foreach (var part in parts)
+        {
+            node = node.GetOrAddChild(part);
+        }
+        
         if (!string.IsNullOrEmpty(source.Alias))
-            child.Alias = source.Alias;
+            node.Alias = source.Alias;
 
         if (source.Children.Count > 0)
         {
             foreach (var nested in source.Children)
-                MergeIntoSelectionNode(nested, child);
+                MergeIntoSelectionNode(nested, node);
         }
     }
 
@@ -215,7 +221,34 @@ internal static class DslSelectParser
                 throw new DslParseException(
                     "Root wildcard cannot be combined with other selections.");
 
-            string? alias = null;
+            // At the root level, continue reading dotted property paths
+            // so that mixed flat-path and nested syntax can coexist.
+            if (isRoot)
+            {
+                while (i < span.Length && span[i] == '.')
+                {
+                    i++; // skip dot
+
+                    if (i < span.Length && span[i] == '*')
+                    {
+                        throw new DslParseException(
+                            "Property wildcard syntax is not supported.");
+                    }
+
+                    var segmentStart = i;
+                    while (i < span.Length && (char.IsLetterOrDigit(span[i]) || span[i] == '_'))
+                        i++;
+
+                    if (i == segmentStart)
+                        throw new DslParseException(
+                            "Empty path segment in 'select' parameter. " +
+                            "Property paths must be dot-separated identifiers.");
+
+                    identifier += "." + span.Slice(segmentStart, i - segmentStart).ToString();
+                }
+            }
+
+            string alias = null;
 
             while (i < span.Length && char.IsWhiteSpace(span[i]))
                 i++;
@@ -253,7 +286,7 @@ internal static class DslSelectParser
                     "Invalid identifier in 'select' parameter. " +
                     "Identifiers must not contain whitespace or other separators.");
 
-            if (i < span.Length && span[i] == '.')
+            if (!isRoot && i < span.Length && span[i] == '.')
                 throw new DslParseException(
                     "Property wildcard syntax is not supported.");
 

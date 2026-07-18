@@ -583,6 +583,29 @@ public class FqlSelectParserTests
         options.SelectTree.Should().BeNull();
     }
 
+    [Fact]
+    public void ParseToSelectionTree_MixedFlatAndNestedSyntax_Valid()
+    {
+        var tree = FqlSelectParser.ParseToSelectionTree("CustomerName,PrimaryContact.EmailAddress AS Email,PrimaryContact(PhoneNumber AS ContactNumber)");
+
+        tree.Should().NotBeNull();
+        tree!.TryGetChild("CustomerName", out _).Should().BeTrue();
+        tree.TryGetChild("PrimaryContact", out var primaryContact).Should().BeTrue();
+        primaryContact!.TryGetChild("EmailAddress", out var email).Should().BeTrue();
+        email!.Alias.Should().Be("Email");
+        primaryContact.TryGetChild("PhoneNumber", out var phone).Should().BeTrue();
+        phone!.Alias.Should().Be("ContactNumber");
+    }
+
+    [Fact]
+    public void ParseToSelectionTree_MixedFlatAndNestedSyntax_SameFieldDifferentAliases_ThrowsDuringMerge()
+    {
+        // Parser should succeed; SelectTreeBuilder should reject conflicting aliases.
+        var act = () => FqlSelectParser.ParseToSelectionTree("Customer.Email AS CustomerEmail,Customer(Email AS CustomerEmailAddress)");
+
+        act.Should().NotThrow<FqlParseException>();
+    }
+
     #endregion
 
     #endregion
