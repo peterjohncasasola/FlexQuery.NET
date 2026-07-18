@@ -1,3 +1,4 @@
+using System.Text;
 using FlexQuery.NET.Dapper.Dialects;
 using FlexQuery.NET.Dapper.Mapping;
 using FlexQuery.NET.Dapper.Sql.Converters;
@@ -14,7 +15,7 @@ internal static class SqlHavingBuilder
 {
     public static string Build(
         ISqlDialect dialect,
-        HavingCondition? having,
+        HavingNode? having,
         IEntityMapping mapping,
         SqlParameterContext parameters)
     {
@@ -23,6 +24,47 @@ internal static class SqlHavingBuilder
             return string.Empty;
         }
 
+        var sb = new StringBuilder();
+        sb.Append("HAVING ");
+        AppendExpression(sb, having, dialect, mapping, parameters);
+        return sb.ToString();
+    }
+
+    private static void AppendExpression(StringBuilder sb, HavingNode node, ISqlDialect dialect, IEntityMapping mapping, SqlParameterContext parameters)
+    {
+        switch (node)
+        {
+            case HavingConditionNode c:
+                sb.Append(BuildCondition(c, dialect, mapping, parameters));
+                break;
+            case HavingLogicalNode l:
+            {
+                var parts = new List<string>();
+                foreach (var child in l.Children)
+                {
+                    var childSb = new StringBuilder();
+                    AppendExpression(childSb, child, dialect, mapping, parameters);
+                    parts.Add(childSb.ToString());
+                }
+
+                var op = l.Logic.ToKeyword();
+                sb.Append('(');
+                sb.Append(string.Join($" {op} ", parts));
+                sb.Append(')');
+                break;
+            }
+            case HavingGroupNode g:
+            {
+                sb.Append('(');
+                AppendExpression(sb, g.Inner, dialect, mapping, parameters);
+                sb.Append(')');
+                break;
+            }
+        }
+    }
+
+    private static string BuildCondition(HavingConditionNode having, ISqlDialect dialect, IEntityMapping mapping, SqlParameterContext parameters)
+    {
         var isCountStar =
             having.Function == AggregateFunction.Count &&
             string.IsNullOrWhiteSpace(having.Field);
@@ -44,22 +86,14 @@ internal static class SqlHavingBuilder
                 $"{having.Function.ToKeyword().ToUpperInvariant()}({column})";
         }
 
-        var value = ConvertValue(
-            dialect,
-            having,
-            mapping);
-
+        var value = ConvertValue(dialect, having, mapping);
         var parameterName = parameters.Add(value);
-
         var sqlOperator = NormalizeOperator(having.Operator);
 
-        return $"HAVING {aggregateExpression} {sqlOperator} {parameterName}";
+        return $"{aggregateExpression} {sqlOperator} {parameterName}";
     }
 
-    private static object? ConvertValue(
-        ISqlDialect dialect,
-        HavingCondition having,
-        IEntityMapping mapping)
+    private static object? ConvertValue(ISqlDialect dialect, HavingConditionNode having, IEntityMapping mapping)
     {
         var value = having.Value?.Trim('"');
 
