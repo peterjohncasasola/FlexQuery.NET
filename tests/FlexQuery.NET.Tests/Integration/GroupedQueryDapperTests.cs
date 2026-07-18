@@ -58,7 +58,7 @@ public class GroupedQueryDapperTests
 
             GroupBy = ["CustomerId"],
 
-            Aggregates = [new AggregateModel { Field = "Total", Function = AggregateFunction.Sum, Alias = "totalSum" }],
+            Aggregates = [new Aggregate { Field = "Total", Function = AggregateFunction.Sum, Alias = "totalSum" }],
 
             Paging = { Disabled = true }
 
@@ -202,7 +202,7 @@ public class GroupedQueryDapperTests
 
             GroupBy = ["CustomerId"],
 
-            Aggregates = [new AggregateModel { Field = "Total", Function = AggregateFunction.Sum, Alias = "totalSum" }],
+            Aggregates = [new Aggregate { Field = "Total", Function = AggregateFunction.Sum, Alias = "totalSum" }],
 
             Paging = { Page = 2, PageSize = 10 }
 

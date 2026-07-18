@@ -192,7 +192,7 @@ public static class QueryOptionsExtensions
             ProjectionMode = source.ProjectionMode,
             GroupBy = source.GroupBy?.ToList(),
             Aggregates = source.Aggregates.Select(CloneAggregateModel).ToList(),
-            Having = CloneHavingCondition(source.Having),
+            Having = CloneHavingExpression(source.Having),
             Distinct = source.Distinct,
             SelectTree = source.SelectTree,
             Paging = new PagingOptions { Page = source.Paging.Page, PageSize = source.Paging.PageSize, Disabled = source.Paging.Disabled },
@@ -249,7 +249,7 @@ public static class QueryOptionsExtensions
             Children = include.Children.Select(CloneIncludeNode).ToList()
         };
 
-    private static AggregateModel CloneAggregateModel(AggregateModel aggregate)
+    private static Aggregate CloneAggregateModel(Aggregate aggregate)
         => new()
         {
             Function = aggregate.Function,
@@ -257,16 +257,27 @@ public static class QueryOptionsExtensions
             Alias = aggregate.Alias
         };
 
-    private static HavingCondition? CloneHavingCondition(HavingCondition? having)
-        => having is null
-            ? null
-            : new HavingCondition
+    private static HavingNode? CloneHavingExpression(HavingNode? having)
+        => having switch
+        {
+            HavingConditionNode c => new HavingConditionNode
             {
-                Function = having.Function,
-                Field = having.Field,
-                Operator = having.Operator,
-                Value = having.Value
-            };
+                Function = c.Function,
+                Field = c.Field,
+                Operator = c.Operator,
+                Value = c.Value
+            },
+            HavingLogicalNode l => new HavingLogicalNode
+            {
+                Logic = l.Logic,
+                Children = l.Children.Select(CloneHavingExpression).Where(x => x is not null).Cast<HavingNode>().ToList()
+            },
+            HavingGroupNode g => new HavingGroupNode
+            {
+                Inner = CloneHavingExpression(g.Inner)!
+            },
+            _ => null
+        };
 
     /// <summary>
     /// Generates a stable cache key for the query execution pipeline.

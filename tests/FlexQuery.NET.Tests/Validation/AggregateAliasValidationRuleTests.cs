@@ -35,7 +35,7 @@ public class AggregateValidationRuleTests
     {
         var options = new QueryOptions
         {
-            Aggregates = [new AggregateModel { Function = AggregateFunction.Sum, Field = "Total", Alias = "TotalSum" }]
+            Aggregates = [new Aggregate { Function = AggregateFunction.Sum, Field = "Total", Alias = "TotalSum" }]
         };
         var result = Validate(options);
 
@@ -47,7 +47,7 @@ public class AggregateValidationRuleTests
     {
         var options = new QueryOptions
         {
-            Aggregates = [new AggregateModel { Function = AggregateFunction.Sum, Field = "Total", Alias = "TotalSales" }]
+            Aggregates = [new Aggregate { Function = AggregateFunction.Sum, Field = "Total", Alias = "TotalSales" }]
         };
         var result = Validate(options);
 
@@ -59,7 +59,7 @@ public class AggregateValidationRuleTests
     {
         var options = new QueryOptions
         {
-            Aggregates = [new AggregateModel { Function = AggregateFunction.Sum, Field = "Total", Alias = "123Total" }]
+            Aggregates = [new Aggregate { Function = AggregateFunction.Sum, Field = "Total", Alias = "123Total" }]
         };
         var result = Validate(options);
 
@@ -72,7 +72,7 @@ public class AggregateValidationRuleTests
     {
         var options = new QueryOptions
         {
-            Aggregates = [new AggregateModel { Function = AggregateFunction.Sum, Field = "Total", Alias = "total-sales" }]
+            Aggregates = [new Aggregate { Function = AggregateFunction.Sum, Field = "Total", Alias = "total-sales" }]
         };
         var result = Validate(options);
 
@@ -85,7 +85,7 @@ public class AggregateValidationRuleTests
     {
         var options = new QueryOptions
         {
-            Aggregates = [new AggregateModel { Function = AggregateFunction.Sum, Field = "Total", Alias = "total sales" }]
+            Aggregates = [new Aggregate { Function = AggregateFunction.Sum, Field = "Total", Alias = "total sales" }]
         };
         var result = Validate(options);
 
@@ -98,7 +98,7 @@ public class AggregateValidationRuleTests
     {
         var options = new QueryOptions
         {
-            Aggregates = [new AggregateModel { Function = AggregateFunction.Sum, Field = "Total", Alias = "total.sales" }]
+            Aggregates = [new Aggregate { Function = AggregateFunction.Sum, Field = "Total", Alias = "total.sales" }]
         };
         var result = Validate(options);
 
@@ -111,7 +111,7 @@ public class AggregateValidationRuleTests
     {
         var options = new QueryOptions
         {
-            Aggregates = [new AggregateModel { Function = AggregateFunction.Sum, Field = "Total", Alias = "total!" }]
+            Aggregates = [new Aggregate { Function = AggregateFunction.Sum, Field = "Total", Alias = "total!" }]
         };
         var result = Validate(options);
 
@@ -148,7 +148,7 @@ public class AggregateValidationRuleTests
     {
         var options = new QueryOptions
         {
-            Aggregates = [new AggregateModel { Function = AggregateFunction.Sum, Field = "Total", Alias = reservedAlias }]
+            Aggregates = [new Aggregate { Function = AggregateFunction.Sum, Field = "Total", Alias = reservedAlias }]
         };
         var result = Validate(options);
 
@@ -163,8 +163,8 @@ public class AggregateValidationRuleTests
         {
             Aggregates =
             [
-                new AggregateModel { Function = AggregateFunction.Sum, Field = "Total", Alias = "Total" },
-                new AggregateModel { Function = AggregateFunction.Avg, Field = "Price", Alias = "Total" }
+                new Aggregate { Function = AggregateFunction.Sum, Field = "Total", Alias = "Total" },
+                new Aggregate { Function = AggregateFunction.Avg, Field = "Price", Alias = "Total" }
             ]
         };
         var result = Validate(options);
@@ -180,8 +180,8 @@ public class AggregateValidationRuleTests
         {
             Aggregates =
             [
-                new AggregateModel { Function = AggregateFunction.Sum, Field = "Total", Alias = "Total" },
-                new AggregateModel { Function = AggregateFunction.Avg, Field = "Price", Alias = "total" }
+                new Aggregate { Function = AggregateFunction.Sum, Field = "Total", Alias = "Total" },
+                new Aggregate { Function = AggregateFunction.Avg, Field = "Price", Alias = "total" }
             ]
         };
         var result = Validate(options);
@@ -197,8 +197,8 @@ public class AggregateValidationRuleTests
         {
             Aggregates =
             [
-                new AggregateModel { Function = AggregateFunction.Sum, Field = "Total", Alias = "TotalSum" },
-                new AggregateModel { Function = AggregateFunction.Count, Field = "Id", Alias = "TotalSum" }
+                new Aggregate { Function = AggregateFunction.Sum, Field = "Total", Alias = "TotalSum" },
+                new Aggregate { Function = AggregateFunction.Count, Field = "Id", Alias = "TotalSum" }
             ]
         };
         var result = Validate(options);
@@ -212,7 +212,7 @@ public class AggregateValidationRuleTests
     {
         var options = new QueryOptions
         {
-            Aggregates = [new AggregateModel { Function = AggregateFunction.Sum, Field = null, Alias = "SumAll" }]
+            Aggregates = [new Aggregate { Function = AggregateFunction.Sum, Field = null, Alias = "SumAll" }]
         };
         var result = Validate(options);
 
@@ -225,7 +225,7 @@ public class AggregateValidationRuleTests
     {
         var options = new QueryOptions
         {
-            Aggregates = [new AggregateModel { Function = AggregateFunction.Avg, Field = null, Alias = "AvgAll" }]
+            Aggregates = [new Aggregate { Function = AggregateFunction.Avg, Field = null, Alias = "AvgAll" }]
         };
         var result = Validate(options);
 
@@ -238,7 +238,7 @@ public class AggregateValidationRuleTests
     {
         var options = new QueryOptions
         {
-            Aggregates = [new AggregateModel { Function = AggregateFunction.Min, Field = null, Alias = "MinAll" }]
+            Aggregates = [new Aggregate { Function = AggregateFunction.Min, Field = null, Alias = "MinAll" }]
         };
         var result = Validate(options);
 
@@ -251,7 +251,7 @@ public class AggregateValidationRuleTests
     {
         var options = new QueryOptions
         {
-            Aggregates = [new AggregateModel { Function = AggregateFunction.Max, Field = null, Alias = "MaxAll" }]
+            Aggregates = [new Aggregate { Function = AggregateFunction.Max, Field = null, Alias = "MaxAll" }]
         };
         var result = Validate(options);
 
@@ -264,7 +264,7 @@ public class AggregateValidationRuleTests
     {
         var options = new QueryOptions
         {
-            Aggregates = [new AggregateModel { Function = AggregateFunction.Count, Field = "*", Alias = "TotalCount" }]
+            Aggregates = [new Aggregate { Function = AggregateFunction.Count, Field = "*", Alias = "TotalCount" }]
         };
         var result = Validate(options);
 
@@ -277,7 +277,7 @@ public class AggregateValidationRuleTests
     {
         var options = new QueryOptions
         {
-            Aggregates = [new AggregateModel { Function = AggregateFunction.Sum, Field = "Total", Alias = "TotalSum" }]
+            Aggregates = [new Aggregate { Function = AggregateFunction.Sum, Field = "Total", Alias = "TotalSum" }]
         };
         var result = Validate(options);
 
@@ -291,8 +291,8 @@ public class AggregateValidationRuleTests
         {
             Aggregates =
             [
-                new AggregateModel { Function = AggregateFunction.Sum, Field = null, Alias = "SELECT" },
-                new AggregateModel { Function = AggregateFunction.Sum, Field = "Total", Alias = "SELECT" }
+                new Aggregate { Function = AggregateFunction.Sum, Field = null, Alias = "SELECT" },
+                new Aggregate { Function = AggregateFunction.Sum, Field = "Total", Alias = "SELECT" }
             ]
         };
         var result = Validate(options);
@@ -311,8 +311,8 @@ public class AggregateValidationRuleTests
         {
             Aggregates =
             [
-                new AggregateModel { Function = AggregateFunction.Sum, Field = "Total", Alias = "TotalSum" },
-                new AggregateModel { Function = AggregateFunction.Sum, Field = "Total", Alias = "TotalSum2" }
+                new Aggregate { Function = AggregateFunction.Sum, Field = "Total", Alias = "TotalSum" },
+                new Aggregate { Function = AggregateFunction.Sum, Field = "Total", Alias = "TotalSum2" }
             ]
         };
         var result = Validate(options);
@@ -328,8 +328,8 @@ public class AggregateValidationRuleTests
         {
             Aggregates =
             [
-                new AggregateModel { Function = AggregateFunction.Sum, Field = "Total", Alias = "Sales" },
-                new AggregateModel { Function = AggregateFunction.Sum, Field = "Total", Alias = "Revenue" }
+                new Aggregate { Function = AggregateFunction.Sum, Field = "Total", Alias = "Sales" },
+                new Aggregate { Function = AggregateFunction.Sum, Field = "Total", Alias = "Revenue" }
             ]
         };
         var result = Validate(options);
@@ -345,8 +345,8 @@ public class AggregateValidationRuleTests
         {
             Aggregates =
             [
-                new AggregateModel { Function = AggregateFunction.Sum, Field = "Total", Alias = "TotalSum" },
-                new AggregateModel { Function = AggregateFunction.Avg, Field = "Total", Alias = "AvgTotal" }
+                new Aggregate { Function = AggregateFunction.Sum, Field = "Total", Alias = "TotalSum" },
+                new Aggregate { Function = AggregateFunction.Avg, Field = "Total", Alias = "AvgTotal" }
             ]
         };
         var result = Validate(options);
@@ -361,8 +361,8 @@ public class AggregateValidationRuleTests
         {
             Aggregates =
             [
-                new AggregateModel { Function = AggregateFunction.Sum, Field = "Total", Alias = "TotalSum" },
-                new AggregateModel { Function = AggregateFunction.Sum, Field = "Price", Alias = "PriceSum" }
+                new Aggregate { Function = AggregateFunction.Sum, Field = "Total", Alias = "TotalSum" },
+                new Aggregate { Function = AggregateFunction.Sum, Field = "Price", Alias = "PriceSum" }
             ]
         };
         var result = Validate(options);
@@ -377,8 +377,8 @@ public class AggregateValidationRuleTests
         {
             Aggregates =
             [
-                new AggregateModel { Function = AggregateFunction.Sum, Field = "Total", Alias = "TotalSum" },
-                new AggregateModel { Function = AggregateFunction.Sum, Field = "total", Alias = "TotalSum2" }
+                new Aggregate { Function = AggregateFunction.Sum, Field = "Total", Alias = "TotalSum" },
+                new Aggregate { Function = AggregateFunction.Sum, Field = "total", Alias = "TotalSum2" }
             ]
         };
         var result = Validate(options);

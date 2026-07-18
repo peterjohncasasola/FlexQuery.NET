@@ -66,15 +66,7 @@ internal static class GroupByBuilder
 
         if (options.Having is not null)
         {
-            var havingFunction = AggregateFunctionConverter.ToKeyword(options.Having.Function);
-            
-            var havingAlias = ParserUtilities.BuildAggregateAlias(havingFunction, options.Having.Field);
-            var matchingAggregate = options.Aggregates.FirstOrDefault(a =>
-                a.Function == options.Having.Function &&
-                string.Equals(a.Field, options.Having.Field, StringComparison.OrdinalIgnoreCase));
-            if (matchingAggregate?.Alias != null)
-                havingAlias = matchingAggregate.Alias;
-            var havingLambda = HavingExpressionBuilder.Build(projectionType, options.Having, havingAlias, options.CaseInsensitive);
+            var havingLambda = HavingExpressionBuilder.Build(projectionType, options.Having, options.Aggregates, options.CaseInsensitive);
             if (havingLambda is not null)
             {
                 finalCall = Expression.Call(
@@ -143,7 +135,7 @@ internal static class GroupByBuilder
         Type keyType,
         Type sourceType,
         List<string> selectedFields,
-        List<AggregateModel> aggregates,
+        List<Aggregate> aggregates,
         QueryOptions options,
         out Type? projectionType)
     {
@@ -188,7 +180,7 @@ internal static class GroupByBuilder
         return Expression.MemberInit(Expression.New(dynamicType), bindings);
     }
 
-    private static Expression? BuildAggregateExpression(ParameterExpression grouping, Type sourceType, AggregateModel aggregate, QueryOptions options)
+    private static Expression? BuildAggregateExpression(ParameterExpression grouping, Type sourceType, Aggregate aggregate, QueryOptions options)
     {
         var fn = aggregate.Function;
 

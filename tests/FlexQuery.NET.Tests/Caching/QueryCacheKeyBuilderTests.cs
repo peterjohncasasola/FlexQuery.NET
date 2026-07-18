@@ -113,7 +113,7 @@ public class QueryCacheKeyBuilderTests
         var options = new QueryOptions
         {
             GroupBy = ["Category"],
-            Aggregates = [new AggregateModel { Function = AggregateFunction.Count, Field = "Id", Alias = "cnt" }]
+            Aggregates = [new Aggregate { Function = AggregateFunction.Count, Field = "Id", Alias = "cnt" }]
         };
 
         var key = QueryCacheKeyBuilder.Build(options, typeof(Customer), "query");

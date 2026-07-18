@@ -199,7 +199,7 @@ public class QueryNormalizationTests
         new QueryOptions { Includes = ["Orders"] }.HasProjection().Should().BeTrue();
         new QueryOptions { Expand = [new IncludeNode { Path = "Orders" }] }.HasProjection().Should().BeTrue();
         new QueryOptions { GroupBy = ["Status"] }.HasProjection().Should().BeTrue();
-        new QueryOptions { Aggregates = [new AggregateModel { Function = AggregateFunction.Count, Alias = "Count" }] }.HasProjection().Should().BeTrue();
+        new QueryOptions { Aggregates = [new Aggregate { Function = AggregateFunction.Count, Alias = "Count" }] }.HasProjection().Should().BeTrue();
     }
 
     [Fact]

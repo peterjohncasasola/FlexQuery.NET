@@ -1,5 +1,6 @@
 using FlexQuery.NET.Caching;
 using FlexQuery.NET.Models;
+using FlexQuery.NET.Models.Aggregates;
 using FlexQuery.NET.Models.Filters;
 using FlexQuery.NET.Security;
 using FlexQuery.NET.Exceptions;
@@ -111,10 +112,10 @@ internal sealed class FieldAccessValidationRule : IValidationRule
             }
         }
 
-        // 8. Process Having - check field if present
-        if (options.Having != null && !string.IsNullOrWhiteSpace(options.Having.Field))
+        // 8. Process Having - check fields recursively
+        if (options.Having != null)
         {
-            CheckAccess(options.Having.Field, QueryOperation.Having, context, result);
+            ValidateHavingAccess(options.Having, context, result, execOptions);
         }
     }
 
@@ -544,5 +545,25 @@ internal sealed class FieldAccessValidationRule : IValidationRule
         }
     
         return _normalizationCache.GetOrAdd(rawField, f => f.Trim());
+    }
+
+    private void ValidateHavingAccess(HavingNode having, QueryContext context, ValidationResult result, QueryGovernanceOptions execOptions)
+    {
+        switch (having)
+        {
+            case HavingConditionNode c:
+                if (!string.IsNullOrWhiteSpace(c.Field))
+                {
+                    CheckAccess(c.Field, QueryOperation.Having, context, result);
+                }
+                break;
+            case HavingLogicalNode l:
+                foreach (var child in l.Children)
+                    ValidateHavingAccess(child, context, result, execOptions);
+                break;
+            case HavingGroupNode g:
+                ValidateHavingAccess(g.Inner, context, result, execOptions);
+                break;
+        }
     }
 }

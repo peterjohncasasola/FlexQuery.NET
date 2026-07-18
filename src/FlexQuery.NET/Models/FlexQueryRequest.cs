@@ -34,10 +34,10 @@ public sealed class FlexQueryRequest
     public List<string>? GroupBy { get; set; }
 
     /// <summary>Aggregate projection expressions (sum, count, avg).</summary>
-    public List<AggregateModel> Aggregate { get; set; } = [];
+    public List<Aggregate> Aggregate { get; set; } = [];
 
     /// <summary>HAVING condition against aggregate projections.</summary>
-    public HavingCondition? Having { get; set; }
+    public HavingNode? Having { get; set; }
 
     /// <summary>If true, applies Distinct() to the query.</summary>
     public bool? Distinct { get; set; }

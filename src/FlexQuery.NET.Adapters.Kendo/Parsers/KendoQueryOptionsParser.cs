@@ -164,7 +164,7 @@ internal static class KendoQueryOptionsParser
         var fn = NormalizeAggregateFunction(aggregateFunction);
         var alias = BuildAggregateAlias(fn, field);
         
-        result.Aggregates.Add(new AggregateModel
+        result.Aggregates.Add(new Aggregate
         {
             Field = field,
             Function = fn,

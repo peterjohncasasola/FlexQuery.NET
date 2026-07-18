@@ -28,7 +28,7 @@ internal sealed class AggregateValidationRule : IValidationRule
         ValidateAggregateTargets(options.Aggregates, result);
     }
 
-    private static void ValidateInvalidIdentifier(AggregateModel aggregate, ValidationResult result)
+    private static void ValidateInvalidIdentifier(Aggregate aggregate, ValidationResult result)
     {
         if (aggregate.Alias.Length > 0 && !ParserUtilities.IsValidIdentifier(aggregate.Alias.AsSpan()))
         {
@@ -39,7 +39,7 @@ internal sealed class AggregateValidationRule : IValidationRule
         }
     }
 
-    private static void ValidateReservedKeyword(AggregateModel aggregate, ValidationResult result)
+    private static void ValidateReservedKeyword(Aggregate aggregate, ValidationResult result)
     {
         if (ReservedKeywordHelper.IsReserved(aggregate.Alias))
         {
@@ -49,9 +49,9 @@ internal sealed class AggregateValidationRule : IValidationRule
         }
     }
 
-    private static void ValidateDuplicateAliases(IReadOnlyCollection<AggregateModel> aggregates, ValidationResult result)
+    private static void ValidateDuplicateAliases(IReadOnlyCollection<Aggregate> aggregates, ValidationResult result)
     {
-        var seen = new Dictionary<string, AggregateModel>(StringComparer.OrdinalIgnoreCase);
+        var seen = new Dictionary<string, Aggregate>(StringComparer.OrdinalIgnoreCase);
         foreach (var aggregate in aggregates)
         {
             if (seen.TryGetValue(aggregate.Alias, out var existing))
@@ -68,9 +68,9 @@ internal sealed class AggregateValidationRule : IValidationRule
         }
     }
 
-    private static void ValidateDuplicateDefinitions(IReadOnlyCollection<AggregateModel> aggregates, ValidationResult result)
+    private static void ValidateDuplicateDefinitions(IReadOnlyCollection<Aggregate> aggregates, ValidationResult result)
     {
-        var seen = new Dictionary<AggregateKey, AggregateModel>();
+        var seen = new Dictionary<AggregateKey, Aggregate>();
         foreach (var aggregate in aggregates)
         {
             var key = new AggregateKey(aggregate.Function, aggregate.Field);
@@ -88,7 +88,7 @@ internal sealed class AggregateValidationRule : IValidationRule
         }
     }
 
-    private static void ValidateAggregateTargets(IReadOnlyCollection<AggregateModel> aggregates, ValidationResult result)
+    private static void ValidateAggregateTargets(IReadOnlyCollection<Aggregate> aggregates, ValidationResult result)
     {
         foreach (var aggregate in aggregates)
         {
@@ -108,7 +108,7 @@ internal sealed class AggregateValidationRule : IValidationRule
         }
     }
 
-    private static string FormatAggregate(AggregateModel aggregate)
+    private static string FormatAggregate(Aggregate aggregate)
     {
         var function = aggregate.Function.ToKeyword().ToUpperInvariant();
         var field = aggregate.Field ?? "*";

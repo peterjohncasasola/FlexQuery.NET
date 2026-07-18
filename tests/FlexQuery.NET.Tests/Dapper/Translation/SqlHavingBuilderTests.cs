@@ -30,7 +30,7 @@ public class SqlHavingBuilderTests
     {
         var mapping = _registry.GetMapping(typeof(Employee));
         var parameters = new SqlParameterContext(Dialect);
-        var having = new HavingCondition
+        var having = new HavingConditionNode
         {
             Function = AggregateFunction.Count,
             Field = null,
@@ -50,7 +50,7 @@ public class SqlHavingBuilderTests
     {
         var mapping = _registry.GetMapping(typeof(Employee));
         var parameters = new SqlParameterContext(Dialect);
-        var having = new HavingCondition
+        var having = new HavingConditionNode
         {
             Function = AggregateFunction.Count,
             Field = null,
@@ -69,7 +69,7 @@ public class SqlHavingBuilderTests
     {
         var mapping = _registry.GetMapping(typeof(Employee));
         var parameters = new SqlParameterContext(Dialect);
-        var having = new HavingCondition
+        var having = new HavingConditionNode
         {
             Function = AggregateFunction.Count,
             Field = null,
@@ -88,7 +88,7 @@ public class SqlHavingBuilderTests
     {
         var mapping = _registry.GetMapping(typeof(Employee));
         var parameters = new SqlParameterContext(Dialect);
-        var having = new HavingCondition
+        var having = new HavingConditionNode
         {
             Function = AggregateFunction.Count,
             Field = null,
@@ -107,7 +107,7 @@ public class SqlHavingBuilderTests
     {
         var mapping = _registry.GetMapping(typeof(Employee));
         var parameters = new SqlParameterContext(Dialect);
-        var having = new HavingCondition
+        var having = new HavingConditionNode
         {
             Function = AggregateFunction.Count,
             Field = null,
@@ -126,7 +126,7 @@ public class SqlHavingBuilderTests
     {
         var mapping = _registry.GetMapping(typeof(Employee));
         var parameters = new SqlParameterContext(Dialect);
-        var having = new HavingCondition
+        var having = new HavingConditionNode
         {
             Function = AggregateFunction.Count,
             Field = null,
@@ -145,7 +145,7 @@ public class SqlHavingBuilderTests
     {
         var mapping = _registry.GetMapping(typeof(Employee));
         var parameters = new SqlParameterContext(Dialect);
-        var having = new HavingCondition
+        var having = new HavingConditionNode
         {
             Function = AggregateFunction.Count,
             Field = "Status",
@@ -164,7 +164,7 @@ public class SqlHavingBuilderTests
     {
         var mapping = _registry.GetMapping(typeof(Employee));
         var parameters = new SqlParameterContext(Dialect);
-        var having = new HavingCondition
+        var having = new HavingConditionNode
         {
             Function = AggregateFunction.Sum,
             Field = "Score",
@@ -183,7 +183,7 @@ public class SqlHavingBuilderTests
     {
         var mapping = _registry.GetMapping(typeof(Employee));
         var parameters = new SqlParameterContext(Dialect);
-        var having = new HavingCondition
+        var having = new HavingConditionNode
         {
             Function = AggregateFunction.Avg,
             Field = "Score",
@@ -202,7 +202,7 @@ public class SqlHavingBuilderTests
     {
         var mapping = _registry.GetMapping(typeof(Employee));
         var parameters = new SqlParameterContext(Dialect);
-        var having = new HavingCondition
+        var having = new HavingConditionNode
         {
             Function = AggregateFunction.Min,
             Field = "Score",
@@ -221,7 +221,7 @@ public class SqlHavingBuilderTests
     {
         var mapping = _registry.GetMapping(typeof(Employee));
         var parameters = new SqlParameterContext(Dialect);
-        var having = new HavingCondition
+        var having = new HavingConditionNode
         {
             Function = AggregateFunction.Max,
             Field = "Score",
@@ -241,7 +241,7 @@ public class SqlHavingBuilderTests
         var mapping = _registry.GetMapping(typeof(Employee));
         var parameters = new SqlParameterContext(Dialect);
 
-        var having = new HavingCondition
+        var having = new HavingConditionNode
         {
             Function = AggregateFunction.Count,
             Field = null,
@@ -259,7 +259,7 @@ public class SqlHavingBuilderTests
         var mapping = _registry.GetMapping(typeof(Employee));
         var parameters = new SqlParameterContext(Dialect);
 
-        var having = new HavingCondition
+        var having = new HavingConditionNode
         {
             Function = AggregateFunction.Count,
             Field = null,
@@ -277,7 +277,7 @@ public class SqlHavingBuilderTests
         var mapping = _registry.GetMapping(typeof(Employee));
         var parameters = new SqlParameterContext(Dialect);
 
-        var having = new HavingCondition
+        var having = new HavingConditionNode
         {
             Function = AggregateFunction.Count,
             Field = null,
@@ -295,7 +295,7 @@ public class SqlHavingBuilderTests
         var mapping = _registry.GetMapping(typeof(Employee));
         var parameters = new SqlParameterContext(Dialect);
 
-        var having = new HavingCondition
+        var having = new HavingConditionNode
         {
             Function = AggregateFunction.Count,
             Field = null,
@@ -313,7 +313,7 @@ public class SqlHavingBuilderTests
         var mapping = _registry.GetMapping(typeof(Employee));
         var parameters = new SqlParameterContext(Dialect);
 
-        var having = new HavingCondition
+        var having = new HavingConditionNode
         {
             Function = AggregateFunction.Count,
             Field = null,
@@ -331,7 +331,7 @@ public class SqlHavingBuilderTests
         var mapping = _registry.GetMapping(typeof(Employee));
         var parameters = new SqlParameterContext(Dialect);
 
-        var having = new HavingCondition
+        var having = new HavingConditionNode
         {
             Function = AggregateFunction.Count,
             Field = null,
@@ -348,7 +348,7 @@ public class SqlHavingBuilderTests
     {
         var mapping = _registry.GetMapping(typeof(Employee));
         var parameters = new SqlParameterContext(Dialect);
-        var having = new HavingCondition
+        var having = new HavingConditionNode
         {
             Function = AggregateFunction.Sum,
             Field = "Score",
@@ -367,7 +367,7 @@ public class SqlHavingBuilderTests
     {
         var mapping = _registry.GetMapping(typeof(Employee));
         var parameters = new SqlParameterContext(new SqliteDialect());
-        var having = new HavingCondition
+        var having = new HavingConditionNode
         {
             Function = AggregateFunction.Count,
             Field = null,
@@ -386,7 +386,7 @@ public class SqlHavingBuilderTests
     {
         var mapping = _registry.GetMapping(typeof(Employee));
         var parameters = new SqlParameterContext(new SqliteDialect());
-        var having = new HavingCondition
+        var having = new HavingConditionNode
         {
             Function = AggregateFunction.Sum,
             Field = "Score",
@@ -405,7 +405,7 @@ public class SqlHavingBuilderTests
     {
         var mapping = _registry.GetMapping(typeof(Employee));
         var parameters = new SqlParameterContext(new PostgreSqlDialect());
-        var having = new HavingCondition
+        var having = new HavingConditionNode
         {
             Function = AggregateFunction.Sum,
             Field = "Score",
@@ -423,7 +423,7 @@ public class SqlHavingBuilderTests
     {
         var mapping = _registry.GetMapping(typeof(Employee));
         var parameters = new SqlParameterContext(new MySqlDialect());
-        var having = new HavingCondition
+        var having = new HavingConditionNode
         {
             Function = AggregateFunction.Sum,
             Field = "Score",
@@ -443,7 +443,7 @@ public class SqlHavingBuilderTests
         registry.Entity<Employee>().ToTable("Employees").HasAlias("e");
         var mapping = registry.GetMapping(typeof(Employee));
         var parameters = new SqlParameterContext(Dialect);
-        var having = new HavingCondition
+        var having = new HavingConditionNode
         {
             Function = AggregateFunction.Sum,
             Field = "Score",
@@ -461,7 +461,7 @@ public class SqlHavingBuilderTests
     {
         var mapping = _registry.GetMapping(typeof(Employee));
         var parameters = new SqlParameterContext(Dialect);
-        var having = new HavingCondition
+        var having = new HavingConditionNode
         {
             Function = AggregateFunction.Count,
             Field = null,

@@ -3,7 +3,7 @@ namespace FlexQuery.NET.Models.Aggregates;
 /// <summary>
 /// Represents an aggregate projection expression (sum/count/avg).
 /// </summary>
-public sealed class AggregateModel
+public sealed class Aggregate
 {
     /// <summary>Aggregate function.</summary>
     public AggregateFunction Function { get; set; }

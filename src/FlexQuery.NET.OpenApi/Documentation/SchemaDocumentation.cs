@@ -26,11 +26,14 @@ internal static class SchemaDocumentation
     internal static readonly string PagingOptions =
         "Pagination parameters: page number, page size, and disable option.";
 
-    internal static readonly string AggregateModel =
+    internal static readonly string Aggregate =
         "An aggregate projection expression with function, field, and alias.";
 
-    internal static readonly string HavingCondition =
+    internal static readonly string HavingConditionNode =
         "A HAVING condition against an aggregate projection.";
+
+    internal static readonly string HavingNode =
+        "A HAVING expression tree supporting logical combinations of aggregate conditions.";
 
     internal static readonly string IncludeNode =
         "A filtered navigation include path with optional child expansions.";

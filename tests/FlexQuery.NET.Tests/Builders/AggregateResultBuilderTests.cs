@@ -32,7 +32,7 @@ public class AggregateResultBuilderTests
     public void Build_MatchingAggregates_ReturnsGrandTotals()
     {
         var row = new AggregateRow { TotalSum = 250.0, IdCount = 10 };
-        var aggregates = new List<AggregateModel>
+        var aggregates = new List<Aggregate>
         {
             new() { Function = AggregateFunction.Sum, Field = "Total", Alias = "TotalSum" },
             new() { Function = AggregateFunction.Count, Field = "Id", Alias = "IdCount" }
@@ -53,7 +53,7 @@ public class AggregateResultBuilderTests
     public void Build_PartialMatch_OnlyReturnsMatching()
     {
         var row = new AggregateRow { TotalSum = 100, IdCount = 5 };
-        var aggregates = new List<AggregateModel>
+        var aggregates = new List<Aggregate>
         {
             new() { Function = AggregateFunction.Sum, Field = "Total", Alias = "TotalSum" }
         };
@@ -69,7 +69,7 @@ public class AggregateResultBuilderTests
     public void Build_MissingAlias_ReturnsNullForUnmatchedProperty()
     {
         var row = new { OtherField = 42 };
-        var aggregates = new List<AggregateModel>
+        var aggregates = new List<Aggregate>
         {
             new() { Function = AggregateFunction.Count, Field = "Id", Alias = "NonExistentProperty" }
         };

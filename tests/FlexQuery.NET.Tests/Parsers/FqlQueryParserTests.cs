@@ -1,9 +1,12 @@
 ﻿using FlexQuery.NET.Exceptions;
+using FlexQuery.NET.Execution;
 using FlexQuery.NET.Models;
 using FlexQuery.NET.Models.Aggregates;
 using FlexQuery.NET.Models.Projection;
 using FlexQuery.NET.Models.Filters;
 using FlexQuery.NET.Parsers.Fql;
+using FlexQuery.NET.Validation;
+using FlexQuery.NET.Validation.Rules;
 
 namespace FlexQuery.NET.Tests.Parsers;
 
@@ -33,6 +36,13 @@ public class FqlQueryParserTests
             Page = page,
             PageSize = pageSize
         });
+    }
+
+    private static HavingConditionNode GetHavingCondition(HavingNode? having)
+    {
+        having.Should().NotBeNull();
+        having.Should().BeOfType<HavingConditionNode>();
+        return (HavingConditionNode)having!;
     }
 
     [Fact]
@@ -391,7 +401,6 @@ public class FqlQueryParserTests
         filter.Filters[0].ScopedFilter.Should().BeNull();
     }
 
-    // â”€â”€â”€ Sort Parser Tests â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
     [Fact]
     public void FqlSort_SingleAsc_ParsedCorrectly()
@@ -545,8 +554,6 @@ public class FqlQueryParserTests
 
         act.Should().Throw<QueryParseException>();
     }
-
-    // â”€â”€â”€ Aggregate Parser Tests â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
     [Fact]
     public void FqlAggregate_SumWithAlias_ParsedCorrectly()
@@ -736,7 +743,6 @@ public class FqlQueryParserTests
             .Which.ParameterName.Should().Be("aggregate");
     }
 
-    // â”€â”€â”€ GroupBy Parser Tests â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
     [Fact]
     public void FqlGroupBy_SingleField_ParsedCorrectly()
@@ -765,7 +771,6 @@ public class FqlQueryParserTests
         result.GroupBy[0].Should().Be("Customer.Region");
     }
 
-    // â”€â”€â”€ Having Parser Tests â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
     [Fact]
     public void FqlHaving_CountGreaterThan_ParsedCorrectly()
@@ -773,10 +778,11 @@ public class FqlQueryParserTests
         var result = FqlParse(having: "COUNT(Orders) > 5");
 
         result.Having.Should().NotBeNull();
-        result.Having!.Function.Should().Be(AggregateFunction.Count);
-        result.Having.Field.Should().Be("Orders");
-        result.Having.Operator.Should().Be("gt");
-        result.Having.Value.Should().Be("5");
+        var having = GetHavingCondition(result.Having);
+        having.Function.Should().Be(AggregateFunction.Count);
+        having.Field.Should().Be("Orders");
+        having.Operator.Should().Be("gt");
+        having.Value.Should().Be("5");
     }
 
     [Fact]
@@ -784,11 +790,11 @@ public class FqlQueryParserTests
     {
         var result = FqlParse(having: "SUM(Amount) > 1000");
 
-        result.Having.Should().NotBeNull();
-        result.Having!.Function.Should().Be(AggregateFunction.Sum);
-        result.Having.Field.Should().Be("Amount");
-        result.Having.Operator.Should().Be("gt");
-        result.Having.Value.Should().Be("1000");
+        var having = GetHavingCondition(result.Having);
+        having.Function.Should().Be(AggregateFunction.Sum);
+        having.Field.Should().Be("Amount");
+        having.Operator.Should().Be("gt");
+        having.Value.Should().Be("1000");
     }
 
     [Fact]
@@ -805,9 +811,9 @@ public class FqlQueryParserTests
     private void AssertHaving(string havingExpr, string expectedOp, string expectedValue)
     {
         var result = FqlParse(having: havingExpr);
-        result.Having.Should().NotBeNull();
-        result.Having!.Operator.Should().Be(expectedOp);
-        result.Having.Value.Should().Be(expectedValue);
+        var having = GetHavingCondition(result.Having);
+        having.Operator.Should().Be(expectedOp);
+        having.Value.Should().Be(expectedValue);
     }
 
     [Fact]
@@ -815,11 +821,11 @@ public class FqlQueryParserTests
     {
         var result = FqlParse(having: "SUM(Orders.Total) > 500");
 
-        result.Having.Should().NotBeNull();
-        result.Having!.Function.Should().Be(AggregateFunction.Sum);
-        result.Having.Field.Should().Be("Orders.Total");
-        result.Having.Operator.Should().Be("gt");
-        result.Having.Value.Should().Be("500");
+        var having = GetHavingCondition(result.Having);
+        having.Function.Should().Be(AggregateFunction.Sum);
+        having.Field.Should().Be("Orders.Total");
+        having.Operator.Should().Be("gt");
+        having.Value.Should().Be("500");
     }
 
     [Fact]
@@ -830,7 +836,6 @@ public class FqlQueryParserTests
         result.Having.Should().BeNull();
     }
 
-    // â”€â”€â”€ Integration Tests â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
     [Fact]
     public void FqlIntegration_AllParameters_ParsedCorrectly()
@@ -895,10 +900,11 @@ public class FqlQueryParserTests
 
         // Having
         result.Having.Should().NotBeNull();
-        result.Having!.Function.Should().Be(AggregateFunction.Sum);
-        result.Having.Field.Should().Be("Amount");
-        result.Having.Operator.Should().Be("gt");
-        result.Having.Value.Should().Be("1000");
+        var having = GetHavingCondition(result.Having);
+        having.Function.Should().Be(AggregateFunction.Sum);
+        having.Field.Should().Be("Amount");
+        having.Operator.Should().Be("gt");
+        having.Value.Should().Be("1000");
 
         // Distinct
         result.Distinct.Should().BeTrue();
@@ -906,6 +912,268 @@ public class FqlQueryParserTests
         // Paging
         result.Paging.Page.Should().Be(2);
         result.Paging.PageSize.Should().Be(25);
+    }
+    
+    [Fact]
+    public void FqlQuery_ValidAggregateHaving_PassesValidation()
+    {
+        var parameters = new FlexQueryParameters
+        {
+            Aggregate = "SUM(Total)",
+            Having = "SUM(Total) > 100"
+        };
+
+        var options = new FqlQueryParser().Parse(parameters);
+        var rule = new HavingAggregateExistenceRule();
+        var result = ValidationResult.Success();
+
+        rule.Validate(options, new QueryContext { TargetType = typeof(Order) }, result);
+
+        result.IsValid.Should().BeTrue();
+    }
+    
+    [Fact]
+    public void FqlQuery_ValidAggregateHavingWithAnd_PassesValidation()
+    {
+        var parameters = new FlexQueryParameters
+        {
+            Aggregate = "SUM(Total), COUNT(Id)",
+            Having = "SUM(Total) > 100 AND COUNT(Id) >= 5"
+        };
+
+        var options = new FqlQueryParser().Parse(parameters);
+        var rule = new HavingAggregateExistenceRule();
+        var result = ValidationResult.Success();
+
+        rule.Validate(options, new QueryContext { TargetType = typeof(Order) }, result);
+
+        result.IsValid.Should().BeTrue();
+    }
+    
+    [Fact]
+    public void FqlQuery_ValidAggregateHavingWithOr_PassesValidation()
+    {
+        var parameters = new FlexQueryParameters
+        {
+            Aggregate = "SUM(Total), AVG(Price)",
+            Having = "SUM(Total) > 100 OR AVG(Price) < 50"
+        };
+
+        var options = new FqlQueryParser().Parse(parameters);
+        var rule = new HavingAggregateExistenceRule();
+        var result = ValidationResult.Success();
+
+        rule.Validate(options, new QueryContext { TargetType = typeof(Order) }, result);
+
+        result.IsValid.Should().BeTrue();
+    }
+    
+    [Fact]
+    public void FqlQuery_ValidNestedAggregateHaving_PassesValidation()
+    {
+        var parameters = new FlexQueryParameters
+        {
+            Aggregate = "SUM(Total), COUNT(Id), AVG(Price)",
+            Having = "(SUM(Total) > 100 OR COUNT(Id) >= 5) AND AVG(Price) < 50"
+        };
+
+        var options = new FqlQueryParser().Parse(parameters);
+        var rule = new HavingAggregateExistenceRule();
+        var result = ValidationResult.Success();
+
+        rule.Validate(options, new QueryContext { TargetType = typeof(Order) }, result);
+
+        result.IsValid.Should().BeTrue();
+    }
+    
+    [Fact]
+    public void FqlQuery_InvalidAggregateHaving_FailsValidation()
+    {
+        var parameters = new FlexQueryParameters
+        {
+            Aggregate = "SUM(Total)",
+            Having = "AVG(Price) > 100"
+        };
+
+        var options = new FqlQueryParser().Parse(parameters);
+        var rule = new HavingAggregateExistenceRule();
+        var result = ValidationResult.Success();
+
+        rule.Validate(options, new QueryContext { TargetType = typeof(Order) }, result);
+
+        result.IsValid.Should().BeFalse();
+    }
+    
+    [Fact]
+    public void FqlQuery_InvalidAggregateHavingWithAnd_FailsValidation()
+    {
+        var parameters = new FlexQueryParameters
+        {
+            Aggregate = "SUM(Total)",
+            Having = "SUM(Total) > 100 AND COUNT(Id) >= 5"
+        };
+
+        var options = new FqlQueryParser().Parse(parameters);
+        var rule = new HavingAggregateExistenceRule();
+        var result = ValidationResult.Success();
+
+        rule.Validate(options, new QueryContext { TargetType = typeof(Order) }, result);
+
+        result.IsValid.Should().BeFalse();
+    }
+    
+    [Fact]
+    public void FqlQuery_InvalidAggregateHavingWithOr_FailsValidation()
+    {
+        var parameters = new FlexQueryParameters
+        {
+            Aggregate = "SUM(Total)",
+            Having = "SUM(Total) > 100 OR AVG(Price) < 50"
+        };
+
+        var options = new FqlQueryParser().Parse(parameters);
+        var rule = new HavingAggregateExistenceRule();
+        var result = ValidationResult.Success();
+
+        rule.Validate(options, new QueryContext { TargetType = typeof(Order) }, result);
+
+        result.IsValid.Should().BeFalse();
+    }
+    
+    [Fact]
+    public void FqlQuery_InvalidNestedAggregateHaving_FailsValidation()
+    {
+        var parameters = new FlexQueryParameters
+        {
+            Aggregate = "SUM(Total), COUNT(Id)",
+            Having = "(SUM(Total) > 100 OR AVG(Price) < 50) AND COUNT(Id) >= 5"
+        };
+
+        var options = new FqlQueryParser().Parse(parameters);
+        var rule = new HavingAggregateExistenceRule();
+        var result = ValidationResult.Success();
+
+        rule.Validate(options, new QueryContext { TargetType = typeof(Order) }, result);
+
+        result.IsValid.Should().BeFalse();
+    }
+    
+    [Fact]
+    public void FqlQuery_HavingCountFieldNotDefinedInAggregate_FailsValidation()
+    {
+        var parameters = new FlexQueryParameters
+        {
+            Aggregate = "COUNT(OrderItems.Id)",
+            Having = "COUNT(Id) > 10"
+        };
+
+        var options = new FqlQueryParser().Parse(parameters);
+        var rule = new HavingAggregateExistenceRule();
+        var result = ValidationResult.Success();
+
+        rule.Validate(options, new QueryContext { TargetType = typeof(Order) }, result);
+
+        result.IsValid.Should().BeFalse();
+    }
+    
+    [Fact]
+    public void FqlQuery_HavingCountStarDefinedInAggregate_PassesValidation()
+    {
+        var parameters = new FlexQueryParameters
+        {
+            Aggregate = "COUNT(Id)",
+            Having = "COUNT(Id) > 10"
+        };
+
+        var options = new FqlQueryParser().Parse(parameters);
+        var rule = new HavingAggregateExistenceRule();
+        var result = ValidationResult.Success();
+
+        rule.Validate(options, new QueryContext { TargetType = typeof(Order) }, result);
+
+        result.IsValid.Should().BeTrue();
+    }
+    
+    [Fact]
+    public void FqlQuery_CountStarAggregate_ThrowsParseException()
+    {
+        var parameters = new FlexQueryParameters
+        {
+            Aggregate = "COUNT(*)"
+        };
+
+        var action = () => new FqlQueryParser().Parse(parameters);
+
+        action.Should().Throw<QueryParseException>();
+    }
+    
+    [Fact]
+    public void FqlQuery_CountStarAggregateAndHaving_ThrowsParseException()
+    {
+        var parameters = new FlexQueryParameters
+        {
+            Aggregate = "COUNT(*)",
+            Having = "COUNT(*)"
+        };
+
+        var action = () => new FqlQueryParser().Parse(parameters);
+
+        action.Should().Throw<QueryParseException>();
+    }
+    
+    [Fact]
+    public void FqlQuery_NestedHavingContainsMissingAggregate_FailsValidation()
+    {
+        var parameters = new FlexQueryParameters
+        {
+            Aggregate = "SUM(Total), COUNT(Id)",
+            Having = "(SUM(Total) > 100 OR AVG(Price) < 50) AND COUNT(Id) >= 5"
+        };
+
+        var options = new FqlQueryParser().Parse(parameters);
+        var rule = new HavingAggregateExistenceRule();
+        var result = ValidationResult.Success();
+
+        rule.Validate(options, new QueryContext { TargetType = typeof(Order) }, result);
+
+        result.IsValid.Should().BeFalse();
+    }
+    
+    [Fact]
+    public void FqlQuery_HavingAndContainsMissingAggregate_FailsValidation()
+    {
+        var parameters = new FlexQueryParameters
+        {
+            Aggregate = "SUM(Total)",
+            Having = "SUM(Total) > 100 AND COUNT(Id) >= 5"
+        };
+
+        var options = new FqlQueryParser().Parse(parameters);
+        var rule = new HavingAggregateExistenceRule();
+        var result = ValidationResult.Success();
+
+        rule.Validate(options, new QueryContext { TargetType = typeof(Order) }, result);
+
+        result.IsValid.Should().BeFalse();
+    }
+    
+    
+    [Fact]
+    public void FqlQuery_NestedHavingWithDeclaredAggregates_PassesValidation()
+    {
+        var parameters = new FlexQueryParameters
+        {
+            Aggregate = "COUNT(Id), SUM(Total)",
+            Having = "(SUM(Total) > 500 AND COUNT(Id) >= 5)"
+        };
+
+        var options = new FqlQueryParser().Parse(parameters);
+        var rule = new HavingAggregateExistenceRule();
+        var result = ValidationResult.Success();
+
+        rule.Validate(options, new QueryContext { TargetType = typeof(Order) }, result);
+
+        result.IsValid.Should().BeTrue();
     }
 }
 

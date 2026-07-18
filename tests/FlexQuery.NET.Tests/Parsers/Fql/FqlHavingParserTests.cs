@@ -11,7 +11,7 @@ namespace FlexQuery.NET.Tests.Parsers.Fql;
 
 public class FqlHavingParserTests
 {
-    private static HavingCondition? Parse(string? raw) =>
+    private static HavingNode? Parse(string? raw) =>
         FqlHavingParser.Parse(raw);
 
     [Fact]
@@ -40,46 +40,14 @@ public class FqlHavingParserTests
     [InlineData("SUM(Total) = 100", "eq", "100")]
     [InlineData("SUM(Total) != 100", "neq", "100")]
     [InlineData("SUM(Total) <> 100", "neq", "100")]
-    [InlineData("AVG(Price) LIKE '%abc%'", "like", "%abc%")]
-    [InlineData("SUM(Total) IS NULL", "isnull", null)]
-    [InlineData("SUM(Total) IS NOT NULL", "isnotnull", null)]
     public void Parse_ValidOperator_ReturnsNormalizedOperator(string input, string expectedOperator, string? expectedValue)
     {
         var result = Parse(input);
 
         result.Should().NotBeNull();
-        result!.Operator.Should().Be(expectedOperator);
-        result.Value.Should().Be(expectedValue);
-    }
-
-    [Fact]
-    public void Parse_ValidBetweenOperator_ReturnsCommaSeparatedValues()
-    {
-        var result = Parse("SUM(Total) BETWEEN 10 AND 20");
-
-        result.Should().NotBeNull();
-        result!.Operator.Should().Be("between");
-        result.Value.Should().Be("10,20");
-    }
-
-    [Fact]
-    public void Parse_ValidInOperator_ReturnsCommaSeparatedValues()
-    {
-        var result = Parse("COUNT(Orders) IN (1, 2, 3)");
-
-        result.Should().NotBeNull();
-        result!.Operator.Should().Be("in");
-        result.Value.Should().Be("1,2,3");
-    }
-
-    [Fact]
-    public void Parse_ValidNotInOperator_ReturnsCommaSeparatedValues()
-    {
-        var result = Parse("COUNT(Orders) NOT IN (1, 2, 3)");
-
-        result.Should().NotBeNull();
-        result!.Operator.Should().Be("notin");
-        result.Value.Should().Be("1,2,3");
+        var having = (HavingConditionNode)result!;
+        having.Operator.Should().Be(expectedOperator);
+        having.Value.Should().Be(expectedValue);
     }
 
     [Theory]
@@ -93,59 +61,15 @@ public class FqlHavingParserTests
         act.Should().Throw<FqlParseException>();
     }
 
-    [Fact]
-    public void Parse_UnsupportedOperator_ErrorMessageContainsOperator()
+    [Theory]
+    [InlineData("SUM(Total) BETWEEN 10 AND 20")]
+    [InlineData("COUNT(Orders) IN (1, 2, 3)")]
+    [InlineData("COUNT(Orders) NOT IN (1, 2, 3)")]
+    public void Parse_UnsupportedHavingOperator_ThrowsFqlParseException(string input)
     {
-        var ex = Record.Exception(() => Parse("SUM(Total) FOO 100"));
+        var act = () => Parse(input);
 
-        ex.Should().BeOfType<FqlParseException>();
-        ex.Message.Should().Contain("FOO");
-        ex.Message.Should().Contain("Unrecognized operator");
-    }
-
-    [Fact]
-    public void Parse_Between_MissingAnd_ThrowsFqlParseException()
-    {
-        var act = () => Parse("SUM(Total) BETWEEN 10");
-
-        act.Should().Throw<FqlParseException>()
-            .WithMessage("*BETWEEN requires two values*");
-    }
-
-    [Fact]
-    public void Parse_In_MissingOpeningParen_ThrowsFqlParseException()
-    {
-        var act = () => Parse("SUM(Total) IN 1, 2, 3");
-
-        act.Should().Throw<FqlParseException>()
-            .WithMessage("*IN requires a parenthesized list*");
-    }
-
-    [Fact]
-    public void Parse_In_MissingClosingParen_ThrowsFqlParseException()
-    {
-        var act = () => Parse("SUM(Total) IN (1, 2, 3");
-
-        act.Should().Throw<FqlParseException>()
-            .WithMessage("*Missing closing parenthesis*");
-    }
-
-    [Fact]
-    public void Parse_In_EmptyList_ThrowsFqlParseException()
-    {
-        var act = () => Parse("SUM(Total) IN ()");
-
-        act.Should().Throw<FqlParseException>()
-            .WithMessage("*IN list cannot be empty*");
-    }
-
-    [Fact]
-    public void Parse_IsNull_ExtraContent_ThrowsFqlParseException()
-    {
-        var act = () => Parse("SUM(Total) IS NULL EXTRA");
-
-        act.Should().Throw<FqlParseException>()
-            .WithMessage("*Unexpected content after*");
+        act.Should().Throw<FqlParseException>();
     }
 
     [Fact]
@@ -154,50 +78,11 @@ public class FqlHavingParserTests
         var result = Parse("SUM(Total) > 100");
 
         result.Should().NotBeNull();
-        result!.Function.Should().Be(AggregateFunction.Sum);
-        result.Field.Should().Be("Total");
-        result.Operator.Should().Be("gt");
-        result.Value.Should().Be("100");
-    }
-
-    [Fact]
-    public void Parse_ValidBetweenOperator_ReturnsCorrectValue()
-    {
-        var result = Parse("SUM(Total) BETWEEN 10 AND 20");
-
-        result.Should().NotBeNull();
-        result!.Operator.Should().Be("between");
-        result.Value.Should().Be("10,20");
-    }
-
-    [Fact]
-    public void Parse_ValidInOperator_ReturnsCorrectValue()
-    {
-        var result = Parse("COUNT(Orders) IN (1, 2, 3)");
-
-        result.Should().NotBeNull();
-        result!.Operator.Should().Be("in");
-        result.Value.Should().Be("1,2,3");
-    }
-
-    [Fact]
-    public void Parse_ValidIsNullOperator_ReturnsCorrectValue()
-    {
-        var result = Parse("SUM(Total) IS NULL");
-
-        result.Should().NotBeNull();
-        result!.Operator.Should().Be("isnull");
-        result.Value.Should().BeNull();
-    }
-
-    [Fact]
-    public void Parse_ValidIsNotNullOperator_ReturnsCorrectValue()
-    {
-        var result = Parse("SUM(Total) IS NOT NULL");
-
-        result.Should().NotBeNull();
-        result!.Operator.Should().Be("isnotnull");
-        result.Value.Should().BeNull();
+        var having = (HavingConditionNode)result!;
+        having.Function.Should().Be(AggregateFunction.Sum);
+        having.Field.Should().Be("Total");
+        having.Operator.Should().Be("gt");
+        having.Value.Should().Be("100");
     }
 
     [Fact]
@@ -215,13 +100,13 @@ public class FqlHavingParserTests
         var act = () => Parse("COUNT(*) > 0");
 
         act.Should().Throw<FqlParseException>()
-            .WithMessage("*COUNT(*) is not supported*");
+            .WithMessage("*Expected field name inside aggregate function 'COUNT'*");
     }
 
     [Fact]
     public void Parse_InvalidField_ThrowsFqlParseException()
     {
-        var act = () => Parse("SUM(Invalid Field) > 0");
+        var act = () => Parse("SUM(bad-field) > 0");
 
         act.Should().Throw<FqlParseException>()
             .WithMessage("*Invalid field*");
@@ -233,7 +118,7 @@ public class FqlHavingParserTests
         var act = () => Parse("Total > 100");
 
         act.Should().Throw<FqlParseException>()
-            .WithMessage("*Missing function call*");
+            .WithMessage("*Expected aggregate function*");
     }
 
     [Fact]
@@ -242,17 +127,31 @@ public class FqlHavingParserTests
         var act = () => Parse("SUM(Total > 100");
 
         act.Should().Throw<FqlParseException>()
-            .WithMessage("*Missing closing parenthesis*");
+            .WithMessage("*Expected CloseParen at position 10, but found Gt*");
     }
 
     [Fact]
     public void Parse_QuotedValues_StrippedCorrectly()
     {
-        var result = Parse("SUM(Total) BETWEEN '10' AND '20'");
+        var result = Parse("SUM(Total) > '100'");
 
         result.Should().NotBeNull();
-        result!.Operator.Should().Be("between");
-        result.Value.Should().Be("10,20");
+        var having = (HavingConditionNode)result!;
+        having.Operator.Should().Be("gt");
+        having.Value.Should().Be("100");
+    }
+
+    [Fact]
+    public void Parse_DottedField_ReturnsCorrectField()
+    {
+        var result = Parse("SUM(Orders.Total) > 100");
+
+        result.Should().NotBeNull();
+        var having = (HavingConditionNode)result!;
+        having.Function.Should().Be(AggregateFunction.Sum);
+        having.Field.Should().Be("Orders.Total");
+        having.Operator.Should().Be("gt");
+        having.Value.Should().Be("100");
     }
 
     [Fact]
@@ -265,7 +164,7 @@ public class FqlHavingParserTests
         };
 
         var options = new FqlQueryParser().Parse(parameters);
-        var rule = new HavingAliasIntegrityRule();
+        var rule = new HavingAggregateExistenceRule();
         var result = ValidationResult.Success();
 
         rule.Validate(options, new QueryContext { TargetType = typeof(Order) }, result);
@@ -282,13 +181,13 @@ public class FqlHavingParserTests
         };
 
         var options = new FqlQueryParser().Parse(parameters);
-        var rule = new HavingAliasIntegrityRule();
+        var rule = new HavingAggregateExistenceRule();
         var result = ValidationResult.Success();
 
         rule.Validate(options, new QueryContext { TargetType = typeof(Order) }, result);
 
         result.IsValid.Should().BeFalse();
-        result.Errors.Should().ContainSingle(e => e.Code == ValidationErrorCodes.AggregateNotDeclared);
+        result.Errors.Should().ContainSingle(e => e.Code == ValidationErrorCodes.HavingAliasMismatch);
     }
 
     [Fact]
@@ -301,13 +200,13 @@ public class FqlHavingParserTests
         };
 
         var options = new FqlQueryParser().Parse(parameters);
-        var rule = new HavingAliasIntegrityRule();
+        var rule = new HavingAggregateExistenceRule();
         var result = ValidationResult.Success();
 
         rule.Validate(options, new QueryContext { TargetType = typeof(Order) }, result);
 
         result.IsValid.Should().BeFalse();
-        result.Errors.Should().ContainSingle(e => e.Code == ValidationErrorCodes.AggregateNotDeclared);
+        result.Errors.Should().ContainSingle(e => e.Code == ValidationErrorCodes.HavingAliasMismatch);
     }
 
     [Fact]
@@ -320,12 +219,32 @@ public class FqlHavingParserTests
         };
 
         var options = new FqlQueryParser().Parse(parameters);
-        var rule = new HavingAliasIntegrityRule();
+        var rule = new HavingAggregateExistenceRule();
         var result = ValidationResult.Success();
 
         rule.Validate(options, new QueryContext { TargetType = typeof(Order) }, result);
 
         result.IsValid.Should().BeFalse();
-        result.Errors.Should().ContainSingle(e => e.Code == ValidationErrorCodes.AggregateNotDeclared);
+        result.Errors.Should().ContainSingle(e => e.Code == ValidationErrorCodes.HavingAliasMismatch);
     }
+    
+    
+    [Fact]
+    public void FqlQuery_HavingOrContainsMissingAggregate_FailsValidation()
+    {
+        var parameters = new FlexQueryParameters
+        {
+            Aggregate = "SUM(Total)",
+            Having = "SUM(Total) > 100 OR AVG(Cost) < 50"
+        };
+
+        var options = new FqlQueryParser().Parse(parameters);
+        var rule = new HavingAggregateExistenceRule();
+        var result = ValidationResult.Success();
+
+        rule.Validate(options, new QueryContext { TargetType = typeof(Order) }, result);
+
+        result.IsValid.Should().BeFalse();
+    }
+    
 }

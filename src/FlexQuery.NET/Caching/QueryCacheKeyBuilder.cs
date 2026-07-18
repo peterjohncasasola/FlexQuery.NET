@@ -80,16 +80,27 @@ internal static class QueryCacheKeyBuilder
             : string.Join(",", sorts.Select(s =>
                 $"{Escape(s.Field)}:{s.Descending}:{Escape(s.Aggregate.HasValue ? s.Aggregate.Value.ToKeyword() : null)}:{Escape(s.AggregateField)}"));
 
-    private static string AggregateKey(IEnumerable<AggregateModel>? aggregates)
+    private static string AggregateKey(IEnumerable<Aggregate>? aggregates)
         => aggregates is null
             ? string.Empty
             : string.Join(",", aggregates.Select(a =>
                 $"{Escape(a.Function.ToKeyword())}:{Escape(a.Field)}:{Escape(a.Alias)}"));
 
-    private static string HavingKey(HavingCondition? having)
+    private static string HavingKey(HavingNode? having)
         => having is null
             ? string.Empty
-            : $"{Escape(having.Function.ToKeyword())}:{Escape(having.Field)}:{Escape(having.Operator)}:{Escape(having.Value)}";
+            : BuildHavingKey(having);
+
+    private static string BuildHavingKey(HavingNode having)
+    {
+        return having switch
+        {
+            HavingConditionNode c => $"{Escape(c.Function.ToKeyword())}:{Escape(c.Field)}:{Escape(c.Operator)}:{Escape(c.Value)}",
+            HavingLogicalNode l => $"({string.Join(l.Logic.ToKeyword().ToLowerInvariant() == "or" ? "|" : "&", l.Children.Select(BuildHavingKey))})",
+            HavingGroupNode g => $"({BuildHavingKey(g.Inner)})",
+            _ => string.Empty
+        };
+    }
 
     private static string IncludeKey(IEnumerable<IncludeNode>? includes)
         => includes is null

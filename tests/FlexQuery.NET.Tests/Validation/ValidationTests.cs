@@ -99,7 +99,7 @@ public class ValidationTests
     {
         var options = new QueryOptions
         {
-            Having = new HavingCondition { Function = AggregateFunction.Count, Field = "Id", Operator = "gt", Value = "5" }
+            Having = new HavingConditionNode { Function = AggregateFunction.Count, Field = "Id", Operator = "gt", Value = "5" }
         };
 
         Action act = () => options.ValidateOrThrow<Customer>();
@@ -114,8 +114,8 @@ public class ValidationTests
         var options = new QueryOptions
         {
             GroupBy = ["Status"],
-            Aggregates = [new AggregateModel { Function = AggregateFunction.Count, Field = "Id", Alias = "idCount" }],
-            Having = new HavingCondition { Function = AggregateFunction.Count, Field = "Id", Operator = "gt", Value = "5" }
+            Aggregates = [new Aggregate { Function = AggregateFunction.Count, Field = "Id", Alias = "idCount" }],
+            Having = new HavingConditionNode { Function = AggregateFunction.Count, Field = "Id", Operator = "gt", Value = "5" }
         };
 
         Action act = () => options.ValidateOrThrow<Customer>();
@@ -128,8 +128,8 @@ public class ValidationTests
     {
         var options = new QueryOptions
         {
-            Aggregates = [new AggregateModel { Function = AggregateFunction.Count, Field = "Id", Alias = "idCount" }],
-            Having = new HavingCondition { Function = AggregateFunction.Count, Field = "Id", Operator = "gt", Value = "5" }
+            Aggregates = [new Aggregate { Function = AggregateFunction.Count, Field = "Id", Alias = "idCount" }],
+            Having = new HavingConditionNode { Function = AggregateFunction.Count, Field = "Id", Operator = "gt", Value = "5" }
         };
 
         Action act = () => options.ValidateOrThrow<Customer>();
@@ -142,14 +142,14 @@ public class ValidationTests
     {
         var options = new QueryOptions
         {
-            Aggregates = [new AggregateModel { Function = AggregateFunction.Sum, Field = "Total", Alias = "totalSum" }],
-            Having = new HavingCondition { Function = AggregateFunction.Count, Field = "Id", Operator = "gt", Value = "5" }
+            Aggregates = [new Aggregate { Function = AggregateFunction.Sum, Field = "Age", Alias = "totalAge" }],
+            Having = new HavingConditionNode { Function = AggregateFunction.Count, Field = "Id", Operator = "gt", Value = "5" }
         };
 
         Action act = () => options.ValidateOrThrow<Customer>();
 
         act.Should().Throw<QueryValidationException>()
-           .Which.Result.Errors.Should().Contain(e => e.Code == ValidationErrorCodes.AggregateNotDeclared);
+           .Which.Result.Errors.Should().Contain(e => e.Code == ValidationErrorCodes.HavingAliasMismatch);
     }
 
     [Fact]
@@ -157,8 +157,8 @@ public class ValidationTests
     {
         var options = new QueryOptions
         {
-            Aggregates = [new AggregateModel { Function = AggregateFunction.Sum, Field = "Total", Alias = "totalSum" }],
-            Having = new HavingCondition { Function = AggregateFunction.Sum, Field = "Total", Operator = "gt", Value = "100" }
+            Aggregates = [new Aggregate { Function = AggregateFunction.Sum, Field = "Age", Alias = "totalAge" }],
+            Having = new HavingConditionNode { Function = AggregateFunction.Sum, Field = "Age", Operator = "gt", Value = "100" }
         };
 
         Action act = () => options.ValidateOrThrow<Customer>();
