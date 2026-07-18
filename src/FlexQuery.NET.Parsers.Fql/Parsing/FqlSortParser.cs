@@ -18,8 +18,8 @@ internal static class FqlSortParser
             var trimmed = item.Trim();
             if (trimmed.Length == 0)
                 throw new FqlParseException(
-                    $"Unable to parse sort expression '{sortRaw}'. Empty sort item found. " +
-                    $"Expected format: Field [ASC|DESC] or FUNCTION(Field) [ASC|DESC]");
+                    "Unable to parse sort expression. Empty sort item found. Expected format: Field [ASC|DESC] or FUNCTION(Field) [ASC|DESC]",
+                    position: -1);
 
             ParseSortItem(trimmed, result, sortRaw);
         }
@@ -41,8 +41,8 @@ internal static class FqlSortParser
         if (openParen > 0 || closeParen > 0)
         {
             throw new FqlParseException(
-                $"Unable to parse sort expression '{rawInput}'. Malformed aggregate syntax in '{item}'. " +
-                $"Expected format: FUNCTION(Field) [ASC|DESC].");
+                "Unable to parse sort expression. Malformed aggregate syntax. Expected format: FUNCTION(Field) [ASC|DESC].",
+                position: -1);
         }
 
         ParseFieldSort(item, result, rawInput);
@@ -54,8 +54,8 @@ internal static class FqlSortParser
         if (functionName.Length == 0)
         {
             throw new FqlParseException(
-                $"Unable to parse sort expression '{rawInput}'. Missing aggregate function in '{item}'. " +
-                $"Expected format: FUNCTION(Field) [ASC|DESC].");
+                "Unable to parse sort expression. Missing aggregate function. Expected format: FUNCTION(Field) [ASC|DESC].",
+                position: -1);
         }
 
         AggregateFunction function;
@@ -66,29 +66,30 @@ internal static class FqlSortParser
         catch
         {
             throw new FqlParseException(
-                $"Unable to parse sort expression '{rawInput}'. Unrecognized aggregate function '{functionName}' in '{item}'. " +
-                $"Expected one of: SUM, COUNT, AVG, MIN, MAX.");
+                $"Unable to parse sort expression. Unrecognized aggregate function '{functionName}'. Expected one of: SUM, COUNT, AVG, MIN, MAX.",
+                position: -1);
         }
 
         var fieldRaw = item[(openParen + 1)..closeParen].Trim();
         if (fieldRaw.Length == 0)
         {
             throw new FqlParseException(
-                $"Unable to parse sort expression '{rawInput}'. Missing field in aggregate '{item}'. " +
-                $"Expected format: FUNCTION(Field) [ASC|DESC].");
+                "Unable to parse sort expression. Missing field in aggregate. Expected format: FUNCTION(Field) [ASC|DESC].",
+                position: -1);
         }
 
         if (function == AggregateFunction.Count && fieldRaw == "*")
         {
             throw new FqlParseException(
-                $"Unable to parse sort expression '{rawInput}'. COUNT(*) is not supported in sort. Use COUNT(<collection>) or another aggregate over a property instead.");
+                "Unable to parse sort expression. COUNT(*) is not supported in sort. Use COUNT(<collection>) or another aggregate over a property instead.",
+                position: -1);
         }
 
         if (fieldRaw != "*" && !ParserUtilities.IsValidPropertyPath(fieldRaw.AsSpan()))
         {
             throw new FqlParseException(
-                $"Unable to parse sort expression '{rawInput}'. Invalid field path '{fieldRaw}' in aggregate '{item}'. " +
-                $"Expected format: FUNCTION(Field) [ASC|DESC].");
+                $"Unable to parse sort expression. Invalid field path '{fieldRaw}' in aggregate. Expected format: FUNCTION(Field) [ASC|DESC].",
+                position: -1);
         }
 
         string? field = null;
@@ -130,8 +131,8 @@ internal static class FqlSortParser
             else
             {
                 throw new FqlParseException(
-                    $"Unable to parse sort expression '{rawInput}'. Invalid sort direction '{remaining}' in '{item}'. " +
-                    $"Expected ASC or DESC.");
+                    "Unable to parse sort expression. Invalid sort direction. Expected ASC or DESC.",
+                    position: -1);
             }
         }
 
@@ -157,8 +158,8 @@ internal static class FqlSortParser
             {
                 if (!ParserUtilities.IsValidPropertyPath(field.AsSpan()))
                     throw new FqlParseException(
-                        $"Unable to parse sort expression '{rawInput}'. Invalid field path at '{field}'. " +
-                        $"Expected format: Field [ASC|DESC]");
+                        "Unable to parse sort expression. Invalid field path. Expected format: Field [ASC|DESC]",
+                        position: -1);
                 result.Add(new SortNode { Field = field, Descending = true });
                 return;
             }
@@ -168,8 +169,8 @@ internal static class FqlSortParser
             {
                 if (!ParserUtilities.IsValidPropertyPath(field.AsSpan()))
                     throw new FqlParseException(
-                        $"Unable to parse sort expression '{rawInput}'. Invalid field path at '{field}'. " +
-                        $"Expected format: Field [ASC|DESC]");
+                        "Unable to parse sort expression. Invalid field path. Expected format: Field [ASC|DESC]",
+                        position: -1);
                 result.Add(new SortNode { Field = field, Descending = false });
                 return;
             }
@@ -182,8 +183,8 @@ internal static class FqlSortParser
         else
         {
             throw new FqlParseException(
-                $"Unable to parse sort expression '{rawInput}'. Invalid field path at '{item}'. " +
-                $"Expected format: Field [ASC|DESC]");
+                "Unable to parse sort expression. Invalid field path. Expected format: Field [ASC|DESC]",
+                position: -1);
         }
     }
 }

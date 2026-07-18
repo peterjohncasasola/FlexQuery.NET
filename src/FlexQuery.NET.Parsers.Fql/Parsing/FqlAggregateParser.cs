@@ -22,9 +22,8 @@ internal static class FqlAggregateParser
             if (parenIndex <= 0)
             {
                 throw new FqlParseException(
-                    $"Unable to parse aggregate expression '{rawSelect}'. " +
-                    $"Expected format: FUNCTION(Field) [AS Alias]. " +
-                    $"Missing opening parenthesis in '{trimmed}'.");
+                    "Unable to parse aggregate expression. Expected format: FUNCTION(Field) [AS Alias]. Missing opening parenthesis.",
+                    position: -1);
             }
 
             var functionName = trimmed[..parenIndex].Trim();
@@ -36,47 +35,37 @@ internal static class FqlAggregateParser
             catch
             {
                 throw new FqlParseException(
-                    $"Unable to parse aggregate expression '{rawSelect}'. " +
-                    $"Expected format: FUNCTION(Field) [AS Alias]. " +
-                    $"Unrecognized function '{functionName}' at '{trimmed}'.");
+                    "Unable to parse aggregate expression. Expected format: FUNCTION(Field) [AS Alias]. Unrecognized function.",
+                    position: -1);
             }
 
             var closeParen = trimmed.IndexOf(')', parenIndex);
             if (closeParen < 0)
             {
                 throw new FqlParseException(
-                    $"Unable to parse aggregate expression '{rawSelect}'. " +
-                    $"Expected format: FUNCTION(Field) [AS Alias]. " +
-                    $"Missing closing parenthesis in '{trimmed}'.");
+                    "Unable to parse aggregate expression. Expected format: FUNCTION(Field) [AS Alias]. Missing closing parenthesis.",
+                    position: -1);
             }
 
             var fieldRaw = trimmed[(parenIndex + 1)..closeParen].Trim();
             if (fieldRaw.Length == 0)
             {
                 throw new FqlParseException(
-                    $"Unable to parse aggregate expression '{rawSelect}'. " +
-                    $"Expected format: FUNCTION(Field) [AS Alias]. " +
-                    $"Missing field in '{trimmed}'.");
+                    "Unable to parse aggregate expression. Expected format: FUNCTION(Field) [AS Alias]. Missing field.",
+                    position: -1);
             }
 
             if (function == AggregateFunction.Count && fieldRaw == "*")
             {
                 throw new FqlParseException(
-                    $"Unable to parse aggregate expression '{rawSelect}'. " +
-                    $"COUNT(*) is not supported. Use COUNT(<collection>) or another aggregate over a property instead.");
-            }
-
-            if (function == AggregateFunction.Count && fieldRaw == "*")
-            {
-                throw new FqlParseException(
-                    $"Unable to parse aggregate expression '{rawSelect}'. " +
-                    $"COUNT(*) is not supported. Use COUNT(<collection>) or another aggregate over a property instead.");
+                    "Unable to parse aggregate expression. COUNT(*) is not supported. Use COUNT(<collection>) or another aggregate over a property instead.",
+                    position: -1);
             }
 
             if (fieldRaw != "*" && !ParserUtilities.IsValidPropertyPath(fieldRaw.AsSpan()))
                 throw new FqlParseException(
-                    $"Invalid field '{fieldRaw}' in aggregate expression '{rawSelect}'. " +
-                    "Field must be a valid property path.");
+                    $"Invalid field '{fieldRaw}' in aggregate expression. Field must be a valid property path.",
+                    position: -1);
 
             string? field;
 
@@ -99,9 +88,8 @@ internal static class FqlAggregateParser
                 if (remaining.Length == 2)
                 {
                     throw new FqlParseException(
-                        $"Unable to parse aggregate expression '{rawSelect}'. " +
-                        $"Expected format: FUNCTION(Field) [AS Alias]. " +
-                        $"Missing alias after AS in '{trimmed}'.");
+                        "Unable to parse aggregate expression. Expected format: FUNCTION(Field) [AS Alias]. Missing alias after AS.",
+                        position: -1);
                 }
 
                 var afterAs = remaining[2..];
@@ -111,9 +99,8 @@ internal static class FqlAggregateParser
                     if (alias.Length == 0)
                     {
                         throw new FqlParseException(
-                            $"Unable to parse aggregate expression '{rawSelect}'. " +
-                            $"Expected format: FUNCTION(Field) [AS Alias]. " +
-                            $"Missing alias after AS in '{trimmed}'.");
+                            "Unable to parse aggregate expression. Expected format: FUNCTION(Field) [AS Alias]. Missing alias after AS.",
+                            position: -1);
                     }
                 }
             }
@@ -121,17 +108,16 @@ internal static class FqlAggregateParser
             if (string.IsNullOrEmpty(alias) && remaining.Length > 0)
             {
                 throw new FqlParseException(
-                    $"Unable to parse aggregate expression '{rawSelect}'. " +
-                    $"Expected format: FUNCTION(Field) [AS Alias]. " +
-                    $"Unexpected content after field in '{trimmed}'.");
+                    "Unable to parse aggregate expression. Expected format: FUNCTION(Field) [AS Alias]. Unexpected content after field.",
+                    position: -1);
             }
 
             if (alias is not null)
             {
                 if (!ParserUtilities.IsValidIdentifier(alias.AsSpan()))
                     throw new FqlParseException(
-                        $"Invalid alias '{alias}' in aggregate expression. " +
-                        "Aliases must be valid identifiers (e.g. 'TotalSales').");
+                        $"Invalid alias '{alias}' in aggregate expression. Aliases must be valid identifiers (e.g. 'TotalSales').",
+                        position: -1);
             }
 
             result.Add(new Aggregate
@@ -145,8 +131,8 @@ internal static class FqlAggregateParser
         if (result.Count == 0)
         {
             throw new FqlParseException(
-                $"Unable to parse aggregate expression '{rawSelect}'. " +
-                $"Expected format: FUNCTION(Field) [AS Alias]. No valid aggregate expressions found.");
+                "Unable to parse aggregate expression. Expected format: FUNCTION(Field) [AS Alias]. No valid aggregate expressions found.",
+                position: -1);
         }
 
         return result;

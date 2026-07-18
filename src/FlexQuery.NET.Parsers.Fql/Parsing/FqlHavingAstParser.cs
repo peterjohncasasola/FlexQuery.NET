@@ -23,7 +23,9 @@ internal sealed class FqlHavingAstParser(IReadOnlyList<FqlToken> tokens)
         var result = parser.ParseExpression();
 
         if (parser.Current.Kind != FqlTokenType.End)
-            throw new FqlParseException($"Unexpected token at position {parser.Current.Position}.");
+            throw new FqlParseException(
+                "Unexpected token after HAVING expression.",
+                position: parser.Current.Position);
 
         return result;
     }
@@ -94,19 +96,25 @@ internal sealed class FqlHavingAstParser(IReadOnlyList<FqlToken> tokens)
     private FqlAstNode ParseAggregateCondition()
     {
         if (_position >= tokens.Count)
-            throw new FqlParseException("Expected aggregate condition but reached end of HAVING expression.");
+            throw new FqlParseException("Expected aggregate condition but reached end of HAVING expression.", position: -1);
 
         var (fn, fnValue) = ExpectFunctionToken();
 
         if (!Match(FqlTokenType.OpenParen))
-            throw new FqlParseException($"Expected '(' after aggregate function '{fnValue}'.");
+            throw new FqlParseException(
+                $"Expected '(' after aggregate function '{fnValue}'.",
+                position: Current.Position,
+                expected: "(",
+                found: Current.Value);
 
         string? field = null;
         if (Current.Kind != FqlTokenType.CloseParen)
         {
             if (Match(FqlTokenType.Star))
             {
-                throw new FqlParseException($"Expected field name inside aggregate function '{fnValue}'.");
+                throw new FqlParseException(
+                    $"Expected field name inside aggregate function '{fnValue}'.",
+                    position: Current.Position);
             }
 
             var fieldParts = new List<string>();
@@ -126,7 +134,11 @@ internal sealed class FqlHavingAstParser(IReadOnlyList<FqlToken> tokens)
                     }
                     else
                     {
-                        throw new FqlParseException($"Expected identifier after '.' in field path at position {Current.Position}.");
+                        throw new FqlParseException(
+                            "Expected identifier after '.' in field path.",
+                            position: Current.Position,
+                            expected: "identifier",
+                            found: Current.Value);
                     }
                 }
                 else
@@ -136,23 +148,31 @@ internal sealed class FqlHavingAstParser(IReadOnlyList<FqlToken> tokens)
             }
 
             if (fieldParts.Count == 0)
-                throw new FqlParseException($"Expected field name inside aggregate function '{fnValue}'.");
+                throw new FqlParseException(
+                    $"Expected field name inside aggregate function '{fnValue}'.",
+                    position: Current.Position);
 
             field = string.Join('.', fieldParts);
 
             if (!ParserUtilities.IsValidPropertyPath(field.AsSpan()))
-                throw new FqlParseException($"Invalid field '{field}' in HAVING expression.");
+                throw new FqlParseException(
+                    $"Invalid field '{field}' in HAVING expression.",
+                    position: Current.Position);
         }
 
         Expect(FqlTokenType.CloseParen);
 
         if (Current.Kind is FqlTokenType.And or FqlTokenType.Or)
-            throw new FqlParseException($"Missing operator after aggregate condition '{fnValue}({field})'.");
+            throw new FqlParseException(
+                $"Missing operator after aggregate condition '{fnValue}({field})'.",
+                position: Current.Position);
 
         var op = ParseComparisonOperator();
 
         if (Current.Kind is FqlTokenType.And or FqlTokenType.Or or FqlTokenType.End or FqlTokenType.CloseParen or FqlTokenType.CloseBracket)
-            throw new FqlParseException($"Missing value after operator in HAVING expression.");
+            throw new FqlParseException(
+                "Missing value after operator in HAVING expression.",
+                position: Current.Position);
 
         var value = ParseValue();
 
@@ -169,7 +189,11 @@ internal sealed class FqlHavingAstParser(IReadOnlyList<FqlToken> tokens)
             return (fn, token.Value);
         }
 
-        throw new FqlParseException($"Expected aggregate function (SUM, COUNT, AVG, MIN, MAX) but found '{token.Value}' at position {token.Position}.");
+        throw new FqlParseException(
+            "Expected aggregate function (SUM, COUNT, AVG, MIN, MAX).",
+            position: token.Position,
+            expected: "aggregate function",
+            found: token.Value);
     }
 
     private string ParseComparisonOperator()
@@ -181,13 +205,17 @@ internal sealed class FqlHavingAstParser(IReadOnlyList<FqlToken> tokens)
         if (Match(FqlTokenType.Lt)) return "lt";
         if (Match(FqlTokenType.Eq)) return "eq";
 
-        throw new FqlParseException($"Expected comparison operator (>, >=, <, <=, =, <>) at position {Current.Position}.");
+        throw new FqlParseException(
+            "Expected comparison operator (>, >=, <, <=, =, <>).",
+            position: Current.Position,
+            expected: "comparison operator",
+            found: Current.Value);
     }
 
     private string ParseValue()
     {
         if (_position >= tokens.Count)
-            throw new FqlParseException("Expected value but reached end of HAVING expression.");
+            throw new FqlParseException("Expected value but reached end of HAVING expression.", position: -1);
 
         var token = Current;
         _position++;
@@ -205,7 +233,11 @@ internal sealed class FqlHavingAstParser(IReadOnlyList<FqlToken> tokens)
     private FqlToken Expect(FqlTokenType kind)
     {
         if (Current.Kind != kind)
-            throw new FqlParseException($"Expected {kind} at position {Current.Position}, but found {Current.Kind}.");
+            throw new FqlParseException(
+                $"Expected {kind} but found {Current.Kind}.",
+                position: Current.Position,
+                expected: kind.ToString(),
+                found: Current.Kind.ToString());
 
         return tokens[_position++];
     }

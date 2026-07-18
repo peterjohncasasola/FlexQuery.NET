@@ -41,7 +41,14 @@ internal sealed class FqlQueryParser : IQueryParser
             }
             catch (FqlParseException ex)
             {
-                throw new QueryParseException(QueryOptionKeys.Select, QuerySyntax.Fql, parameters.Select, ex);
+                throw new QueryParseException(
+                    QueryOptionKeys.Select,
+                    QuerySyntax.Fql,
+                    parameters.Select,
+                    ex,
+                    position: ex.Position,
+                    expected: ex.Expected,
+                    found: ex.Found);
             }
         }
 
@@ -55,7 +62,14 @@ internal sealed class FqlQueryParser : IQueryParser
             }
             catch (FqlParseException ex)
             {
-                throw new QueryParseException("filter", QuerySyntax.Fql, parameters.Filter, ex);
+                throw new QueryParseException(
+                    "filter",
+                    QuerySyntax.Fql,
+                    parameters.Filter,
+                    ex,
+                    position: ex.Position,
+                    expected: ex.Expected,
+                    found: ex.Found);
             }
         }
 
@@ -67,7 +81,14 @@ internal sealed class FqlQueryParser : IQueryParser
             }
             catch (FqlParseException ex)
             {
-                throw new QueryParseException(QueryOptionKeys.Sort, QuerySyntax.Fql, parameters.Sort, ex);
+                throw new QueryParseException(
+                    QueryOptionKeys.Sort,
+                    QuerySyntax.Fql,
+                    parameters.Sort,
+                    ex,
+                    position: ex.Position,
+                    expected: ex.Expected,
+                    found: ex.Found);
             }
         }
 
@@ -77,9 +98,16 @@ internal sealed class FqlQueryParser : IQueryParser
             {
                 options.GroupBy = GroupByParser.Parse(parameters.GroupBy);
             }
-            catch (FqlParseException ex)
+            catch (FlexQueryParseException ex)
             {
-                throw new QueryParseException(QueryOptionKeys.GroupBy, QuerySyntax.Fql, parameters.GroupBy, ex);
+                throw new QueryParseException(
+                    QueryOptionKeys.GroupBy,
+                    QuerySyntax.Fql,
+                    parameters.GroupBy,
+                    ex,
+                    position: ex.Position,
+                    expected: ex.Expected,
+                    found: ex.Found);
             }
         }
 
@@ -92,7 +120,14 @@ internal sealed class FqlQueryParser : IQueryParser
             }
             catch (FqlParseException ex)
             {
-                throw new QueryParseException(QueryOptionKeys.Aggregate, QuerySyntax.Fql, parameters.Aggregate, ex);
+                throw new QueryParseException(
+                    QueryOptionKeys.Aggregate,
+                    QuerySyntax.Fql,
+                    parameters.Aggregate,
+                    ex,
+                    position: ex.Position,
+                    expected: ex.Expected,
+                    found: ex.Found);
             }
         }
 
@@ -104,7 +139,14 @@ internal sealed class FqlQueryParser : IQueryParser
             }
             catch (FqlParseException ex)
             {
-                throw new QueryParseException(QueryOptionKeys.Having, QuerySyntax.Fql, parameters.Having, ex);
+                throw new QueryParseException(
+                    QueryOptionKeys.Having,
+                    QuerySyntax.Fql,
+                    parameters.Having,
+                    ex,
+                    position: ex.Position,
+                    expected: ex.Expected,
+                    found: ex.Found);
             }
         }
 
@@ -116,7 +158,14 @@ internal sealed class FqlQueryParser : IQueryParser
             }
             catch (FqlParseException ex)
             {
-                throw new QueryParseException(QueryOptionKeys.Include, QuerySyntax.Fql, parameters.Include, ex);
+                throw new QueryParseException(
+                    QueryOptionKeys.Include,
+                    QuerySyntax.Fql,
+                    parameters.Include,
+                    ex,
+                    position: ex.Position,
+                    expected: ex.Expected,
+                    found: ex.Found);
             }
         }
 

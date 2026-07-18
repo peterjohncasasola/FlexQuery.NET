@@ -194,7 +194,10 @@ internal sealed class FqlAstParser
         }
 
         throw new FqlParseException(
-            $"Expected operator at position {Current.Position}, but found {Current.Kind}.");
+            $"Expected operator but found {Current.Value}.",
+            position: Current.Position,
+            expected: "operator",
+            found: Current.Value);
     }
 
     private IReadOnlyList<string> ParseValue(string op)
@@ -213,7 +216,8 @@ internal sealed class FqlAstParser
 
             if (values.Count == 0)
                 throw new FqlParseException(
-                    $"IN list cannot be empty at position {Current.Position}.");
+                    "IN list cannot be empty.",
+                    position: Current.Position);
 
             return values;
         }
@@ -234,7 +238,10 @@ internal sealed class FqlAstParser
         }
 
         throw new FqlParseException(
-            $"Expected value at position {Current.Position}, but found {Current.Kind}.");
+            $"Expected value but found {Current.Kind}.",
+            position: Current.Position,
+            expected: "value",
+            found: Current.Kind.ToString());
     }
 
     private string ParseDottedIdentifier()
@@ -283,7 +290,10 @@ internal sealed class FqlAstParser
             return _tokens[_position++];
 
         throw new FqlParseException(
-            $"Expected {kind} at position {Current.Position}, but found {Current.Kind}.");
+            $"Expected {kind} but found {Current.Kind}.",
+            position: Current.Position,
+            expected: kind.ToString(),
+            found: Current.Kind.ToString());
     }
 
     private FqlToken? PeekAhead(int offset)

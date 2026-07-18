@@ -38,6 +38,8 @@ internal static class FqlHavingParser
             {
                 Inner = Convert(g.Inner)
             },
-            _ => throw new FqlParseException($"Unsupported HAVING AST node type: {node.GetType().Name}.")
+            _ => throw new FqlParseException(
+                $"Unsupported HAVING AST node type: {node.GetType().Name}.",
+                position: -1)
         };
 }

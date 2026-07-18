@@ -61,7 +61,7 @@ internal sealed class FqlTokenizer
                         _position += 2;
                         break;
                     }
-                    throw new FqlParseException($"Unexpected character '!' at position {start}.");
+                    throw new FqlParseException("Unexpected character '!'.", position: start, found: "!");
                 case '>':
                     if (Peek('='))
                     {
@@ -130,7 +130,7 @@ internal sealed class FqlTokenizer
         {
             _position++;
             if (_position >= _source.Length || !char.IsDigit(_source[_position]))
-                throw new FqlParseException($"Invalid number at position {start}.");
+                throw new FqlParseException("Invalid number.", position: start);
         }
 
         while (_position < _source.Length)
@@ -169,7 +169,7 @@ internal sealed class FqlTokenizer
         }
 
         if (_position == start)
-            throw new FqlParseException($"Unexpected character '{_source[_position]}' at position {_position}.");
+            throw new FqlParseException($"Unexpected character '{_source[_position]}'.", position: _position, found: _source[_position].ToString());
 
         var raw = _source[start.._position];
 
@@ -244,7 +244,7 @@ internal sealed class FqlTokenizer
             _position++;
         }
 
-        throw new FqlParseException($"Unterminated quoted value at position {tokenStart}.");
+        throw new FqlParseException("Unterminated quoted value.", position: tokenStart);
     }
 
     private FqlToken ReadEscapedQuoted(char quote, int tokenStart, int valueStart)
@@ -273,6 +273,6 @@ internal sealed class FqlTokenizer
             _position++;
         }
 
-        throw new FqlParseException($"Unterminated quoted value at position {tokenStart}.");
+        throw new FqlParseException("Unterminated quoted value.", position: tokenStart);
     }
 }
