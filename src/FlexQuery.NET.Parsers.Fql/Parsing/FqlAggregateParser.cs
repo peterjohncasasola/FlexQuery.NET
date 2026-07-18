@@ -5,12 +5,12 @@ namespace FlexQuery.NET.Parsers.Fql;
 
 internal static class FqlAggregateParser
 {
-    public static List<AggregateModel> Parse(string? rawSelect)
+    public static List<Aggregate> Parse(string? rawSelect)
     {
         if (string.IsNullOrWhiteSpace(rawSelect))
             return [];
 
-        var result = new List<AggregateModel>();
+        var result = new List<Aggregate>();
         var segments = SplitTopLevel(rawSelect);
 
         foreach (var segment in segments)
@@ -57,6 +57,13 @@ internal static class FqlAggregateParser
                     $"Unable to parse aggregate expression '{rawSelect}'. " +
                     $"Expected format: FUNCTION(Field) [AS Alias]. " +
                     $"Missing field in '{trimmed}'.");
+            }
+
+            if (function == AggregateFunction.Count && fieldRaw == "*")
+            {
+                throw new FqlParseException(
+                    $"Unable to parse aggregate expression '{rawSelect}'. " +
+                    $"COUNT(*) is not supported. Use COUNT(<collection>) or another aggregate over a property instead.");
             }
 
             if (function == AggregateFunction.Count && fieldRaw == "*")
@@ -127,7 +134,7 @@ internal static class FqlAggregateParser
                         "Aliases must be valid identifiers (e.g. 'TotalSales').");
             }
 
-            result.Add(new AggregateModel
+            result.Add(new Aggregate
             {
                 Function = function,
                 Field = field,

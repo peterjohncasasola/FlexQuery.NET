@@ -215,7 +215,7 @@ internal static class DslSelectParser
                 throw new DslParseException(
                     "Root wildcard cannot be combined with other selections.");
 
-            string alias = null;
+            string? alias = null;
 
             while (i < span.Length && char.IsWhiteSpace(span[i]))
                 i++;
@@ -224,7 +224,7 @@ internal static class DslSelectParser
             {
                 i++;
 
-                int aliasStart = i;
+                var aliasStart = i;
                 while (i < span.Length && (char.IsLetterOrDigit(span[i]) || span[i] == '_'))
                     i++;
 
