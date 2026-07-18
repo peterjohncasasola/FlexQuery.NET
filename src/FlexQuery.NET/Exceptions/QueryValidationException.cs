@@ -17,7 +17,7 @@ public sealed class QueryValidationException : FlexQueryException
     /// </summary>
     public QueryValidationException(ValidationResult result)
         : base(result.Errors.Count > 0
-            ? string.Join("; ", result.Errors.Select(e => e.Message))
+            ? result.ToErrorMessage()
             : "Query validation failed. Check the Result property for details.")
     {
         Result = result;

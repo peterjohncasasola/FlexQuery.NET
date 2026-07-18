@@ -1,3 +1,4 @@
+using System.Text;
 using FlexQuery.NET.Constants;
 using FlexQuery.NET.Execution;
 using FlexQuery.NET.Models;
@@ -28,7 +29,8 @@ internal sealed class HavingAggregateExistenceRule : IValidationRule
         foreach (var reference in missing)
         {
             result.Errors.Add(new ValidationError(
-                $"HAVING references aggregate '{reference}' which is not declared in the aggregate clause.",
+                $"Aggregate '{reference}' is used in the HAVING clause but is not declared in the aggregate clause. " +
+                $"Declare it in the aggregate clause or update the HAVING expression.",
                 ValidationErrorCodes.HavingAliasMismatch,
                 reference));
         }

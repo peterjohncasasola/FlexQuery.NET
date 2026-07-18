@@ -58,7 +58,7 @@ public static class QueryOptionsExtensions
         if (!result.IsValid && execOptions.StrictFieldValidation)
         {
             var errors = string.Join("; ", result.Errors.Select(e => e.Message));
-            throw new QueryValidationException($"Query validation failed: {errors}", result);
+            throw new QueryValidationException(result);
         }
     }
 
