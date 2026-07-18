@@ -81,6 +81,49 @@ public class IncludeAccessValidationRuleTests
     }
 
     [Fact]
+    public void AllowedIncludes_Configured_WithNullIncludes_DoesNotMutate()
+    {
+        var execOptions = new TestGovernanceOptions { AllowedIncludes = ["Children", "Orders"] };
+        var options = new QueryOptions { Includes = null };
+        var rule = new IncludeAccessValidationRule();
+        var result = ValidationResult.Success();
+
+        rule.Validate(options, Context(execOptions: execOptions), result);
+
+        result.IsValid.Should().BeTrue();
+        options.Includes.Should().BeNull();
+    }
+
+    [Fact]
+    public void AllowedIncludes_Configured_WithEmptyIncludes_DoesNotAddIncludes()
+    {
+        var execOptions = new TestGovernanceOptions { AllowedIncludes = ["Children", "Orders"] };
+        var options = new QueryOptions { Includes = [] };
+        var rule = new IncludeAccessValidationRule();
+        var result = ValidationResult.Success();
+
+        rule.Validate(options, Context(execOptions: execOptions), result);
+
+        result.IsValid.Should().BeTrue();
+        options.Includes.Should().BeEmpty();
+    }
+
+    [Fact]
+    public void AllowedIncludes_Configured_MultipleValidIncludes_AllPass()
+    {
+        var execOptions = new TestGovernanceOptions { AllowedIncludes = ["Children", "Orders", "Profile"] };
+        var options = new QueryOptions { Includes = ["Children", "Orders", "Profile"] };
+        var rule = new IncludeAccessValidationRule();
+        var result = ValidationResult.Success();
+
+        rule.Validate(options, Context(execOptions: execOptions), result);
+
+        result.IsValid.Should().BeTrue();
+        options.Includes.Should().HaveCount(3);
+        options.Includes.Should().Contain(new[] { "Children", "Orders", "Profile" });
+    }
+
+    [Fact]
     public void MixedIncludes_RemovesOnlyDisallowed()
     {
         var execOptions = new TestGovernanceOptions { StrictFieldValidation = false, AllowedIncludes = ["Children"] };

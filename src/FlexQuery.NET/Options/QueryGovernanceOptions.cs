@@ -27,7 +27,11 @@ public abstract class QueryGovernanceOptions : BaseQueryOptions
     /// <summary>Global list of blocked fields (blacklist).</summary>
     public HashSet<string>? BlockedFields { get; set; }
 
-    /// <summary>Global list of allowed includes (whitelist for navigation properties).</summary>
+    /// <summary>
+    /// Specifies the whitelist of navigation properties that clients are permitted to request
+    /// through the <c>include</c> query parameter. This property is used solely for validation
+    /// and does not automatically eager-load navigation properties when no <c>include</c> parameter is provided.
+    /// </summary>
     public HashSet<string>? AllowedIncludes { get; set; }
 
     /// <summary>Fields allowed specifically for sorting operations.</summary>
