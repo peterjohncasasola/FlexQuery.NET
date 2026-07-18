@@ -6,6 +6,13 @@ namespace FlexQuery.NET.Tests.Projection;
 
 public class ProjectionMetadataBuilderTests
 {
+    private static SelectNode S(string field, string? alias = null, List<SelectNode>? children = null)
+    {
+        var node = new SelectNode { Field = field, Alias = alias };
+        if (children != null) node.Children.AddRange(children);
+        return node;
+    }
+
     [Fact]
     public void Build_ReturnsProjectionMetadata()
     {
@@ -48,6 +55,26 @@ public class ProjectionMetadataBuilderTests
         var result = ProjectionMetadataBuilder.IsIEnumerable(typeof(int), out _);
 
         result.Should().BeFalse();
+    }
+
+    [Fact]
+    public void Build_NestedAlias_FieldTypesUsesAlias()
+    {
+        var options = new QueryOptions
+        {
+            Select = new List<SelectNode>
+            {
+                S("Profile", children: new List<SelectNode>
+                    { S("Bio", "ProfileBio") } )
+            }
+        };
+
+        var result = ProjectionMetadataBuilder.Build(typeof(Customer), options);
+
+        result.Should().NotBeNull();
+        result.IsProjected.Should().BeTrue();
+        result.FieldTypes.Should().ContainKey("ProfileBio");
+        result.FieldTypes["ProfileBio"].Should().Be(typeof(string));
     }
 }
 

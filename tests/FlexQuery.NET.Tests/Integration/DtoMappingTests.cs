@@ -1,5 +1,7 @@
 using FlexQuery.NET.Models;
 using System.Text.Json;
+using FlexQuery.NET.EntityFrameworkCore;
+using FlexQuery.NET.Parsers;
 
 namespace FlexQuery.NET.Tests.Integration;
 
@@ -112,5 +114,50 @@ public class DtoMappingTests : IDisposable
         result.Data.Should().NotBeEmpty();
         var items = result.Data.Cast<Customer>().ToList();
         items.Should().AllSatisfy(x => x.Orders.Sum(o => o.Total).Should().BeGreaterThan(100));
+    }
+
+    [Fact]
+    public void FqlQuery_MappedField_NestedSelectSyntax_AppliesMappedExpression()
+    {
+        FlexQuery.NET.Parsers.Fql.Fql.Register();
+
+        var parameters = new FlexQueryParameters
+        {
+            Select = "Profile(Bio AS profileBio)"
+        };
+
+        var options = QueryOptionsParser.Parse(parameters, QuerySyntax.Fql);
+
+        var result = _db.Customers.AsQueryable().FlexQuery(options);
+
+        result.Data.Should().NotBeEmpty();
+        var first = result.Data[0];
+        var profileProp = first.GetType().GetProperty("Profile");
+        profileProp.Should().NotBeNull();
+        var profileObj = profileProp!.GetValue(first);
+        profileObj.Should().NotBeNull();
+        profileObj.GetType().GetProperty("profileBio").Should().NotBeNull();
+        profileObj.GetType().GetProperty("Bio").Should().BeNull();
+    }
+    
+    
+    [Fact]
+    public void DslQuery_MappedField_NestedSelectSyntax_AppliesMappedExpression()
+    {
+        var parameters = new FlexQueryParameters
+        {
+            Select = "Profile(Bio:profileBio)"
+        };
+
+        var result = _db.Customers.AsQueryable().FlexQuery(parameters);
+
+        result.Data.Should().NotBeEmpty();
+        var first = result.Data[0];
+        var profileProp = first.GetType().GetProperty("Profile");
+        profileProp.Should().NotBeNull();
+        var profileObj = profileProp!.GetValue(first);
+        profileObj.Should().NotBeNull();
+        profileObj?.GetType().GetProperty("profileBio").Should().NotBeNull();
+        profileObj?.GetType().GetProperty("Bio").Should().BeNull();
     }
 }

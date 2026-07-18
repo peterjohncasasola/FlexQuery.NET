@@ -9,6 +9,8 @@ using FlexQuery.NET.Caching;
 using FlexQuery.NET.Exceptions;
 using FlexQuery.NET.EntityFrameworkCore.Options;
 using FlexQuery.NET.EntityFrameworkCore;
+using FlexQuery.NET.Parsers;
+using FlexQuery.NET.Parsers.Fql;
 
 namespace FlexQuery.NET.Tests.Projection;
 
@@ -568,10 +570,11 @@ public class SelectTests : IDisposable
             ]
         };
 
-        var act = () => SelectTreeBuilder.Build(options);
-
+        var         act = () => SelectTreeBuilder.Build(options);
         act.Should().Throw<QueryValidationException>()
-            .WithMessage("*Conflicting aliases*");
+            .WithMessage("*is projected multiple times with different aliases*")
+            .WithMessage("*'Profile.Bio'*")
+            .WithMessage("*'FirstBio' and 'LastBio'*");
     }
 
     [Fact]
@@ -627,6 +630,419 @@ public class SelectTests : IDisposable
         var key2 = QueryCacheKeyBuilder.Build(options2, typeof(Customer), "query");
 
         key1.Should().Be(key2);
+    }
+
+    #endregion
+
+    private static SelectNode S(string field, string? alias = null, List<SelectNode>? children = null)
+    {
+        var node = new SelectNode { Field = field, Alias = alias };
+        if (children != null) node.Children.AddRange(children);
+        return node;
+    }
+
+    #region Nested Select Syntax Alias
+
+    private static void AssertSelectionTreeEqual(SelectionNode expected, SelectionNode actual)
+    {
+        actual.Should().NotBeNull();
+        actual!.HasChildren.Should().Be(expected.HasChildren);
+        actual.IncludeAllScalars.Should().Be(expected.IncludeAllScalars);
+        actual.Count.Should().Be(expected.Count);
+
+        foreach (var expectedChild in expected.EnumerateChildren())
+        {
+            actual.TryGetChild(expectedChild.Key, out var actualChild).Should().BeTrue($"expected child '{expectedChild.Key}' not found");
+            actualChild.Should().NotBeNull();
+            actualChild!.Alias.Should().Be(expectedChild.Value.Alias);
+            actualChild.IncludeAllScalars.Should().Be(expectedChild.Value.IncludeAllScalars);
+            actualChild.Count.Should().Be(expectedChild.Value.Count);
+            AssertSelectionTreeEqual(expectedChild.Value, actualChild);
+        }
+    }
+
+    [Fact]
+    public void Select_NestedSelectSyntax_SingleNestedAlias_AppliesAliasToChild()
+    {
+        var options = new QueryOptions
+        {
+            Select = new List<SelectNode>
+            {
+                S("Profile", children: new List<SelectNode>
+                    { S("Bio", "ProfileBio") } )
+            }
+        };
+
+        var expected = new SelectionNode();
+        var profile = expected.GetOrAddChild("Profile");
+        profile.GetOrAddChild("Bio").Alias = "ProfileBio";
+
+        var result = SelectTreeBuilder.Build(options);
+        AssertSelectionTreeEqual(expected, result);
+    }
+
+    [Fact]
+    public void Select_NestedSelectSyntax_MultipleNestedAliases_AllApplied()
+    {
+        var options = new QueryOptions
+        {
+            Select = new List<SelectNode>
+            {
+                S("Profile", children: new List<SelectNode>
+                    {
+                        S("Bio", "ProfileBio"),
+                        S("PreferredLanguage", "ProfileLang")
+                    } )
+            }
+        };
+
+        var expected = new SelectionNode();
+        var profile = expected.GetOrAddChild("Profile");
+        profile.GetOrAddChild("Bio").Alias = "ProfileBio";
+        profile.GetOrAddChild("PreferredLanguage").Alias = "ProfileLang";
+
+        var result = SelectTreeBuilder.Build(options);
+        AssertSelectionTreeEqual(expected, result);
+    }
+
+    [Fact]
+    public void Select_NestedSelectSyntax_MixedAliasedAndNonAliased_PreservesAll()
+    {
+        var options = new QueryOptions
+        {
+            Select = new List<SelectNode>
+            {
+                S("Profile", children: new List<SelectNode>
+                    {
+                        S("Bio", "ProfileBio"),
+                        S("PreferredLanguage"),
+                        S("LoyaltyPoints", "ProfilePoints")
+                    } )
+            }
+        };
+
+        var expected = new SelectionNode();
+        var profile = expected.GetOrAddChild("Profile");
+        var bio = profile.GetOrAddChild("Bio");
+        bio.Alias = "ProfileBio";
+        var lang = profile.GetOrAddChild("PreferredLanguage");
+        var points = profile.GetOrAddChild("LoyaltyPoints");
+        points.Alias = "ProfilePoints";
+
+        var result = SelectTreeBuilder.Build(options);
+        AssertSelectionTreeEqual(expected, result);
+    }
+
+    [Fact]
+    public void Select_NestedSelectSyntax_MultipleNestedObjects_EachWithAliases()
+    {
+        var options = new QueryOptions
+        {
+            Select = new List<SelectNode>
+            {
+                S("Profile", children: new List<SelectNode>
+                    { S("Bio", "ProfileBio") } ),
+                S("Address", children: new List<SelectNode>
+                    { S("City", "AddressCity") } )
+            }
+        };
+
+        var expected = new SelectionNode();
+        var profile = expected.GetOrAddChild("Profile");
+        profile.GetOrAddChild("Bio").Alias = "ProfileBio";
+        var address = expected.GetOrAddChild("Address");
+        address.GetOrAddChild("City").Alias = "AddressCity";
+
+        var result = SelectTreeBuilder.Build(options);
+        AssertSelectionTreeEqual(expected, result);
+    }
+
+    [Fact]
+    public void Select_NestedSelectSyntax_DeepNesting_PropagatesAliases()
+    {
+        var options = new QueryOptions
+        {
+            Select = new List<SelectNode>
+            {
+                S("Profile", children: new List<SelectNode>
+                    {
+                        S("Address", children: new List<SelectNode>
+                            { S("City", "ProfileCity") } )
+                    } )
+            }
+        };
+
+        var expected = new SelectionNode();
+        var profile = expected.GetOrAddChild("Profile");
+        var address = profile.GetOrAddChild("Address");
+        address.GetOrAddChild("City").Alias = "ProfileCity";
+
+        var result = SelectTreeBuilder.Build(options);
+        AssertSelectionTreeEqual(expected, result);
+    }
+
+    [Fact]
+    public void Select_NestedSelectSyntax_NoDuplicateNesting_PreventsSpuriousGrandchildren()
+    {
+        var options = new QueryOptions
+        {
+            Select = new List<SelectNode>
+            {
+                S("Profile", children: new List<SelectNode>
+                    { S("Bio", "ProfileBio") } )
+            }
+        };
+
+        var result = SelectTreeBuilder.Build(options);
+
+        result.TryGetChild("Profile", out var profile).Should().BeTrue();
+        profile.Should().NotBeNull();
+        profile!.Count.Should().Be(1);
+        profile.TryGetChild("Bio", out var bio).Should().BeTrue();
+        bio.Should().NotBeNull();
+        bio!.Alias.Should().Be("ProfileBio");
+        bio.Count.Should().Be(0);
+        bio.IncludeAllScalars.Should().BeFalse();
+    }
+
+    [Fact]
+    public void Select_NestedSelectSyntax_FlatPathAndNestedSyntax_IdenticalStructure()
+    {
+        var flatOptions = new QueryOptions
+        {
+            Select = new List<SelectNode>
+            {
+                new SelectNode { Field = "Profile.Bio", Alias = "ProfileBio" },
+                new SelectNode { Field = "Profile.PreferredLanguage", Alias = "ProfileLang" }
+            }
+        };
+
+        var nestedOptions = new QueryOptions
+        {
+            Select = new List<SelectNode>
+            {
+                S("Profile", children: new List<SelectNode>
+                    {
+                        S("Bio", "ProfileBio"),
+                        S("PreferredLanguage", "ProfileLang")
+                    } )
+            }
+        };
+
+        var flatTree = SelectTreeBuilder.Build(flatOptions);
+        var nestedTree = SelectTreeBuilder.Build(nestedOptions);
+
+        AssertSelectionTreeEqual(flatTree, nestedTree);
+    }
+
+    [Fact]
+    public void Select_NestedSelectSyntax_MixedFlatPathAndNestedSyntax_AllAliasesPreserved()
+    {
+        var options = new QueryOptions
+        {
+            Select = new List<SelectNode>
+            {
+                S("Profile.PreferredLanguage", "ProfileLangFlat" ),
+                S("Profile", children: new List<SelectNode>
+                    {
+                        S("Bio", "ProfileBioNested")
+                    } )
+            }
+        };
+
+        var expected = new SelectionNode();
+        var profile = expected.GetOrAddChild("Profile");
+        profile.GetOrAddChild("PreferredLanguage").Alias = "ProfileLangFlat";
+        profile.GetOrAddChild("Bio").Alias = "ProfileBioNested";
+
+        var result = SelectTreeBuilder.Build(options);
+        AssertSelectionTreeEqual(expected, result);
+    }
+
+    #endregion
+
+    #region Nested Select Syntax Alias Conflicts
+
+    [Fact]
+    public void Select_NestedSelectSyntax_FlatPlusNested_ConflictingAlias_Throws()
+    {
+        var options = new QueryOptions
+        {
+            Select =
+            [
+                S("Profile.Bio", "A"),
+                S("Profile", children: [S("Bio", "B")])
+            ]
+        };
+
+        var act = () => SelectTreeBuilder.Build(options);
+        act.Should().Throw<QueryValidationException>()
+            .WithMessage("*is projected multiple times with different aliases*")
+            .WithMessage("*'Profile.Bio'*")
+            .WithMessage("*'A' and 'B'*");
+    }
+
+    [Fact]
+    public void Select_NestedSelectSyntax_NestedPlusNested_ConflictingAlias_Throws()
+    {
+        var options = new QueryOptions
+        {
+            Select =
+            [
+                S("Profile", children:
+                [
+                    S("Bio", "A"),
+                    S("Bio", "B")
+                ])
+            ]
+        };
+
+        var act = () => SelectTreeBuilder.Build(options);
+        act.Should().Throw<QueryValidationException>()
+            .WithMessage("*is projected multiple times with different aliases*")
+            .WithMessage("*'Profile.Bio'*")
+            .WithMessage("*'A' and 'B'*");
+    }
+
+    [Fact]
+    public void Select_AliasConflict_FlatPlusNested_SameAlias_Succeeds()
+    {
+        var options = new QueryOptions
+        {
+            Select =
+            [
+                S("Profile.Bio", "ProfileBio"),
+                S("Profile", children: [S("Bio", "ProfileBio")])
+            ]
+        };
+
+        var result = SelectTreeBuilder.Build(options);
+        result.TryGetChild("Profile", out var profile).Should().BeTrue();
+        profile!.TryGetChild("Bio", out var bio).Should().BeTrue();
+        bio!.Alias.Should().Be("ProfileBio");
+    }
+
+    [Fact]
+    public void Select_AliasConflict_NestedPlusNested_SameAlias_Succeeds()
+    {
+        var options = new QueryOptions
+        {
+            Select =
+            [
+                S("Profile", children:
+                [
+                    S("Bio", "ProfileBio"),
+                    S("Bio", "ProfileBio")
+                ])
+            ]
+        };
+
+        var result = SelectTreeBuilder.Build(options);
+        result.TryGetChild("Profile", out var profile).Should().BeTrue();
+        profile!.TryGetChild("Bio", out var bio).Should().BeTrue();
+        bio!.Alias.Should().Be("ProfileBio");
+    }
+
+    [Fact]
+    public void Select_AliasConflict_FlatPlusFlat_DifferentAliases_Throws()
+    {
+        var options = new QueryOptions
+        {
+            Select =
+            [
+                S("Profile.Bio", "FirstBio"),
+                S("Profile.Bio", "SecondBio")
+            ]
+        };
+
+        var act = () => SelectTreeBuilder.Build(options);
+        act.Should().Throw<QueryValidationException>()
+            .WithMessage("*is projected multiple times with different aliases*")
+            .WithMessage("*'Profile.Bio'*")
+            .WithMessage("*'FirstBio' and 'SecondBio'*");
+    }
+
+    #endregion
+
+    #region Nested Select Syntax End-to-End
+
+    [Fact]
+    public async Task Select_NestedAlias_EndToEnd_ParserToMaterialization_ProjectsAliasedFieldNames()
+    {
+        Fql.Register();
+
+        var parameters = new FlexQueryParameters
+        {
+            Select = "Id AS customerId,Profile(Bio AS profileBio)"
+        };
+
+        var options = QueryOptionsParser.Parse(parameters, QuerySyntax.Fql);
+
+        var result = await _db.Customers.FlexQueryAsync(options);
+
+        result.Data.Should().NotBeEmpty();
+        var first = result.Data.First();
+        var type = first.GetType();
+
+        type.GetProperty("customerId").Should().NotBeNull();
+        type.GetProperty("Id").Should().BeNull("root alias must replace original name");
+
+        var profileProp = type.GetProperty("Profile");
+        profileProp.Should().NotBeNull();
+        var profileObj = profileProp!.GetValue(first);
+        profileObj.Should().NotBeNull();
+        profileObj!.GetType().GetProperty("profileBio").Should().NotBeNull("nested alias must appear on projected navigation");
+        profileObj.GetType().GetProperty("Bio").Should().BeNull("original name must be hidden by alias");
+
+        ((int)type.GetProperty("customerId")!.GetValue(first)!).Should().Be(1);
+    }
+
+    [Fact]
+    public async Task Select_NestedAlias_WithInclude_AppliesAliasAndPreservesInclude()
+    {
+        Fql.Register();
+
+        var parameters = new FlexQueryParameters
+        {
+            Include = "Profile",
+            Select = "Id,Profile(Bio AS profileBio)"
+        };
+
+        var options = QueryOptionsParser.Parse(parameters, QuerySyntax.Fql);
+
+        var result = await _db.Customers.FlexQueryAsync(options);
+
+        result.Data.Should().NotBeEmpty();
+        var first = result.Data.First();
+        var type = first.GetType();
+
+        type.GetProperty("Id").Should().NotBeNull();
+
+        var profileProp = type.GetProperty("Profile");
+        profileProp.Should().NotBeNull();
+        var profileObj = profileProp!.GetValue(first);
+        profileObj.Should().NotBeNull();
+        profileObj!.GetType().GetProperty("profileBio").Should().NotBeNull("nested alias must appear on included navigation");
+        profileObj.GetType().GetProperty("Bio").Should().BeNull("original name must be hidden by alias");
+    }
+
+    [Fact]
+    public void Select_AliasConflict_MixedFlatAndNested_SameFieldDifferentAliases_Throws()
+    {
+        var options = new QueryOptions
+        {
+            Select =
+            [
+                S("PrimaryContact.EmailAddress", "Email"),
+                S("PrimaryContact", children: [S("EmailAddress", "ContactEmail")])
+            ]
+        };
+
+        var act = () => SelectTreeBuilder.Build(options);
+        act.Should().Throw<QueryValidationException>()
+            .WithMessage("*is projected multiple times with different aliases*")
+            .WithMessage("*'PrimaryContact.EmailAddress'*")
+            .WithMessage("*'Email' and 'ContactEmail'*");
     }
 
     #endregion

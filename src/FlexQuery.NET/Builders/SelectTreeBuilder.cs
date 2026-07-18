@@ -88,16 +88,9 @@ internal static class SelectTreeBuilder
         {
             var part = parts[i];
             node = node.GetOrAddChild(part);
-            if (i == parts.Length - 1 && alias != null)
+            if (i == parts.Length - 1)
             {
-                if (!string.IsNullOrWhiteSpace(node.Alias) &&
-                    !string.Equals(node.Alias, alias, StringComparison.Ordinal))
-                {
-                    throw new QueryValidationException(
-                        $"Conflicting aliases for field '{model.Field}': '{node.Alias}' and '{alias}'. " +
-                        "Use identical aliases for the same field or omit the alias.");
-                }
-                node.Alias = alias;
+                ApplyAlias(node, alias, model.Field);
             }
         }
 
@@ -105,19 +98,49 @@ internal static class SelectTreeBuilder
         {
             node.MarkIncludeAllScalars();
         }
-        else if (includeAllScalarsAtLeaf)
+        else if (includeAllScalarsAtLeaf && !node.HasChildren)
         {
-            if (!node.HasChildren)
-            {
-                node.MarkIncludeAllScalars();
-            }
+            node.MarkIncludeAllScalars();
         }
 
-        foreach (var child in model.Children)
+        MergeChildren(node, model.Children, includeAllScalarsAtLeaf: false, parentPath: model.Field);
+    }
+
+    /// <summary>
+    /// Merges already-parsed child <see cref="SelectNode"/> entries into <paramref name="parent"/>.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// Parser invariant: nested <see cref="SelectNode.Children"/> are produced exclusively by
+    /// <see cref="Parsers.Fql.FqlSelectParser"/> and <see cref="Parsers.Dsl.DslSelectParser"/>.
+    /// Both parsers enforce that child fields inside parentheses are simple identifiers—dotted paths
+    /// and wildcards are explicitly rejected. Therefore <paramref name="children"/> may only contain
+    /// simple names, and this method must never re-parse <c>child.Field</c> as a dotted path.
+    /// </para>
+    /// </remarks>
+    private static void MergeChildren(SelectionNode parent, IReadOnlyList<SelectNode> children, bool includeAllScalarsAtLeaf, string parentPath)
+    {
+        foreach (var child in children)
         {
-            var childNode = node.GetOrAddChild(child.Field);
-            MergePath(childNode, child, includeAllScalarsAtLeaf: false);
+            var childNode = parent.GetOrAddChild(child.Field);
+            var fullyQualified = string.IsNullOrEmpty(parentPath) ? child.Field : $"{parentPath}.{child.Field}";
+            ApplyAlias(childNode, child.Alias, fullyQualified);
+            MergeChildren(childNode, child.Children, includeAllScalarsAtLeaf: false, parentPath: fullyQualified);
         }
+    }
+
+    private static void ApplyAlias(SelectionNode node, string? alias, string fullyQualifiedField)
+    {
+        if (string.IsNullOrWhiteSpace(alias)) return;
+        
+        if (!string.IsNullOrWhiteSpace(node.Alias) &&
+            !string.Equals(node.Alias, alias, StringComparison.Ordinal))
+        {
+            throw new QueryValidationException(
+                $"The field '{fullyQualifiedField}' is projected multiple times with different aliases " +
+                $"('{node.Alias}' and '{alias}'). A source field may only be projected once per query.");
+        }
+        node.Alias = alias;
     }
 
     private static void MergePath(SelectionNode current, string path, bool includeAllScalarsAtLeaf)
@@ -141,16 +164,9 @@ internal static class SelectTreeBuilder
         {
             var part = parts[i];
             node = node.GetOrAddChild(part);
-            if (i == parts.Length - 1 && alias != null)
+            if (i == parts.Length - 1)
             {
-                if (!string.IsNullOrWhiteSpace(node.Alias) &&
-                    !string.Equals(node.Alias, alias, StringComparison.Ordinal))
-                {
-                    throw new QueryValidationException(
-                        $"Conflicting aliases for field '{path}': '{node.Alias}' and '{alias}'. " +
-                        "Use identical aliases for the same field or omit the alias.");
-                }
-                node.Alias = alias;
+                ApplyAlias(node, alias, path);
             }
         }
 
@@ -158,16 +174,13 @@ internal static class SelectTreeBuilder
         {
             node.MarkIncludeAllScalars();
         }
-        else if (includeAllScalarsAtLeaf)
+        else if (includeAllScalarsAtLeaf && !node.HasChildren)
         {
-            if (!node.HasChildren)
-            {
-                node.MarkIncludeAllScalars();
-            }
+            node.MarkIncludeAllScalars();
         }
     }
 
-    private static void MergeTree(SelectionNode target, SelectionNode source)
+    private static void MergeTree(SelectionNode target, SelectionNode source, string parentPath = "")
     {
         if (source.IncludeAllScalars)
         {
@@ -177,20 +190,9 @@ internal static class SelectTreeBuilder
         foreach (var kvp in source.EnumerateChildren())
         {
             var targetChild = target.GetOrAddChild(kvp.Key);
-
-            if (!string.IsNullOrWhiteSpace(kvp.Value.Alias))
-            {
-                if (!string.IsNullOrWhiteSpace(targetChild.Alias) &&
-                    !string.Equals(targetChild.Alias, kvp.Value.Alias, StringComparison.Ordinal))
-                {
-                    throw new QueryValidationException(
-                        $"Conflicting aliases for field '{kvp.Key}': '{targetChild.Alias}' and '{kvp.Value.Alias}'. " +
-                        "Use identical aliases for the same field or omit the alias.");
-                }
-                targetChild.Alias = kvp.Value.Alias;
-            }
-
-            MergeTree(targetChild, kvp.Value);
+            var fullyQualified = string.IsNullOrEmpty(parentPath) ? kvp.Key : $"{parentPath}.{kvp.Key}";
+            ApplyAlias(targetChild, kvp.Value.Alias, fullyQualified);
+            MergeTree(targetChild, kvp.Value, fullyQualified);
         }
     }
 
