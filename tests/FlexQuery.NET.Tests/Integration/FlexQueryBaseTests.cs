@@ -22,7 +22,7 @@ public class FlexQueryBaseTests
             Select = ["Id", "Name"],
             Include = ["Orders"],
             GroupBy = ["Category"],
-            Having = new HavingCondition { Function = AggregateFunction.Count, Field = "Id", Operator = "gt", Value = "5" },
+            Having = new HavingConditionNode { Function = AggregateFunction.Count, Field = "Id", Operator = "gt", Value = "5" },
             Paging = new PagingOptions { Page = 2, PageSize = 25 },
             IncludeCount = false,
             Distinct = true,
@@ -36,8 +36,9 @@ public class FlexQueryBaseTests
         request.Include.Should().BeEquivalentTo("Orders");
         request.GroupBy.Should().BeEquivalentTo("Category");
         request.Having.Should().NotBeNull();
-        request.Having!.Function.Should().Be(AggregateFunction.Count);
-        request.Having.Field.Should().Be("Id");
+        var having = (HavingConditionNode)request.Having!;
+        having.Function.Should().Be(AggregateFunction.Count);
+        having.Field.Should().Be("Id");
         request.Paging.Page.Should().Be(2);
         request.Paging.PageSize.Should().Be(25);
         request.IncludeCount.Should().BeFalse();

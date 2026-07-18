@@ -112,7 +112,7 @@ public class ResultCountTests
             GroupBy = ["CustomerId"],
             Aggregates =
             [
-                new AggregateModel
+                new Aggregate
                 {
                     Field = "Total",
                     Function = AggregateFunction.Sum,
@@ -132,14 +132,14 @@ public class ResultCountTests
             GroupBy = ["CustomerId"],
             Aggregates =
             [
-                new AggregateModel
+                new Aggregate
                 {
                     Field = "Total",
                     Function = AggregateFunction.Sum,
                     Alias = "totalSum"
                 }
             ],
-            Having = new HavingCondition
+            Having = new HavingConditionNode
             {
                 Field = "Total",
                 Function = AggregateFunction.Sum,

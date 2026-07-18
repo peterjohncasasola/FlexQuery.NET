@@ -319,7 +319,7 @@ public class ValidationEdgeCaseTests
         var options = new QueryOptions
         {
             GroupBy = ["City"],
-            Aggregates = [new AggregateModel { Function = AggregateFunction.Count, Field = "Id", Alias = "count" }],
+            Aggregates = [new Aggregate { Function = AggregateFunction.Count, Field = "Id", Alias = "count" }],
             Sort = [new SortNode { Field = "count" }]
         };
         var rule = new FieldExistenceRule();
@@ -382,7 +382,7 @@ public class ValidationEdgeCaseTests
         var options = new QueryOptions
         {
             GroupBy = ["City"],
-            Having = new HavingCondition { Function = AggregateFunction.Count, Field = "Id", Operator = "gt", Value = "5" }
+            Having = new HavingConditionNode { Function = AggregateFunction.Count, Field = "Id", Operator = "gt", Value = "5" }
         };
         var rule = new HavingWithoutGroupByRule();
         var result = ValidationResult.Success();
@@ -397,8 +397,8 @@ public class ValidationEdgeCaseTests
     {
         var options = new QueryOptions
         {
-            Aggregates = [new AggregateModel { Function = AggregateFunction.Count, Field = "Id", Alias = "cnt" }],
-            Having = new HavingCondition { Function = AggregateFunction.Count, Field = "Id", Operator = "gt", Value = "5" }
+            Aggregates = [new Aggregate { Function = AggregateFunction.Count, Field = "Id", Alias = "cnt" }],
+            Having = new HavingConditionNode { Function = AggregateFunction.Count, Field = "Id", Operator = "gt", Value = "5" }
         };
         var rule = new HavingWithoutGroupByRule();
         var result = ValidationResult.Success();

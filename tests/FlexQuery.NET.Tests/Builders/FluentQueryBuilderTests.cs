@@ -260,12 +260,12 @@ public class FluentQueryBuilderTests
             .Build();
 
         options.Aggregates.Should().HaveCount(6);
-        options.Aggregates[0].Should().Match<AggregateModel>(a => a.Function == AggregateFunction.Sum && a.Field == "Amount" && a.Alias == "TotalAmount");
-        options.Aggregates[1].Should().Match<AggregateModel>(a => a.Function == AggregateFunction.Count && a.Field == "Id" && a.Alias == "OrderCount");
-        options.Aggregates[2].Should().Match<AggregateModel>(a => a.Function == AggregateFunction.Count && a.Field == "TotalCount" && a.Alias == "TotalCount");
-        options.Aggregates[3].Should().Match<AggregateModel>(a => a.Function == AggregateFunction.Avg && a.Field == "Price" && a.Alias == "AvgPrice");
-        options.Aggregates[4].Should().Match<AggregateModel>(a => a.Function == AggregateFunction.Min && a.Field == "Date" && a.Alias == "Earliest");
-        options.Aggregates[5].Should().Match<AggregateModel>(a => a.Function == AggregateFunction.Max && a.Field == "Date" && a.Alias == "Latest");
+        options.Aggregates[0].Should().Match<Aggregate>(a => a.Function == AggregateFunction.Sum && a.Field == "Amount" && a.Alias == "TotalAmount");
+        options.Aggregates[1].Should().Match<Aggregate>(a => a.Function == AggregateFunction.Count && a.Field == "Id" && a.Alias == "OrderCount");
+        options.Aggregates[2].Should().Match<Aggregate>(a => a.Function == AggregateFunction.Count && a.Field == "TotalCount" && a.Alias == "TotalCount");
+        options.Aggregates[3].Should().Match<Aggregate>(a => a.Function == AggregateFunction.Avg && a.Field == "Price" && a.Alias == "AvgPrice");
+        options.Aggregates[4].Should().Match<Aggregate>(a => a.Function == AggregateFunction.Min && a.Field == "Date" && a.Alias == "Earliest");
+        options.Aggregates[5].Should().Match<Aggregate>(a => a.Function == AggregateFunction.Max && a.Field == "Date" && a.Alias == "Latest");
     }
 
     [Fact]
@@ -276,10 +276,11 @@ public class FluentQueryBuilderTests
             .Build();
 
         options.Having.Should().NotBeNull();
-        options.Having!.Function.Should().Be(AggregateFunction.Count);
-        options.Having.Field.Should().Be("Id");
-        options.Having.Operator.Should().Be("gt");
-        options.Having.Value.Should().Be("5");
+        var having = (HavingConditionNode)options.Having!;
+        having.Function.Should().Be(AggregateFunction.Count);
+        having.Field.Should().Be("Id");
+        having.Operator.Should().Be("gt");
+        having.Value.Should().Be("5");
     }
 
     [Fact]

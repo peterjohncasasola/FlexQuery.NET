@@ -26,7 +26,10 @@ internal sealed class QueryValidator : IQueryValidator
         _rules.Add(new OperatorValidityRule());
         _rules.Add(new TypeCompatibilityRule());
         _rules.Add(new HavingWithoutGroupByRule());
-        _rules.Add(new HavingAliasIntegrityRule());
+        _rules.Add(new HavingAggregateExistenceRule());
+        _rules.Add(new HavingOperatorValidityRule());
+        _rules.Add(new HavingFieldExistenceRule());
+        _rules.Add(new HavingTypeCompatibilityRule());
         _rules.Add(new AggregateValidationRule());
         _rules.Add(new AggregateSortValidationRule());
         _rules.Add(new GroupByIncludeConflictRule());

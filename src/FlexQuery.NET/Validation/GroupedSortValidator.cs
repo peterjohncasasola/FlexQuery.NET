@@ -41,7 +41,7 @@ internal static class GroupedSortValidator
     public static List<SortNode> Validate(
         IReadOnlyList<SortNode> sorts,
         IReadOnlyList<string> groupByFields,
-        IReadOnlyList<AggregateModel> aggregates)
+        IReadOnlyList<Aggregate> aggregates)
     {
         var validFields = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         var fieldToAlias = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);

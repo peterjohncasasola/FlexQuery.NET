@@ -259,7 +259,7 @@ public class FieldAccessValidationRuleTests
             StrictFieldValidation = true,
             BlockedFields = ["Name"]
         };
-        var options = new QueryOptions { Aggregates = [new AggregateModel { Function = AggregateFunction.Count, Field = "Name", Alias = "cnt" }] };
+        var options = new QueryOptions { Aggregates = [new Aggregate { Function = AggregateFunction.Count, Field = "Name", Alias = "cnt" }] };
         var rule = new FieldAccessValidationRule();
 
         var act = () => rule.Validate(options, Context(execOptions: execOptions), ValidationResult.Success());
@@ -275,7 +275,7 @@ public class FieldAccessValidationRuleTests
             StrictFieldValidation = false,
             BlockedFields = ["Name"]
         };
-        var options = new QueryOptions { Aggregates = [new AggregateModel { Function = AggregateFunction.Count, Field = "Name", Alias = "cnt" }] };
+        var options = new QueryOptions { Aggregates = [new Aggregate { Function = AggregateFunction.Count, Field = "Name", Alias = "cnt" }] };
         var rule = new FieldAccessValidationRule();
         var result = ValidationResult.Success();
 
@@ -294,7 +294,7 @@ public class FieldAccessValidationRuleTests
         };
         var options = new QueryOptions
         {
-            Having = new HavingCondition { Function = AggregateFunction.Count, Field = "Name", Operator = "gt", Value = "5" }
+            Having = new HavingConditionNode { Function = AggregateFunction.Count, Field = "Name", Operator = "gt", Value = "5" }
         };
         var rule = new FieldAccessValidationRule();
 
@@ -380,7 +380,7 @@ public class FieldAccessValidationRuleTests
             StrictFieldValidation = true,
             AggregatableFields = ["Id"]
         };
-        var options = new QueryOptions { Aggregates = [new AggregateModel { Function = AggregateFunction.Count, Field = "Name", Alias = "cnt" }] };
+        var options = new QueryOptions { Aggregates = [new Aggregate { Function = AggregateFunction.Count, Field = "Name", Alias = "cnt" }] };
         var rule = new FieldAccessValidationRule();
 
         var act = () => rule.Validate(options, Context(execOptions: execOptions), ValidationResult.Success());
@@ -740,7 +740,7 @@ public class FieldAccessValidationRuleTests
         var options = new QueryOptions
         {
             GroupBy = ["Age"],
-            Aggregates = [new AggregateModel { Function = AggregateFunction.Count, Field = "Age", Alias = "cnt" }],
+            Aggregates = [new Aggregate { Function = AggregateFunction.Count, Field = "Age", Alias = "cnt" }],
             Sort = [new SortNode { Field = "cnt" }]
         };
         var rule = new FieldAccessValidationRule();

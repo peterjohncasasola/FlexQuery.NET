@@ -23,7 +23,7 @@ public class SqlSelectBuilderTests
         var builder = new SqlSelectBuilder(_registry, Dialect);
         var options = new QueryOptions
         {
-            Aggregates = [new AggregateModel { Function = AggregateFunction.Count, Field = null, Alias = "total" }]
+            Aggregates = [new Aggregate { Function = AggregateFunction.Count, Field = null, Alias = "total" }]
         };
 
         var parts = builder.BuildAggregateSelectParts(options, mapping);
@@ -38,7 +38,7 @@ public class SqlSelectBuilderTests
         var builder = new SqlSelectBuilder(_registry, Dialect);
         var options = new QueryOptions
         {
-            Aggregates = [new AggregateModel { Function = AggregateFunction.Count, Field = "*", Alias = "total" }]
+            Aggregates = [new Aggregate { Function = AggregateFunction.Count, Field = "*", Alias = "total" }]
         };
 
         var parts = builder.BuildAggregateSelectParts(options, mapping);
@@ -53,7 +53,7 @@ public class SqlSelectBuilderTests
         var builder = new SqlSelectBuilder(_registry, Dialect);
         var options = new QueryOptions
         {
-            Aggregates = [new AggregateModel { Function = AggregateFunction.Count, Field = "Status", Alias = "statusCount" }]
+            Aggregates = [new Aggregate { Function = AggregateFunction.Count, Field = "Status", Alias = "statusCount" }]
         };
 
         var parts = builder.BuildAggregateSelectParts(options, mapping);
@@ -68,7 +68,7 @@ public class SqlSelectBuilderTests
         var builder = new SqlSelectBuilder(_registry, Dialect);
         var options = new QueryOptions
         {
-            Aggregates = [new AggregateModel { Function = AggregateFunction.Sum, Field = "Score", Alias = "totalScore" }]
+            Aggregates = [new Aggregate { Function = AggregateFunction.Sum, Field = "Score", Alias = "totalScore" }]
         };
 
         var parts = builder.BuildAggregateSelectParts(options, mapping);
@@ -83,7 +83,7 @@ public class SqlSelectBuilderTests
         var builder = new SqlSelectBuilder(_registry, Dialect);
         var options = new QueryOptions
         {
-            Aggregates = [new AggregateModel { Function = AggregateFunction.Avg, Field = "Score", Alias = "avgScore" }]
+            Aggregates = [new Aggregate { Function = AggregateFunction.Avg, Field = "Score", Alias = "avgScore" }]
         };
 
         var parts = builder.BuildAggregateSelectParts(options, mapping);
@@ -98,7 +98,7 @@ public class SqlSelectBuilderTests
         var builder = new SqlSelectBuilder(_registry, Dialect);
         var options = new QueryOptions
         {
-            Aggregates = [new AggregateModel { Function = AggregateFunction.Min, Field = "Score", Alias = "minScore" }]
+            Aggregates = [new Aggregate { Function = AggregateFunction.Min, Field = "Score", Alias = "minScore" }]
         };
 
         var parts = builder.BuildAggregateSelectParts(options, mapping);
@@ -113,7 +113,7 @@ public class SqlSelectBuilderTests
         var builder = new SqlSelectBuilder(_registry, Dialect);
         var options = new QueryOptions
         {
-            Aggregates = [new AggregateModel { Function = AggregateFunction.Max, Field = "Score", Alias = "maxScore" }]
+            Aggregates = [new Aggregate { Function = AggregateFunction.Max, Field = "Score", Alias = "maxScore" }]
         };
 
         var parts = builder.BuildAggregateSelectParts(options, mapping);
@@ -130,9 +130,9 @@ public class SqlSelectBuilderTests
         {
             Aggregates =
             [
-                new AggregateModel { Function = AggregateFunction.Count, Field = null, Alias = "total" },
-                new AggregateModel { Function = AggregateFunction.Sum, Field = "Score", Alias = "sumScore" },
-                new AggregateModel { Function = AggregateFunction.Avg, Field = "Score", Alias = "avgScore" }
+                new Aggregate { Function = AggregateFunction.Count, Field = null, Alias = "total" },
+                new Aggregate { Function = AggregateFunction.Sum, Field = "Score", Alias = "sumScore" },
+                new Aggregate { Function = AggregateFunction.Avg, Field = "Score", Alias = "avgScore" }
             ]
         };
 
@@ -153,7 +153,7 @@ public class SqlSelectBuilderTests
         var builder = new SqlSelectBuilder(registry, Dialect);
         var options = new QueryOptions
         {
-            Aggregates = [new AggregateModel { Function = AggregateFunction.Sum, Field = "Score", Alias = "total" }]
+            Aggregates = [new Aggregate { Function = AggregateFunction.Sum, Field = "Score", Alias = "total" }]
         };
 
         var parts = builder.BuildAggregateSelectParts(options, mapping);
@@ -219,7 +219,7 @@ public class SqlSelectBuilderTests
         var options = new QueryOptions
         {
             GroupBy = ["Status"],
-            Aggregates = [new AggregateModel { Function = AggregateFunction.Count, Field = null, Alias = "cnt" }]
+            Aggregates = [new Aggregate { Function = AggregateFunction.Count, Field = null, Alias = "cnt" }]
         };
         var tree = new SelectionNode();
 

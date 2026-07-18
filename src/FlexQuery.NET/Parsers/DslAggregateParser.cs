@@ -5,12 +5,12 @@ namespace FlexQuery.NET.Parsers;
 
 internal static class DslAggregateParser
 {
-    public static List<AggregateModel> Parse(string? rawAggregates)
+    public static List<Aggregate> Parse(string? rawAggregates)
     {
         if (string.IsNullOrWhiteSpace(rawAggregates))
             return [];
 
-        var result = new List<AggregateModel>();
+        var result = new List<Aggregate>();
         var items = rawAggregates.Split(',', StringSplitOptions.TrimEntries);
 
         foreach (var item in items)
@@ -60,7 +60,7 @@ internal static class DslAggregateParser
                         $"Invalid alias '{aliasPart}' in aggregate expression. " +
                         "Aliases must be valid identifiers (e.g. 'TotalSales').");
 
-                result.Add(new AggregateModel
+                result.Add(new Aggregate
                 {
                     Function = aggregateRef.Function,
                     Field = aggregateRef.Field,
@@ -69,7 +69,7 @@ internal static class DslAggregateParser
             }
             else
             {
-                result.Add(new AggregateModel
+                result.Add(new Aggregate
                 {
                     Function = aggregateRef.Function,
                     Field = aggregateRef.Field,

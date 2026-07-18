@@ -14,7 +14,7 @@ public class FlexQueryDocumentationRegistryTests
     [InlineData(typeof(SortNode))]
     [InlineData(typeof(PagingOptions))]
     [InlineData(typeof(AggregateModel))]
-    [InlineData(typeof(HavingCondition))]
+    [InlineData(typeof(HavingConditionNode))]
     [InlineData(typeof(IncludeNode))]
     [InlineData(typeof(ProjectionMode))]
     [InlineData(typeof(LogicOperator))]

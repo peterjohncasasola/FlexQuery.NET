@@ -55,12 +55,12 @@ internal static class ExampleProvider
         ],
         Aggregate =
         [
-            new AggregateModel { Function = AggregateFunction.Sum, Field = "TotalAmount", Alias = "TotalRevenue" },
-            new AggregateModel { Function = AggregateFunction.Count, Alias = "OrderCount" },
-            new AggregateModel { Function = AggregateFunction.Avg, Field = "Rating", Alias = "AvgRating" }
+            new Aggregate { Function = AggregateFunction.Sum, Field = "TotalAmount", Alias = "TotalRevenue" },
+            new Aggregate { Function = AggregateFunction.Count, Alias = "OrderCount" },
+            new Aggregate { Function = AggregateFunction.Avg, Field = "Rating", Alias = "AvgRating" }
         ],
         GroupBy = ["Region", "Category"],
-        Having = new HavingCondition
+        Having = new HavingConditionNode
         {
             Function = AggregateFunction.Sum,
             Field = "TotalAmount",

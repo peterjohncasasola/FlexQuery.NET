@@ -78,7 +78,7 @@ internal static class AgGridQueryOptionsParser
 
                 var fn = AggregateFunctionConverter.Parse(col.AggFunc);
                 var alias = ParserUtilities.BuildAggregateAlias(fn.ToString().ToLowerInvariant(), col.Field);
-                result.Aggregates.Add(new AggregateModel
+                result.Aggregates.Add(new Aggregate
                 {
                     Field = col.Field,
                     Function = fn,

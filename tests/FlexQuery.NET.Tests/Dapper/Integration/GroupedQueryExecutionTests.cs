@@ -153,8 +153,8 @@ public class GroupedQueryExecutionTests : IDisposable
             GroupBy = ["CustomerId"],
             Aggregates =
             [
-                new AggregateModel { Field = "Id", Function = AggregateFunction.Count, Alias = "idCount" },
-                new AggregateModel { Field = "Total", Function = AggregateFunction.Sum, Alias = "totalSum" }
+                new Aggregate { Field = "Id", Function = AggregateFunction.Count, Alias = "idCount" },
+                new Aggregate { Field = "Total", Function = AggregateFunction.Sum, Alias = "totalSum" }
             ],
             Filter = NumberPrefixFilter("COUNT-"),
             Sort = [new SortNode { Field = "CustomerId" }],
@@ -186,7 +186,7 @@ public class GroupedQueryExecutionTests : IDisposable
             GroupBy = ["CustomerId"],
             Aggregates =
             [
-                new AggregateModel
+                new Aggregate
                 {
                     Field = "Total",
                     Function = AggregateFunction.Sum,
@@ -204,7 +204,7 @@ public class GroupedQueryExecutionTests : IDisposable
             GroupBy = ["CustomerId", "OrderDate"],
             Aggregates =
             [
-                new AggregateModel
+                new Aggregate
                 {
                     Field = "Total",
                     Function = AggregateFunction.Sum,
@@ -218,7 +218,7 @@ public class GroupedQueryExecutionTests : IDisposable
     private static QueryOptions GroupedOptionsWithHaving(int page, int pageSize, decimal minimumTotal)
     {
         var options = GroupedOptions(page, pageSize);
-        options.Having = new HavingCondition
+        options.Having = new HavingConditionNode
         {
             Field = "Total",
             Function = AggregateFunction.Sum,
@@ -235,14 +235,14 @@ public class GroupedQueryExecutionTests : IDisposable
             GroupBy = ["CustomerId"],
             Aggregates =
             [
-                new AggregateModel
+                new Aggregate
                 {
                     Field = "Id",
                     Function = AggregateFunction.Count,
                     Alias = "idCount"
                 }
             ],
-            Having = new HavingCondition
+            Having = new HavingConditionNode
             {
                 Field = "Id",
                 Function = AggregateFunction.Count,

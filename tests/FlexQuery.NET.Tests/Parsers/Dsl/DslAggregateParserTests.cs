@@ -7,7 +7,7 @@ namespace FlexQuery.NET.Tests.Parsers.Dsl;
 
 public class DslAggregateParserTests
 {
-    private static List<AggregateModel> Parse(string? raw) =>
+    private static List<Aggregate> Parse(string? raw) =>
         DslAggregateParser.Parse(raw);
 
     [Fact]
@@ -413,5 +413,13 @@ public class DslAggregateParserTests
         result[0].Function.Should().Be(AggregateFunction.Sum);
         result[0].Field.Should().Be("Amount");
         result[0].Alias.Should().Be("AmountSum");
+    }
+    
+    [Fact]
+    public void Parse_Field_CountStar_ThrowsFqlParseException()
+    {
+        var ex = Record.Exception(() => Parse("count:*"));
+
+        ex.Should().BeOfType<DslParseException>();
     }
 }

@@ -94,7 +94,7 @@ public sealed class FluentQueryBuilder
     /// <summary>Sets the HAVING condition for aggregate filtering.</summary>
     public FluentQueryBuilder Having(string function, string? field, string op, string? value)
     {
-        _options.Having = new HavingCondition
+        _options.Having = new HavingConditionNode
         {
             Function = AggregateFunctionConverter.Parse(function),
             Field = field,

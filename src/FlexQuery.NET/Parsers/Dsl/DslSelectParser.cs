@@ -257,7 +257,7 @@ internal static class DslSelectParser
             {
                 i++;
 
-                int aliasStart = i;
+                var aliasStart = i;
                 while (i < span.Length && (char.IsLetterOrDigit(span[i]) || span[i] == '_'))
                     i++;
 

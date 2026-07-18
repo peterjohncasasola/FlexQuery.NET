@@ -104,7 +104,7 @@ public class SecurityGovernanceDapperIntegrationTests
         var options = NoPaging(new QueryOptions
         {
             GroupBy = new List<string> { "Category" },
-            Aggregates = { new AggregateModel { Field = "Price", Function = AggregateFunction.Avg, Alias = "priceAvg" } },
+            Aggregates = { new Aggregate { Field = "Price", Function = AggregateFunction.Avg, Alias = "priceAvg" } },
             Sort = { new SortNode { Field = "Category", Descending = true } }
         });
         options.Items[ContextKeys.EntityType] = typeof(GovOrder);
@@ -139,7 +139,7 @@ public class SecurityGovernanceDapperIntegrationTests
         var options = NoPaging(new QueryOptions
         {
             GroupBy = new List<string> { "Category" },
-            Aggregates = { new AggregateModel { Field = "Price", Function = AggregateFunction.Sum, Alias = "priceSum" } },
+            Aggregates = { new Aggregate { Field = "Price", Function = AggregateFunction.Sum, Alias = "priceSum" } },
             Sort = { new SortNode { Field = "Id" } }
         });
         options.Items[ContextKeys.EntityType] = typeof(GovOrder);
@@ -172,7 +172,7 @@ public class SecurityGovernanceDapperIntegrationTests
         var options = NoPaging(new QueryOptions
         {
             GroupBy = new List<string> { "Salary" },
-            Aggregates = { new AggregateModel { Field = "Salary", Function = AggregateFunction.Sum, Alias = "salarySum" } }
+            Aggregates = { new Aggregate { Field = "Salary", Function = AggregateFunction.Sum, Alias = "salarySum" } }
         });
         options.Items[ContextKeys.EntityType] = typeof(GovEntity);
 
@@ -195,7 +195,7 @@ public class SecurityGovernanceDapperIntegrationTests
     {
         var options = NoPaging(new QueryOptions
         {
-            Aggregates = { new AggregateModel { Field = "Salary", Function = AggregateFunction.Sum, Alias = "salarySum" } }
+            Aggregates = { new Aggregate { Field = "Salary", Function = AggregateFunction.Sum, Alias = "salarySum" } }
         });
         options.Items[ContextKeys.EntityType] = typeof(GovEntity);
 
@@ -219,8 +219,8 @@ public class SecurityGovernanceDapperIntegrationTests
         var options = NoPaging(new QueryOptions
         {
             GroupBy = new List<string> { "Name" },
-            Aggregates = { new AggregateModel { Field = "Salary", Function = AggregateFunction.Sum, Alias = "salarySum" } },
-            Having = new HavingCondition { Field = "Salary", Function = AggregateFunction.Sum, Operator = "gt", Value = "0" }
+            Aggregates = { new Aggregate { Field = "Salary", Function = AggregateFunction.Sum, Alias = "salarySum" } },
+            Having = new HavingConditionNode { Field = "Salary", Function = AggregateFunction.Sum, Operator = "gt", Value = "0" }
         });
         options.Items[ContextKeys.EntityType] = typeof(GovEntity);
 
@@ -481,7 +481,7 @@ public class SecurityGovernanceDapperIntegrationTests
         var options = NoPaging(new QueryOptions
         {
             GroupBy = new List<string> { "CustomerId" },
-            Aggregates = { new AggregateModel { Field = "Total", Function = AggregateFunction.Sum, Alias = "totalSum" } },
+            Aggregates = { new Aggregate { Field = "Total", Function = AggregateFunction.Sum, Alias = "totalSum" } },
             Sort = { new SortNode { Field = "Total", Descending = true } }
         });
         var dapperOptions = new DapperQueryOptions
@@ -513,7 +513,7 @@ public class SecurityGovernanceDapperIntegrationTests
         var options = NoPaging(new QueryOptions
         {
             GroupBy = new List<string> { "Name" },
-            Aggregates = { new AggregateModel { Field = "Name", Function = AggregateFunction.Count, Alias = "cnt" } }
+            Aggregates = { new Aggregate { Field = "Name", Function = AggregateFunction.Count, Alias = "cnt" } }
         });
         var modelBuilder = new DapperModelBuilder();
         modelBuilder.Entity<GovEntity>().ToTable("Entities");
@@ -540,7 +540,7 @@ public class SecurityGovernanceDapperIntegrationTests
 
         var options = NoPaging(new QueryOptions
         {
-            Aggregates = { new AggregateModel { Field = "Name", Function = AggregateFunction.Count, Alias = "cnt" } }
+            Aggregates = { new Aggregate { Field = "Name", Function = AggregateFunction.Count, Alias = "cnt" } }
         });
         var dapperOptions = new DapperQueryOptions
         {
@@ -564,8 +564,8 @@ public class SecurityGovernanceDapperIntegrationTests
         var options = NoPaging(new QueryOptions
         {
             GroupBy = new List<string> { "Name" },
-            Aggregates = { new AggregateModel { Field = "Name", Function = AggregateFunction.Count, Alias = "cnt" } },
-            Having = new HavingCondition { Field = "Name", Function = AggregateFunction.Count, Operator = "gt", Value = "0" }
+            Aggregates = { new Aggregate { Field = "Name", Function = AggregateFunction.Count, Alias = "cnt" } },
+            Having = new HavingConditionNode { Field = "Name", Function = AggregateFunction.Count, Operator = "gt", Value = "0" }
         });
         var dapperOptions = new DapperQueryOptions
         {
