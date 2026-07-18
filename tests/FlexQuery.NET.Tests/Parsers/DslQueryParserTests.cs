@@ -1328,6 +1328,24 @@ public class DslQueryParserTests
     }
 
     [Fact]
+    public void DslFilter_ReservedKeyword_AndAsUnquotedValue_ThrowsWithHelpfulMessage()
+    {
+        var act = () => ParseFilter("name:eq:AND");
+        var ex = act.Should().Throw<QueryParseException>().Which;
+        ex.Message.Should().Contain("Reserved keyword 'AND' cannot be used as an unquoted value");
+        ex.Message.Should().Contain("name:eq:\"AND\"");
+    }
+
+    [Fact]
+    public void DslFilter_ReservedKeyword_OrAsUnquotedValue_ThrowsWithHelpfulMessage()
+    {
+        var act = () => ParseFilter("status:eq:OR");
+        var ex = act.Should().Throw<QueryParseException>().Which;
+        ex.Message.Should().Contain("Reserved keyword 'OR' cannot be used as an unquoted value");
+        ex.Message.Should().Contain("name:eq:\"OR\"");
+    }
+
+    [Fact]
     public void DslFilter_Value_ContainsOrKeyword()
     {
         var filter = ParseFilter("status:in:Active,OR,Pending");

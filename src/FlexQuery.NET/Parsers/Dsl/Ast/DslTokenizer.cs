@@ -112,8 +112,18 @@ internal sealed class DslTokenizer
         {
             current = _source[_position];
 
-            if (IsAtLogicalKeyword(_source, _position))
+            if (TryMatchLogicalKeyword(_source, _position, out var keyword))
+            {
+                if (_position == valueStart)
+                {
+                    throw new DslParseException(
+                        $"Reserved keyword '{keyword}' cannot be used as an unquoted value.\n" +
+                        $"If you intended a literal value, quote it:\n" +
+                        $"  name:eq:\"{keyword}\"",
+                        position: start);
+                }
                 break;
+            }
 
             if (current is '&' or '|' or ')' or '(')
             {
@@ -146,8 +156,18 @@ internal sealed class DslTokenizer
         {
             var current = _source[_position];
 
-            if (IsAtLogicalKeyword(_source, _position))
+            if (TryMatchLogicalKeyword(_source, _position, out var keyword))
+            {
+                if (sb.Length == 0)
+                {
+                    throw new DslParseException(
+                        $"Reserved keyword '{keyword}' cannot be used as an unquoted value.\n" +
+                        $"If you intended a literal value, quote it:\n" +
+                        $"  name:eq:\"{keyword}\"",
+                        position: tokenStart);
+                }
                 break;
+            }
 
             if (current is '&' or '|' or ')' or '(')
             {
@@ -175,8 +195,10 @@ internal sealed class DslTokenizer
         return new DslToken(DslTokenKind.Identifier, s, tokenStart);
     }
 
-    private static bool IsAtLogicalKeyword(string source, int position)
+    private static bool TryMatchLogicalKeyword(string source, int position, out string? keyword)
     {
+        keyword = null;
+
         if (position >= source.Length)
             return false;
 
@@ -189,9 +211,16 @@ internal sealed class DslTokenizer
         {
             var after = position + 3;
             if (after >= source.Length)
+            {
+                keyword = "AND";
                 return true;
+            }
             var ch = source[after];
-            return ch is ':' or '&' or '|' or '(' or ')' || char.IsWhiteSpace(ch);
+            if (ch is ':' or '&' or '|' or '(' or ')' || char.IsWhiteSpace(ch))
+            {
+                keyword = "AND";
+                return true;
+            }
         }
 
         if (remaining >= 2 &&
@@ -200,9 +229,16 @@ internal sealed class DslTokenizer
         {
             var after = position + 2;
             if (after >= source.Length)
+            {
+                keyword = "OR";
                 return true;
+            }
             var ch = source[after];
-            return ch is ':' or '&' or '|' or '(' or ')' || char.IsWhiteSpace(ch);
+            if (ch is ':' or '&' or '|' or '(' or ')' || char.IsWhiteSpace(ch))
+            {
+                keyword = "OR";
+                return true;
+            }
         }
 
         return false;
