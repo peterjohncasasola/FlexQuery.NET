@@ -1,5 +1,6 @@
 using FlexQuery.NET.Diagnostics;
 using FlexQuery.NET.Models;
+using FlexQuery.NET.Models.Aggregates;
 using FlexQuery.NET.Models.Filters;
 
 namespace FlexQuery.NET.Samples.WebApi.Controllers;
@@ -77,10 +78,7 @@ internal static class DiagnosticsHelper
                 }).ToList(),
                 having = options.Having is not null ? new
                 {
-                    function = options.Having.Function,
-                    field = options.Having.Field,
-                    op = options.Having.Operator,
-                    value = options.Having.Value
+                    expression = SerializeHaving(options.Having)
                 } : null,
                 paging = new
                 {
@@ -329,4 +327,31 @@ internal static class DiagnosticsHelper
         } : null,
         timeline = (object[]?)null
     };
+
+    private static object? SerializeHaving(HavingNode having)
+    {
+        return having switch
+        {
+            HavingConditionNode c => new
+            {
+                type = "condition",
+                function = c.Function.ToString(),
+                field = c.Field,
+                @operator = c.Operator,
+                value = c.Value
+            },
+            HavingLogicalNode l => new
+            {
+                type = "logical",
+                logic = l.Logic,
+                children = l.Children.Select(SerializeHaving).ToList()
+            },
+            HavingGroupNode g => new
+            {
+                type = "group",
+                inner = SerializeHaving(g.Inner)
+            },
+            _ => null
+        };
+    }
 }

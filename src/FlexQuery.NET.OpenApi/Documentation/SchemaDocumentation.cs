@@ -32,6 +32,9 @@ internal static class SchemaDocumentation
     internal static readonly string HavingCondition =
         "A HAVING condition against an aggregate projection.";
 
+    internal static readonly string HavingExpression =
+        "A HAVING expression tree supporting logical combinations of aggregate conditions.";
+
     internal static readonly string IncludeNode =
         "A filtered navigation include path with optional child expansions.";
 
