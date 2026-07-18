@@ -90,9 +90,9 @@ internal sealed class AggregateSortValidationRule : IValidationRule
         }
     }
 
-    private static Dictionary<AggregateKey, AggregateModel> BuildLookup(IReadOnlyCollection<AggregateModel> aggregates)
+    private static Dictionary<AggregateKey, Aggregate> BuildLookup(IReadOnlyCollection<Aggregate> aggregates)
     {
-        var dict = new Dictionary<AggregateKey, AggregateModel>();
+        var dict = new Dictionary<AggregateKey, Aggregate>();
         foreach (var aggregate in aggregates)
         {
             var key = new AggregateKey(aggregate.Function, aggregate.Field);
