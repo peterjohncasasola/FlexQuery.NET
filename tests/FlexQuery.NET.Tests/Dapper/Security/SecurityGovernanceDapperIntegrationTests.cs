@@ -134,7 +134,7 @@ public class SecurityGovernanceDapperIntegrationTests
     // ──────────────────────────────────────────────────────────────
 
     [Fact]
-    public void GroupedQuery_NonGroupedSort_PassesThrough()
+    public void GroupedQuery_NonGroupedSort_ThrowsValidationError()
     {
         var options = NoPaging(new QueryOptions
         {
@@ -144,22 +144,12 @@ public class SecurityGovernanceDapperIntegrationTests
         });
         options.Items[ContextKeys.EntityType] = typeof(GovOrder);
 
-        var execOptions = new QueryExecutionOptions
-        {
-            GroupableFields = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "Category" },
-            AggregatableFields = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "Price" }
-        };
-
-        options.Validate(typeof(GovOrder), execOptions);
-
         var translator = new SqlTranslator(CreateValidationRegistry(), Dialect);
-        var command = translator.Translate(options);
 
-        // Non-grouped sort "Id" is removed by GroupedSortValidator and replaced
-        // with a fallback sort by the first group key "Category".
-        command.Sql.Should().Contain("ORDER BY");
-        command.Sql.Should().Contain("\"Category\"");
-        command.Sql.Should().NotContain("\"Id\"");
+        Action act = () => translator.Translate(options);
+
+        act.Should().Throw<QueryValidationException>()
+            .Which.Result.Errors.Should().Contain(e => e.Code == ValidationErrorCodes.GroupBySortInvalid);
     }
 
     // ──────────────────────────────────────────────────────────────

@@ -1,10 +1,12 @@
 using System.Reflection;
 using FlexQuery.NET.Dapper.Sql;
 using FlexQuery.NET.EntityFrameworkCore;
-
+using FlexQuery.NET.Exceptions;
 using FlexQuery.NET.Models;
 using FlexQuery.NET.Models.Aggregates;
 using FlexQuery.NET.Models.Paging;
+using FlexQuery.NET.Validation;
+using FlexQuery.NET.Validation.Rules;
 
 
 namespace FlexQuery.NET.Tests.Integration;
@@ -83,78 +85,43 @@ public class GroupedQueryEfCoreTests : IDisposable
 
     [Fact]
 
-    public async Task GroupedQuery_InvalidDetailSort_SortIsIgnored()
-
+    public async Task GroupedQuery_InvalidDetailSort_ThrowsValidationError()
     {
-
         var options = new QueryOptions
-
         {
-
             GroupBy = ["CustomerId"],
-
             Aggregates = [new Aggregate { Field = "Total", Function = AggregateFunction.Sum, Alias = "totalSum" }],
-
             Sort = [new SortNode { Field = "Id" }],
-
             Paging = { Disabled = true }
-
         };
 
+        Func<Task> act = () => _db.Orders.FlexQueryAsync(options);
 
-
-        var result = await _db.Orders.FlexQueryAsync(options);
-
-        result.Data.Should().NotBeEmpty();
-
-        result.Data.Should().AllSatisfy(row =>
-
-        {
-
-            Read<int>(row, "CustomerId").Should().BeGreaterThan(0);
-
-            Read<double>(row, "totalSum").Should().BeGreaterThan(0);
-
-        });
-
+        var exception = await act.Should().ThrowAsync<QueryValidationException>();
+        exception.Which.Result.Errors.Should().Contain(e => e.Code == ValidationErrorCodes.GroupBySortInvalid);
     }
 
 
 
     [Fact]
 
-    public async Task GroupedQuery_AllInvalidSorts_FallsBackToGroupKey()
-
+    public async Task GroupedQuery_AllInvalidSorts_ThrowsValidationError()
     {
-
         var options = new QueryOptions
-
         {
-
             GroupBy = ["CustomerId"],
-
             Aggregates = [new Aggregate { Field = "Total", Function = AggregateFunction.Sum, Alias = "totalSum" }],
-
             Sort = [
-
                 new SortNode { Field = "Id" },
-
                 new SortNode { Field = "Number" }
-
             ],
-
             Paging = { Disabled = true }
-
         };
 
+        Func<Task> act = () => _db.Orders.FlexQueryAsync(options);
 
-
-        var result = await _db.Orders.FlexQueryAsync(options);
-
-        result.Data.Should().NotBeEmpty();
-
-        result.Data.Select(row => Read<int>(row, "CustomerId")).Should().BeInAscendingOrder();
-
+        var exception = await act.Should().ThrowAsync<QueryValidationException>();
+        exception.Which.Result.Errors.Should().Contain(e => e.Code == ValidationErrorCodes.GroupBySortInvalid);
     }
 
 
