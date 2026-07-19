@@ -34,4 +34,5 @@ internal static class ValidationErrorCodes
     public const string GroupBySortInvalid = "GROUPBY_SORT_INVALID";
     public const string HavingRequiresGroupBy = "HAVING_REQUIRES_GROUPBY";
     public const string HavingFieldNotInGroupBy = "HAVING_FIELD_NOT_IN_GROUPBY";
+    public const string AggregateSelectWithoutGroupBy = "AGGREGATE_SELECT_WITHOUT_GROUPBY";
 }

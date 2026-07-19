@@ -47,7 +47,7 @@ internal static class GroupByBuilder
         var groupingType = typeof(IGrouping<,>).MakeGenericType(keyType, sourceType);
         var groupParam = Expression.Parameter(groupingType, "g");
 
-        var selectedFields = BuildSelectedFieldList(options, groupFields);
+        var selectedFields = GetEffectiveSelectFields(options, groupFields);
         var projection = BuildGroupProjection(groupParam, keyType, sourceType, selectedFields, aggregates, options, out var projectionType);
         if (projection is null || projectionType is null)
             return query;
@@ -79,7 +79,7 @@ internal static class GroupByBuilder
         return query.Provider.CreateQuery(finalCall);
     }
 
-    private static List<string> BuildSelectedFieldList(QueryOptions options, List<string> groupFields)
+    private static List<string> GetEffectiveSelectFields(QueryOptions options, List<string> groupFields)
     {
         var selected = (options.Select ?? []).Select(s => s.Field).ToList();
         if (selected.Count == 0)
