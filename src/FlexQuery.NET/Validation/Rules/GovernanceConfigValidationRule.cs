@@ -89,7 +89,7 @@ internal sealed class GovernanceConfigValidationRule : IValidationRule
             if (!FieldResolver.TryResolveType(targetType, entry, execOptions, out _))
             {
                 errors.Add(new ValidationError(
-                    $"Configured field '{entry}' in {listName} does not exist on type '{targetType.Name}'.",
+                    $"Invalid governance configuration. {listName} contains '{entry}', which does not exist on entity type '{targetType.Name}'.",
                     ValidationErrorCodes.GovernanceFieldNotFound,
                     entry));
             }
@@ -107,7 +107,7 @@ internal sealed class GovernanceConfigValidationRule : IValidationRule
             if (!SafePropertyResolver.TryResolveChain(targetType, entry, out var chain) || chain.Count == 0)
             {
                 errors.Add(new ValidationError(
-                    $"Configured include '{entry}' in AllowedIncludes does not exist on type '{targetType.Name}'.",
+                    $"Invalid governance configuration. AllowedIncludes contains '{entry}', which does not exist on entity type '{targetType.Name}'.",
                     ValidationErrorCodes.GovernanceFieldNotFound,
                     entry));
                 continue;
@@ -122,7 +122,7 @@ internal sealed class GovernanceConfigValidationRule : IValidationRule
             if (!isNavigation)
             {
                 errors.Add(new ValidationError(
-                    $"Configured include '{entry}' in AllowedIncludes is not a navigation property on type '{targetType.Name}'.",
+                    $"Invalid governance configuration. AllowedIncludes contains '{entry}', but '{entry}' is not a navigation property on entity type '{targetType.Name}'.",
                     ValidationErrorCodes.GovernanceFieldNotFound,
                     entry));
             }
