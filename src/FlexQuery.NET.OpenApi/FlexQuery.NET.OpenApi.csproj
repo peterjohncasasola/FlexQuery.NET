@@ -27,6 +27,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\FlexQuery.NET\FlexQuery.NET.csproj" />
+    <ProjectReference Include="..\FlexQuery.NET.AspNetCore\FlexQuery.NET.AspNetCore.csproj" />
   </ItemGroup>
 
   <ItemGroup Condition="'$(TargetFramework)' == 'net9.0'">

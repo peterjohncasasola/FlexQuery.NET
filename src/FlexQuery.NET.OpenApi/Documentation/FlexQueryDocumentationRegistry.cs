@@ -28,18 +28,18 @@ internal static class FlexQueryDocumentationRegistry
         [typeof(AggregateFunction)] = new(SchemaDocumentation.AggregateFunction, null)
     };
 
-    public static bool TryGet(Type type, out FlexQueryDocumentation documentation)
+    public static bool TryGet(Type type, out FlexQueryDocumentation? documentation)
     {
         if (Entries.TryGetValue(type, out documentation!))
             return true;
 
         if (type.IsGenericType && type.GetGenericTypeDefinition() == typeof(QueryResult<>))
         {
-            documentation = new(SchemaDocumentation.QueryResult, ExampleProvider.CreateQueryResultExample());
+            documentation = new FlexQueryDocumentation(SchemaDocumentation.QueryResult, ExampleProvider.CreateQueryResultExample());
             return true;
         }
 
-        documentation = default;
+        documentation = null;
         return false;
     }
 }

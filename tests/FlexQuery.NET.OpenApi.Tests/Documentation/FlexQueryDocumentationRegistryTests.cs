@@ -1,5 +1,9 @@
-using FlexQuery.NET.OpenApi.Documentation;
 using FlexQuery.NET.Models;
+using FlexQuery.NET.Models.Aggregates;
+using FlexQuery.NET.Models.Filters;
+using FlexQuery.NET.Models.Paging;
+using FlexQuery.NET.Models.Projection;
+using FlexQuery.NET.OpenApi.Documentation;
 using Xunit;
 
 namespace FlexQuery.NET.OpenApi.Tests.Documentation;
@@ -13,8 +17,8 @@ public class FlexQueryDocumentationRegistryTests
     [InlineData(typeof(FilterCondition))]
     [InlineData(typeof(SortNode))]
     [InlineData(typeof(PagingOptions))]
-    [InlineData(typeof(AggregateModel))]
-    [InlineData(typeof(HavingConditionNode))]
+    [InlineData(typeof(Aggregate))]
+    [InlineData(typeof(HavingNode))]
     [InlineData(typeof(IncludeNode))]
     [InlineData(typeof(ProjectionMode))]
     [InlineData(typeof(LogicOperator))]

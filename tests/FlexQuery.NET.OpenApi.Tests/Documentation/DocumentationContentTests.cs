@@ -26,8 +26,8 @@ public class DocumentationContentTests
         SchemaDocumentation.FilterCondition.Should().NotBeNullOrWhiteSpace();
         SchemaDocumentation.SortNode.Should().NotBeNullOrWhiteSpace();
         SchemaDocumentation.PagingOptions.Should().NotBeNullOrWhiteSpace();
-        SchemaDocumentation.AggregateModel.Should().NotBeNullOrWhiteSpace();
-        SchemaDocumentation.HavingConditionNode.Should().NotBeNullOrWhiteSpace();
+        SchemaDocumentation.Aggregate.Should().NotBeNullOrWhiteSpace();
+        SchemaDocumentation.HavingNode.Should().NotBeNullOrWhiteSpace();
         SchemaDocumentation.IncludeNode.Should().NotBeNullOrWhiteSpace();
         SchemaDocumentation.ProjectionMode.Should().NotBeNullOrWhiteSpace();
         SchemaDocumentation.LogicOperator.Should().NotBeNullOrWhiteSpace();
