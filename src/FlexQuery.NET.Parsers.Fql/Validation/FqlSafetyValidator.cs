@@ -43,7 +43,9 @@ internal static class FqlSafetyValidator
     public static void ValidateField(string field, int position)
     {
         if (!IsValidPathSyntax(field))
-            throw new FqlParseException($"Invalid FQL field '{field}' at position {position}.");
+            throw new FqlParseException(
+                $"Invalid FQL field '{field}'.",
+                position: position);
     }
 
     private static bool IsValidPathSyntax(string? fieldPath)

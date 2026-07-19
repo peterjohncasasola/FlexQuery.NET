@@ -198,7 +198,9 @@ internal static class DslHavingParser
             }
 
             if (conditionParts.Count == 0)
-                throw new DslParseException("Expected HAVING condition but found logical operator.", position: -1);
+                throw new DslParseException(
+                    "Expected HAVING condition but found logical operator.",
+                    position: _position < tokens.Count ? tokens[_position].Position : -1);
 
             var conditionToken = string.Join(':', conditionParts);
             var parts = conditionToken.Split(':', StringSplitOptions.TrimEntries);
