@@ -40,6 +40,11 @@ public sealed class FieldAccessAttribute : Attribute
     /// Gets or sets the list of fields allowed for aggregation.
     /// </summary>
     public string[]? Aggregatable { get; set; }
+    
+    /// <summary>
+    /// Gets or sets the list of fields allowed for navigation.
+    /// </summary>
+    public string[]? AllowedIncludes { get; set; }
 
     /// <summary>
     /// Gets or sets the default sort field when no sort is specified.

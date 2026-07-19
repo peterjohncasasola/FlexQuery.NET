@@ -39,6 +39,7 @@ public sealed class FieldAccessFilter : IActionFilter
         execOptions.SelectableFields = Merge(attribute.Selectable, execOptions.SelectableFields);
         execOptions.GroupableFields = Merge(attribute.Groupable, execOptions.GroupableFields);
         execOptions.AggregatableFields = Merge(attribute.Aggregatable, execOptions.AggregatableFields);
+        execOptions.AllowedIncludes = Merge(attribute.AllowedIncludes, execOptions.AllowedIncludes);
 
         if (attribute.DefaultSortField != null)
         {
