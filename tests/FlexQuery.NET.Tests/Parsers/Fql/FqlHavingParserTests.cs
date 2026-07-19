@@ -101,7 +101,7 @@ public class FqlHavingParserTests
         var act = () => Parse("COUNT(*) > 0");
 
         act.Should().Throw<FqlParseException>()
-            .WithMessage("*Expected field name inside aggregate function 'COUNT'*");
+            .WithMessage("*Unexpected '*'. Expected a field name inside aggregate function 'COUNT'*");
     }
 
     [Fact]

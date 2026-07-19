@@ -110,10 +110,10 @@ internal sealed class FqlHavingAstParser(IReadOnlyList<FqlToken> tokens)
         string? field = null;
         if (Current.Kind != FqlTokenType.CloseParen)
         {
-            if (Match(FqlTokenType.Star))
+            if (Current.Kind == FqlTokenType.Star)
             {
                 throw new FqlParseException(
-                    $"Expected field name inside aggregate function '{fnValue}'.",
+                    $"Unexpected '*'. Expected a field name inside aggregate function '{fnValue}'.",
                     position: Current.Position);
             }
 

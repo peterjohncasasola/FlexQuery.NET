@@ -49,7 +49,7 @@ public static class FlexQueryParametersExtensions
     /// <param name="parameters">The incoming query parameters.</param>
     /// <param name="syntax">The query syntax to use for parsing.</param>
     /// <returns>A <see cref="QueryOptions"/> instance representing the parsed query.</returns>
-    public static QueryOptions ToQueryOptions(this FlexQueryParameters parameters, QuerySyntax syntax)
+    public static QueryOptions ToQueryOptions(this FlexQueryParameters parameters, QuerySyntax? syntax = null)
     {
         ArgumentNullException.ThrowIfNull(parameters);
         return QueryOptionsParser.Parse(parameters, syntax);
