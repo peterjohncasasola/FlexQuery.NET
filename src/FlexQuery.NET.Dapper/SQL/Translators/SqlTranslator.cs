@@ -76,7 +76,7 @@ internal sealed class SqlTranslator : ISqlTranslator
         var havingClause = SqlHavingBuilder.Build(_dialect, options.Having, mapping, parameters);
 
         var sortForOrderBy = options.GroupBy?.Count > 0
-            ? GroupedSortValidator.Validate(options.Sort, options.GroupBy, options.Aggregates)
+            ? GroupedSortValidator.ValidateOrThrow(options.Sort, options.GroupBy, options.Aggregates)
             : options.Sort;
 
         string orderByClause;

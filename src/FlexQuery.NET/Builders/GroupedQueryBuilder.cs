@@ -9,7 +9,7 @@ internal static class GroupedQueryBuilder
     {
         var typedQuery = (IQueryable<TShape>)groupedQuery;
             
-        var sorts = GroupedSortValidator.Validate(
+        var sorts = GroupedSortValidator.ValidateOrThrow(
             options.Sort,
             options.GroupBy ?? [],
             options.Aggregates);
