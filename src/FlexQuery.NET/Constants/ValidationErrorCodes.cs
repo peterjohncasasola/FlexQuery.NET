@@ -29,4 +29,9 @@ internal static class ValidationErrorCodes
     public const string InvalidCountTarget = "INVALID_COUNT_TARGET";
     public const string AggregateNotDeclared = "AGGREGATE_NOT_DECLARED";
     public const string DuplicateAggregateDefinition = "DUPLICATE_AGGREGATE_DEFINITION";
+    public const string GroupByProjectionMismatch = "GROUPBY_PROJECTION_MISMATCH";
+    public const string GroupByWildcardNotAllowed = "GROUPBY_WILDCARD_NOT_ALLOWED";
+    public const string GroupBySortInvalid = "GROUPBY_SORT_INVALID";
+    public const string HavingRequiresGroupBy = "HAVING_REQUIRES_GROUPBY";
+    public const string HavingFieldNotInGroupBy = "HAVING_FIELD_NOT_IN_GROUPBY";
 }
