@@ -4,6 +4,7 @@ using FlexQuery.NET.Models;
 using FlexQuery.NET.Models.Filters;
 using FlexQuery.NET.Models.Paging;
 using FlexQuery.NET.Options;
+using FlexQuery.NET.Tests.Shared.Models;
 
 namespace FlexQuery.NET.Tests.Validation;
 
@@ -17,27 +18,6 @@ namespace FlexQuery.NET.Tests.Validation;
 /// </summary>
 public class GovernanceReviewChangesTests
 {
-    private sealed class Customer
-    {
-        public int Id { get; set; }
-        public string Name { get; set; } = string.Empty;
-        public string SSN { get; set; } = string.Empty;
-        public CustomerGroup CustomerGroup { get; set; } = new();
-        public List<Order> Orders { get; set; } = new();
-    }
-
-    private sealed class CustomerGroup
-    {
-        public int Id { get; set; }
-        public string GroupName { get; set; } = string.Empty;
-    }
-
-    private sealed class Order
-    {
-        public int Id { get; set; }
-        public decimal Total { get; set; }
-        public string Status { get; set; } = string.Empty;
-    }
 
     private static QueryOptions FilterOn(string field, string op = "eq", string value = "x")
         => new()
@@ -94,11 +74,11 @@ public class GovernanceReviewChangesTests
     [Fact]
     public void Filter_OnNavigation_Allowed_WhenNavigationInAllowedIncludes()
     {
-        var options = FilterOn("CustomerGroup.GroupName", value: "Retail");
+        var options = FilterOn("Profile.Bio", value: "Retail");
         var execOptions = new QueryExecutionOptions
         {
             AllowedFields = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "Id", "Name" },
-            AllowedIncludes = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "CustomerGroup" }
+            AllowedIncludes = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "Profile" }
         };
 
         Action act = () => options.ValidateOrThrow<Customer>(execOptions);
@@ -109,7 +89,7 @@ public class GovernanceReviewChangesTests
     [Fact]
     public void Filter_OnNavigation_Rejected_WhenNavigationNotInAllowedIncludes()
     {
-        var options = FilterOn("CustomerGroup.GroupName", value: "Retail");
+        var options = FilterOn("Profile.Bio", value: "Retail");
         var execOptions = new QueryExecutionOptions
         {
             AllowedFields = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "Id", "Name" },
@@ -127,12 +107,12 @@ public class GovernanceReviewChangesTests
     {
         var options = new QueryOptions
         {
-            Sort = { new SortNode { Field = "CustomerGroup.GroupName" } }
+            Sort = { new SortNode { Field = "Profile.Bio" } }
         };
         var execOptions = new QueryExecutionOptions
         {
             SortableFields = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "Name" },
-            AllowedIncludes = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "CustomerGroup" }
+            AllowedIncludes = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "Profile" }
         };
 
         Action act = () => options.ValidateOrThrow<Customer>(execOptions);
@@ -174,11 +154,11 @@ public class GovernanceReviewChangesTests
     [Fact]
     public void BlockedFields_StillWin_OverAllowedIncludesTraversal()
     {
-        var options = FilterOn("CustomerGroup.GroupName", value: "Retail");
+        var options = FilterOn("Profile.Bio", value: "Retail");
         var execOptions = new QueryExecutionOptions
         {
-            AllowedIncludes = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "CustomerGroup" },
-            BlockedFields = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "CustomerGroup.GroupName" }
+            AllowedIncludes = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "Profile" },
+            BlockedFields = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "Profile.Bio" }
         };
 
         Action act = () => options.ValidateOrThrow<Customer>(execOptions);
@@ -259,12 +239,47 @@ public class GovernanceReviewChangesTests
         var execOptions = new QueryExecutionOptions
         {
             AllowedFields = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "Id", "Name" },
-            AllowedIncludes = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "CustomerGroup", "Orders" },
+            AllowedIncludes = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "Profile", "Orders" },
             SortableFields = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "Name" }
         };
 
         var result = options.Validate(typeof(Customer), execOptions);
 
         result.Errors.Should().NotContain(e => e.Code == ValidationErrorCodes.GovernanceFieldNotFound);
+    }
+
+    // ── Nested property governance investigation ────────────────────────────────
+    // Reproduction test for: does AllowedFields wildcard cover nested scalar paths?
+    // e.g. AllowedFields = { "Address.*" } should allow filter on "Address.City"
+
+    [Fact]
+    public void NestedField_AllowedFieldsWildcard_WithInclude_ShouldPass()
+    {
+        var options = FilterOn("Address.City", value: "Seattle");
+        var execOptions = new QueryExecutionOptions
+        {
+            AllowedFields = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "Address.*" },
+            AllowedIncludes = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "Address" },
+            StrictFieldValidation = true
+        };
+
+        Action act = () => options.ValidateOrThrow<Customer>(execOptions);
+
+        act.Should().NotThrow();
+    }
+
+    [Fact]
+    public void NestedField_AllowedFieldsWildcard_WithoutInclude_ShouldStillPassAtFieldAccessLevel()
+    {
+        var options = FilterOn("Address.City", value: "Seattle");
+        var execOptions = new QueryExecutionOptions
+        {
+            AllowedFields = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "Address.*" },
+            StrictFieldValidation = true
+        };
+
+        Action act = () => options.ValidateOrThrow<Customer>(execOptions);
+
+        act.Should().NotThrow();
     }
 }
