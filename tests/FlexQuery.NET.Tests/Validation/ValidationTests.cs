@@ -124,7 +124,7 @@ public class ValidationTests
     }
 
     [Fact]
-    public void HavingWithoutGroupBy_AllowsHavingWithAggregates()
+    public void HavingWithoutGroupBy_RequiresGroupByEvenWithAggregates()
     {
         var options = new QueryOptions
         {
@@ -134,7 +134,8 @@ public class ValidationTests
 
         Action act = () => options.ValidateOrThrow<Customer>();
 
-        act.Should().NotThrow();
+        act.Should().Throw<QueryValidationException>()
+           .Which.Result.Errors.Should().Contain(e => e.Code == ValidationErrorCodes.HavingRequiresGroupBy);
     }
 
     [Fact]
@@ -157,6 +158,7 @@ public class ValidationTests
     {
         var options = new QueryOptions
         {
+            GroupBy = ["Status"],
             Aggregates = [new Aggregate { Function = AggregateFunction.Sum, Field = "Age", Alias = "totalAge" }],
             Having = new HavingConditionNode { Function = AggregateFunction.Sum, Field = "Age", Operator = "gt", Value = "100" }
         };
