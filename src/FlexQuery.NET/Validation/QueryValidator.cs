@@ -38,6 +38,10 @@ internal sealed class QueryValidator : IQueryValidator
         _rules.Add(new GroupBySortValidationRule());
         _rules.Add(new GroupByIncludeConflictRule());
         _rules.Add(new PaginationModeValidationRule());
+        _rules.Add(new IncludeExpandConsistencyValidationRule());
+        _rules.Add(new ExpandDuplicatePathValidationRule());
+        _rules.Add(new ExpandExpressionContextValidationRule());
+        _rules.Add(new ExpandSortOnReferenceValidationRule());
     }
 
     /// <summary>
