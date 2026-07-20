@@ -1,4 +1,5 @@
 using FlexQuery.NET.Models.Filters;
+using FlexQuery.NET.Models.Paging;
 
 namespace FlexQuery.NET.Models.Projection;
 
@@ -24,4 +25,16 @@ public sealed class IncludeNode
 
     /// <summary>Deeper navigation levels chained after this one.</summary>
     public List<IncludeNode> Children { get; set; } = [];
+
+    /// <summary>
+    /// Optional sort expressions applied to the navigation collection at this level.
+    /// When null or empty, the provider's default ordering is used.
+    /// </summary>
+    public List<SortNode>? Sort { get; set; }
+
+    /// <summary>
+    /// Optional number of items to take from the navigation collection at this level.
+    /// Only meaningful for collection navigations.
+    /// </summary>
+    public int? Take { get; set; }
 }

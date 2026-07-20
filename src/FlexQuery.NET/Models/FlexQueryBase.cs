@@ -18,6 +18,9 @@ public abstract class FlexQueryBase
     /// <summary>The comma-separated list of fields to include.</summary>
     public string? Include { get; set; }
 
+    /// <summary>The expand expression for filtered navigation loading.</summary>
+    public string? Expand { get; set; }
+
     /// <summary>The comma-separated list of fields to group by.</summary>
     public string? GroupBy { get; set; }
 
