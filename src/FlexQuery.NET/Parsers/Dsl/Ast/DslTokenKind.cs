@@ -17,6 +17,8 @@ internal enum DslTokenKind
     OpenParen,
     /// <summary>The ')' group closer.</summary>
     CloseParen,
+    /// <summary>The ';' option separator.</summary>
+    Semicolon,
     /// <summary>End of input.</summary>
     End
 }

@@ -48,6 +48,11 @@ internal sealed class DslTokenizer
                         _valueMode = true;
                     }
                     break;
+                case ';':
+                    tokens.Add(new DslToken(DslTokenKind.Semicolon, ";", start));
+                    _position++;
+                    _colonCount = 0;
+                    break;
                 case '&':
                     tokens.Add(new DslToken(DslTokenKind.And, "&", start));
                     _position++;
@@ -125,7 +130,7 @@ internal sealed class DslTokenizer
                 break;
             }
 
-            if (current is '&' or '|' or ')' or '(')
+            if (current is '&' or '|' or ')' or '(' or ';')
             {
                 break;
             }
@@ -169,7 +174,7 @@ internal sealed class DslTokenizer
                 break;
             }
 
-            if (current is '&' or '|' or ')' or '(')
+            if (current is '&' or '|' or ')' or '(' or ';')
             {
                 break;
             }
@@ -251,7 +256,7 @@ internal sealed class DslTokenizer
         while (_position < _source.Length)
         {
             var current = _source[_position];
-            if (current is ':' or '&' or '|' or '(' or ')' || char.IsWhiteSpace(current))
+            if (current is ':' or ';' or '&' or '|' or '(' or ')' || char.IsWhiteSpace(current))
                 break;
 
             if (current == '\\')
@@ -282,7 +287,7 @@ internal sealed class DslTokenizer
         while (_position < _source.Length)
         {
             var current = _source[_position];
-            if (current is ':' or '&' or '|' or '(' or ')' || char.IsWhiteSpace(current))
+            if (current is ':' or ';' or '&' or '|' or '(' or ')' || char.IsWhiteSpace(current))
                 break;
 
             if (current == '\\' && _position + 1 < _source.Length)

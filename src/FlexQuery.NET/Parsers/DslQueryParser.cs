@@ -95,6 +95,26 @@ internal sealed class DslQueryParser : IQueryParser
             }
         }
 
+        if (!string.IsNullOrWhiteSpace(parameters.Expand))
+        {
+            try
+            {
+                var expandAst = DslExpandParser.Parse(parameters.Expand);
+                options.Expand = ExpandNormalizer.Normalize(expandAst);
+            }
+            catch (DslParseException ex)
+            {
+                throw new QueryParseException(
+                    QueryOptionKeys.Expand,
+                    QuerySyntax.NativeDsl,
+                    parameters.Expand,
+                    ex,
+                    position: ex.Position,
+                    expected: ex.Expected,
+                    found: ex.Found);
+            }
+        }
+
         if (!string.IsNullOrWhiteSpace(parameters.Sort))
         {
             try
