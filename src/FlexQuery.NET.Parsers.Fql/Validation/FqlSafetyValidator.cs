@@ -5,7 +5,7 @@ namespace FlexQuery.NET.Parsers.Fql;
 internal static class FqlSafetyValidator
 {
     private static readonly Regex AllowedChars = new(
-        @"^[A-Za-z0-9_\.\(\)\[\]\,\=\!\.\>\<\-\s'" + "\"" + @"@:/\\%]+$",
+        @"^[A-Za-z0-9_\.\(\)\[\]\,\=\;\!\>\<\-\s'" + "\"" + @"@:/\\%]+$",
         RegexOptions.Compiled);
 
     private static readonly Regex SegmentPattern = new(

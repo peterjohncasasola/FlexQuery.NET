@@ -46,6 +46,10 @@ internal sealed class FqlTokenizer
                     tokens.Add(new FqlToken(FqlTokenType.Comma, ",", start));
                     _position++;
                     break;
+                case ';':
+                    tokens.Add(new FqlToken(FqlTokenType.Semicolon, ";", start));
+                    _position++;
+                    break;
                 case '.':
                     tokens.Add(new FqlToken(FqlTokenType.Dot, ".", start));
                     _position++;
@@ -163,7 +167,7 @@ internal sealed class FqlTokenizer
         while (_position < _source.Length)
         {
             var ch = _source[_position];
-            if (char.IsWhiteSpace(ch) || ch is '(' or ')' or '[' or ']' or ',' or '.' or '=' or '!' or '<' or '>')
+            if (char.IsWhiteSpace(ch) || ch is '(' or ')' or '[' or ']' or ',' or ';' or '.' or '=' or '!' or '<' or '>')
                 break;
             _position++;
         }

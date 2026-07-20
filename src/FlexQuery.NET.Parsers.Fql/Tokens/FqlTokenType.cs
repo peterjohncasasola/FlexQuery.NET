@@ -41,5 +41,6 @@ internal enum FqlTokenType
     Min,
     Max,
     As,
-    Star
+    Star,
+    Semicolon
 }

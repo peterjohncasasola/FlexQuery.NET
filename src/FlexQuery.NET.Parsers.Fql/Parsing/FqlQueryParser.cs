@@ -169,6 +169,26 @@ internal sealed class FqlQueryParser : IQueryParser
             }
         }
 
+        if (!string.IsNullOrWhiteSpace(parameters.Expand))
+        {
+            try
+            {
+                var expandAst = FqlExpandParser.Parse(parameters.Expand);
+                options.Expand = ExpandNormalizer.Normalize(expandAst);
+            }
+            catch (FqlParseException ex)
+            {
+                throw new QueryParseException(
+                    QueryOptionKeys.Expand,
+                    QuerySyntax.Fql,
+                    parameters.Expand,
+                    ex,
+                    position: ex.Position,
+                    expected: ex.Expected,
+                    found: ex.Found);
+            }
+        }
+
         return options;
     }
 }

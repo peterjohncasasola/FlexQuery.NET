@@ -23,6 +23,11 @@ internal sealed class FqlAstParser
         return new FqlAstParser(new FqlTokenizer(source).Tokenize()).Parse();
     }
 
+    internal static FqlAstNode Parse(IReadOnlyList<FqlToken> tokens)
+    {
+        return new FqlAstParser(tokens).Parse();
+    }
+
     private FqlAstNode ParseOr()
     {
         var children = new List<FqlAstNode> { ParseAnd() };
