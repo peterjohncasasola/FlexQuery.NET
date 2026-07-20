@@ -1,5 +1,6 @@
 using FlexQuery.NET.Exceptions;
 using FlexQuery.NET.Models;
+using FlexQuery.NET.Models.Projection;
 using FlexQuery.NET.Constants;
 using FlexQuery.NET.Execution;
 using FlexQuery.NET.Options;
@@ -47,5 +48,57 @@ internal sealed class IncludeAccessValidationRule : IValidationRule
                 }
             }
         }
+
+        // Check expand paths - remove unauthorized ones in non-strict mode
+        if (options.Expand is not null)
+        {
+            for (var i = options.Expand.Count - 1; i >= 0; i--)
+            {
+                if (!IsExpandPathAllowed(options.Expand[i], allowedIncludes))
+                {
+                    var path = GetExpandPath(options.Expand[i]);
+                    var message = $"Expand path '{path}' is not allowed.";
+                    if (execOptions.StrictFieldValidation)
+                    {
+                        throw new QueryValidationException(message);
+                    }
+                    result.Errors.Add(new ValidationError(message, ValidationErrorCodes.IncludeAccessDenied, path));
+                    // Remove in non-strict mode
+                    options.Expand.RemoveAt(i);
+                }
+            }
+        }
+    }
+
+    private static bool IsExpandPathAllowed(IncludeNode node, HashSet<string> allowedIncludes, string parentPath = "")
+    {
+        var fullPath = string.IsNullOrEmpty(parentPath) ? node.Path : $"{parentPath}.{node.Path}";
+
+        if (!allowedIncludes.Contains(fullPath))
+            return false;
+
+        if (node.Children is { Count: > 0 })
+        {
+            foreach (var child in node.Children)
+            {
+                if (!IsExpandPathAllowed(child, allowedIncludes, fullPath))
+                    return false;
+            }
+        }
+
+        return true;
+    }
+
+    private static string GetExpandPath(IncludeNode node)
+    {
+        var path = node.Path;
+        if (node.Children is { Count: > 0 })
+        {
+            foreach (var child in node.Children)
+            {
+                path += "." + GetExpandPath(child);
+            }
+        }
+        return path;
     }
 }
