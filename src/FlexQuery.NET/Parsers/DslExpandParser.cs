@@ -63,32 +63,14 @@ internal static class DslExpandParser
             throw new DslParseException($"Unclosed parenthesis in expand block '{block}'.");
 
         var optionsStr = block[(parenIndex + 1)..closeParenIndex].Trim();
-        var leaf = new ExpandAst
+        var result = new ExpandAst
         {
-            Path = [pathSegments[^1]],
+            Path = pathSegments,
             Children = []
         };
-        ParseOptionList(optionsStr, leaf);
+        ParseOptionList(optionsStr, result);
 
-        if (pathSegments.Count == 1)
-            return leaf;
-
-        var parent = new ExpandAst
-        {
-            Path = [pathSegments[^2]],
-            Children = [leaf]
-        };
-        for (var i = pathSegments.Count - 3; i >= 0; i--)
-        {
-            var intermediate = new ExpandAst
-            {
-                Path = [pathSegments[i]],
-                Children = []
-            };
-            intermediate.Children.Add(parent);
-            parent = intermediate;
-        }
-        return parent;
+        return result;
     }
 
     private static ExpandAst BuildDottedPathNode(string pathStr)
@@ -98,34 +80,11 @@ internal static class DslExpandParser
         if (segments.Count == 0)
             throw new DslParseException($"Empty expand path.");
 
-        if (segments.Count == 1)
-            return new ExpandAst
-            {
-                Path = segments,
-                Children = []
-            };
-
-        var leaf = new ExpandAst
+        return new ExpandAst
         {
-            Path = [segments[^1]],
+            Path = segments,
             Children = []
         };
-        var parent = new ExpandAst
-        {
-            Path = [segments[^2]],
-            Children = [leaf]
-        };
-        for (var i = segments.Count - 3; i >= 0; i--)
-        {
-            var intermediate = new ExpandAst
-            {
-                Path = [segments[i]],
-                Children = []
-            };
-            intermediate.Children.Add(parent);
-            parent = intermediate;
-        }
-        return parent;
     }
 
     private static void ParseOptionList(string optionsStr, ExpandAst parent)

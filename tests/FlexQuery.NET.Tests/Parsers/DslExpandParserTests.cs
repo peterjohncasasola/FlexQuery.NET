@@ -93,7 +93,7 @@ public class DslExpandParserTests
     [Fact]
     public void Parse_MultipleBlocks_SamePathTwice_ReturnsTwoNodes()
     {
-        var result = DslExpandParser.Parse("orders(filter=status:eq:Active),orders(filter=status:eq:Pending))");
+        var result = DslExpandParser.Parse("orders(filter=status:eq:Active),orders(filter=status:eq:Pending)");
 
         result.Should().HaveCount(2);
         result[0].Path[0].Should().Be("orders");
@@ -143,9 +143,9 @@ public class DslExpandParserTests
 
         result.Should().ContainSingle();
         result[0].Path[0].Should().Be("orders");
-        result[0].Children.Should().ContainSingle();
-        result[0].Children[0].Path[0].Should().Be("orderItems");
-        result[0].Children[0].Filter.Should().NotBeNull();
+        result[0].Path.Should().Contain("orderItems");
+        result[0].Filter.Should().NotBeNull();
+        result[0].Children.Should().BeEmpty();
     }
 
     [Fact]
@@ -155,9 +155,8 @@ public class DslExpandParserTests
 
         result.Should().ContainSingle();
         result[0].Path[0].Should().Be("orders");
-        result[0].Children.Should().ContainSingle();
-        result[0].Children[0].Path[0].Should().Be("orderItems");
-        result[0].Children[0].Children.Should().BeEmpty();
+        result[0].Path.Should().Contain("orderItems");
+        result[0].Children.Should().BeEmpty();
     }
 
     #endregion
@@ -340,9 +339,8 @@ public class DslExpandParserTests
 
         result.Should().ContainSingle();
         result[0].Path[0].Should().Be("orders");
-        result[0].Children.Should().ContainSingle();
-        result[0].Children[0].Path[0].Should().Be("orderItems");
-        result[0].Children[0].Children.Should().BeEmpty();
+        result[0].Path.Should().Contain("orderItems");
+        result[0].Children.Should().BeEmpty();
     }
 
     [Fact]
