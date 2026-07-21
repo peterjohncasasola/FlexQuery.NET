@@ -16,11 +16,7 @@ internal sealed class IncludeExpandConsistencyValidationRule : IValidationRule
     {
         if (options.Expand is not { Count: > 0 }) return;
 
-        // Omitted include list = no restriction on expand.
-        // Explicitly empty include list = nothing is allowed, so every expand path is invalid.
-        if (options.Includes is null) return;
-
-        if (options.Includes.Count == 0)
+        if (options.Includes is null || options.Includes.Count == 0)
         {
             AddErrorForAllExpandPaths(options.Expand, string.Empty, result,
                 "Expand is not allowed when include list is empty.");
