@@ -13,6 +13,9 @@ internal interface IEntityMapping
     /// <summary>Table name.</summary>
     string TableName { get; }
 
+    /// <summary>Schema name.</summary>
+    string? Schema { get; }
+
     /// <summary>Table alias.</summary>
     string? TableAlias { get; set; }
 
@@ -24,6 +27,12 @@ internal interface IEntityMapping
 
     /// <summary>Get all mapped property names.</summary>
     IEnumerable<string> GetProperties();
+
+    /// <summary>Get primary key property names.</summary>
+    IEnumerable<string> GetKeyProperties();
+
+    /// <summary>Check whether a property is ignored.</summary>
+    bool IsIgnored(string propertyName);
 
     /// <summary>Get relationship mapping metadata.</summary>
     RelationshipMapping? GetRelationship(string navigationProperty);

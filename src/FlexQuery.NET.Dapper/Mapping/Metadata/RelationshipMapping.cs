@@ -25,8 +25,10 @@ internal sealed class RelationshipMapping
     
     /// <summary>
     /// The principal key column or property name on the target/principal entity.
+    /// Null means not explicitly configured; the effective principal key will be
+    /// resolved from the principal entity's configured primary key at query time.
     /// </summary>
-    public string PrincipalKey { get; set; } = "Id";
+    public string? PrincipalKey { get; set; }
 
     /// <summary>
     /// For many-to-many relationships, the join table name.

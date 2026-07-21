@@ -3,7 +3,7 @@ namespace FlexQuery.NET.Dapper.Mapping.Metadata;
 /// <summary>
 /// Defines the type of relationship between two entities.
 /// </summary>
-public enum RelationshipType
+internal enum RelationshipType
 {
     /// <summary>One-to-one relationship.</summary>
     OneToOne,

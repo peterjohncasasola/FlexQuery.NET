@@ -29,13 +29,30 @@ public sealed class EntityTypeBuilder<TEntity> where TEntity : class
     }
 
     /// <summary>
-    /// Configures the SQL table alias used when generating queries.
+    /// Configures the database table and schema mapped to the entity.
     /// </summary>
-    /// <param name="tableAlias">The table alias.</param>
+    /// <param name="tableName">The database table name.</param>
+    /// <param name="schema">The database schema name.</param>
     /// <returns>The current entity builder.</returns>
-    public EntityTypeBuilder<TEntity> HasAlias(string tableAlias)
+    public EntityTypeBuilder<TEntity> ToTable(string tableName, string? schema)
     {
-        _mapping.TableAlias = tableAlias;
+        _mapping.TableName = tableName;
+        _mapping.Schema = schema;
+        return this;
+    }
+
+    /// <summary>
+    /// Excludes the specified property from mapping metadata.
+    /// </summary>
+    /// <typeparam name="TProperty">The property type.</typeparam>
+    /// <param name="propertyExpression">
+    /// An expression identifying the property to ignore.
+    /// </param>
+    /// <returns>The current entity builder.</returns>
+    public EntityTypeBuilder<TEntity> Ignore<TProperty>(Expression<Func<TEntity, TProperty>> propertyExpression)
+    {
+        var propertyInfo = GetPropertyInfo(propertyExpression);
+        _mapping.Ignore(propertyInfo.Name);
         return this;
     }
 

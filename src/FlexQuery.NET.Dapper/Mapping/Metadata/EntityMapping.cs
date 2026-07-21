@@ -9,11 +9,14 @@ internal sealed class EntityMapping : IEntityMapping
 {
     private readonly Dictionary<string, PropertyMapping> _properties = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string, RelationshipMapping> _relationships = new(StringComparer.OrdinalIgnoreCase);
+    private readonly HashSet<string> _ignoredProperties = new(StringComparer.OrdinalIgnoreCase);
 
     /// <summary>The CLR type of the entity.</summary>
     public Type Type { get; }
     /// <summary>The name of the database table.</summary>
     public string TableName { get; set; }
+    /// <summary>The schema name.</summary>
+    public string? Schema { get; set; }
     /// <summary>An optional alias for the table used in SQL queries.</summary>
     public string? TableAlias { get; set; }
 
@@ -64,6 +67,18 @@ internal sealed class EntityMapping : IEntityMapping
     public IReadOnlyList<PropertyMapping> Keys =>
         _properties.Values.Where(p => p.IsPrimaryKey).ToList();
 
+    /// <summary>Marks the specified property as ignored.</summary>
+    public void Ignore(string propertyName)
+    {
+        _ignoredProperties.Add(propertyName);
+    }
+
+    /// <summary>Checks whether the specified property is ignored.</summary>
+    public bool IsIgnored(string propertyName) => _ignoredProperties.Contains(propertyName);
+
+    /// <summary>Primary key property names.</summary>
+    public IEnumerable<string> GetKeyProperties() => Keys.Select(k => k.PropertyName);
+
     // --- Backward compatibility with existing IEntityMapping interface ---
 
     /// <summary>Returns the database column name for the given property name.</summary>
@@ -82,20 +97,17 @@ internal sealed class EntityMapping : IEntityMapping
     }
 
     /// <summary>Returns all registered property names for this entity.</summary>
-    public IEnumerable<string> GetProperties() => _properties.Keys;
+    public IEnumerable<string> GetProperties() => _properties.Keys.Except(_ignoredProperties, StringComparer.OrdinalIgnoreCase);
 
     /// <summary>Returns join information for the given navigation property, or null if not found.</summary>
     public JoinInfo? GetJoinInfo(string navigationProperty)
     {
-        // JoinInfo is a legacy structure, we construct it dynamically if needed by the translators.
         if (_relationships.TryGetValue(navigationProperty, out var rel))
         {
-            // The actual join condition is usually built during translation based on the relationship type.
-            // But for backward compatibility with existing tests/translators, we can generate a basic condition.
             string joinCondition = rel.RelationshipType switch
             {
-                RelationshipType.OneToMany => $"{TableName}.Id = {rel.TargetType.Name}s.{rel.ForeignKey}",
-                RelationshipType.ManyToOne => $"{TableName}.{rel.ForeignKey} = {rel.TargetType.Name}s.{rel.PrincipalKey}",
+                RelationshipType.OneToMany => $"{TableName}.{RelationshipResolver.ResolvePrincipalColumn(this, rel)} = {rel.TargetType.Name}s.{rel.ForeignKey}",
+                RelationshipType.ManyToOne => $"{TableName}.{rel.ForeignKey} = {rel.TargetType.Name}s.{RelationshipResolver.ResolvePrincipalColumn(this, rel)}",
                 _ => string.Empty
             };
 
@@ -103,13 +115,11 @@ internal sealed class EntityMapping : IEntityMapping
             {
                 NavigationProperty = rel.NavigationPropertyName,
                 TargetType = rel.TargetType,
-                // Ideally, TableName for target should be retrieved from the MappingRegistry,
-                // but we might not have it here. The translator will need to fetch it.
-                // We provide a fallback for now.
-                TableName = rel.TargetType.Name + "s", 
+                TableName = rel.TargetType.Name + "s",
                 JoinCondition = joinCondition
             };
         }
         return null;
     }
 }
+
