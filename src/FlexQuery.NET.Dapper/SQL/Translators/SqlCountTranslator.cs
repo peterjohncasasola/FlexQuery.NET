@@ -2,6 +2,7 @@ using FlexQuery.NET.Constants;
 using FlexQuery.NET.Dapper.Sql.Ast;
 using FlexQuery.NET.Dapper.Dialects;
 using FlexQuery.NET.Dapper.Mapping;
+using FlexQuery.NET.Dapper.Sql.Builders;
 using FlexQuery.NET.Models.Filters;
 
 namespace FlexQuery.NET.Dapper.Sql.Translators;
@@ -51,7 +52,7 @@ internal class SqlCountTranslator(ISqlDialect dialect)
             _ => "="
         };
 
-        return $"(SELECT COUNT(*) FROM {dialect.QuoteIdentifier(targetMapping.TableName)} WHERE {subqueryWhere}) {sqlOp} {paramName}";
+        return $"(SELECT COUNT(*) FROM {SqlSyntaxBuilder.QuoteTable(dialect, targetMapping)} WHERE {subqueryWhere}) {sqlOp} {paramName}";
     }
 
     private string BuildJoinCondition(IEntityMapping source, IEntityMapping target, Mapping.Metadata.RelationshipMapping rel, string targetAlias)
@@ -59,8 +60,8 @@ internal class SqlCountTranslator(ISqlDialect dialect)
         var alias = dialect.QuoteIdentifier(targetAlias);
         return rel.RelationshipType switch
         {
-            Mapping.Metadata.RelationshipType.OneToMany => $"{alias}.{dialect.QuoteIdentifier(rel.ForeignKey)} = {dialect.QuoteIdentifier(source.TableAlias ?? source.TableName)}.{dialect.QuoteIdentifier(source.GetColumnName(rel.PrincipalKey ?? "Id"))}",
-            Mapping.Metadata.RelationshipType.ManyToOne => $"{dialect.QuoteIdentifier(source.TableAlias ?? source.TableName)}.{dialect.QuoteIdentifier(rel.ForeignKey)} = {alias}.{dialect.QuoteIdentifier(target.GetColumnName(rel.PrincipalKey ?? "Id"))}",
+            Mapping.Metadata.RelationshipType.OneToMany => $"{alias}.{dialect.QuoteIdentifier(rel.ForeignKey)} = {dialect.QuoteIdentifier(source.TableAlias ?? source.TableName)}.{dialect.QuoteIdentifier(RelationshipResolver.ResolvePrincipalColumn(source, rel))}",
+            Mapping.Metadata.RelationshipType.ManyToOne => $"{dialect.QuoteIdentifier(source.TableAlias ?? source.TableName)}.{dialect.QuoteIdentifier(rel.ForeignKey)} = {alias}.{dialect.QuoteIdentifier(RelationshipResolver.ResolvePrincipalColumn(target, rel))}",
             _ => "1=0"
         };
     }

@@ -2,6 +2,7 @@ using FlexQuery.NET.Dapper.Sql.Ast;
 using FlexQuery.NET.Dapper.Dialects;
 using FlexQuery.NET.Dapper.Mapping;
 using FlexQuery.NET.Dapper.Mapping.Metadata;
+using FlexQuery.NET.Dapper.Sql.Builders;
 using FlexQuery.NET.Models.Filters;
 
 namespace FlexQuery.NET.Dapper.Sql.Translators;
@@ -32,12 +33,12 @@ internal class SqlIncludeTranslator
         
         var joinCondition = rel.RelationshipType switch
         {
-            RelationshipType.OneToMany => $"{alias}.{_dialect.QuoteIdentifier(rel.ForeignKey)} = {_dialect.QuoteIdentifier(mapping.TableAlias ?? mapping.TableName)}.{_dialect.QuoteIdentifier(mapping.GetColumnName(rel.PrincipalKey))}",
-            RelationshipType.ManyToOne => $"{_dialect.QuoteIdentifier(mapping.TableAlias ?? mapping.TableName)}.{_dialect.QuoteIdentifier(rel.ForeignKey)} = {alias}.{_dialect.QuoteIdentifier(targetMapping.GetColumnName(rel.PrincipalKey))}",
+            RelationshipType.OneToMany => $"{alias}.{_dialect.QuoteIdentifier(rel.ForeignKey)} = {_dialect.QuoteIdentifier(mapping.TableAlias ?? mapping.TableName)}.{_dialect.QuoteIdentifier(RelationshipResolver.ResolvePrincipalColumn(mapping, rel))}",
+            RelationshipType.ManyToOne => $"{_dialect.QuoteIdentifier(mapping.TableAlias ?? mapping.TableName)}.{_dialect.QuoteIdentifier(rel.ForeignKey)} = {alias}.{_dialect.QuoteIdentifier(RelationshipResolver.ResolvePrincipalColumn(targetMapping, rel))}",
             _ => "1=0"
         };
 
-        var sql = $"LEFT JOIN {_dialect.QuoteIdentifier(targetMapping.TableName)} AS {alias} ON {joinCondition}";
+        var sql = $"LEFT JOIN {SqlSyntaxBuilder.QuoteTable(_dialect, targetMapping)} AS {alias} ON {joinCondition}";
 
         if (node.Filter == null) return sql;
         

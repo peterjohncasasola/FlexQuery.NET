@@ -32,6 +32,7 @@ internal class DefaultEntityConvention : IEntityConvention
         if (tableAttr != null)
         {
             mapping.TableName = tableAttr.Name;
+            mapping.Schema = string.IsNullOrEmpty(tableAttr.Schema) ? null : tableAttr.Schema;
         }
         else if (string.IsNullOrEmpty(mapping.TableName) || mapping.TableName == type.Name)
         {
@@ -41,24 +42,26 @@ internal class DefaultEntityConvention : IEntityConvention
         // 2. Property Conventions
         foreach (var property in type.GetProperties(BindingFlags.Public | BindingFlags.Instance))
         {
-            // Skip unmapped / ignored properties (can add NotMappedAttribute support here)
-            if (property.GetCustomAttribute<NotMappedAttribute>() != null)
+            if (mapping.IsIgnored(property.Name))
                 continue;
 
-            // Skip navigation properties (complex types and collections are handled by relationship convention)
+            if (property.GetCustomAttribute<NotMappedAttribute>() != null)
+            {
+                mapping.Ignore(property.Name);
+                continue;
+            }
+
             if (TypeHelper.IsNavigationProperty(property.PropertyType))
                 continue;
 
             var propMapping = mapping.GetOrAddProperty(property);
 
-            // Column Name
             var columnAttr = property.GetCustomAttribute<ColumnAttribute>();
             if (columnAttr != null)
             {
                 propMapping.ColumnName = columnAttr.Name ?? property.Name;
             }
 
-            // Primary Key
             if (property.GetCustomAttribute<KeyAttribute>() != null)
             {
                 propMapping.IsPrimaryKey = true;

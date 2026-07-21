@@ -52,7 +52,8 @@ internal static class DapperRowHydrator
         where T : class
     {
         var parentMap = new Dictionary<object, T>();
-        var pkProperty = mapping.GetProperties().FirstOrDefault(p => p.Equals("Id", StringComparison.OrdinalIgnoreCase))
+        var pkProperty = mapping.GetKeyProperties().FirstOrDefault()
+            ?? mapping.GetProperties().FirstOrDefault(p => p.Equals("Id", StringComparison.OrdinalIgnoreCase))
             ?? mapping.GetProperties().First();
         var pkColumn = mapping.GetColumnName(pkProperty);
 
@@ -77,21 +78,22 @@ internal static class DapperRowHydrator
 
             foreach (var include in includes)
             {
-                var joinInfo = mapping.GetJoinInfo(include);
-                if (joinInfo == null) continue;
+                var rel = mapping.GetRelationship(include);
+                if (rel == null) continue;
 
-                if (joinInfo.TargetType is null) continue;
+                if (rel.TargetType is null) continue;
 
-                var targetMapping = registry.GetMapping(joinInfo.TargetType);
-                var childPkProperty = targetMapping.GetProperties().FirstOrDefault(p => p.Equals("Id", StringComparison.OrdinalIgnoreCase))
+                var targetMapping = registry.GetMapping(rel.TargetType);
+                var childPkProperty = targetMapping.GetKeyProperties().FirstOrDefault()
+                    ?? targetMapping.GetProperties().FirstOrDefault(p => p.Equals("Id", StringComparison.OrdinalIgnoreCase))
                     ?? targetMapping.GetProperties().First();
-                var childPkColumn = joinInfo.NavigationProperty + "_" + targetMapping.GetColumnName(childPkProperty);
+                var childPkColumn = include + "_" + targetMapping.GetColumnName(childPkProperty);
 
                 if (rowKeys.TryGetValue(childPkColumn, out var actualChildPkCol)
                     && rowDict[actualChildPkCol] != DBNull.Value)
                 {
-                    var child = MapRowToEntity(rowDict, targetMapping, joinInfo.NavigationProperty + "_");
-                    AddChildToParent(parent, joinInfo.NavigationProperty, child);
+                    var child = MapRowToEntity(rowDict, targetMapping, include + "_");
+                    AddChildToParent(parent, include, child);
                 }
             }
         }
@@ -163,14 +165,25 @@ internal static class DapperRowHydrator
 
         if (value is System.Collections.IList list)
         {
-            var childPkProp = child.GetType().GetProperties().FirstOrDefault(p => p.Name.Equals("Id", StringComparison.OrdinalIgnoreCase));
-            var childPk = childPkProp?.GetValue(child);
+            var childType = child.GetType();
+            var childKeyProp = childType.GetProperties()
+                .FirstOrDefault(p => p.Name.Equals("Id", StringComparison.OrdinalIgnoreCase));
+
+            if (childKeyProp == null)
+            {
+                var keyProps = childType.GetProperties()
+                    .Where(p => p.Name.EndsWith("Id", StringComparison.OrdinalIgnoreCase))
+                    .ToList();
+                childKeyProp = keyProps.FirstOrDefault();
+            }
+
+            var childPk = childKeyProp?.GetValue(child);
 
             if (childPk != null)
             {
                 foreach (var item in list)
                 {
-                    var itemPk = item.GetType().GetProperty(childPkProp!.Name)?.GetValue(item);
+                    var itemPk = item.GetType().GetProperty(childKeyProp!.Name)?.GetValue(item);
                     if (childPk.Equals(itemPk))
                     {
                         return;

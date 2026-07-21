@@ -205,9 +205,10 @@ internal sealed class SqlTranslator : ISqlTranslator
 
     private string BuildFromClause(IEntityMapping mapping)
     {
+        var quotedTable = SqlSyntaxBuilder.QuoteTable(_dialect, mapping);
         return string.IsNullOrEmpty(mapping.TableAlias)
-            ? $"FROM {_dialect.QuoteIdentifier(mapping.TableName)}"
-            : $"FROM {_dialect.QuoteIdentifier(mapping.TableName)} AS {_dialect.QuoteIdentifier(mapping.TableAlias)}";
+            ? $"FROM {quotedTable}"
+            : $"FROM {quotedTable} AS {_dialect.QuoteIdentifier(mapping.TableAlias)}";
     }
 
     private string BuildGroupByClause(IReadOnlyList<string>? groupBys, IEntityMapping mapping)

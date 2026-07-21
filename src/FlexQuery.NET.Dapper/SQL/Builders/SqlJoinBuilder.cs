@@ -84,7 +84,7 @@ internal sealed class SqlJoinBuilder(
             {
                 var parentRef = string.IsNullOrEmpty(parentAlias) ? currentMapping.TableName : parentAlias;
                 var joinCondition = SqlSyntaxBuilder.BuildJoinCondition(dialect, rel, currentMapping, parentRef, targetMapping, childAlias);
-                var sql = $"LEFT JOIN {dialect.QuoteIdentifier(targetMapping.TableName)} AS {dialect.QuoteIdentifier(childAlias)} ON {joinCondition}";
+                var sql = $"LEFT JOIN {SqlSyntaxBuilder.QuoteTable(dialect, targetMapping)} AS {dialect.QuoteIdentifier(childAlias)} ON {joinCondition}";
 
                 if (child.Value.Filter != null)
                 {

@@ -171,7 +171,7 @@ internal sealed class SqlSelectBuilder(IMappingRegistry mappingRegistry, ISqlDia
 
         if (navPath.Count == 0)
         {
-            var dialectTable = dialect.QuoteIdentifier(mapping.TableName);
+            var dialectTable = SqlSyntaxBuilder.QuoteTable(dialect, mapping);
 
             foreach (var f in fields)
             {
@@ -194,7 +194,7 @@ internal sealed class SqlSelectBuilder(IMappingRegistry mappingRegistry, ISqlDia
 
         var currentAlias = mapping.TableAlias ?? mapping.TableName;
         var currentMapping = mapping;
-        var rootTable = dialect.QuoteIdentifier(mapping.TableName);
+        var rootTable = SqlSyntaxBuilder.QuoteTable(dialect, mapping);
 
         // Project root scalars (level -1) for FlatMixed mode
         if (allowRootScalars)
@@ -217,7 +217,7 @@ internal sealed class SqlSelectBuilder(IMappingRegistry mappingRegistry, ISqlDia
 
             var joinCondition = SqlSyntaxBuilder.BuildJoinCondition(dialect, rel, currentMapping, currentAlias, targetMapping, navAlias);
 
-            joins.Add($"LEFT JOIN {dialect.QuoteIdentifier(targetMapping.TableName)} AS {dialect.QuoteIdentifier(navAlias)} ON {joinCondition}");
+            joins.Add($"LEFT JOIN {SqlSyntaxBuilder.QuoteTable(dialect, targetMapping)} AS {dialect.QuoteIdentifier(navAlias)} ON {joinCondition}");
             flatJoins.Add(navAlias);
 
             if (allowRootScalars)

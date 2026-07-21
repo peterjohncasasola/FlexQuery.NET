@@ -20,6 +20,15 @@ internal static class SqlSyntaxBuilder
         return $"{dialect.QuoteIdentifier(mapping.TableAlias)}.{dialect.QuoteIdentifier(column)}";
     }
 
+    /// <summary>Quotes a fully-qualified table name, including schema when present.</summary>
+    public static string QuoteTable(ISqlDialect dialect, IEntityMapping mapping)
+    {
+        if (string.IsNullOrEmpty(mapping.Schema))
+            return dialect.QuoteIdentifier(mapping.TableName);
+
+        return $"{dialect.QuoteIdentifier(mapping.Schema)}.{dialect.QuoteIdentifier(mapping.TableName)}";
+    }
+
     /// <summary>
     /// Builds the ON condition for a LEFT JOIN between a parent and a related (child) table,
     /// based on the relationship's direction. Returns "1=0" for unsupported relationship types,
@@ -36,9 +45,9 @@ internal static class SqlSyntaxBuilder
         return rel.RelationshipType switch
         {
             RelationshipType.OneToMany =>
-                $"{dialect.QuoteIdentifier(childAlias)}.{dialect.QuoteIdentifier(rel.ForeignKey)} = {dialect.QuoteIdentifier(parentRef)}.{dialect.QuoteIdentifier(parentMapping.GetColumnName(rel.PrincipalKey))}",
+                $"{dialect.QuoteIdentifier(childAlias)}.{dialect.QuoteIdentifier(rel.ForeignKey)} = {dialect.QuoteIdentifier(parentRef)}.{dialect.QuoteIdentifier(RelationshipResolver.ResolvePrincipalColumn(parentMapping, rel))}",
             RelationshipType.ManyToOne =>
-                $"{dialect.QuoteIdentifier(parentRef)}.{dialect.QuoteIdentifier(rel.ForeignKey)} = {dialect.QuoteIdentifier(childAlias)}.{dialect.QuoteIdentifier(targetMapping.GetColumnName(rel.PrincipalKey))}",
+                $"{dialect.QuoteIdentifier(parentRef)}.{dialect.QuoteIdentifier(rel.ForeignKey)} = {dialect.QuoteIdentifier(childAlias)}.{dialect.QuoteIdentifier(RelationshipResolver.ResolvePrincipalColumn(targetMapping, rel))}",
             _ => "1=0"
         };
     }
