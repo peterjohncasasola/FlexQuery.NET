@@ -267,6 +267,7 @@ public class ValidationTests
     {
         var options = new QueryOptions
         {
+            Includes = ["Orders", "Orders.Customer"],
             Expand =
             [
                 new IncludeNode

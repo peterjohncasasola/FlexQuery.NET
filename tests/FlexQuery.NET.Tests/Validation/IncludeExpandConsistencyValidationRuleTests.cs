@@ -87,11 +87,149 @@ public class IncludeExpandConsistencyValidationRuleTests
     }
 
     [Fact]
-    public void Validate_NoIncludes_AnyExpand_Valid()
+    public void Validate_NoIncludes_ExpandWithFilter_Error()
+    {
+        var options = new QueryOptions
+        {
+            Expand = [new IncludeNode { Path = "Orders", Filter = new FilterGroup { Filters = [new FilterCondition { Field = "Id", Operator = FilterOperators.Equal, Value = "10001" }] } }]
+        };
+        var rule = new IncludeExpandConsistencyValidationRule();
+        var result = ValidationResult.Success();
+
+        rule.Validate(options, Context(), result);
+
+        result.IsValid.Should().BeFalse();
+        result.Errors.Should().ContainSingle(e => e.Code == ValidationErrorCodes.ExpandPathNotInInclude);
+        result.Errors.Should().ContainSingle(e => e.Field == "Orders");
+    }
+
+    [Fact]
+    public void Validate_NoIncludes_ExpandWithSort_Error()
+    {
+        var options = new QueryOptions
+        {
+            Expand = [new IncludeNode { Path = "Orders", Sort = [new SortNode { Field = "OrderDate", Descending = true }] }]
+        };
+        var rule = new IncludeExpandConsistencyValidationRule();
+        var result = ValidationResult.Success();
+
+        rule.Validate(options, Context(), result);
+
+        result.IsValid.Should().BeFalse();
+        result.Errors.Should().ContainSingle(e => e.Code == ValidationErrorCodes.ExpandPathNotInInclude);
+        result.Errors.Should().ContainSingle(e => e.Field == "Orders");
+    }
+
+    [Fact]
+    public void Validate_NoIncludes_ExpandWithSelect_Error()
     {
         var options = new QueryOptions
         {
             Expand = [new IncludeNode { Path = "Orders" }]
+        };
+        var rule = new IncludeExpandConsistencyValidationRule();
+        var result = ValidationResult.Success();
+
+        rule.Validate(options, Context(), result);
+
+        result.IsValid.Should().BeFalse();
+        result.Errors.Should().ContainSingle(e => e.Code == ValidationErrorCodes.ExpandPathNotInInclude);
+        result.Errors.Should().ContainSingle(e => e.Field == "Orders");
+    }
+
+    [Fact]
+    public void Validate_NoIncludes_ExpandWithTake_Error()
+    {
+        var options = new QueryOptions
+        {
+            Expand = [new IncludeNode { Path = "Orders", Take = 5 }]
+        };
+        var rule = new IncludeExpandConsistencyValidationRule();
+        var result = ValidationResult.Success();
+
+        rule.Validate(options, Context(), result);
+
+        result.IsValid.Should().BeFalse();
+        result.Errors.Should().ContainSingle(e => e.Code == ValidationErrorCodes.ExpandPathNotInInclude);
+        result.Errors.Should().ContainSingle(e => e.Field == "Orders");
+    }
+
+    [Fact]
+    public void Validate_NestedMissingInclude_Error()
+    {
+        var options = new QueryOptions
+        {
+            Includes = ["orders"],
+            Expand = [new IncludeNode { Path = "Orders", Children = [new IncludeNode { Path = "OrderItems" }] }]
+        };
+        var rule = new IncludeExpandConsistencyValidationRule();
+        var result = ValidationResult.Success();
+
+        rule.Validate(options, Context(), result);
+
+        result.IsValid.Should().BeFalse();
+        result.Errors.Should().ContainSingle(e => e.Code == ValidationErrorCodes.ExpandPathNotInInclude);
+        result.Errors.Should().ContainSingle(e => e.Field == "Orders.OrderItems");
+    }
+
+    [Fact]
+    public void Validate_IncludeWithExpandFilter_Valid()
+    {
+        var options = new QueryOptions
+        {
+            Includes = ["orders"],
+            Expand = [new IncludeNode { Path = "Orders", Filter = new FilterGroup { Filters = [new FilterCondition { Field = "Id", Operator = FilterOperators.Equal, Value = "10001" }] } }]
+        };
+        var rule = new IncludeExpandConsistencyValidationRule();
+        var result = ValidationResult.Success();
+
+        rule.Validate(options, Context(), result);
+
+        result.IsValid.Should().BeTrue();
+        result.Errors.Should().BeEmpty();
+    }
+
+    [Fact]
+    public void Validate_IncludeWithExpandSort_Valid()
+    {
+        var options = new QueryOptions
+        {
+            Includes = ["orders"],
+            Expand = [new IncludeNode { Path = "Orders", Sort = [new SortNode { Field = "OrderDate", Descending = true }] }]
+        };
+        var rule = new IncludeExpandConsistencyValidationRule();
+        var result = ValidationResult.Success();
+
+        rule.Validate(options, Context(), result);
+
+        result.IsValid.Should().BeTrue();
+        result.Errors.Should().BeEmpty();
+    }
+
+    [Fact]
+    public void Validate_IncludeWithExpandTake_Valid()
+    {
+        var options = new QueryOptions
+        {
+            Includes = ["orders"],
+            Expand = [new IncludeNode { Path = "Orders", Take = 5 }]
+        };
+        var rule = new IncludeExpandConsistencyValidationRule();
+        var result = ValidationResult.Success();
+
+        rule.Validate(options, Context(), result);
+
+        result.IsValid.Should().BeTrue();
+        result.Errors.Should().BeEmpty();
+    }
+
+    [Fact]
+    public void Validate_IncludeNestedWithNestedExpandFilter_Valid()
+    {
+        var options = new QueryOptions
+        {
+            Includes = ["orders", "orders.orderitems"],
+            Expand = [new IncludeNode { Path = "Orders", Children = [new IncludeNode { Path = "OrderItems", Filter = new FilterGroup { Filters = [new FilterCondition { Field = "Price", Operator = FilterOperators.GreaterThan, Value = "100" }] } }] }]
         };
         var rule = new IncludeExpandConsistencyValidationRule();
         var result = ValidationResult.Success();
