@@ -212,6 +212,76 @@ public class ResultCountTests
     }
 
     [Fact]
+    public async Task Dapper_IncludeWithTotalCount_ReturnsCorrectRootCount()
+    {
+        await using var db = SqlProjectionDbContext.CreateSeeded();
+        var result = await ExecuteDapperCustomersAsync(db, new QueryOptions
+        {
+            IncludeCount = true,
+            Paging = { Page = 1, PageSize = 10 }
+        });
+
+        result.TotalCount.Should().Be(10);
+        result.Data.Should().HaveCount(10);
+    }
+
+    [Fact]
+    public async Task Dapper_IncludeWithTotalCount_ReturnsCorrectRootCount_WithInclude()
+    {
+        await using var db = SqlProjectionDbContext.CreateSeeded();
+        var result = await ExecuteDapperCustomersAsync(db, new QueryOptions
+        {
+            Includes = ["Orders"],
+            IncludeCount = true,
+            Paging = { Page = 1, PageSize = 10 }
+        });
+
+        result.TotalCount.Should().Be(10);
+        result.Data.Should().NotBeEmpty();
+
+        var alice = result.Data.OfType<Customer>().FirstOrDefault(c => c.Id == 1);
+        alice.Should().NotBeNull();
+        alice!.Orders.Should().HaveCount(2);
+    }
+
+    [Fact]
+    public async Task Dapper_NavigationFilter_TotalCount_CountsRootEntities()
+    {
+        await using var db = SqlProjectionDbContext.CreateSeeded();
+        var result = await ExecuteDapperCustomersAsync(db, new QueryOptions
+        {
+            Filter = new FilterGroup
+            {
+                Filters =
+                [
+                    new FilterCondition
+                    {
+                        Field = "Orders",
+                        Operator = FilterOperators.Any,
+                        ScopedFilter = new FilterGroup
+                        {
+                            Filters =
+                            [
+                                new FilterCondition
+                                {
+                                    Field = "Status",
+                                    Operator = FilterOperators.Equal,
+                                    Value = "Delivered"
+                                }
+                            ]
+                        }
+                    }
+                ]
+            },
+            IncludeCount = true,
+            Paging = { Page = 1, PageSize = 10 }
+        });
+
+        result.TotalCount.Should().Be(1);
+        result.Data.Should().HaveCount(1);
+    }
+
+    [Fact]
     public async Task Dapper_IncludeTotalCountFalse_ReturnsNullTotalCount()
     {
         await using var db = SqlProjectionDbContext.CreateSeeded();
@@ -254,6 +324,25 @@ public class ResultCountTests
         };
 
         return await connection.FlexQueryAsync<Order>(
+            options,
+            options: CreateRegistry(dapperOptions));
+    }
+
+    private static async Task<QueryResult<object>> ExecuteDapperCustomersAsync(
+        SqlProjectionDbContext db,
+        QueryOptions options,
+        bool includeTotalCount = true)
+    {
+        var connection = db.Database.GetDbConnection();
+        if (connection.State != System.Data.ConnectionState.Open)
+            await connection.OpenAsync();
+
+        var dapperOptions = new DapperQueryOptions
+        {
+            IncludeTotalCount = includeTotalCount
+        };
+
+        return await connection.FlexQueryAsync<Customer>(
             options,
             options: CreateRegistry(dapperOptions));
     }

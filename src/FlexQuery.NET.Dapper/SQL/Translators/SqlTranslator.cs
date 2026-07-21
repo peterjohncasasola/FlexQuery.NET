@@ -171,10 +171,9 @@ internal sealed class SqlTranslator : ISqlTranslator
         var parameters = new SqlParameterContext(_dialect);
 
         var fromClause = BuildFromClause(mapping);
-        var joinClause = _joinBuilder.BuildJoinClause(options, mapping, parameters, selectTree);
         var whereClause = _whereBuilder.BuildWhereClause(options.Filter, mapping, parameters, options.CaseInsensitive);
 
-        var clauses = new List<string> { $"SELECT {_dialect.GetCountExpression}", fromClause, joinClause, whereClause };
+        var clauses = new List<string> { $"SELECT {_dialect.GetCountExpression}", fromClause, whereClause };
         var sql = string.Join(" ", clauses.Where(c => !string.IsNullOrEmpty(c)));
         sql = Regex.Replace(sql, @"\s+", " ");
 
