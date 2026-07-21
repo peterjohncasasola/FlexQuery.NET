@@ -16,9 +16,16 @@ internal sealed class IncludeExpandConsistencyValidationRule : IValidationRule
     {
         if (options.Expand is not { Count: > 0 }) return;
 
-        // Only enforce include-expand consistency when includes are explicitly specified.
-        // If no includes are provided, expand paths are validated solely by ExpandPathValidationRule.
-        if (options.Includes is not { Count: > 0 }) return;
+        // Omitted include list = no restriction on expand.
+        // Explicitly empty include list = nothing is allowed, so every expand path is invalid.
+        if (options.Includes is null) return;
+
+        if (options.Includes.Count == 0)
+        {
+            AddErrorForAllExpandPaths(options.Expand, string.Empty, result,
+                "Expand is not allowed when include list is empty.");
+            return;
+        }
 
         var allowedIncludes = new HashSet<string>(options.Includes, StringComparer.OrdinalIgnoreCase);
 
@@ -36,15 +43,12 @@ internal sealed class IncludeExpandConsistencyValidationRule : IValidationRule
     {
         var fullPath = string.IsNullOrEmpty(parentPath) ? node.Path : $"{parentPath}.{node.Path}";
 
-        if (node.Children is not { Count: > 0 })
+        if (!allowedIncludes.Contains(fullPath))
         {
-            if (!allowedIncludes.Contains(fullPath))
-            {
-                result.Errors.Add(new ValidationError(
-                    $"Expand path '{fullPath}' requires '{fullPath}' in include.",
-                    ValidationErrorCodes.ExpandPathNotInInclude,
-                    fullPath));
-            }
+            result.Errors.Add(new ValidationError(
+                $"Expand path '{fullPath}' requires '{fullPath}' in include.",
+                ValidationErrorCodes.ExpandPathNotInInclude,
+                fullPath));
         }
 
         if (node.Children is not { Count: > 0 }) return;
