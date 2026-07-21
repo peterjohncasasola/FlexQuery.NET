@@ -93,7 +93,7 @@ public class FqlExpandParserTests
     [Fact]
     public void Parse_MultipleBlocks_SamePathTwice_ReturnsTwoNodes()
     {
-        var result = FqlExpandParser.Parse("orders(filter=Status='Active'),orders(filter=Status='Pending'))");
+        var result = FqlExpandParser.Parse("orders(filter=Status='Active'),orders(filter=Status='Pending')");
 
         result.Should().HaveCount(2);
         result[0].Path.Should().Contain("orders");
@@ -223,7 +223,7 @@ public class FqlExpandParserTests
         var result = FqlExpandParser.Parse("orders()");
 
         result.Should().ContainSingle();
-        result[0].Path.Should().Contain("orders");
+        result[0].Path.Should().Equal("orders");
         result[0].Filter.Should().BeNull();
         result[0].Sort.Should().BeEmpty();
         result[0].Take.Should().BeNull();
@@ -266,7 +266,7 @@ public class FqlExpandParserTests
     [Fact]
     public void Parse_MissingCloseParen_ThrowsParseException()
     {
-        Action act = () => FqlExpandParser.Parse("orders(filter=Status='Active')");
+        Action act = () => FqlExpandParser.Parse("orders(filter=Status='Active'");
 
         act.Should().Throw<FqlParseException>();
     }

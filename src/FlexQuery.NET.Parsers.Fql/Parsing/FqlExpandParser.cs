@@ -49,10 +49,6 @@ internal static class FqlExpandParser
                 result.Add(ParseExpandBlock());
             }
 
-            while (Match(FqlTokenType.CloseParen))
-            {
-            }
-
             if (Current.Kind != FqlTokenType.End)
             {
                 throw new FqlParseException(
