@@ -12,34 +12,34 @@ public static class SharedFlexQueryModel
         builder.Entity<Customer>()
             .ToTable("Customers")
             .HasOne(c => c.Address)
-            .WithForeignKey("CustomerId");
+            .HasForeignKey("CustomerId");
 
         builder.Entity<Customer>()
             .HasMany(c => c.Orders)
-            .WithForeignKey("CustomerId");
+            .HasForeignKey("CustomerId");
 
         builder.Entity<Order>()
             .ToTable("Orders")
             .HasMany(o => o.OrderItems)
-            .WithForeignKey("OrderId");
+            .HasForeignKey("OrderId");
 
         builder.Entity<OrderItem>()
             .ToTable("OrderItems");
         
         builder.Entity<User>()
             .ToTable("Users")
-            .HasMany(u => u.Roles).WithForeignKey("UserId");
+            .HasMany(u => u.Roles).HasForeignKey("UserId");
         
         builder.Entity<Role>()
             .ToTable("Roles")
-            .HasMany(r => r.Permissions).WithForeignKey("RoleId");
+            .HasMany(r => r.Permissions).HasForeignKey("RoleId");
         
         builder.Entity<Permission>()
             .ToTable("Permissions");
         
         builder.Entity<Employee>()
             .ToTable("Employees")
-            .HasOne(e => e.Manager).WithForeignKey("ManagerId");
+            .HasOne(e => e.Manager).HasForeignKey("ManagerId");
         
         return builder.Build();
     }

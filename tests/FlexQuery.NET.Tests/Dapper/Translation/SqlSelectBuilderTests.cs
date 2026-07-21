@@ -145,10 +145,10 @@ public class SqlSelectBuilderTests
     }
 
     [Fact]
-    public void BuildAggregateSelectParts_WithTableAlias_UsesAlias()
+    public void BuildAggregateSelectParts_WithoutTableAlias_UsesColumnOnly()
     {
         var registry = new MappingRegistry();
-        registry.Entity<Employee>().ToTable("Employees").HasAlias("e");
+        registry.Entity<Employee>().ToTable("Employees");
         var mapping = registry.GetMapping(typeof(Employee));
         var builder = new SqlSelectBuilder(registry, Dialect);
         var options = new QueryOptions
@@ -158,7 +158,7 @@ public class SqlSelectBuilderTests
 
         var parts = builder.BuildAggregateSelectParts(options, mapping);
 
-        parts.Should().ContainSingle().Which.Should().Be("SUM([e].[Score]) AS [total]");
+        parts.Should().ContainSingle().Which.Should().Be("SUM([Score]) AS [total]");
     }
 
     // ── BuildSelectClause ────────────────────────────────────────────────
@@ -325,10 +325,10 @@ public class SqlSelectBuilderTests
     }
 
     [Fact]
-    public void BuildSelectClause_WithTableAlias_UsesAlias()
+    public void BuildSelectClause_WithoutTableAlias_UsesColumnOnly()
     {
         var mapping = _registry.GetMapping<Employee>();
-        _registry.Entity<Employee>().ToTable("Employees").HasAlias("e");
+        _registry.Entity<Employee>().ToTable("Employees");
         var builder = new SqlSelectBuilder(_registry, Dialect);
         var options = new QueryOptions();
         var tree = new SelectionNode();
@@ -336,7 +336,7 @@ public class SqlSelectBuilderTests
 
         var result = builder.BuildSelectClause(options, mapping, string.Empty, tree);
 
-        result.Should().Be("SELECT [e].[Name] AS [Name]");
+        result.Should().Be("SELECT [Name] AS [Name]");
     }
 
     // ── BuildFlatSelectClause ────────────────────────────────────────────

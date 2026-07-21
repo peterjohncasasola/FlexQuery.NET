@@ -438,10 +438,10 @@ public class SqlHavingBuilderTests
     }
 
     [Fact]
-    public void Build_WithTableAlias_UsesAliasInColumn()
+    public void Build_WithoutTableAlias_UsesColumnOnly()
     {
         var registry = new MappingRegistry();
-        registry.Entity<Employee>().ToTable("Employees").HasAlias("e");
+        registry.Entity<Employee>().ToTable("Employees");
         var mapping = registry.GetMapping(typeof(Employee));
         var parameters = new SqlParameterContext(Dialect);
         var having = new HavingConditionNode
@@ -454,7 +454,7 @@ public class SqlHavingBuilderTests
 
         var result = SqlHavingBuilder.Build(Dialect, having, mapping, parameters);
 
-        result.Should().Be("HAVING SUM([e].[Score]) > @p0");
+        result.Should().Be("HAVING SUM([Score]) > @p0");
     }
 
     [Fact]

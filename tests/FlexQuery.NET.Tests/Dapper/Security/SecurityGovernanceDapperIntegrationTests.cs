@@ -698,10 +698,10 @@ public class SecurityGovernanceDapperIntegrationTests
         var builder = new DapperModelBuilder();
         builder.Entity<Customer>()
             .ToTable("Customers")
-            .HasMany(c => c.Orders).WithForeignKey("CustomerId");
+            .HasMany(c => c.Orders).HasForeignKey("CustomerId");
         builder.Entity<Order>()
             .ToTable("Orders")
-            .HasMany(o => o.OrderItems).WithForeignKey("OrderId");
+            .HasMany(o => o.OrderItems).HasForeignKey("OrderId");
         builder.Entity<OrderItem>().ToTable("OrderItems");
         options.UseModel(builder.Build());
     }

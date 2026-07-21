@@ -21,7 +21,7 @@ public class GroupedQueryDapperTests
 
         registry.Entity<Order>()
             .ToTable("Orders")
-            .HasMany(o => o.OrderItems).WithForeignKey("OrderId");
+            .HasMany(o => o.OrderItems).HasForeignKey("OrderId");
 
         registry.Entity<OrderItem>().ToTable("OrderItems");
 

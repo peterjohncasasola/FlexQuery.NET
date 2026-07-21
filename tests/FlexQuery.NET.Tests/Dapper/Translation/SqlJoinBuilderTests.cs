@@ -266,11 +266,11 @@ public class SqlJoinBuilderTests
     }
 
     [Fact]
-    public void BuildJoinClause_WithTableAlias_UsesAliasInJoinCondition()
+    public void BuildJoinClause_WithoutTableAlias_UsesTableNameInJoinCondition()
     {
 
         var mapping = _registry.GetMapping(typeof(Customer));
-        _registry.Entity<Customer>().HasAlias("c");
+        _registry.Entity<Customer>().ToTable("Customers");
         var includeTranslator = new SqlIncludeTranslator(Dialect);
         var existsTranslator = new SqlExistsTranslator(Dialect);
         var countTranslator = new SqlCountTranslator(Dialect);
@@ -285,7 +285,7 @@ public class SqlJoinBuilderTests
 
         var result = builder.BuildJoinClause(options, mapping, parameters, tree);
 
-        result.Should().Contain("[c]");
+        result.Should().Contain("[Customers]");
     }
 
     [Fact]
