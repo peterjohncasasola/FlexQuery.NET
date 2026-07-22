@@ -19,7 +19,8 @@ internal static class DapperResultMaterializer
         IEnumerable<dynamic> rows,
         QueryOptions queryOptions,
         Func<IEnumerable<dynamic>, IReadOnlyList<object>> hydrateIncludes,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        Func<string, string>? propertyNameTransformer = null)
     {
         if (queryOptions.Includes?.Count > 0 ||
             queryOptions.Expand?.Count > 0)
@@ -31,20 +32,34 @@ internal static class DapperResultMaterializer
             queryOptions.GroupBy?.Count > 0 ||
             queryOptions.Aggregates.Count > 0;
 
-        return isGroupedOrAggregated ? MaterializeGroupedRows(rows, cancellationToken) : ToPlainDictionaries(rows);
+        return isGroupedOrAggregated ? MaterializeGroupedRows(rows, cancellationToken) : ToPlainDictionaries(rows, propertyNameTransformer);
     }
 
     private static IReadOnlyList<object> ToPlainDictionaries(
-        IEnumerable<dynamic> rows)
+        IEnumerable<dynamic> rows,
+        Func<string, string>? propertyNameTransformer)
     {
         return rows
-            .Select(row => (object)new Dictionary<string, object>(
-                (IDictionary<string, object>)row,
-                StringComparer.OrdinalIgnoreCase))
+            .Select(row =>
+            {
+                var source = (IDictionary<string, object>)row;
+                if (propertyNameTransformer is null)
+                {
+                    return (object)new Dictionary<string, object>(source, StringComparer.OrdinalIgnoreCase);
+                }
+
+                var dict = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase);
+                foreach (var kvp in source)
+                {
+                    dict[propertyNameTransformer(kvp.Key)] = kvp.Value;
+                }
+
+                return dict;
+            })
             .ToList();
     }
 
-    public static object ProjectEntity(object? entity, SelectionNode selectTree)
+    public static object ProjectEntity(object? entity, SelectionNode selectTree, Func<string, string>? propertyNameTransformer = null)
     {
         var result = new ExpandoObject();
         IDictionary<string, object?> resultDict = result;
@@ -59,7 +74,8 @@ internal static class DapperResultMaterializer
                     continue;
 
                 var value = prop.GetValue(entity);
-                resultDict[prop.Name] = value!;
+                var outputName = propertyNameTransformer is null ? prop.Name : propertyNameTransformer(prop.Name);
+                resultDict[outputName] = value!;
             }
         }
 
@@ -71,19 +87,20 @@ internal static class DapperResultMaterializer
 
             if (prop == null) continue;
 
-            var outputName = !string.IsNullOrWhiteSpace(childNode.Alias) ? childNode.Alias : prop.Name;
+            var rawName = !string.IsNullOrWhiteSpace(childNode.Alias) ? childNode.Alias : prop.Name;
+            var outputName = propertyNameTransformer is null ? rawName : propertyNameTransformer(rawName);
             var value = prop.GetValue(entity);
 
             if (childNode.HasChildren || childNode.IncludeAllScalars)
             {
                 if (value is IEnumerable enumerable and not string)
                 {
-                    var items = (from object? item in enumerable select ProjectEntity(item, childNode)).ToList();
+                    var items = (from object? item in enumerable select ProjectEntity(item, childNode, propertyNameTransformer)).ToList();
                     resultDict[outputName] = items;
                 }
                 else if (value != null)
                 {
-                    resultDict[outputName] = ProjectEntity(value, childNode);
+                    resultDict[outputName] = ProjectEntity(value, childNode, propertyNameTransformer);
                 }
             }
             else

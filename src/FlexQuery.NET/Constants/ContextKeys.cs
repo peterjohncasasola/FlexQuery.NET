@@ -8,4 +8,5 @@ internal static class ContextKeys
     public const string EntityType = nameof(EntityType);
     public const string ExpressionMappings = nameof(ExpressionMappings);
     public const string ExecutionOptions = nameof(ExecutionOptions);
+    public const string PropertyNameTransformer = nameof(PropertyNameTransformer);
 }

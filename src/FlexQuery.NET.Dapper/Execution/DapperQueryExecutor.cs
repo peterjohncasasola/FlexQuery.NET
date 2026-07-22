@@ -24,6 +24,9 @@ namespace FlexQuery.NET.Dapper.Execution;
 
 internal static class DapperQueryExecutor
 {
+    private static string? ApplyNaming(string? name, Func<string, string>? transformer)
+        => string.IsNullOrEmpty(name) ? name : transformer?.Invoke(name) ?? name;
+
     public static async Task<QueryResult<object>> RunAsync<T>(
         DbConnection connection,
         QueryOptions queryOptions,
@@ -69,6 +72,11 @@ internal static class DapperQueryExecutor
 
         queryOptions.Items[ContextKeys.EntityType] = typeof(T);
 
+        var transformer = queryOptions.Items.TryGetValue(ContextKeys.PropertyNameTransformer, out var tObj)
+            && tObj is Func<string, string> transformerFunc
+            ? transformerFunc
+            : null;
+
         var mapping = registry.GetMapping(typeof(T));
         var translator = new SqlTranslator(registry, dialect);
         var useSimpleIncludeStreaming = SqlSimpleIncludeQueryBuilder.CanBuild(queryOptions, mapping, registry)
@@ -113,7 +121,7 @@ internal static class DapperQueryExecutor
                 Stopwatch.StartNew();
                 var selectTree = SelectTreeBuilder.Build(queryOptions);
                 items = result.Items
-                    .Select(e => DapperResultMaterializer.ProjectEntity(e, selectTree))
+                    .Select(e => DapperResultMaterializer.ProjectEntity(e, selectTree, transformer))
                     .Cast<object>()
                     .ToList();
             }
@@ -142,6 +150,7 @@ internal static class DapperQueryExecutor
                     dialect,
                     rowsList,
                     command.ColumnAliasMap,
+                    transformer,
                     ct);
             }
             else
@@ -150,13 +159,25 @@ internal static class DapperQueryExecutor
                     rowsList,
                     queryOptions,
                     hydrateIncludes: _ => [],
-                    cancellationToken: ct);
+                    cancellationToken: ct,
+                    propertyNameTransformer: transformer);
             }
         }
 
         var (totalCount, resultCount) = await CountEvaluator.GetCountsAsync(connection, queryOptions, translator, command, parameters, options);
 
         var grandTotals = await AggregateEvaluator.GetGrandTotalsAsync(connection, queryOptions, translator, options, ct);
+
+        if (transformer != null && grandTotals != null)
+        {
+            grandTotals = grandTotals.ToDictionary(
+                outer => ApplyNaming(outer.Key, transformer) ?? outer.Key,
+                outer => (Dictionary<string, object>)outer.Value.ToDictionary(
+                    inner => ApplyNaming(inner.Key, transformer) ?? inner.Key,
+                    inner => inner.Value,
+                    StringComparer.OrdinalIgnoreCase),
+                StringComparer.OrdinalIgnoreCase);
+        }
 
         await ctx.NotifyExecutedAsync(items.Count);
         
@@ -191,6 +212,7 @@ internal static class DapperQueryExecutor
         ISqlDialect dialect,
         IReadOnlyList<dynamic> rowsList,
         Dictionary<string, string>? columnAliasMap,
+        Func<string, string>? transformer,
         CancellationToken ct)
         where T : class
     {
@@ -257,7 +279,7 @@ internal static class DapperQueryExecutor
         {
             var selectTree = SelectTreeBuilder.Build(queryOptions);
             projected = rootItems
-                .Select(e => DapperResultMaterializer.ProjectEntity(e, selectTree))
+                .Select(e => DapperResultMaterializer.ProjectEntity(e, selectTree, transformer))
                 .ToList();
         }
         else
