@@ -120,6 +120,11 @@ internal static class SelectTreeBuilder
     /// </remarks>
     private static void MergeChildren(SelectionNode parent, IReadOnlyList<SelectNode> children, bool includeAllScalarsAtLeaf, string parentPath)
     {
+        if (children.Count > 0)
+        {
+            parent.ClearIncludeAllScalars();
+        }
+
         foreach (var child in children)
         {
             var childNode = parent.GetOrAddChild(child.Field);
@@ -208,6 +213,16 @@ internal static class SelectTreeBuilder
         if (source.Filter != null)
         {
             node.Filter = source.Filter;
+        }
+
+        if (source.Sort is not null)
+        {
+            node.Sort = source.Sort;
+        }
+
+        if (source.Take.HasValue)
+        {
+            node.Take = source.Take;
         }
 
         foreach (var child in source.Children)

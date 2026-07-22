@@ -6,6 +6,7 @@ using FlexQuery.NET.Filters;
 using FlexQuery.NET.Internal;
 using FlexQuery.NET.Models;
 using FlexQuery.NET.Models.Filters;
+using FlexQuery.NET.Models.Paging;
 using FlexQuery.NET.Models.Projection;
 using FlexQuery.NET.Projection;
 using FlexQuery.NET.Resolvers;
@@ -116,13 +117,15 @@ internal static class ProjectionBuilder
                     var toListMethod = EnumerableToList.MakeGenericMethod(itemInit.Type);
 
                     var asQueryableCall = Expression.Call(null, asQueryableMethod, propAccess);
-                    var maybeWhereCall = ProjectionEnhancer.ApplyCollectionWhereIfNeeded(
+                    var shapedCollection = ProjectionEnhancer.ApplyCollectionOperatorsIfNeeded(
                         asQueryableCall,
                         itemType,
                         childFilterContext,
+                        childNode.Sort,
+                        childNode.Take,
                         options);
 
-                    var selectCall = Expression.Call(null, selectMethod, maybeWhereCall, selectLambda);
+                    var selectCall = Expression.Call(null, selectMethod, shapedCollection, selectLambda);
                     var toListCall = Expression.Call(null, toListMethod, selectCall);
 
                     var targetListType = typeof(List<>).MakeGenericType(itemInit.Type);
@@ -203,7 +206,7 @@ internal static class ProjectionBuilder
 
         var keys = tree.EnumerateChildren()
             .OrderBy(k => k.Key)
-            .Select(k => $"{k.Key}@{k.Value.Alias ?? ""}:{GenerateCacheKey(k.Value)}|F:{FilterNormalizer.GenerateCacheKey(k.Value.Filter)}");
+            .Select(k => $"{k.Key}@{k.Value.Alias ?? ""}:{GenerateCacheKey(k.Value)}|F:{FilterNormalizer.GenerateCacheKey(k.Value.Filter)}|S:{SortKey(k.Value.Sort)}|T:{k.Value.Take?.ToString() ?? ""}");
 
         var scalarMarker = tree.IncludeAllScalars ? "!" : string.Empty;
         var payload = string.Join(",", keys);
@@ -214,4 +217,10 @@ internal static class ProjectionBuilder
 
         return scalarMarker + "(" + payload + ")";
     }
+
+    private static string SortKey(IEnumerable<SortNode>? sorts)
+        => sorts is null
+            ? string.Empty
+            : string.Join(",", sorts.Select(s =>
+                $"{s.Field}:{s.Descending}:{s.Aggregate?.ToString() ?? string.Empty}:{s.AggregateField ?? string.Empty}"));
 }

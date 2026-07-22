@@ -103,6 +103,8 @@ internal static class ProjectionMetadataBuilder
         {
             var effectiveChild = effective.GetOrAddChild(child.Key);
             effectiveChild.Filter = child.Value.Filter;
+            effectiveChild.Sort = child.Value.Sort;
+            effectiveChild.Take = child.Value.Take;
             if (!string.IsNullOrWhiteSpace(child.Value.Alias))
                 effectiveChild.Alias = child.Value.Alias;
             MergeNodes(effectiveChild, child.Value);
@@ -159,6 +161,16 @@ internal static class ProjectionMetadataBuilder
         if (source.Filter != null)
         {
             target.Filter = source.Filter;
+        }
+
+        if (source.Sort is not null)
+        {
+            target.Sort = source.Sort;
+        }
+
+        if (source.Take.HasValue)
+        {
+            target.Take = source.Take;
         }
 
         if (!string.IsNullOrWhiteSpace(source.Alias))
