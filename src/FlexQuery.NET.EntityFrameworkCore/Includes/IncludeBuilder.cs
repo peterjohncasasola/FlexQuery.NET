@@ -108,7 +108,7 @@ internal static class IncludeBuilder
             return query;
 
         var selector = IncludeSelectorFactory.Build(
-            parentType, navigation, node.Filter, options, allowFilteredCollection: true);
+            parentType, navigation, node, options, allowFilteredCollection: true);
 
         var method = IncludeMethodCache.Resolve(context, typeof(T), parentType, selector.ReturnType);
         var result = method.Invoke(null, new object[] { query, selector });
