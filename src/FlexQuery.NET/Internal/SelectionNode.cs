@@ -1,5 +1,6 @@
 using System.Collections.ObjectModel;
 using FlexQuery.NET.Models.Filters;
+using FlexQuery.NET.Models.Paging;
 
 namespace FlexQuery.NET.Internal;
 
@@ -29,6 +30,16 @@ internal sealed class SelectionNode
     /// Optional filter to apply when projecting this collection navigation.
     /// </summary>
     public FilterGroup? Filter { get; set; }
+
+    /// <summary>
+    /// Optional sort expressions to apply when projecting this collection navigation.
+    /// </summary>
+    public List<SortNode>? Sort { get; set; }
+
+    /// <summary>
+    /// Optional number of items to project from this collection navigation.
+    /// </summary>
+    public int? Take { get; set; }
 
     /// <summary>
     /// Optional alias name used for the projected property (e.g. "productName as name").

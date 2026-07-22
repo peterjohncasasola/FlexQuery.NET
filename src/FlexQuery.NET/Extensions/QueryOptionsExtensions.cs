@@ -246,7 +246,9 @@ public static class QueryOptionsExtensions
         {
             Path = include.Path,
             Filter = CopyFilterGroup(include.Filter),
-            Children = include.Children.Select(CloneIncludeNode).ToList()
+            Children = include.Children.Select(CloneIncludeNode).ToList(),
+            Sort = include.Sort?.Select(CloneSortNode).ToList(),
+            Take = include.Take
         };
 
     private static Aggregate CloneAggregateModel(Aggregate aggregate)

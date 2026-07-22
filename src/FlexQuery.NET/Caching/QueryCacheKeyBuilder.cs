@@ -108,7 +108,7 @@ internal static class QueryCacheKeyBuilder
             : string.Join(",", includes.Select(IncludeKey));
 
     private static string IncludeKey(IncludeNode node)
-        => $"{Escape(node.Path)}[{FilterNormalizer.GenerateCacheKey(node.Filter)}]({IncludeKey(node.Children)})";
+        => $"{Escape(node.Path)}[{FilterNormalizer.GenerateCacheKey(node.Filter)}|S:{SortKey(node.Sort)}|T:{node.Take?.ToString() ?? string.Empty}]({IncludeKey(node.Children)})";
 
     private static string SelectionKey(SelectionNode? node)
     {
@@ -118,7 +118,7 @@ internal static class QueryCacheKeyBuilder
             .OrderBy(c => c.Key, StringComparer.OrdinalIgnoreCase)
             .Select(c => $"{Escape(c.Key)}@{Escape(c.Value.Alias)}:{SelectionKey(c.Value)}");
 
-        return $"{(node.IncludeAllScalars ? "*" : string.Empty)}[{FilterNormalizer.GenerateCacheKey(node.Filter)}]({string.Join(",", children)})";
+        return $"{(node.IncludeAllScalars ? "*" : string.Empty)}[{FilterNormalizer.GenerateCacheKey(node.Filter)}|S:{SortKey(node.Sort)}|T:{node.Take?.ToString() ?? string.Empty}]({string.Join(",", children)})";
     }
 
     private static string Escape(string? value)
