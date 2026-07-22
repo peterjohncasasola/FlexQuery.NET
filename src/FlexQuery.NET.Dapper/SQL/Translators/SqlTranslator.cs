@@ -55,6 +55,7 @@ internal sealed class SqlTranslator : ISqlTranslator
         var parameters = new SqlParameterContext(_dialect);
 
         var distinctClause = options.Distinct == true ? "DISTINCT" : string.Empty;
+        var columnAliasMap = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
 
         string selectClause;
         string joinClause;
@@ -66,7 +67,7 @@ internal sealed class SqlTranslator : ISqlTranslator
         }
         else
         {
-            selectClause = _selectBuilder.BuildSelectClause(options, mapping, distinctClause, selectTree);
+            selectClause = _selectBuilder.BuildSelectClause(options, mapping, distinctClause, selectTree, columnAliasMap);
             joinClause = _joinBuilder.BuildJoinClause(options, mapping, parameters, selectTree);
         }
 
@@ -114,14 +115,7 @@ internal sealed class SqlTranslator : ISqlTranslator
             if (!options.Paging.Disabled
                 && sortForOrderBy is { Count: 0 })
             {
-                if (_dialect.RequiresOrderByForPaging)
-                {
-                    throw new InvalidOperationException(
-                        $"Paging requires an ORDER BY clause when using the {_dialect.GetType().Name} dialect. "
-                        + "Add at least one Sort field to QueryOptions.Sort, or set Paging.Disabled = true.");
-                }
-
-                sortForOrderBy = [new SortNode { Field = ResolveDefaultSortProperty(mapping) }];
+                sortForOrderBy = ResolveDefaultSort(mapping);
             }
 
             orderByClause = BuildOrderByClause(sortForOrderBy, mapping);
@@ -136,7 +130,8 @@ internal sealed class SqlTranslator : ISqlTranslator
         {
             Sql = sql,
             Parameters = parameters.RawParameters,
-            FlatJoins = flatJoins
+            FlatJoins = flatJoins,
+            ColumnAliasMap = columnAliasMap
         };
     }
 
@@ -230,13 +225,16 @@ internal sealed class SqlTranslator : ISqlTranslator
 
     private string ResolveOrderByExpression(SortNode sort, IEntityMapping mapping)
     {
-        if (mapping.GetPropertyName(sort.Field) is not null)
+        if (IsMappedProperty(sort.Field, mapping) || mapping.GetPropertyName(sort.Field) is not null)
         {
             return SqlSyntaxBuilder.QuoteColumn(_dialect, mapping.GetColumnName(sort.Field), mapping);
         }
 
         return _dialect.QuoteIdentifier(sort.Field);
     }
+
+    private static bool IsMappedProperty(string field, IEntityMapping mapping)
+        => mapping.GetProperties().Any(p => p.Equals(field, StringComparison.OrdinalIgnoreCase));
 
     private string BuildPagingClause(PagingOptions paging, SqlParameterContext parameters)
     {
@@ -259,15 +257,44 @@ internal sealed class SqlTranslator : ISqlTranslator
         return _dialect.GetLimitExpression(limitParam);
     }
 
-    private static string ResolveDefaultSortProperty(IEntityMapping mapping)
+    private List<SortNode> ResolveDefaultSort(IEntityMapping mapping)
     {
-        var properties = mapping.GetProperties().ToList();
+        var keyProperties = mapping.GetKeyProperties()
+            .Where(p => !string.IsNullOrWhiteSpace(p))
+            .ToList();
 
-        var pkProperty = properties.FirstOrDefault(p =>
-            p.Equals("Id", StringComparison.OrdinalIgnoreCase)
-            || p.Equals("Key", StringComparison.OrdinalIgnoreCase)
-            || p.EndsWith("Id", StringComparison.OrdinalIgnoreCase));
+        if (keyProperties.Count == 0)
+        {
+            throw new InvalidOperationException(
+                $"Paging requires an ORDER BY clause when using the {_dialect.GetType().Name} dialect. "
+                + "Add at least one Sort field to QueryOptions.Sort, or set Paging.Disabled = true.");
+        }
 
-        return pkProperty ?? properties.FirstOrDefault() ?? "Id";
+        return keyProperties
+            .Select(p => new SortNode { Field = p, Descending = false })
+            .ToList();
+    }
+
+    public string BuildIncludeSql(
+        string navigationPath,
+        IEntityMapping rootMapping,
+        IEntityMapping targetMapping,
+        SqlParameterContext parameters,
+        List<object?> rootPkValues)
+    {
+        return SqlIncludeQueryBuilder.BuildIncludeSql(
+            navigationPath, rootMapping, targetMapping, _dialect, expandNode: null, rootPkValues, parameters);
+    }
+
+    public string BuildIncludeSql(
+        string navigationPath,
+        IEntityMapping rootMapping,
+        IEntityMapping targetMapping,
+        SqlParameterContext parameters,
+        IReadOnlyList<object> rootPkValues,
+        IncludeNode expandNode)
+    {
+        return SqlIncludeQueryBuilder.BuildIncludeSql(
+            navigationPath, rootMapping, targetMapping, _dialect, expandNode, rootPkValues, parameters);
     }
 }

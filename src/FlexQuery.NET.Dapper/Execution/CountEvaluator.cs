@@ -17,7 +17,7 @@ internal static class CountEvaluator
         QueryOptions queryOptions,
         SqlTranslator translator,
         SqlCommand mainCommand,
-        DynamicParameters mainParams,
+        DynamicParameters? mainParams,
         DapperQueryOptions options)
     {
         
@@ -33,7 +33,7 @@ internal static class CountEvaluator
 
         var resultCount = queryOptions.GroupBy is { Count: > 0 } || queryOptions.Distinct == true
             ? (int)await connection.QuerySingleAsync<long>(
-                SqlCountBuilder.ExtractCountSql(mainCommand.Sql), mainParams,
+                SqlCountBuilder.ExtractCountSql(mainCommand.Sql), mainParams!,
                 commandTimeout: options.CommandTimeout, commandType: CommandType.Text)
             : totalCount;
 

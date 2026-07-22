@@ -54,7 +54,7 @@ internal sealed class SqlSelectBuilder(IMappingRegistry mappingRegistry, ISqlDia
     /// for tables with many columns. Specify explicit <c>Select</c> fields to reduce the
     /// result set to only the columns actually needed.
     /// </summary>
-    public string BuildSelectClause(QueryOptions options, IEntityMapping mapping, string distinctClause, SelectionNode selectTree)
+    public string BuildSelectClause(QueryOptions options, IEntityMapping mapping, string distinctClause, SelectionNode selectTree, Dictionary<string, string>? columnAliasMap = null)
     {
         var distinctPrefix = !string.IsNullOrEmpty(distinctClause) ? $"{distinctClause} " : string.Empty;
         var selectParts = new List<string>();
@@ -79,13 +79,10 @@ internal sealed class SqlSelectBuilder(IMappingRegistry mappingRegistry, ISqlDia
             return $"SELECT {distinctPrefix}{string.Join(", ", selectParts)}";
         }
 
-        TraverseSelectTree(selectTree, mapping, mapping.TableAlias, string.Empty, selectParts, options.Select);
+        TraverseSelectTree(selectTree, mapping, mapping.TableAlias, string.Empty, selectParts, options.Select, columnAliasMap);
 
         if (selectParts.Count == 0)
         {
-            // Fallback when no explicit Select or Includes specified:
-            // returns ALL columns from the entity. Specifying explicit Select
-            // fields reduces payload and improves performance.
             var governedProps = GetGovernedProperties(mapping, options.Select);
             foreach (var p in governedProps)
             {
@@ -96,7 +93,7 @@ internal sealed class SqlSelectBuilder(IMappingRegistry mappingRegistry, ISqlDia
         return $"SELECT {distinctPrefix}{string.Join(", ", selectParts)}";
     }
 
-    private void TraverseSelectTree(SelectionNode node, IEntityMapping currentMapping, string? currentAlias, string prefix, List<string> selectParts, IReadOnlyList<SelectNode>? governedSelectFields = null)
+    private void TraverseSelectTree(SelectionNode node, IEntityMapping currentMapping, string? currentAlias, string prefix, List<string> selectParts, IReadOnlyList<SelectNode>? governedSelectFields = null, Dictionary<string, string>? columnAliasMap = null)
     {
         bool hasSpecificFields = false;
 
@@ -109,7 +106,7 @@ internal sealed class SqlSelectBuilder(IMappingRegistry mappingRegistry, ISqlDia
                 var nextPrefix = prefix + rel.NavigationPropertyName + "_";
                 var nextAlias = rel.NavigationPropertyName;
 
-                TraverseSelectTree(child.Value, targetMapping, nextAlias, nextPrefix, selectParts, governedSelectFields);
+                TraverseSelectTree(child.Value, targetMapping, nextAlias, nextPrefix, selectParts, governedSelectFields, columnAliasMap);
             }
             else
             {
@@ -122,6 +119,8 @@ internal sealed class SqlSelectBuilder(IMappingRegistry mappingRegistry, ISqlDia
                 var quotedOutput = dialect.QuoteIdentifier(outputName);
 
                 selectParts.Add($"{quotedAlias}{quotedCol} AS {quotedOutput}");
+
+                columnAliasMap?.TryAdd(outputName, child.Key);
             }
         }
 
@@ -138,6 +137,8 @@ internal sealed class SqlSelectBuilder(IMappingRegistry mappingRegistry, ISqlDia
                 var quotedOutput = dialect.QuoteIdentifier(outputName);
 
                 selectParts.Add($"{quotedAlias}{quotedCol} AS {quotedOutput}");
+
+                columnAliasMap?.TryAdd(outputName, prop);
             }
         }
     }

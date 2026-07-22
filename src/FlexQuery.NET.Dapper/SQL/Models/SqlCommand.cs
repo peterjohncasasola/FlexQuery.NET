@@ -14,6 +14,9 @@ internal sealed class SqlCommand
     /// <summary>List of navigation paths used for flat projection (Flat/FlatMixed mode).</summary>
     public List<string>? FlatJoins { get; init; }
 
+    /// <summary>Maps SQL output column names (including aliases) to entity property names.</summary>
+    public Dictionary<string, string>? ColumnAliasMap { get; init; }
+
     /// <summary>Gets a singleton, empty SQL command with no SQL text and no parameters.</summary>
     public static SqlCommand Empty { get; } = new() { Sql = string.Empty };
 }

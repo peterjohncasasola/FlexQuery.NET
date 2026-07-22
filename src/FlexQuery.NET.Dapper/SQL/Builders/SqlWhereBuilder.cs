@@ -17,7 +17,7 @@ namespace FlexQuery.NET.Dapper.Sql.Builders;
 /// filter scoped to a related entity.
 /// </summary>
 internal sealed class SqlWhereBuilder(
-    IMappingRegistry mappingRegistry,
+    IMappingRegistry? mappingRegistry,
     ISqlDialect dialect,
     SqlExistsTranslator existsTranslator,
     SqlCountTranslator countTranslator)

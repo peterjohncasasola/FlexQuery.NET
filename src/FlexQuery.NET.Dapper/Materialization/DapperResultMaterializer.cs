@@ -1,5 +1,10 @@
+using System.Collections;
+using System.Dynamic;
+using System.Reflection;
 using FlexQuery.NET.Builders;
 using FlexQuery.NET.Models;
+using FlexQuery.NET.Internal;
+using FlexQuery.NET.Metadata;
 
 namespace FlexQuery.NET.Dapper.Materialization;
 
@@ -37,6 +42,57 @@ internal static class DapperResultMaterializer
                 (IDictionary<string, object>)row,
                 StringComparer.OrdinalIgnoreCase))
             .ToList();
+    }
+
+    public static object ProjectEntity(object? entity, SelectionNode selectTree)
+    {
+        var result = new ExpandoObject();
+        IDictionary<string, object?> resultDict = result;
+
+        if (selectTree.IncludeAllScalars)
+        {
+            foreach (var prop in entity?.GetType().GetProperties(
+                         BindingFlags.Public | BindingFlags.Instance)!)
+            {
+                if (!prop.CanRead) continue;
+                if (!TypeClassification.IsScalarType(prop.PropertyType))
+                    continue;
+
+                var value = prop.GetValue(entity);
+                resultDict[prop.Name] = value!;
+            }
+        }
+
+        foreach (var (propName, childNode) in selectTree.EnumerateChildren())
+        {
+            var prop = entity?.GetType().GetProperty(
+                propName,
+                BindingFlags.Public | BindingFlags.Instance | BindingFlags.IgnoreCase);
+
+            if (prop == null) continue;
+
+            var outputName = !string.IsNullOrWhiteSpace(childNode.Alias) ? childNode.Alias : prop.Name;
+            var value = prop.GetValue(entity);
+
+            if (childNode.HasChildren || childNode.IncludeAllScalars)
+            {
+                if (value is IEnumerable enumerable and not string)
+                {
+                    var items = (from object? item in enumerable select ProjectEntity(item, childNode)).ToList();
+                    resultDict[outputName] = items;
+                }
+                else if (value != null)
+                {
+                    resultDict[outputName] = ProjectEntity(value, childNode);
+                }
+            }
+            else
+            {
+                resultDict[outputName] = value;
+            }
+        }
+
+        return result;
     }
 
     private static IReadOnlyList<object> MaterializeGroupedRows(
