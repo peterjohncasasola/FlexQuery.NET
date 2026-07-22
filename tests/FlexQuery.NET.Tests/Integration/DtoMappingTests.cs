@@ -123,7 +123,8 @@ public class DtoMappingTests : IDisposable
 
         var parameters = new FlexQueryParameters
         {
-            Select = "Profile(Bio AS profileBio)"
+            Select = "Profile(Bio AS profileBio)",
+            Include = "Profile"
         };
 
         var options = QueryOptionsParser.Parse(parameters, QuerySyntax.Fql);
@@ -146,7 +147,8 @@ public class DtoMappingTests : IDisposable
     {
         var parameters = new FlexQueryParameters
         {
-            Select = "Profile(Bio:profileBio)"
+            Select = "Profile(Bio:profileBio)",
+            Include = "Profile"
         };
 
         var result = _db.Customers.AsQueryable().FlexQuery(parameters);

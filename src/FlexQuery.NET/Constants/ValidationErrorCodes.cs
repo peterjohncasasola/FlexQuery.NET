@@ -42,4 +42,5 @@ internal static class ValidationErrorCodes
     public const string ExpandSortOnReference = "EXPAND_SORT_ON_REFERENCE";
     public const string ExpandTakeOnReference = "EXPAND_TAKE_ON_REFERENCE";
     public const string ExpandCapabilityNotSupported = "EXPAND_CAPABILITY_NOT_SUPPORTED";
+    public const string NavigationProjectionRequiresInclude = "NAVIGATION_PROJECTION_REQUIRES_INCLUDE";
 }

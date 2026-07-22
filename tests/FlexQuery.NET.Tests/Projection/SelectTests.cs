@@ -973,7 +973,8 @@ public class SelectTests : IDisposable
 
         var parameters = new FlexQueryParameters
         {
-            Select = "Id AS customerId,Profile(Bio AS profileBio)"
+            Select = "Id AS customerId,Profile(Bio AS profileBio)",
+            Include = "Profile"
         };
 
         var options = QueryOptionsParser.Parse(parameters, QuerySyntax.Fql);
