@@ -180,6 +180,127 @@ public class SqlTranslatorTests
     }
 
     [Fact]
+    public void Translate_PagingWithoutSort_UsesMappedPrimaryKey()
+    {
+        var options = new QueryOptions
+        {
+            Paging = { Page = 2, PageSize = 10 }
+        };
+        options.Items[ContextKeys.EntityType] = typeof(Customer);
+
+        var translator = new SqlTranslator(_registry, new SqlServerDialect());
+        var command = translator.Translate(options);
+
+        command.Sql.Should().Contain("ORDER BY [Id]");
+        command.Sql.Should().Contain("OFFSET");
+        command.Sql.Should().Contain("FETCH NEXT");
+    }
+
+    [Fact]
+    public void Translate_PagingWithoutSort_UsesCustomMappedPrimaryKey()
+    {
+        var registry = new MappingRegistry();
+        registry.Entity<CustomerWithCustomKey>()
+            .ToTable("Customers")
+            .HasKey(c => c.CustomerId);
+
+        var options = new QueryOptions
+        {
+            Paging = { Page = 2, PageSize = 10 }
+        };
+        options.Items[ContextKeys.EntityType] = typeof(CustomerWithCustomKey);
+
+        var translator = new SqlTranslator(registry, new SqlServerDialect());
+        var command = translator.Translate(options);
+
+        command.Sql.Should().Contain("ORDER BY [CustomerId]");
+    }
+
+    [Fact]
+    public void Translate_PagingWithoutSort_UsesMappedPrimaryKeyColumnName()
+    {
+        var registry = new MappingRegistry();
+        registry.Entity<CustomerWithCustomKey>()
+            .ToTable("Customers")
+            .HasKey(c => c.CustomerId)
+            .Property(c => c.CustomerId)
+            .HasColumnName("customer_id");
+
+        var options = new QueryOptions
+        {
+            Paging = { Page = 2, PageSize = 10 }
+        };
+        options.Items[ContextKeys.EntityType] = typeof(CustomerWithCustomKey);
+
+        var translator = new SqlTranslator(registry, new SqlServerDialect());
+        var command = translator.Translate(options);
+
+        command.Sql.Should().Contain("ORDER BY [customer_id]");
+    }
+
+    [Fact]
+    public void Translate_PagingWithoutSort_UsesAllCompositeKeyColumns()
+    {
+        var registry = new MappingRegistry();
+        registry.Entity<OrderLine>()
+            .ToTable("OrderLines")
+            .HasKey(o => new { o.OrderId, o.LineNumber });
+
+        var options = new QueryOptions
+        {
+            Paging = { Page = 2, PageSize = 10 }
+        };
+        options.Items[ContextKeys.EntityType] = typeof(OrderLine);
+
+        var translator = new SqlTranslator(registry, new SqlServerDialect());
+        var command = translator.Translate(options);
+
+        command.Sql.Should().Contain("ORDER BY [OrderId], [LineNumber]");
+    }
+
+    [Fact]
+    public void Translate_PagingWithSort_PreservesExplicitSort()
+    {
+        var registry = new MappingRegistry();
+        registry.Entity<CustomerWithCustomKey>()
+            .ToTable("Customers")
+            .HasKey(c => c.CustomerId);
+
+        var options = new QueryOptions
+        {
+            Sort = [new SortNode { Field = "Name", Descending = true }],
+            Paging = { Page = 2, PageSize = 10 }
+        };
+        options.Items[ContextKeys.EntityType] = typeof(CustomerWithCustomKey);
+
+        var translator = new SqlTranslator(registry, new SqlServerDialect());
+        var command = translator.Translate(options);
+
+        command.Sql.Should().Contain("ORDER BY [Name] DESC");
+        command.Sql.Should().NotContain("ORDER BY [CustomerId]");
+    }
+
+    [Fact]
+    public void Translate_PagingWithoutSortOrMappedPrimaryKey_ThrowsExistingPagingException()
+    {
+        var registry = new MappingRegistry();
+        registry.Entity<KeylessReport>().ToTable("Reports");
+
+        var options = new QueryOptions
+        {
+            Paging = { Page = 2, PageSize = 10 }
+        };
+        options.Items[ContextKeys.EntityType] = typeof(KeylessReport);
+
+        var translator = new SqlTranslator(registry, new SqlServerDialect());
+
+        Action act = () => translator.Translate(options);
+
+        act.Should().Throw<InvalidOperationException>()
+            .WithMessage("Paging requires an ORDER BY clause when using the SqlServerDialect dialect.*");
+    }
+
+    [Fact]
     public void Translate_AndLogic_CombinesWithAnd()
     {
         var options = NoPaging(new QueryOptions
@@ -546,6 +667,24 @@ public class SqlTranslatorTests
         command.Sql.Should().Contain("\"OrderItems\".\"Id\"");
         command.FlatJoins.Should().Contain("Orders");
         command.FlatJoins.Should().Contain("OrderItems");
+    }
+
+    private sealed class CustomerWithCustomKey
+    {
+        public int CustomerId { get; set; }
+        public string Name { get; set; } = string.Empty;
+    }
+
+    private sealed class OrderLine
+    {
+        public int OrderId { get; set; }
+        public int LineNumber { get; set; }
+        public string Sku { get; set; } = string.Empty;
+    }
+
+    private sealed class KeylessReport
+    {
+        public string Name { get; set; } = string.Empty;
     }
 }
 

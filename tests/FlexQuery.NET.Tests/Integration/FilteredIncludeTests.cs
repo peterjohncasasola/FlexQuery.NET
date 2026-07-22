@@ -1,5 +1,8 @@
 using FlexQuery.NET.EntityFrameworkCore;
 using FlexQuery.NET.Models;
+using FlexQuery.NET.Models.Filters;
+using FlexQuery.NET.Models.Paging;
+using FlexQuery.NET.Models.Projection;
 using FlexQuery.NET.Parsers;
 using Microsoft.EntityFrameworkCore;
 
@@ -269,6 +272,70 @@ public class FilteredIncludeTests : IDisposable
     }
 
     [Fact]
+    public async Task ApplyExpand_WithSortAndTake_LimitsIncludedCollection()
+    {
+        SeedAliceDeliveredOrders();
+
+        var options = new QueryOptions
+        {
+            Includes = ["Orders"],
+            Expand =
+            [
+                new IncludeNode
+                {
+                    Path = "Orders",
+                    Filter = new FilterGroup
+                    {
+                        Filters =
+                        [
+                            new FilterCondition { Field = "Status", Operator = "eq", Value = "Delivered" }
+                        ]
+                    },
+                    Sort = [new SortNode { Field = "OrderDate", Descending = true }],
+                    Take = 3
+                }
+            ]
+        };
+
+        var alice = await _db.Customers
+            .AsNoTracking()
+            .Where(c => c.Id == 1)
+            .ApplyExpand(options)
+            .SingleAsync();
+
+        alice.Orders.Select(o => o.Id).Should().Equal(11005, 11004, 11003);
+    }
+
+    [Fact]
+    public async Task FlexQueryAsync_WithExpandSortAndTake_LimitsProjectedCollection()
+    {
+        SeedAliceDeliveredOrders();
+
+        var parameters = new FlexQueryParameters
+        {
+            Filter = "Id:eq:1",
+            Include = "Orders",
+            Expand = "Orders(filter=Status:eq:Delivered; sort=OrderDate:desc; take=3)",
+            Select = "Id,Orders.Id,Orders.Status,Orders.OrderDate"
+        };
+
+        var result = await _db.Customers
+            .AsNoTracking()
+            .FlexQueryAsync(parameters);
+
+        var alice = result.Data.Single();
+        var orders = alice.GetType().GetProperty("Orders")?.GetValue(alice) as System.Collections.IEnumerable;
+        orders.Should().NotBeNull();
+
+        var orderList = new List<object>();
+        foreach (var order in orders!) orderList.Add(order);
+
+        orderList.Select(o => (int)o.GetType().GetProperty("Id")!.GetValue(o)!)
+            .Should()
+            .Equal(11005, 11004, 11003);
+    }
+
+    [Fact]
     public async Task Include_MultipleRoots_WithSelectiveExpandConfig()
     {
         var parameters = new FlexQueryParameters
@@ -345,5 +412,26 @@ public class FilteredIncludeTests : IDisposable
         var orderList = new List<object>();
         foreach (var o in orders!) orderList.Add(o);
         orderList.Should().HaveCount(2);
+    }
+
+    private void SeedAliceDeliveredOrders()
+    {
+        if (_db.Orders.Any(o => o.Id == 11001))
+            return;
+
+        var orders = Enumerable.Range(1, 5)
+            .Select(i => new Order
+            {
+                Id = 11000 + i,
+                CustomerId = 1,
+                Status = "Delivered",
+                Total = 100 + i,
+                Number = $"SO-TAKE-{i}",
+                OrderDate = new DateTime(2026, 1, i, 0, 0, 0, DateTimeKind.Utc),
+                OrderItems = []
+            });
+
+        _db.Orders.AddRange(orders);
+        _db.SaveChanges();
     }
 }

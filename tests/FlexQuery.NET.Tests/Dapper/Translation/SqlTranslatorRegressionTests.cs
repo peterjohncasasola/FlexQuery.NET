@@ -393,26 +393,7 @@ public class SqlTranslatorRegressionTests
         command.Sql.Should().Contain("\"Id\"");
         command.Sql.Should().Contain("LIMIT @PageSize OFFSET @Offset");
     }
-
-    [Fact]
-    public void Translate_SqlServer_Paging_WithoutSort_Throws()
-    {
-        var registry = new MappingRegistry();
-        registry.Entity<Customer>().ToTable("Users");
-
-        var options = new QueryOptions
-        {
-            Paging = { Page = 1, PageSize = 10 },
-            Items = { [ContextKeys.EntityType] = typeof(Customer) }
-        };
-
-        var translator = new SqlTranslator(registry, new SqlServerDialect());
-        var act = () => translator.Translate(options);
-
-        act.Should().Throw<InvalidOperationException>()
-            .WithMessage("*ORDER BY*SqlServer*");
-    }
-
+    
     #endregion
 
     #region F. Case-Insensitive SQL Generation Tests

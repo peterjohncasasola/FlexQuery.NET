@@ -150,4 +150,40 @@ public class QueryCacheKeyBuilderTests
 
         key.Should().Contain("filteredIncludes=");
     }
+
+    [Fact]
+    public void Build_ExpandSortAndTake_AffectKey()
+    {
+        var withoutTake = new QueryOptions
+        {
+            Expand =
+            [
+                new IncludeNode
+                {
+                    Path = "Orders",
+                    Sort = [new SortNode { Field = "OrderDate", Descending = true }]
+                }
+            ]
+        };
+
+        var withTake = new QueryOptions
+        {
+            Expand =
+            [
+                new IncludeNode
+                {
+                    Path = "Orders",
+                    Sort = [new SortNode { Field = "OrderDate", Descending = true }],
+                    Take = 3
+                }
+            ]
+        };
+
+        var keyWithoutTake = QueryCacheKeyBuilder.Build(withoutTake, typeof(Customer), "query");
+        var keyWithTake = QueryCacheKeyBuilder.Build(withTake, typeof(Customer), "query");
+
+        keyWithTake.Should().Contain("S:OrderDate:True");
+        keyWithTake.Should().Contain("T:3");
+        keyWithTake.Should().NotBe(keyWithoutTake);
+    }
 }

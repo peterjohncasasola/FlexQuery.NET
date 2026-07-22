@@ -239,9 +239,12 @@ public class ResultCountTests
         result.TotalCount.Should().Be(10);
         result.Data.Should().NotBeEmpty();
 
-        var alice = result.Data.OfType<Customer>().FirstOrDefault(c => c.Id == 1);
+        var alice = result.Data
+            .Cast<IDictionary<string, object?>>()
+            .FirstOrDefault(c => Convert.ToInt32(c["Id"]) == 1);
         alice.Should().NotBeNull();
-        alice!.Orders.Should().HaveCount(2);
+        var orders = ((IEnumerable<object>)alice!["Orders"]!).Cast<IDictionary<string, object?>>().ToList();
+        orders.Should().HaveCount(2);
     }
 
     [Fact]

@@ -85,23 +85,25 @@ public class DialectTests
     // ========================
 
     [Fact]
-    public void SqlServer_PagingWithoutSort_Throws()
+    public void SqlServer_PagingWithoutSort_GeneratesDefaultOrderBy()
     {
         var options = CreatePagedOptionsWithoutSort();
-        var act = () => new SqlTranslator(_registry, new SqlServerDialect()).Translate(options);
+        var command = new SqlTranslator(_registry, new SqlServerDialect()).Translate(options);
 
-        act.Should().Throw<InvalidOperationException>()
-            .WithMessage("*ORDER BY*");
+        command.Sql.Should().Contain("ORDER BY");
+        command.Sql.Should().Contain("OFFSET");
+        command.Sql.Should().Contain("FETCH NEXT");
     }
 
     [Fact]
-    public void Oracle_PagingWithoutSort_Throws()
+    public void Oracle_PagingWithoutSort_GeneratesDefaultOrderBy()
     {
         var options = CreatePagedOptionsWithoutSort();
-        var act = () => new SqlTranslator(_registry, new OracleDialect()).Translate(options);
+        var command = new SqlTranslator(_registry, new OracleDialect()).Translate(options);
 
-        act.Should().Throw<InvalidOperationException>()
-            .WithMessage("*ORDER BY*");
+        command.Sql.Should().Contain("ORDER BY");
+        command.Sql.Should().Contain("OFFSET");
+        command.Sql.Should().Contain("FETCH NEXT");
     }
 
     [Fact]
