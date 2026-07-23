@@ -1,8 +1,8 @@
 using System.Collections;
-using System.Dynamic;
 using System.Reflection;
 using FlexQuery.NET.Builders;
 using FlexQuery.NET.Models;
+using FlexQuery.NET.Models.Projection;
 using FlexQuery.NET.Internal;
 using FlexQuery.NET.Metadata;
 
@@ -20,7 +20,8 @@ internal static class DapperResultMaterializer
         QueryOptions queryOptions,
         Func<IEnumerable<dynamic>, IReadOnlyList<object>> hydrateIncludes,
         CancellationToken cancellationToken,
-        Func<string, string>? propertyNameTransformer = null)
+        Func<string, string>? propertyNameTransformer = null,
+        Type? entityType = null)
     {
         if (queryOptions.Includes?.Count > 0 ||
             queryOptions.Expand?.Count > 0)
@@ -32,7 +33,24 @@ internal static class DapperResultMaterializer
             queryOptions.GroupBy?.Count > 0 ||
             queryOptions.Aggregates.Count > 0;
 
-        return isGroupedOrAggregated ? MaterializeGroupedRows(rows, cancellationToken) : ToPlainDictionaries(rows, propertyNameTransformer);
+        if (isGroupedOrAggregated)
+            return MaterializeGroupedRows(rows, cancellationToken);
+
+        if (queryOptions.HasProjection())
+        {
+            var projectionMode = queryOptions.ProjectionMode;
+            if (projectionMode == ProjectionMode.Flat || projectionMode == ProjectionMode.FlatMixed)
+            {
+                return ToPlainDictionaries(rows, propertyNameTransformer);
+            }
+
+            var selectTree = SelectTreeBuilder.Build(queryOptions);
+            return rows
+                .Select(row => ProjectEntity(row, selectTree, entityType: entityType))
+                .ToList();
+        }
+
+        return ToPlainDictionaries(rows, propertyNameTransformer);
     }
 
     private static IReadOnlyList<object> ToPlainDictionaries(
@@ -59,57 +77,121 @@ internal static class DapperResultMaterializer
             .ToList();
     }
 
-    public static object ProjectEntity(object? entity, SelectionNode selectTree, Func<string, string>? propertyNameTransformer = null)
+    public static object ProjectEntity(object? entity, SelectionNode selectTree, Func<string, string>? propertyNameTransformer = null, Type? entityType = null)
     {
-        var result = new ExpandoObject();
-        IDictionary<string, object?> resultDict = result;
+        if (entity == null) return null!;
+
+        var runtimeType = entity.GetType();
+        var sourceType = entityType ?? runtimeType;
+        var values = new Dictionary<string, (Type Type, object? Value)>(StringComparer.OrdinalIgnoreCase);
 
         if (selectTree.IncludeAllScalars)
         {
-            foreach (var prop in entity?.GetType().GetProperties(
-                         BindingFlags.Public | BindingFlags.Instance)!)
+            foreach (var prop in sourceType.GetProperties(BindingFlags.Public | BindingFlags.Instance))
             {
                 if (!prop.CanRead) continue;
-                if (!TypeClassification.IsScalarType(prop.PropertyType))
-                    continue;
+                if (!TypeClassification.IsScalarType(prop.PropertyType)) continue;
 
-                var value = prop.GetValue(entity);
-                var outputName = propertyNameTransformer is null ? prop.Name : propertyNameTransformer(prop.Name);
-                resultDict[outputName] = value!;
+                var value = ReadValue(entity, prop.Name);
+                values[prop.Name] = (value?.GetType() ?? prop.PropertyType, value);
             }
         }
 
         foreach (var (propName, childNode) in selectTree.EnumerateChildren())
         {
-            var prop = entity?.GetType().GetProperty(
-                propName,
-                BindingFlags.Public | BindingFlags.Instance | BindingFlags.IgnoreCase);
-
-            if (prop == null) continue;
-
-            var rawName = !string.IsNullOrWhiteSpace(childNode.Alias) ? childNode.Alias : prop.Name;
-            var outputName = propertyNameTransformer is null ? rawName : propertyNameTransformer(rawName);
-            var value = prop.GetValue(entity);
+            var resolvedProp = sourceType.GetProperty(propName, BindingFlags.Public | BindingFlags.Instance | BindingFlags.IgnoreCase);
+            var clrName = resolvedProp != null ? resolvedProp.Name : propName;
+            var rawName = !string.IsNullOrWhiteSpace(childNode.Alias) ? childNode.Alias : clrName;
+            var value = ReadValue(entity, propName, rawName, clrName);
 
             if (childNode.HasChildren || childNode.IncludeAllScalars)
             {
                 if (value is IEnumerable enumerable and not string)
                 {
-                    var items = (from object? item in enumerable select ProjectEntity(item, childNode, propertyNameTransformer)).ToList();
-                    resultDict[outputName] = items;
+                    var itemType = ResolveCollectionElementType(resolvedProp?.PropertyType);
+                    var items = (from object? item in enumerable select ProjectEntity(item, childNode, entityType: itemType ?? item?.GetType())).ToList();
+                    values[rawName] = (typeof(List<object>), items);
                 }
                 else if (value != null)
                 {
-                    resultDict[outputName] = ProjectEntity(value, childNode, propertyNameTransformer);
+                    var nested = ProjectEntity(value, childNode, entityType: resolvedProp?.PropertyType ?? value.GetType());
+                    values[rawName] = (nested.GetType(), nested);
                 }
             }
             else
             {
-                resultDict[outputName] = value;
+                var valueType = value?.GetType() ?? resolvedProp?.PropertyType ?? typeof(object);
+                values[rawName] = (valueType, value);
             }
         }
 
-        return result;
+        return CreateProjectedObject(values);
+    }
+
+    private static object CreateProjectedObject(IReadOnlyDictionary<string, (Type Type, object? Value)> values)
+    {
+        if (values.Count == 0)
+            return Activator.CreateInstance(DynamicTypeBuilder.GetDynamicType([]))!;
+
+        var projectedType = DynamicTypeBuilder.GetDynamicType(
+            values.ToDictionary(kvp => kvp.Key, kvp => kvp.Value.Type));
+        var instance = Activator.CreateInstance(projectedType)!;
+
+        foreach (var kvp in values)
+        {
+            var property = projectedType.GetProperty(kvp.Key);
+            if (property is { CanWrite: true })
+                property.SetValue(instance, kvp.Value.Value);
+        }
+
+        return instance;
+    }
+
+    private static object? ReadValue(object entity, params string[] candidateNames)
+    {
+        if (entity is IDictionary<string, object> dictionary)
+            return ReadDictionaryValue(dictionary, candidateNames);
+
+        if (entity is IDictionary<string, object?> nullableDictionary)
+            return ReadDictionaryValue(nullableDictionary, candidateNames);
+
+        foreach (var candidate in candidateNames)
+        {
+            var prop = entity.GetType().GetProperty(candidate, BindingFlags.Public | BindingFlags.Instance | BindingFlags.IgnoreCase);
+            if (prop != null)
+                return prop.GetValue(entity);
+        }
+
+        return null;
+    }
+
+    private static object? ReadDictionaryValue<TValue>(IDictionary<string, TValue> dictionary, string[] candidateNames)
+    {
+        foreach (var candidate in candidateNames)
+        {
+            if (dictionary.TryGetValue(candidate, out var value))
+                return value;
+
+            foreach (var kvp in dictionary)
+            {
+                if (kvp.Key.Equals(candidate, StringComparison.OrdinalIgnoreCase))
+                    return kvp.Value;
+            }
+        }
+
+        return null;
+    }
+
+    private static Type? ResolveCollectionElementType(Type? type)
+    {
+        if (type == null || type == typeof(string))
+            return null;
+
+        var enumerable = type.GetInterfaces()
+            .Concat([type])
+            .FirstOrDefault(i => i.IsGenericType && i.GetGenericTypeDefinition() == typeof(IEnumerable<>));
+
+        return enumerable?.GetGenericArguments()[0];
     }
 
     private static IReadOnlyList<object> MaterializeGroupedRows(
@@ -155,3 +237,4 @@ internal static class DapperResultMaterializer
             .ToList();
     }
 }
+

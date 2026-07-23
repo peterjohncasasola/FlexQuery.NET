@@ -36,6 +36,8 @@ public class DapperSplitQueryBehaviorTests : DapperApiTestBase
 
         items.Should().NotBeEmpty();
         var first = items[0];
+        Console.WriteLine($"DEBUG: first JSON = {first.GetRawText()}");
+        Console.WriteLine($"DEBUG: first properties = {string.Join(", ", first.EnumerateObject().Select(p => p.Name))}");
         first.TryGetProperty("Id", out var id).Should().BeTrue();
         first.TryGetProperty("Name", out var name).Should().BeTrue();
     }
@@ -156,13 +158,19 @@ public class DapperSplitQueryBehaviorTests : DapperApiTestBase
             opt.UseModel(SharedFlexQueryModel.Instance);
         });
 
-        var customer = (IDictionary<string, object?>)result.Data.Single();
-        var orders = ((IEnumerable<object>)customer["Orders"]!).Cast<IDictionary<string, object?>>().ToList();
+        dynamic customer = result.Data.Single();
+        var orders = ((IEnumerable<object>)customer.Orders).Cast<dynamic>().ToList();
 
         orders.Should().HaveCount(3);
-        orders.Select(order => (int)order["Id"]!).Should().Equal(9205, 9204, 9203);
-        orders.Should().OnlyContain(order => (string)order["Status"]! == "Delivered");
-        orders.Should().OnlyContain(order => !order.ContainsKey("Customer") && !order.ContainsKey("OrderItems"));
+        var orderIds = orders.Select(order => (int)order.Id).ToList();
+        orderIds.Should().Equal(9205, 9204, 9203);
+        
+        foreach(var order in orders)
+        {
+            ((string)order.Status).Should().Be("Delivered");
+            ((object?)order.GetType().GetProperty("Customer")).Should().BeNull();
+            ((object?)order.GetType().GetProperty("OrderItems")).Should().BeNull();
+        }
     }
 
     [Fact]
@@ -195,12 +203,18 @@ public class DapperSplitQueryBehaviorTests : DapperApiTestBase
             opt.UseModel(SharedFlexQueryModel.Instance);
         });
 
-        var customer = (IDictionary<string, object?>)result.Data.Single();
-        var orders = ((IEnumerable<object>)customer["Orders"]!).Cast<IDictionary<string, object?>>().ToList();
+        dynamic customer = result.Data.Single();
+        var orders = ((IEnumerable<object>)customer.Orders).Cast<dynamic>().ToList();
 
         orders.Should().HaveCount(3);
-        orders.Select(order => (int)order["Id"]!).Should().Equal(9305, 9304, 9303);
-        orders.Should().OnlyContain(order => (string)order["Status"]! == "Delivered");
-        orders.Should().OnlyContain(order => !order.ContainsKey("Customer") && !order.ContainsKey("OrderItems"));
+        var orderIds = orders.Select(order => (int)order.Id).ToList();
+        orderIds.Should().Equal(9305, 9304, 9303);
+
+        foreach(var order in orders)
+        {
+            ((string)order.Status).Should().Be("Delivered");
+            ((object?)order.GetType().GetProperty("Customer")).Should().BeNull();
+            ((object?)order.GetType().GetProperty("OrderItems")).Should().BeNull();
+        }
     }
 }

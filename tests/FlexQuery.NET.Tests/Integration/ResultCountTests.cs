@@ -240,10 +240,10 @@ public class ResultCountTests
         result.Data.Should().NotBeEmpty();
 
         var alice = result.Data
-            .Cast<IDictionary<string, object?>>()
-            .FirstOrDefault(c => Convert.ToInt32(c["Id"]) == 1);
+            .FirstOrDefault(c => Convert.ToInt32(c.GetType().GetProperty("Id")!.GetValue(c)) == 1);
         alice.Should().NotBeNull();
-        var orders = ((IEnumerable<object>)alice!["Orders"]!).Cast<IDictionary<string, object?>>().ToList();
+        var ordersValue = alice!.GetType().GetProperty("Orders")!.GetValue(alice);
+        var orders = ((IEnumerable<object>)ordersValue!).ToList();
         orders.Should().HaveCount(2);
     }
 

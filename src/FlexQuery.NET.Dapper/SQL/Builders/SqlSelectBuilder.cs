@@ -63,7 +63,7 @@ internal sealed class SqlSelectBuilder(IMappingRegistry mappingRegistry, ISqlDia
         {
             foreach (var g in options.GroupBy)
             {
-                selectParts.Add(SqlSyntaxBuilder.QuoteColumn(dialect, mapping.GetColumnName(g), mapping));
+                selectParts.Add(BuildGroupBySelectPart(mapping, g));
             }
 
             selectParts.AddRange(BuildAggregateSelectParts(options, mapping));
@@ -74,7 +74,7 @@ internal sealed class SqlSelectBuilder(IMappingRegistry mappingRegistry, ISqlDia
         {
             foreach (var g in options.GroupBy)
             {
-                selectParts.Add(SqlSyntaxBuilder.QuoteColumn(dialect, mapping.GetColumnName(g), mapping));
+                selectParts.Add(BuildGroupBySelectPart(mapping, g));
             }
             return $"SELECT {distinctPrefix}{string.Join(", ", selectParts)}";
         }
@@ -112,7 +112,8 @@ internal sealed class SqlSelectBuilder(IMappingRegistry mappingRegistry, ISqlDia
             {
                 hasSpecificFields = true;
                 var col = currentMapping.GetColumnName(child.Key);
-                var outputName = child.Value.Alias ?? (prefix + col);
+                var propName = ResolveMappedPropertyName(currentMapping, child.Key) ?? col;
+                var outputName = child.Value.Alias ?? (prefix + propName);
 
                 var quotedAlias = string.IsNullOrEmpty(currentAlias) ? "" : dialect.QuoteIdentifier(currentAlias) + ".";
                 var quotedCol = dialect.QuoteIdentifier(col);
@@ -287,7 +288,7 @@ internal sealed class SqlSelectBuilder(IMappingRegistry mappingRegistry, ISqlDia
         {
             foreach (var (propName, childNode) in scalarChildren)
             {
-                var outputName = childNode.Alias ?? propName;
+                var outputName = childNode.Alias ?? ResolveMappedPropertyName(mapping, propName) ?? propName;
                 fields.Add(new FlatField(level, outputName, propName, mapping));
             }
 
@@ -322,7 +323,7 @@ internal sealed class SqlSelectBuilder(IMappingRegistry mappingRegistry, ISqlDia
             {
                 foreach (var (propName, childNode) in scalarChildren)
                 {
-                    var outputName = childNode.Alias ?? propName;
+                    var outputName = childNode.Alias ?? ResolveMappedPropertyName(mapping, propName) ?? propName;
                     fields.Add(new FlatField(-1, outputName, propName, mapping));
                 }
             }
@@ -344,4 +345,19 @@ internal sealed class SqlSelectBuilder(IMappingRegistry mappingRegistry, ISqlDia
         }
         return rootFields;
     }
+
+    private string BuildGroupBySelectPart(IEntityMapping mapping, string field)
+    {
+        var column = mapping.GetColumnName(field);
+        var quotedColumn = SqlSyntaxBuilder.QuoteColumn(dialect, column, mapping);
+        var outputName = ResolveMappedPropertyName(mapping, field);
+
+        return outputName is null
+            ? quotedColumn
+            : $"{quotedColumn} AS {dialect.QuoteIdentifier(outputName)}";
+    }
+
+    private static string? ResolveMappedPropertyName(IEntityMapping mapping, string field)
+        => mapping.GetProperties()
+            .FirstOrDefault(property => property.Equals(field, StringComparison.OrdinalIgnoreCase));
 }

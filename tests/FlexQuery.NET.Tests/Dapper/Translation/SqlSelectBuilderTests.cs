@@ -225,7 +225,7 @@ public class SqlSelectBuilderTests
 
         var result = builder.BuildSelectClause(options, mapping, string.Empty, tree);
 
-        result.Should().Be("SELECT [Status], COUNT(1) AS [cnt]");
+        result.Should().Be("SELECT [Status] AS [Status], COUNT(1) AS [cnt]");
     }
 
     [Fact]
@@ -241,7 +241,7 @@ public class SqlSelectBuilderTests
 
         var result = builder.BuildSelectClause(options, mapping, string.Empty, tree);
 
-        result.Should().Be("SELECT [Status], [Name]");
+        result.Should().Be("SELECT [Status] AS [Status], [Name] AS [Name]");
     }
 
     [Fact]

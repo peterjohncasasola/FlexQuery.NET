@@ -121,7 +121,7 @@ internal static class DapperQueryExecutor
                 Stopwatch.StartNew();
                 var selectTree = SelectTreeBuilder.Build(queryOptions);
                 items = result.Items
-                    .Select(e => DapperResultMaterializer.ProjectEntity(e, selectTree, transformer))
+                    .Select(e => DapperResultMaterializer.ProjectEntity(e, selectTree, transformer, typeof(T)))
                     .Cast<object>()
                     .ToList();
             }
@@ -160,7 +160,8 @@ internal static class DapperQueryExecutor
                     queryOptions,
                     hydrateIncludes: _ => [],
                     cancellationToken: ct,
-                    propertyNameTransformer: transformer);
+                    propertyNameTransformer: transformer,
+                    entityType: typeof(T));
             }
         }
 
@@ -279,7 +280,7 @@ internal static class DapperQueryExecutor
         {
             var selectTree = SelectTreeBuilder.Build(queryOptions);
             projected = rootItems
-                .Select(e => DapperResultMaterializer.ProjectEntity(e, selectTree, transformer))
+                .Select(e => DapperResultMaterializer.ProjectEntity(e, selectTree, transformer, typeof(T)))
                 .ToList();
         }
         else
