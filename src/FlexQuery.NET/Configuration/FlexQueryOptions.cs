@@ -19,11 +19,6 @@ public sealed class FlexQueryOptions
     public int DefaultPageSize { get; set; } = 20;
 
     /// <summary>
-    /// Whether field name matching during validation is case-insensitive.
-    /// </summary>
-    public bool CaseInsensitive { get; set; } = true;
-
-    /// <summary>
     /// Whether to include the total count in query results by default.
     /// </summary>
     public bool IncludeTotalCount { get; set; } = true;

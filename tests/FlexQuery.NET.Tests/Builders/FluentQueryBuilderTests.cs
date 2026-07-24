@@ -23,7 +23,6 @@ public class FluentQueryBuilderTests
         options.Paging.PageSize.Should().Be(20);
         options.Distinct.Should().BeNull();
         options.IncludeCount.Should().BeTrue();
-        options.CaseInsensitive.Should().BeTrue();
         options.ProjectionMode.Should().Be(ProjectionMode.Nested);
     }
 

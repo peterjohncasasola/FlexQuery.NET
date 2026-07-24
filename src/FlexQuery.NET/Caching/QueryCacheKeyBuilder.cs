@@ -18,9 +18,8 @@ internal static class QueryCacheKeyBuilder
     public static string Build(QueryOptions options, Type entityType, string operation)
     {
         var sb = new StringBuilder();
-        sb.Append(operation).Append('|')
+         sb.Append(operation).Append('|')
             .Append(entityType.FullName).Append('|')
-            .Append(options.CaseInsensitive ? "ci" : "cs").Append('|')
             .Append("filter=").Append(FilterNormalizer.GenerateCacheKey(options.Filter)).Append('|')
             .Append("sort=").Append(SortKey(options.Sort)).Append('|')
             .Append("select=").Append(SelectModelListKey(options.Select)).Append('|')

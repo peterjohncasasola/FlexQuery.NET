@@ -116,7 +116,7 @@ internal static class SqlIncludeQueryBuilder
         SqlParameterContext parameters,
         ISqlDialect dialect)
     {
-        var whereBuilder = new SqlWhereBuilder(null, dialect, null!, null!).WithCaseInsensitive(true);
+        var whereBuilder = new SqlWhereBuilder(null, dialect, null!, null!);
         return whereBuilder.BuildFilterGroupExpression(filter, mapping, parameters);
     }
 

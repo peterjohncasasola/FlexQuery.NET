@@ -11,30 +11,30 @@ namespace FlexQuery.NET.Expressions;
 /// </summary>
 internal static class HavingExpressionBuilder
 {
-    public static LambdaExpression? Build(Type projectionType, HavingNode? having, List<Aggregate> aggregates, bool caseInsensitive = true)
+    public static LambdaExpression? Build(Type projectionType, HavingNode? having, List<Aggregate> aggregates)
     {
         if (having is null) return null;
 
         var parameter = Expression.Parameter(projectionType, "g");
-        var body = BuildExpression(having, parameter, projectionType, aggregates, caseInsensitive);
+        var body = BuildExpression(having, parameter, projectionType, aggregates);
         if (body is null) return null;
 
         var delegateType = typeof(Func<,>).MakeGenericType(projectionType, typeof(bool));
         return Expression.Lambda(delegateType, body, parameter);
     }
 
-    private static Expression? BuildExpression(HavingNode node, ParameterExpression parameter, Type projectionType, List<Aggregate> aggregates, bool caseInsensitive)
+    private static Expression? BuildExpression(HavingNode node, ParameterExpression parameter, Type projectionType, List<Aggregate> aggregates)
     {
         switch (node)
         {
             case HavingConditionNode c:
-                return BuildCondition(c, parameter, projectionType, aggregates, caseInsensitive);
+                return BuildCondition(c, parameter, projectionType, aggregates);
             case HavingLogicalNode l:
             {
                 var parts = new List<Expression>();
                 foreach (var child in l.Children)
                 {
-                    var childExpr = BuildExpression(child, parameter, projectionType, aggregates, caseInsensitive);
+                    var childExpr = BuildExpression(child, parameter, projectionType, aggregates);
                     if (childExpr is not null) parts.Add(childExpr);
                 }
 
@@ -57,13 +57,13 @@ internal static class HavingExpressionBuilder
                 }
             }
             case HavingGroupNode g:
-                return BuildExpression(g.Inner, parameter, projectionType, aggregates, caseInsensitive);
+                return BuildExpression(g.Inner, parameter, projectionType, aggregates);
             default:
                 return null;
         }
     }
 
-    private static Expression? BuildCondition(HavingConditionNode condition, ParameterExpression parameter, Type projectionType, List<Aggregate> aggregates, bool caseInsensitive)
+    private static Expression? BuildCondition(HavingConditionNode condition, ParameterExpression parameter, Type projectionType, List<Aggregate> aggregates)
     {
         var aggregateAlias = ResolveAggregateAlias(condition, aggregates);
         if (aggregateAlias is null) return null;
@@ -72,7 +72,7 @@ internal static class HavingExpressionBuilder
         if (member is null) return null;
 
         var memberExpr = Expression.Property(parameter, member);
-        var predicate = FilterExpressionBuilder.Build(memberExpr, condition.Operator, condition.Value, caseInsensitive);
+        var predicate = FilterExpressionBuilder.Build(memberExpr, condition.Operator, condition.Value);
         return predicate;
     }
 

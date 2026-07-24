@@ -197,7 +197,6 @@ public static class QueryOptionsExtensions
             SelectTree = source.SelectTree,
             Paging = new PagingOptions { Page = source.Paging.Page, PageSize = source.Paging.PageSize, Disabled = source.Paging.Disabled },
             IncludeCount = source.IncludeCount,
-            CaseInsensitive = source.CaseInsensitive,
             EnableCache = source.EnableCache,
             Cursor = source.Cursor,
             IsKeysetMode = source.IsKeysetMode,

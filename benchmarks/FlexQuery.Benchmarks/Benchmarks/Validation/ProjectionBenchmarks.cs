@@ -88,7 +88,6 @@ public class ProjectionBenchmarks
                 Logic = LogicOperator.And,
             },
             Paging = new PagingOptions { Page = 1, PageSize = 50 },
-            CaseInsensitive = true,
         };
     }
 

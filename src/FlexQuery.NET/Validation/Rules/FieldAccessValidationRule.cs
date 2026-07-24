@@ -448,13 +448,10 @@ internal sealed class FieldAccessValidationRule : IValidationRule
     private static bool IsIncludeListed(string navPath, QueryGovernanceOptions execOptions)
     {
         var allowed = execOptions.AllowedIncludes!;
-        var comparison = execOptions.CaseInsensitive
-            ? StringComparison.OrdinalIgnoreCase
-            : StringComparison.Ordinal;
 
         foreach (var include in allowed)
         {
-            if (string.Equals(include, navPath, comparison))
+            if (string.Equals(include, navPath, StringComparison.OrdinalIgnoreCase))
                 return true;
         }
         return false;

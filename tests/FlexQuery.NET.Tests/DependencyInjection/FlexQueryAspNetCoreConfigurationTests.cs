@@ -36,7 +36,6 @@ public class FlexQueryAspNetCoreConfigurationTests
 
         options.MaxPageSize.Should().Be(1000);
         options.DefaultPageSize.Should().Be(20);
-        options.CaseInsensitive.Should().BeTrue();
         options.IncludeTotalCount.Should().BeTrue();
         options.StrictFieldValidation.Should().BeTrue();
         options.MaxFieldDepth.Should().Be(5);

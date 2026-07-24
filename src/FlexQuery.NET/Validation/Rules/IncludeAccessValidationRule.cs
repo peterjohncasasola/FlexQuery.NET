@@ -26,8 +26,7 @@ internal sealed class IncludeAccessValidationRule : IValidationRule
             return; // No include restrictions
         }
 
-        var comparer = execOptions.CaseInsensitive ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal;
-        var allowedIncludes = new HashSet<string>(execOptions.AllowedIncludes, comparer);
+        var allowedIncludes = new HashSet<string>(execOptions.AllowedIncludes, StringComparer.OrdinalIgnoreCase);
 
         // Check flat includes - remove unauthorized ones in non-strict mode
         if (options.Includes is not null)

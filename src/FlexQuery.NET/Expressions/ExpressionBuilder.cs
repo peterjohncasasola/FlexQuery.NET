@@ -46,7 +46,7 @@ internal static class ExpressionBuilder
 
     /// <summary>
     /// Backward-compatible overload. Builds a predicate from a <see cref="FilterGroupNode"/>
-    /// using default options (CaseInsensitive = true).
+    /// using default options.
     /// </summary>
     /// <typeparam name="T">The entity type.</typeparam>
     /// <param name="group">The filter group node to build a predicate from.</param>
@@ -87,7 +87,7 @@ internal static class ExpressionBuilder
 
     /// <summary>
     /// Backward-compatible overload for the runtime-type variant.
-    /// Uses default options (CaseInsensitive = true).
+    /// Uses default options.
     /// </summary>
     /// <param name="elementType">The runtime type of the collection element.</param>
     /// <param name="group">The filter group node to build a predicate from.</param>
@@ -140,7 +140,7 @@ internal static class ExpressionBuilder
                 FilterOperators.Any => BuildAnyExpression(resolvedExpr, resolvedType, condition.Value, options),
                 FilterOperators.All => BuildAllExpression(resolvedExpr, resolvedType, condition.Value, options),
                 FilterOperators.Count => BuildCountExpression(resolvedExpr, resolvedType, condition.Value, options),
-                _ => FilterExpressionBuilder.Build(resolvedExpr, op, condition.Value, options.CaseInsensitive)
+                _ => FilterExpressionBuilder.Build(resolvedExpr, op, condition.Value)
             };
 
             if (expr is null) return null;
@@ -209,7 +209,7 @@ internal static class ExpressionBuilder
         var isLeaf = index == chain.Count - 1;
         if (isLeaf)
         {
-            return FilterExpressionBuilder.Build(access, op, rawValue, options.CaseInsensitive);
+            return FilterExpressionBuilder.Build(access, op, rawValue);
         }
 
         if (SafePropertyResolver.TryGetCollectionElementType(prop.PropertyType, out var elementType))

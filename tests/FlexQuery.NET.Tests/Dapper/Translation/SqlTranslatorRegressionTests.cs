@@ -14,12 +14,11 @@ namespace FlexQuery.NET.Tests.Dapper.Translation;
 /// </summary>
 public class SqlTranslatorRegressionTests
 {
-    private static QueryOptions NoPaging(QueryOptions options)
-    {
-        options.Paging.Disabled = true;
-        options.CaseInsensitive = false;
-        return options;
-    }
+private static QueryOptions NoPaging(QueryOptions options)
+{
+    options.Paging.Disabled = true;
+    return options;
+}
 
     #region A. Alias Collision Regression Tests
 
@@ -100,7 +99,6 @@ public class SqlTranslatorRegressionTests
                 ]
             },
             Paging = { Page = 1, PageSize = 10 },
-            CaseInsensitive = false,
             Items = { [ContextKeys.EntityType] = typeof(Customer) }
         };
 
@@ -146,7 +144,6 @@ public class SqlTranslatorRegressionTests
                 ]
             },
             Paging = { Page = 2, PageSize = 5 },
-            CaseInsensitive = false,
             Items = { [ContextKeys.EntityType] = typeof(Customer) }
         };
 
@@ -394,192 +391,6 @@ public class SqlTranslatorRegressionTests
         command.Sql.Should().Contain("LIMIT @PageSize OFFSET @Offset");
     }
     
-    #endregion
-
-    #region F. Case-Insensitive SQL Generation Tests
-
-    [Fact]
-    public void Translate_CaseInsensitiveTrue_WrapsStringEqWithLower()
-    {
-        var registry = new MappingRegistry();
-        registry.Entity<Customer>().ToTable("Users");
-
-        var options = new QueryOptions
-        {
-            Paging = { Disabled = true },
-            CaseInsensitive = true,
-            Filter = new FilterGroup
-            {
-                Filters = [new FilterCondition { Field = "Name", Operator = "eq", Value = "John" }]
-            },
-            Items = { [ContextKeys.EntityType] = typeof(Customer) }
-        };
-
-        var translator = new SqlTranslator(registry, new SqlServerDialect());
-        var command = translator.Translate(options);
-
-        command.Sql.Should().Contain("LOWER([Name]) = LOWER(@p0)");
-    }
-
-    [Fact]
-    public void Translate_CaseInsensitiveTrue_WrapsStringContainsWithLower()
-    {
-        var registry = new MappingRegistry();
-        registry.Entity<Customer>().ToTable("Users");
-
-        var options = new QueryOptions
-        {
-            Paging = { Disabled = true },
-            CaseInsensitive = true,
-            Filter = new FilterGroup
-            {
-                Filters = [new FilterCondition { Field = "Name", Operator = "contains", Value = "john" }]
-            },
-            Items = { [ContextKeys.EntityType] = typeof(Customer) }
-        };
-
-        var translator = new SqlTranslator(registry, new SqlServerDialect());
-        var command = translator.Translate(options);
-
-        command.Sql.Should().Contain("LOWER([Name]) LIKE LOWER(@p0)");
-    }
-
-    [Fact]
-    public void Translate_CaseInsensitiveTrue_WrapsStringInWithLower()
-    {
-        var registry = new MappingRegistry();
-        registry.Entity<Customer>().ToTable("Users");
-
-        var options = new QueryOptions
-        {
-            Paging = { Disabled = true },
-            CaseInsensitive = true,
-            Filter = new FilterGroup
-            {
-                Filters = [new FilterCondition { Field = "Name", Operator = "in", Value = "John,Jane" }]
-            },
-            Items = { [ContextKeys.EntityType] = typeof(Customer) }
-        };
-
-        var translator = new SqlTranslator(registry, new SqlServerDialect());
-        var command = translator.Translate(options);
-
-        command.Sql.Should().Contain("LOWER([Name]) IN (LOWER(@p0), LOWER(@p1))");
-    }
-
-    [Fact]
-    public void Translate_CaseInsensitiveTrue_DoesNotWrapNonStringFields()
-    {
-        var registry = new MappingRegistry();
-        registry.Entity<Customer>().ToTable("Users");
-
-        var options = new QueryOptions
-        {
-            Paging = { Disabled = true },
-            CaseInsensitive = true,
-            Filter = new FilterGroup
-            {
-                Filters = [new FilterCondition { Field = "Age", Operator = "gt", Value = "18" }]
-            },
-            Items = { [ContextKeys.EntityType] = typeof(Customer) }
-        };
-
-        var translator = new SqlTranslator(registry, new SqlServerDialect());
-        var command = translator.Translate(options);
-
-        command.Sql.Should().Contain("[Age] > @p0");
-        command.Sql.Should().NotContain("LOWER");
-    }
-
-    [Fact]
-    public void Translate_CaseInsensitiveFalse_DoesNotWrapStringComparisons()
-    {
-        var registry = SharedFlexQueryModel.Instance.Registry;
-
-        var options = new QueryOptions
-        {
-            Paging = { Disabled = true },
-            CaseInsensitive = false,
-            Filter = new FilterGroup
-            {
-                Filters = [new FilterCondition { Field = "Name", Operator = "eq", Value = "John" }]
-            },
-            Items = { [ContextKeys.EntityType] = typeof(Customer) }
-        };
-
-        var translator = new SqlTranslator(registry, new SqlServerDialect());
-        var command = translator.Translate(options);
-
-        command.Sql.Should().Contain("[Name] = @p0");
-        command.Sql.Should().NotContain("LOWER");
-    }
-
-    [Fact]
-    public void Translate_CaseInsensitiveTrue_WrapsStringStartsWithWithLower()
-    {
-        var registry = SharedFlexQueryModel.Instance.Registry;
-
-        var options = new QueryOptions
-        {
-            Paging = { Disabled = true },
-            CaseInsensitive = true,
-            Filter = new FilterGroup
-            {
-                Filters = [new FilterCondition { Field = "Name", Operator = "startswith", Value = "Jo" }]
-            },
-            Items = { [ContextKeys.EntityType] = typeof(Customer) }
-        };
-
-        var translator = new SqlTranslator(registry, new SqlServerDialect());
-        var command = translator.Translate(options);
-
-        command.Sql.Should().Contain("LOWER([Name]) LIKE LOWER(@p0)");
-    }
-
-    [Fact]
-    public void Translate_CaseInsensitiveTrue_WrapsStringEndsWithWithLower()
-    {
-        var registry = SharedFlexQueryModel.Instance.Registry;
-
-        var options = new QueryOptions
-        {
-            Paging = { Disabled = true },
-            CaseInsensitive = true,
-            Filter = new FilterGroup
-            {
-                Filters = [new FilterCondition { Field = "Name", Operator = "endswith", Value = "hn" }]
-            },
-            Items = { [ContextKeys.EntityType] = typeof(Customer) }
-        };
-
-        var translator = new SqlTranslator(registry, new SqlServerDialect());
-        var command = translator.Translate(options);
-
-        command.Sql.Should().Contain("LOWER([Name]) LIKE LOWER(@p0)");
-    }
-
-    [Fact]
-    public void Translate_CaseInsensitiveTrue_WrapsStringBetweenWithLower()
-    {
-        var registry = SharedFlexQueryModel.Instance.Registry;
-
-        var options = new QueryOptions
-        {
-            Paging = { Disabled = true },
-            CaseInsensitive = true,
-            Filter = new FilterGroup
-            {
-                Filters = [new FilterCondition { Field = "Name", Operator = "between", Value = "A,Z" }]
-            },
-            Items = { [ContextKeys.EntityType] = typeof(Customer) }
-        };
-
-        var translator = new SqlTranslator(registry, new SqlServerDialect());
-        var command = translator.Translate(options);
-
-        command.Sql.Should().Contain("LOWER([Name]) BETWEEN LOWER(@p0) AND LOWER(@p1)");
-    }
-
     #endregion
 
     #region G. Deep Nested Any & Logic Tests

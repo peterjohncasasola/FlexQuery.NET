@@ -512,7 +512,7 @@ public class SqlTranslatorTests
         command.Sql.Should().Contain("EXISTS");
         command.Sql.Should().Contain("SELECT 1 FROM [Roles]");
         command.Sql.Should().Contain("[Roles].[UserId] = [Users].[Id]");
-        command.Sql.Should().Contain("LOWER([Name]) = LOWER(@p0)");
+        command.Sql.Should().Contain("[Name] = @p0");
         command.Parameters["@p0"].Should().Be("Admin");
     }
 
@@ -541,7 +541,7 @@ public class SqlTranslatorTests
 
         command.Sql.Should().Contain("NOT EXISTS");
         command.Sql.Should().Contain("SELECT 1 FROM [Roles]");
-        command.Sql.Should().Contain("NOT (LOWER([Name]) = LOWER(@p0))");
+        command.Sql.Should().Contain("NOT ([Name] = @p0)");
     }
 
     [Fact]

@@ -124,8 +124,7 @@ public class IncludeSecurityTests
 
         var exec = new QueryExecutionOptions
         {
-            AllowedIncludes = new HashSet<string> { "Orders.OrderItems" },
-            CaseInsensitive = true
+            AllowedIncludes = new HashSet<string> { "Orders.OrderItems" }
         };
         var context = new QueryContext { ExecutionOptions = exec };
         

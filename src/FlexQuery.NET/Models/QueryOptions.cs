@@ -68,9 +68,6 @@ public sealed class QueryOptions
 
     // --- Internal: retained for pipeline use (set via QueryExecutionOptions instead) ---
 
-    /// <summary>Whether string comparisons are case-insensitive.</summary>
-    internal bool CaseInsensitive { get; set; } = true;
-
     /// <summary>Whether expression caching is enabled for this query.</summary>
     internal bool? EnableCache { get; set; }
 

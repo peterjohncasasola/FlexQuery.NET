@@ -36,7 +36,6 @@ internal static class IncludeSelectorFactory
                 var predicate = ExpressionBuilder.BuildPredicate(navigation.TargetType, new QueryOptions
                 {
                     Filter = node.Filter,
-                    CaseInsensitive = options.CaseInsensitive,
                     EnableCache = options.EnableCache,
                     UseEfCoreOperators = options.UseEfCoreOperators
                 });

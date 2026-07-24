@@ -54,7 +54,6 @@ internal static class ProjectionEnhancer
             var predicate = BuildPredicateLambda(elementType, new QueryOptions
             {
                 Filter = collectionFilter,
-                CaseInsensitive = options.CaseInsensitive,
                 EnableCache = options.EnableCache,
                 UseEfCoreOperators = options.UseEfCoreOperators
             });

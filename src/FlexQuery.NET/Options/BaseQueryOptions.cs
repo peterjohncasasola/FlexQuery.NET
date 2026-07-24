@@ -58,10 +58,6 @@ public abstract class BaseQueryOptions
     /// <summary>The maximum page size a user is allowed to request.</summary>
     public int? MaxPageSize { get; set; }
 
-    /// <summary>If true, field name matching during validation is case-insensitive.</summary>
-    public bool CaseInsensitive { get; set; } = true;
-    
-
     /// <summary>
     /// Optional per-request query syntax override.
     /// When <c>null</c>, the global <see cref="Configuration.FlexQueryOptions.DefaultQuerySyntax"/> is used.
@@ -96,9 +92,6 @@ public abstract class BaseQueryOptions
 
         if (target.DefaultPageSize is 0 or 20)
             target.DefaultPageSize = global.DefaultPageSize;
-
-        if (target.CaseInsensitive)
-            target.CaseInsensitive = global.CaseInsensitive;
 
         if (target.IncludeTotalCount)
             target.IncludeTotalCount = global.IncludeTotalCount;

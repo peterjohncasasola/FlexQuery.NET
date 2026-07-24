@@ -25,7 +25,7 @@ internal sealed class SqlJoinBuilder(
         var joinedPaths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
         // 1. Infer joins from deep projection tree
-        TraverseJoinTree(selectTree, mapping, mapping.TableAlias, joins, joinedPaths, parameters, options.CaseInsensitive);
+        TraverseJoinTree(selectTree, mapping, mapping.TableAlias, joins, joinedPaths, parameters);
 
         // 2. Explicit Includes and Filtered Includes
         if (options.Expand != null)
@@ -43,11 +43,10 @@ internal sealed class SqlJoinBuilder(
                     Filter = filteredInclude.Filter
                 };
 
-                var ci = options.CaseInsensitive;
                 var sql = includeTranslator.Translate(node, mapping, filterGroup =>
                 {
                     var targetMapping = mappingRegistry.GetMapping(rel.TargetType);
-                    return whereBuilder.BuildFilterGroupExpression(filterGroup, targetMapping, parameters, ci);
+                    return whereBuilder.BuildFilterGroupExpression(filterGroup, targetMapping, parameters);
                 }, mappingRegistry);
 
                 if (!string.IsNullOrEmpty(sql)) joins.Add(sql);
@@ -70,7 +69,7 @@ internal sealed class SqlJoinBuilder(
         return string.Join(" ", joins);
     }
     
-    private void TraverseJoinTree(SelectionNode node, IEntityMapping currentMapping, string? parentAlias, List<string> joins, HashSet<string> joinedPaths, SqlParameterContext parameters, bool caseInsensitive = false)
+    private void TraverseJoinTree(SelectionNode node, IEntityMapping currentMapping, string? parentAlias, List<string> joins, HashSet<string> joinedPaths, SqlParameterContext parameters)
     {
         foreach (var child in node.EnumerateChildren())
         {
@@ -88,7 +87,7 @@ internal sealed class SqlJoinBuilder(
 
                 if (child.Value.Filter != null)
                 {
-                    var filterSql = whereBuilder.BuildFilterGroupExpression(child.Value.Filter, targetMapping, parameters, caseInsensitive);
+                    var filterSql = whereBuilder.BuildFilterGroupExpression(child.Value.Filter, targetMapping, parameters);
                     if (!string.IsNullOrEmpty(filterSql))
                         sql += $" AND ({filterSql})";
                 }
@@ -96,7 +95,7 @@ internal sealed class SqlJoinBuilder(
                 joins.Add(sql);
             }
 
-            TraverseJoinTree(child.Value, targetMapping, childAlias, joins, joinedPaths, parameters, caseInsensitive);
+            TraverseJoinTree(child.Value, targetMapping, childAlias, joins, joinedPaths, parameters);
         }
     }
 }

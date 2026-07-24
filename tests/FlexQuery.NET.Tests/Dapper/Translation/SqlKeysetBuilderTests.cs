@@ -155,8 +155,7 @@ public class SqlKeysetBuilderTests
     {
         var options = Options(o =>
         {
-            o.CaseInsensitive = false;
-            o.Filter = new FilterGroup
+                        o.Filter = new FilterGroup
             {
                 Filters = [new FilterCondition { Field = "Status", Operator = "eq", Value = "Active" }]
             };

@@ -216,13 +216,12 @@ public class SqlJoinBuilderTests
     }
 
     [Fact]
-    public void BuildJoinClause_CaseInsensitiveFilter_AppliesCorrectly()
+    public void BuildJoinClause_FilteredNavigation_GeneratesFilteredJoin()
     {
         var mapping = _registry.GetMapping(typeof(Customer));
         var builder = CreateBuilder();
         var options = new QueryOptions
         {
-            CaseInsensitive = true,
             Expand =
             [
                 new IncludeNode
@@ -240,8 +239,8 @@ public class SqlJoinBuilderTests
 
         var result = builder.BuildJoinClause(options, mapping, parameters, tree);
 
-        result.Should().Contain("LOWER(");
         result.Should().Contain("LEFT JOIN");
+        result.Should().Contain("[Orders]");
     }
 
     [Fact]

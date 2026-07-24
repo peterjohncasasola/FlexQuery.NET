@@ -132,7 +132,6 @@ internal sealed class GovernanceConfigValidationRule : IValidationRule
     private static string BuildCacheKey(Type targetType, QueryGovernanceOptions o)
     {
         var sb = new StringBuilder(targetType.FullName ?? targetType.Name);
-        sb.Append(o.CaseInsensitive ? "|ci" : "|cs");
         Append(sb, "AF", o.AllowedFields);
         Append(sb, "BF", o.BlockedFields);
         Append(sb, "SelF", o.SelectableFields);

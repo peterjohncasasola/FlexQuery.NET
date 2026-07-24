@@ -66,7 +66,7 @@ internal static class GroupByBuilder
 
         if (options.Having is not null)
         {
-            var havingLambda = HavingExpressionBuilder.Build(projectionType, options.Having, options.Aggregates, options.CaseInsensitive);
+            var havingLambda = HavingExpressionBuilder.Build(projectionType, options.Having, options.Aggregates);
             if (havingLambda is not null)
             {
                 finalCall = Expression.Call(
