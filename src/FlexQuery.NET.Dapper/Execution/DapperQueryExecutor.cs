@@ -109,26 +109,16 @@ internal static class DapperQueryExecutor
 
         if (useSimpleIncludeStreaming)
         {
-            var result = await SimpleIncludeStreamingMaterializer.MaterializeAsync<T>(
+            var selectTree = SelectTreeBuilder.Build(queryOptions);
+            var projectedResult = await SimpleIncludeStreamingMaterializer.MaterializeProjectedAsync(
                 connection,
                 simpleIncludeCommand!,
                 mapping,
                 options.CommandTimeout,
+                selectTree,
                 ct);
 
-            if (queryOptions.HasProjection())
-            {
-                Stopwatch.StartNew();
-                var selectTree = SelectTreeBuilder.Build(queryOptions);
-                items = result.Items
-                    .Select(e => DapperResultMaterializer.ProjectEntity(e, selectTree, transformer, typeof(T)))
-                    .Cast<object>()
-                    .ToList();
-            }
-            else
-            {
-                items = result.Items.Cast<object>().ToList();
-            }
+            items = projectedResult.Items;
         }
         else
         {
@@ -173,7 +163,7 @@ internal static class DapperQueryExecutor
         {
             grandTotals = grandTotals.ToDictionary(
                 outer => ApplyNaming(outer.Key, transformer) ?? outer.Key,
-                outer => (Dictionary<string, object>)outer.Value.ToDictionary(
+                outer => outer.Value.ToDictionary(
                     inner => ApplyNaming(inner.Key, transformer) ?? inner.Key,
                     inner => inner.Value,
                     StringComparer.OrdinalIgnoreCase),
@@ -266,7 +256,6 @@ internal static class DapperQueryExecutor
         }
         else if (queryOptions.Includes is { Count: > 0 })
         {
-            Stopwatch.StartNew();
             foreach (var includePath in queryOptions.Includes)
             {
                 ct.ThrowIfCancellationRequested();
@@ -276,7 +265,8 @@ internal static class DapperQueryExecutor
         }
 
         IReadOnlyList<object> projected;
-        if (queryOptions.HasProjection())
+        if (queryOptions.Select?.Count > 0 || queryOptions.SelectTree is not null
+            || queryOptions.Includes?.Count > 0 || queryOptions.Expand?.Count > 0)
         {
             var selectTree = SelectTreeBuilder.Build(queryOptions);
             projected = rootItems
