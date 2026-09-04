@@ -2,6 +2,7 @@ using FlexQuery.NET.Configuration;
 
 namespace FlexQuery.NET.Tests.DependencyInjection;
 
+[Collection("GlobalConfiguration")]
 public class FlexQueryAspNetCoreConfigurationTests
 {
     public FlexQueryAspNetCoreConfigurationTests()

@@ -263,7 +263,7 @@ public class ValidationTests
     }
 
     [Fact]
-    public void ExpandPathValidation_AllowsDeeplyNestedValidIncludePath()
+    public void ExpandPathValidation_ReferenceTerminal_Fails()
     {
         var options = new QueryOptions
         {
@@ -281,8 +281,11 @@ public class ValidationTests
             ]
         };
 
+        // Expand may only target collection-valued navigations — Customer is a
+        // reference navigation and must be rejected even with empty expand options.
         Action act = () => options.ValidateOrThrow<Customer>();
 
-        act.Should().NotThrow();
+        act.Should().Throw<FlexQuery.NET.Exceptions.QueryValidationException>()
+            .WithMessage("*reference navigation*");
     }
 }

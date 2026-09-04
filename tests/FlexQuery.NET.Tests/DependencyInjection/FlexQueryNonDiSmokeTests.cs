@@ -5,6 +5,7 @@ using MiniODataApi = FlexQuery.NET.Parsers.MiniOData.MiniOData;
 
 namespace FlexQuery.NET.Tests.DependencyInjection;
 
+[Collection("GlobalConfiguration")]
 public class FlexQueryNonDiSmokeTests
 {
     public FlexQueryNonDiSmokeTests()
@@ -29,3 +30,4 @@ public class FlexQueryNonDiSmokeTests
         act.Should().NotThrow();
     }
 }
+

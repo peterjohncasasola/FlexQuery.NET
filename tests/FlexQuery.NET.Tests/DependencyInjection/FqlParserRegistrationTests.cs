@@ -3,6 +3,7 @@ using FlexQuery.NET.Parsers.Fql;
 
 namespace FlexQuery.NET.Tests.DependencyInjection;
 
+[Collection("GlobalConfiguration")]
 public class FqlParserRegistrationTests
 {
     [Fact]
@@ -13,3 +14,4 @@ public class FqlParserRegistrationTests
         QueryParserRegistry.IsRegistered(QuerySyntax.Fql).Should().BeTrue();
     }
 }
+

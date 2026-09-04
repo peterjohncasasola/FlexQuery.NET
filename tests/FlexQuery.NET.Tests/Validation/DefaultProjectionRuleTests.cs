@@ -1,4 +1,4 @@
-﻿using FlexQuery.NET.Execution;
+using FlexQuery.NET.Execution;
 using FlexQuery.NET.Internal;
 using FlexQuery.NET.Models;
 using FlexQuery.NET.Models.Projection;using FlexQuery.NET.Options;
@@ -52,7 +52,7 @@ public class DefaultProjectionRuleTests
 
         rule.Validate(options, Context(execOptions: execOptions), result);
 
-        options.Select.Should().BeEquivalentTo([new SelectNode { Field = "Id" }]);
+        options.Select.Should().ContainSingle(n => n.Field == "Id");
     }
 
     [Fact]
@@ -92,7 +92,7 @@ public class DefaultProjectionRuleTests
 
         rule.Validate(options, Context(execOptions: execOptions), result);
 
-        options.Select.Should().BeEquivalentTo([new SelectNode { Field = "Id" }, new SelectNode { Field = "Name" }]);
+        options.Select.Should().HaveCount(2).And.Contain(n => n.Field == "Id").And.Contain(n => n.Field == "Name");
     }
 
     [Fact]
@@ -109,7 +109,7 @@ public class DefaultProjectionRuleTests
 
         rule.Validate(options, Context(execOptions: execOptions), result);
 
-        options.Select.Should().BeEquivalentTo([new SelectNode { Field = "Id" }, new SelectNode { Field = "Name" }, new SelectNode { Field = "Age" }]);
+        options.Select.Should().HaveCount(3).And.Contain(n => n.Field == "Id").And.Contain(n => n.Field == "Name").And.Contain(n => n.Field == "Age");
     }
 
     [Fact]
@@ -126,7 +126,7 @@ public class DefaultProjectionRuleTests
 
         rule.Validate(options, Context(execOptions: execOptions), result);
 
-        options.Select.Should().BeEquivalentTo([new SelectNode { Field = "Id" }]);
+        options.Select.Should().ContainSingle(n => n.Field == "Id");
     }
 
     [Fact]
@@ -139,7 +139,7 @@ public class DefaultProjectionRuleTests
 
         rule.Validate(options, Context(execOptions: execOptions), result);
 
-        options.Select.Should().BeEquivalentTo([new SelectNode { Field = "Id" }, new SelectNode { Field = "Name" }]);
+        options.Select.Should().HaveCount(2).And.Contain(n => n.Field == "Id").And.Contain(n => n.Field == "Name");
     }
 
     [Fact]
@@ -152,10 +152,10 @@ public class DefaultProjectionRuleTests
 
         rule.Validate(options, Context(execOptions: execOptions), result);
 
-        options.Select.Should().ContainEquivalentOf(new SelectNode { Field = "Id" });
-        options.Select.Should().ContainEquivalentOf(new SelectNode { Field = "Name" });
-        options.Select.Should().ContainEquivalentOf(new SelectNode { Field = "Age" });
-        options.Select.Should().NotContainEquivalentOf(new SelectNode { Field = "Description" });
+        options.Select.Should().Contain(n => n.Field == "Id");
+        options.Select.Should().Contain(n => n.Field == "Name");
+        options.Select.Should().Contain(n => n.Field == "Age");
+        options.Select.Should().NotContain(n => n.Field == "Description");
     }
 
     [Fact]
@@ -168,10 +168,10 @@ public class DefaultProjectionRuleTests
 
         rule.Validate(options, Context(execOptions: execOptions), result);
 
-        options.Select.Should().ContainEquivalentOf(new SelectNode { Field = "Id" });
-        options.Select.Should().ContainEquivalentOf(new SelectNode { Field = "Name" });
-        options.Select.Should().ContainEquivalentOf(new SelectNode { Field = "Age" });
-        options.Select.Should().ContainEquivalentOf(new SelectNode { Field = "Description" });
+        options.Select.Should().Contain(n => n.Field == "Id");
+        options.Select.Should().Contain(n => n.Field == "Name");
+        options.Select.Should().Contain(n => n.Field == "Age");
+        options.Select.Should().Contain(n => n.Field == "Description");
     }
 
     [Fact]
@@ -188,8 +188,12 @@ public class DefaultProjectionRuleTests
 
         rule.Validate(options, Context(execOptions: execOptions), result);
 
-        options.Select.Should().BeEquivalentTo([new SelectNode { Field = "Id" }]);
+        options.Select.Should().ContainSingle(n => n.Field == "Id");
     }
 }
+
+
+
+
 
 

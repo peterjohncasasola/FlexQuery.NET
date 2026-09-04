@@ -91,15 +91,14 @@ public class DslExpandParserTests
     }
 
     [Fact]
-    public void Parse_MultipleBlocks_SamePathTwice_ReturnsTwoNodes()
+    public void Parse_MultipleBlocks_SamePathTwice_ThrowsDuplicatePath()
     {
-        var result = DslExpandParser.Parse("orders(filter=status:eq:Active),orders(filter=status:eq:Pending)");
+        // A navigation path may be expanded at most once per query — duplicates are
+        // rejected deterministically at parse time instead of being merged or
+        // last-write-wins.
+        var act = () => DslExpandParser.Parse("orders(filter=status:eq:Active),orders(filter=status:eq:Pending)");
 
-        result.Should().HaveCount(2);
-        result[0].Path[0].Should().Be("orders");
-        result[0].Filter.Should().NotBeNull();
-        result[1].Path[0].Should().Be("orders");
-        result[1].Filter.Should().NotBeNull();
+        act.Should().Throw<DslParseException>().WithMessage("*Duplicate expand path*");
     }
 
     #endregion

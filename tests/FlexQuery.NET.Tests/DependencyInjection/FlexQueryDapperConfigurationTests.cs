@@ -4,6 +4,7 @@ using FlexQuery.NET.Tests.Shared.Models;
 
 namespace FlexQuery.NET.Tests.DependencyInjection;
 
+[Collection("GlobalConfiguration")]
 public class FlexQueryDapperConfigurationTests
 {
     public FlexQueryDapperConfigurationTests()
@@ -39,3 +40,4 @@ public class FlexQueryDapperConfigurationTests
         act.Should().NotThrow();
     }
 }
+

@@ -1,131 +1,85 @@
-using FlexQuery.NET.Parsers;
-using FlexQuery.NET.Models.Projection;
 using FlexQuery.NET.Models.Filters;
+using FlexQuery.NET.Models.Projection;
+using FlexQuery.NET.Parsers;
+using Xunit;
 
 namespace FlexQuery.NET.Tests.Parsers;
 
+/// <summary>
+/// Deep expansion normalization: flat dotted expand paths are merged into a
+/// hierarchical IncludeNode tree; options stay scoped to their own path; duplicate
+/// full paths are rejected deterministically at parse time.
+/// </summary>
 public class ExpandNormalizerTests
 {
     [Fact]
-    public void Normalize_SinglePath_ReturnsSingleNode()
+    public void MultipleFlatPaths_MergeIntoHierarchicalTree()
     {
-        var ast = new List<ExpandAst>
-        {
-            new() { Path = ["Orders"] }
-        };
+        var asts = DslExpandParser.Parse("Orders(take=3;filter=Status:eq:Delivered;sort=Id:desc),Orders.OrderItems(take=5)");
+        var tree = ExpandNormalizer.Normalize(asts);
 
-        var result = ExpandNormalizer.Normalize(ast);
+        // One root: Orders (merged from both flat paths).
+        tree.Should().ContainSingle();
+        var orders = tree[0];
+        orders.Path.Should().Be("Orders");
+        orders.Take.Should().Be(3);
+        orders.Filter.Should().NotBeNull();
+        orders.Filter!.Filters.Should().Contain(f => f.Field == "Status" && f.Value == "Delivered");
+        orders.Sort.Should().Contain(s => s.Field == "Id" && s.Descending);
 
-        result.Should().ContainSingle();
-        result[0].Path.Should().Be("Orders");
-        result[0].Children.Should().BeEmpty();
+        // Child: OrderItems with its own scoped options.
+        var orderItems = orders.Children.Should().ContainSingle().Subject;
+        orderItems.Path.Should().Be("OrderItems");
+        orderItems.Take.Should().Be(5);
+        orderItems.Filter.Should().BeNull();
+        orderItems.Sort.Should().BeNull();
     }
 
     [Fact]
-    public void Normalize_FlatDottedPath_ReturnsRecursiveTree()
+    public void ThreeLevelPath_NormalizesIntoRecursiveChain()
     {
-        var ast = new List<ExpandAst>
-        {
-            new() { Path = ["Orders", "OrderItems"] }
-        };
+        var asts = DslExpandParser.Parse("A.B.C(take=2)");
+        var tree = ExpandNormalizer.Normalize(asts);
 
-        var result = ExpandNormalizer.Normalize(ast);
+        var a = tree[0];
+        a.Path.Should().Be("A");
+        a.Take.Should().BeNull(); // options attach to the deepest segment
 
-        result.Should().ContainSingle();
-        result[0].Path.Should().Be("Orders");
-        result[0].Children.Should().ContainSingle();
-        result[0].Children[0].Path.Should().Be("OrderItems");
-        result[0].Children[0].Children.Should().BeEmpty();
+        var b = a.Children.Should().ContainSingle().Subject;
+        b.Path.Should().Be("B");
+        b.Take.Should().BeNull();
+
+        var c = b.Children.Should().ContainSingle().Subject;
+        c.Path.Should().Be("C");
+        c.Take.Should().Be(2);
     }
 
     [Fact]
-    public void Normalize_NestedChildren_ReturnsRecursiveTree()
+    public void DuplicatePath_AtParseTime_Rejected()
     {
-        var ast = new List<ExpandAst>
-        {
-            new()
-            {
-                Path = ["Orders"],
-                Children =
-                [
-                    new() { Path = ["OrderItems"] }
-                ]
-            }
-        };
+        var act = () => DslExpandParser.Parse("Orders(take=3),Orders(take=10)");
 
-        var result = ExpandNormalizer.Normalize(ast);
-
-        result.Should().ContainSingle();
-        result[0].Path.Should().Be("Orders");
-        result[0].Children.Should().ContainSingle();
-        result[0].Children[0].Path.Should().Be("OrderItems");
+        act.Should().Throw<Exception>().WithMessage("*Duplicate expand path*");
     }
 
     [Fact]
-    public void Normalize_FlatAndNestedProduceSameResult()
+    public void CaseInsensitiveDuplicatePath_Rejected()
     {
-        var flatAst = new List<ExpandAst>
-        {
-            new() { Path = ["Orders", "OrderItems"] }
-        };
+        var act = () => DslExpandParser.Parse("Orders(take=3),orders(take=10)");
 
-        var nestedAst = new List<ExpandAst>
-        {
-            new()
-            {
-                Path = ["Orders"],
-                Children =
-                [
-                    new() { Path = ["OrderItems"] }
-                ]
-            }
-        };
-
-        var flatResult = ExpandNormalizer.Normalize(flatAst);
-        var nestedResult = ExpandNormalizer.Normalize(nestedAst);
-
-        flatResult.Should().HaveCount(1);
-        nestedResult.Should().HaveCount(1);
-        flatResult[0].Path.Should().Be(nestedResult[0].Path);
-        flatResult[0].Children.Should().HaveCount(1);
-        nestedResult[0].Children.Should().HaveCount(1);
-        flatResult[0].Children[0].Path.Should().Be(nestedResult[0].Children[0].Path);
+        act.Should().Throw<Exception>().WithMessage("*Duplicate expand path*");
     }
 
     [Fact]
-    public void Normalize_AttachesFilterToDeepestNode()
+    public void SiblingRoots_RemainSeparate()
     {
-        var ast = new List<ExpandAst>
-        {
-            new()
-            {
-                Path = ["Orders", "OrderItems"],
-                Filter = new() { Logic = LogicOperator.And }
-            }
-        };
+        var asts = DslExpandParser.Parse("Orders(take=3),Invoices(take=5)");
+        var tree = ExpandNormalizer.Normalize(asts);
 
-        var result = ExpandNormalizer.Normalize(ast);
-
-        result[0].Filter.Should().BeNull();
-        result[0].Children[0].Filter.Should().NotBeNull();
-    }
-
-    [Fact]
-    public void Normalize_AttachesSortToDeepestNode()
-    {
-        var ast = new List<ExpandAst>
-        {
-            new()
-            {
-                Path = ["Orders", "OrderItems"],
-                Sort = [new() { Field = "Id", Descending = true }]
-            }
-        };
-
-        var result = ExpandNormalizer.Normalize(ast);
-
-        result[0].Sort.Should().BeNull();
-        result[0].Children[0].Sort.Should().NotBeNull();
-        result[0].Children[0].Sort![0].Field.Should().Be("Id");
+        tree.Should().HaveCount(2);
+        tree[0].Path.Should().Be("Orders");
+        tree[0].Take.Should().Be(3);
+        tree[1].Path.Should().Be("Invoices");
+        tree[1].Take.Should().Be(5);
     }
 }

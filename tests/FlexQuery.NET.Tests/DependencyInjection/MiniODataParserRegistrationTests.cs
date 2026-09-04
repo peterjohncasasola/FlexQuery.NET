@@ -3,6 +3,7 @@ using FlexQuery.NET.Parsers.MiniOData;
 
 namespace FlexQuery.NET.Tests.DependencyInjection;
 
+[Collection("GlobalConfiguration")]
 public class MiniODataParserRegistrationTests
 {
     [Fact]
@@ -13,3 +14,4 @@ public class MiniODataParserRegistrationTests
         QueryParserRegistry.IsRegistered(QuerySyntax.MiniOData).Should().BeTrue();
     }
 }
+
