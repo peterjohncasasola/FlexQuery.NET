@@ -19,6 +19,13 @@ builder.Services.AddControllers()
     {
         options.JsonSerializerOptions.DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull;
         options.JsonSerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.CamelCase;
+        // Guard against object cycles when entity graphs contain bidirectional
+        // navigations (e.g. Customer.Orders <-> Order.Customer). FlexQuery's default
+        // no-tracking execution avoids inverse-navigation fixup, but host-level
+        // configuration (tracked queries, lazy-loading proxies) can still populate
+        // both sides; IgnoreCycles serializes the back-reference as null instead of
+        // throwing a depth-32 JsonException.
+        options.JsonSerializerOptions.ReferenceHandler = System.Text.Json.Serialization.ReferenceHandler.IgnoreCycles;
     });
 
 
@@ -195,3 +202,6 @@ app.UseStaticFiles(); // Serve aggrid.html and kendo.html from wwwroot
 app.MapControllers();
 
 app.Run();
+
+// Exposes the top-level-statement entry point to WebApplicationFactory-based integration tests.
+public partial class Program { }

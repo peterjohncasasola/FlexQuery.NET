@@ -46,4 +46,18 @@ public sealed class DapperCustomersController(AppDbContext db) : ControllerBase
             __diagnostics = diagnostics
         });
     }
+
+    [HttpGet("dto")]
+    [ProducesResponseType(typeof(QueryResult<CustomerDto>), 200)]
+    public async Task<IActionResult> GetCustomersDto(
+        [FromQuery] FlexQueryParameters parameters,
+        CancellationToken cancellationToken)
+    {
+        var connection = db.Database.GetDbConnection();
+
+        var result = await connection.FlexQueryAsync<Customer, CustomerDto>(parameters,
+            cancellationToken: cancellationToken);
+
+        return Ok(result);
+    }
 }
