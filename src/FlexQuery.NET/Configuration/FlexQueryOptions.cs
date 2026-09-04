@@ -1,4 +1,5 @@
 using FlexQuery.NET.Parsers;
+using FlexQuery.NET.Mapping;
 
 namespace FlexQuery.NET.Configuration;
 
@@ -38,4 +39,26 @@ public sealed class FlexQueryOptions
     /// Defaults to <see cref="QuerySyntax.NativeDsl"/>.
     /// </summary>
     public QuerySyntax DefaultQuerySyntax { get; set; } = QuerySyntax.NativeDsl;
+
+    /// <summary>
+    /// Registers an application-level entity → DTO type map. Globally registered maps
+    /// are automatically reused by every <c>FlexQueryAsync&lt;TEntity, TResponse&gt;</c>
+    /// call; same-name compatible properties map by convention, renamed members via
+    /// <c>ForMember</c>, and renamed navigation collections via <c>ForNavigation</c>.
+    /// Per-query <c>CreateMap</c> registrations take precedence.
+    /// </summary>
+    /// <example>
+    /// <code>
+    /// options.CreateMap&lt;Customer, CustomerResponse&gt;()
+    ///     .ForMember(dto =&gt; dto.CustomerFullName, entity =&gt; entity.CustomerName);
+    /// options.CreateMap&lt;Order, OrderResponse&gt;();
+    /// </code>
+    /// </example>
+    public Mapping.ITypeMapExpression<TEntity, TDestination> CreateMap<TEntity, TDestination>()
+        where TEntity : class
+        where TDestination : class
+    {
+        var typeMap = (Mapping.TypeMap)FlexQueryMapping.Registry.GetOrCreate(typeof(TEntity), typeof(TDestination));
+        return new Mapping.TypeMapExpression<TEntity, TDestination>(typeMap);
+    }
 }
