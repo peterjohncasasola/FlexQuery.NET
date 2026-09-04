@@ -15,6 +15,7 @@ public class SharedTestDbContext(DbContextOptions<SharedTestDbContext> options) 
     public DbSet<User> Users => Set<User>();
     public DbSet<Role> Roles => Set<Role>();
     public DbSet<Permission> Permissions => Set<Permission>();
+    public DbSet<Discount> Discounts => Set<Discount>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -164,8 +165,17 @@ public class SharedTestDbContext(DbContextOptions<SharedTestDbContext> options) 
             entity.HasKey(x => x.Id);
             entity.Property(x => x.Sku).IsRequired();
         });
-    }
 
+        modelBuilder.Entity<Discount>(entity =>
+        {
+            entity.HasKey(x => x.Id);
+        });
+
+        modelBuilder.Entity<OrderItem>()
+            .HasMany(x => x.Discounts)
+            .WithOne()
+            .HasForeignKey(x => x.OrderItemId);
+    }
     public static SharedTestDbContext Create(string? dbName = null)
     {
         var opts = new DbContextOptionsBuilder<SharedTestDbContext>()

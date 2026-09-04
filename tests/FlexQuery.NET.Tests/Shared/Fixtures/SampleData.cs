@@ -22,6 +22,7 @@ public static class SampleData
                 Email = "alice@example.com",
                 CreatedAt = new DateTime(2023, 1, 1),
                 Status = nameof(Status.Active),
+                Salary = 50000m,
                 Orders = []
             };
             var aliceProfile = new Profile { Id = 1, Bio = "Developer" };
@@ -52,6 +53,7 @@ public static class SampleData
                 Email = "bob@example.com",
                 CreatedAt = new DateTime(2023, 2, 1),
                 Status = nameof(Status.Inactive),
+                Salary = 60000m,
                 Orders = []
             };
             var bobProfile = new Profile { Id = 2, Bio = "Designer" };
@@ -70,6 +72,7 @@ public static class SampleData
                 CreatedAt = new DateTime(2023, 3, 1),
                 Status = nameof(Status.Pending),
                 Profile = new Profile { Id = 3, Bio = "Manager" },
+                Salary = 70000m,
                 Orders = []
             };
             profiles.Add(carol.Profile!);
@@ -87,6 +90,7 @@ public static class SampleData
                 CreatedAt = new DateTime(2023, 4, 1),
                 Status = nameof(Status.Active),
                 Profile = null,
+                Salary = 55000m,
                 Orders = []
             };
 
@@ -98,6 +102,7 @@ public static class SampleData
                 City = "London",
                 CreatedAt = new DateTime(2023, 5, 1),
                 Status = nameof(Status.Inactive),
+                Salary = 45000m,
                 Orders = []
             };
 
@@ -109,6 +114,7 @@ public static class SampleData
                 City = "Berlin",
                 CreatedAt = new DateTime(2023, 6, 1),
                 Status = nameof(Status.Active),
+                Salary = 80000m,
                 Orders = []
             };
 
@@ -120,6 +126,7 @@ public static class SampleData
                 City = "Paris",
                 CreatedAt = new DateTime(2023, 7, 1),
                 Status = nameof(Status.Pending),
+                Salary = 35000m,
                 Orders = []
             };
 
@@ -131,6 +138,7 @@ public static class SampleData
                 City = "New York",
                 CreatedAt = new DateTime(2023, 8, 1),
                 Status = nameof(Status.Active),
+                Salary = 90000m,
                 Orders = []
             };
 
@@ -142,6 +150,7 @@ public static class SampleData
                 City = "Berlin",
                 CreatedAt = new DateTime(2023, 9, 1),
                 Status = nameof(Status.Inactive),
+                Salary = 65000m,
                 Orders = []
             };
 
@@ -154,6 +163,7 @@ public static class SampleData
                 City = "London",
                 CreatedAt = new DateTime(2023, 10, 1),
                 Status = nameof(Status.Active),
+                Salary = 58000m,
                 Orders = []
             };
 

@@ -36,6 +36,7 @@
       <ProjectReference Include="..\..\src\FlexQuery.NET.Adapters.AgGrid\FlexQuery.NET.Adapters.AgGrid.csproj" />
       <ProjectReference Include="..\..\src\FlexQuery.NET.Adapters.Kendo\FlexQuery.NET.Adapters.Kendo.csproj" />
       <ProjectReference Include="..\..\src\FlexQuery.NET.Diagnostics\FlexQuery.NET.Diagnostics.csproj" />
+      <ProjectReference Include="..\..\samples\FlexQuery.NET.Samples.WebApi\FlexQuery.NET.Samples.WebApi.csproj" />
     </ItemGroup>
 
 </Project>
