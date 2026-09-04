@@ -128,10 +128,16 @@ internal static class ExpressionBuilder
         if (string.IsNullOrWhiteSpace(condition.Field)) return null;
         var op = FilterOperators.Normalize(condition.Operator);
         if (!FilterOperators.IsSupported(op)) return null;
-        if (!FieldRegistry.IsAllowed(entityType, condition.Field)) return null;
 
         if (FieldResolver.TryResolveMappedExpression(param, condition.Field, options, out var resolvedExpr, out var resolvedType))
         {
+            // The optional FieldRegistry whitelist is entity-keyed. In DTO mode the raw
+            // field is a public name, so also accept the resolved entity member name —
+            // otherwise a renamed field would be silently dropped from the filter.
+            if (!FieldRegistry.IsAllowed(entityType, condition.Field)
+                && !IsRegistryAllowedForMember(entityType, resolvedExpr))
+                return null;
+
             if (condition.ScopedFilter is not null)
                 return BuildScopedCollectionExpression(resolvedExpr, resolvedType, op, condition.ScopedFilter, options);
 
@@ -146,6 +152,12 @@ internal static class ExpressionBuilder
             if (expr is null) return null;
             return condition.IsNegated ? Expression.Not(expr) : expr;
         }
+
+        if (!FieldRegistry.IsAllowed(entityType, condition.Field)) return null;
+
+        // Public-surface enforcement: when a DTO surface is active, a field that does not
+        // resolve through the surface must not fall back to entity reflection.
+        if (FieldResolver.IsDtoSurfaceActive(options)) return null;
 
         if (!SafePropertyResolver.TryResolveChain(entityType, condition.Field, out var chain)) return null;
 
@@ -167,18 +179,41 @@ internal static class ExpressionBuilder
         return condition.IsNegated ? Expression.Not(expression) : expression;
     }
 
+    /// <summary>
+    /// Returns true when the resolved expression targets an entity member that is
+    /// whitelisted in the (entity-keyed, optional) FieldRegistry.
+    /// </summary>
+    private static bool IsRegistryAllowedForMember(Type entityType, Expression resolvedExpr)
+    {
+        var member = resolvedExpr as MemberExpression;
+        var root = member?.Expression;
+        while (root is MemberExpression inner)
+        {
+            member = inner;
+            root = inner.Expression;
+        }
+
+        return member?.Member.Name is { } name && FieldRegistry.IsAllowed(entityType, name);
+    }
+
     private static Expression? BuildScopedCollectionExpression(
         Expression? collectionAccess,
         Type? collectionType,
         string quantifier,
         FilterGroupNode scopedFilter,
         QueryOptions options)
-    {
-        if (collectionAccess is null || collectionType is null) return null;
+    {        if (collectionAccess is null || collectionType is null) return null;
         if (!SafePropertyResolver.TryGetCollectionElementType(collectionType, out var elementType)) return null;
 
         var itemParam = Expression.Parameter(elementType, "sc");
-        var predicate = BuildGroupExpression(itemParam, scopedFilter, elementType, options);
+
+        Expression? predicate;
+        // Scoped filter fields are entity-level names on the element type, not part of
+        // the root public surface — suppress DTO-surface enforcement for this scope.
+        using (FieldResolver.SuppressSurface(options))
+        {
+            predicate = BuildGroupExpression(itemParam, scopedFilter, elementType, options);
+        }
         if (predicate is null) return null;
 
         if (quantifier == FilterOperators.All)

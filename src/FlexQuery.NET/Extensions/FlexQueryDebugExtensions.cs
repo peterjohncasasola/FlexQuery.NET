@@ -61,7 +61,7 @@ public static class FlexQueryDebugExtensions
         }
     }
 
-    private sealed class DebugQueryable<T>(Expression expression, IQueryProvider provider) : IQueryable<T>
+    private sealed class DebugQueryable<T>(Expression expression, IQueryProvider provider) : IOrderedQueryable<T>
     {
         public Type ElementType => typeof(T);
         public Expression Expression { get; } = expression;

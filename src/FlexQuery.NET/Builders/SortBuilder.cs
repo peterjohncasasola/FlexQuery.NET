@@ -61,6 +61,9 @@ internal static class SortBuilder
         }
         else
         {
+            // Public-surface enforcement: no entity reflection fallback in DTO mode.
+            if (FieldResolver.IsDtoSurfaceActive(options)) return false;
+
             if (!SafePropertyResolver.TryResolveChain(parameter.Type, sort.Field, out var chain)
                 || chain.Count == 0)
             {
@@ -131,6 +134,9 @@ internal static class SortBuilder
             propertyExpression = resolvedExpr;
             return true;
         }
+
+        // Public-surface enforcement: no entity reflection fallback in DTO mode.
+        if (FieldResolver.IsDtoSurfaceActive(options)) return false;
 
         if (!SafePropertyResolver.TryResolveChain(parameter.Type, path, out var chain))
             return false;

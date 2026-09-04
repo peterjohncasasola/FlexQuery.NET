@@ -1,4 +1,5 @@
 using System.Linq.Expressions;
+using System.Reflection;
 using FlexQuery.NET.Caching;
 using FlexQuery.NET.Models;
 using FlexQuery.NET.Models.Filters;
@@ -85,32 +86,108 @@ internal static class QueryBuilder
     {
         if (options?.Paging == null || options.Paging.Disabled) return query;
 
-        if (options.Paging.Skip > 0 && query is not IOrderedQueryable<T>)
+        // Deterministic ordering is required whenever the root page is sliced
+        // (Skip > 0), and providers in split-query mode additionally reject
+        // Skip/Take without ordering on the first page — inject the default
+        // order when the query carries no ordering. The runtime type check alone
+        // is not sufficient: EF's EntityQueryable implements IOrderedQueryable
+        // even for unordered queries, so inspect the expression tree.
+        if (query is not IOrderedQueryable<T> || !HasOrdering(query.Expression))
         {
-            var fieldName = options.Select?.FirstOrDefault(f => !string.IsNullOrWhiteSpace(f.Field) && !f.Field.Contains('.'));
+            var fieldName = options.Select?.FirstOrDefault(f => !string.IsNullOrWhiteSpace(f.Field) && !f.Field.Contains('.') && IsScalarSelectField(typeof(T), f));
             if (fieldName == null)
             {
                 var allProps = ReflectionCache.GetProperties(typeof(T));
                 var defaultSortProp = allProps
                     .FirstOrDefault(p => p.Name.Equals("Id", StringComparison.OrdinalIgnoreCase) || p.Name.Equals("Key", StringComparison.OrdinalIgnoreCase))
-                    ?? allProps.FirstOrDefault();
+                    ?? allProps.FirstOrDefault(IsScalarProperty);
                 fieldName = defaultSortProp is null ? null : new SelectNode { Field = defaultSortProp.Name };
             }
 
             if (fieldName != null)
             {
-                var defaultSortProp = ReflectionCache.GetProperty(typeof(T), fieldName.Field);
-                if (defaultSortProp != null && !IsCollectionType(defaultSortProp.PropertyType))
+                // Resolve through the shared field-resolution pipeline so DTO surface
+                // names (renamed fields) order deterministically too.
+                var parameter = Expression.Parameter(typeof(T), "x");
+                Expression keyExpr;
+                Type keyType;
+
+                if (fieldName.Field != null)
                 {
-                    var parameter = Expression.Parameter(typeof(T), "x");
-                    var property = Expression.Property(parameter, defaultSortProp);
-                    var keySelector = Expression.Lambda(property, parameter);
-                    query = SortBuilder.ApplyInitialOrder(query, keySelector, defaultSortProp.PropertyType, false);
+                    var defaultSortProp = ReflectionCache.GetProperty(typeof(T), fieldName.Field);
+                    if (defaultSortProp != null && IsScalarProperty(defaultSortProp))
+                    {
+                        keyExpr = Expression.Property(parameter, defaultSortProp);
+                        keyType = defaultSortProp.PropertyType;
+                    }
+                    else if (SortBuilder.BuildPropertyExpression(parameter, fieldName.Field, options, out var resolvedExpr)
+                             && IsScalarType(resolvedExpr.Type))
+                    {
+                        keyExpr = resolvedExpr;
+                        keyType = resolvedExpr.Type;
+                    }
+                    else
+                    {
+                        return query.Skip(options.Paging.Skip).Take(options.Paging.PageSize);
+                    }
+
+                    var keySelector = Expression.Lambda(keyExpr, parameter);
+                    query = SortBuilder.ApplyInitialOrder(query, keySelector, keyType, false);
                 }
             }
         }
 
         return query.Skip(options.Paging.Skip).Take(options.Paging.PageSize);
+    }
+
+    /// <summary>
+    /// True when the select node's output type is a scalar (primitive, string, enum,
+    /// decimal, or nullable thereof). Default-order injection must order by a scalar:
+    /// ordering by a navigation reference yields nondeterministic (null-first) results.
+    /// </summary>
+    private static bool IsScalarSelectField(Type targetType, SelectNode node)
+    {
+        if (node.Children is { Count: > 0 }) return false;
+        var prop = ReflectionCache.GetProperty(targetType, node.Field);
+        return prop is null || IsScalarType(prop.PropertyType);
+    }
+
+    private static bool IsScalarProperty(PropertyInfo property) => IsScalarType(property.PropertyType);
+
+    private static bool IsScalarType(Type type)
+    {
+        var underlying = Nullable.GetUnderlyingType(type) ?? type;
+        return underlying.IsPrimitive
+               || underlying.IsEnum
+               || underlying == typeof(string)
+               || underlying == typeof(decimal)
+               || underlying == typeof(DateTime)
+               || underlying == typeof(DateTimeOffset)
+               || underlying == typeof(TimeSpan);
+    }
+
+    /// <summary>
+    /// Determines whether the query expression already carries an ordering node.
+    /// Needed because EF's <c>EntityQueryable</c> implements <see cref="IOrderedQueryable"/>
+    /// even for unordered queries, making the runtime type check unreliable.
+    /// </summary>
+    private static bool HasOrdering(Expression? expression)
+    {
+        while (expression is MethodCallExpression call)
+        {
+            if (call.Method.DeclaringType == typeof(Queryable)
+                && call.Method.Name is nameof(Queryable.OrderBy)
+                    or nameof(Queryable.OrderByDescending)
+                    or nameof(Queryable.ThenBy)
+                    or nameof(Queryable.ThenByDescending))
+            {
+                return true;
+            }
+
+            expression = call.Object ?? (call.Arguments.Count > 0 ? call.Arguments[0] : null);
+        }
+
+        return false;
     }
 
     /// <summary>Applies keyset (seek/cursor) pagination. Generates WHERE predicate from cursor values instead of Skip/Take.</summary>
@@ -126,7 +203,7 @@ internal static class QueryBuilder
         if (options.Cursor is null)
             return query.Take(options.Paging.PageSize);
         
-        var orderings = KeysetPaginationBuilder.BuildOrderingInfos<T>(options.Sort);
+        var orderings = KeysetPaginationBuilder.BuildOrderingInfos<T>(options.Sort, options);
         var predicate = KeysetPaginationBuilder.BuildSeekPredicate<T>(orderings, options.Cursor.Values);
         
         return query.Where(predicate).Take(options.Paging.PageSize);

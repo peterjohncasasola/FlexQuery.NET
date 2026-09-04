@@ -275,24 +275,27 @@ internal static class FlatProjectionBuilder
             {
                 if (mappings.TryGetValue(propName, out var mappedLambda))
                 {
-                    leafChildren.Add((propName, node, null!)); 
+                    leafChildren.Add((propName, node, null!));
                     continue;
                 }
             }
 
             var pi = ReflectionCache.GetProperty(currentType, propName);
-            if (pi == null) continue;
-
-            if (pi != null)
+            if (pi == null)
             {
-                bool isNav = TypeClassification.IsCollectionType(pi.PropertyType, out var elemType)
-                             || (!TypeClassification.IsScalarType(pi.PropertyType) && node.HasChildren);
-
-                if (isNav)
-                    navChildren.Add((propName, node, pi, elemType ?? pi.PropertyType));
-                else if (TypeClassification.IsScalarType(pi.PropertyType))
-                    leafChildren.Add((propName, node, pi));
+                // Public-surface enforcement: mapped DTO fields are already handled above
+                // via ExpressionMappings; a non-resolvable field in DTO mode is skipped.
+                continue;
             }
+
+            var isNav = TypeClassification.IsCollectionType(pi.PropertyType, out var elemType)
+                        || (!TypeClassification.IsScalarType(pi.PropertyType) && node.HasChildren);
+
+            if (isNav)
+                navChildren.Add((propName, node, pi, elemType));
+            
+            else if (TypeClassification.IsScalarType(pi.PropertyType))
+                leafChildren.Add((propName, node, pi));
         }
 
         // Pass 2: validate

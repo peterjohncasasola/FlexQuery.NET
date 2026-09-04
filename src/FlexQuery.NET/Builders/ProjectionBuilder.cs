@@ -94,6 +94,9 @@ internal static class ProjectionBuilder
             }
             else
             {
+                // Public-surface enforcement: no entity reflection fallback in DTO mode.
+                if (FieldResolver.IsDtoSurfaceActive(options)) continue;
+
                 var propInfo = ReflectionCache.GetProperty(sourceType, propName);
                 if (propInfo == null) continue;
                 propAccess = Expression.Property(source, propInfo);
@@ -109,7 +112,15 @@ internal static class ProjectionBuilder
                 if (ProjectionMetadataBuilder.IsIEnumerable(propType, out var itemType))
                 {
                     var itemParam = Expression.Parameter(itemType, "i");
-                    var itemInit = BuildMemberInit(itemParam, itemType, childNode, childFilterContext, options, isRoot: false);
+
+                    Expression itemInit;
+                    // Nested navigation children are entity-level fields, not part of the
+                    // root public surface — suppress DTO-surface enforcement in this scope.
+                    using (FieldResolver.SuppressSurface(options))
+                    {
+                        itemInit = BuildMemberInit(itemParam, itemType, childNode, childFilterContext, options, isRoot: false);
+                    }
+
                     var selectLambda = Expression.Lambda(itemInit, itemParam);
 
                     var asQueryableMethod = AsQueryable.MakeGenericMethod(itemType);
@@ -133,7 +144,12 @@ internal static class ProjectionBuilder
                 }
                 else
                 {
-                    var nestedInit = BuildMemberInit(propAccess, propType, childNode, childFilterContext, options, isRoot: false);
+                    Expression nestedInit;
+                    using (FieldResolver.SuppressSurface(options))
+                    {
+                        nestedInit = BuildMemberInit(propAccess, propType, childNode, childFilterContext, options, isRoot: false);
+                    }
+
                     var isNullable = !propType.IsValueType || Nullable.GetUnderlyingType(propType) != null;
 
                     if (isNullable)

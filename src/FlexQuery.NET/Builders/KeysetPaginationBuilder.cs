@@ -4,6 +4,9 @@ using System.Text.Json;
 using FlexQuery.NET.Caching;
 using FlexQuery.NET.Expressions;
 using FlexQuery.NET.Models.Paging;
+using FlexQuery.NET.Models;
+using FlexQuery.NET.Resolvers;
+using FlexQuery.NET.Security;
 using FlexQuery.NET.Validation;
 
 namespace FlexQuery.NET.Builders;
@@ -14,11 +17,13 @@ internal static class KeysetPaginationBuilder
     private static readonly MethodInfo OrderByDescendingMethod = ExpressionMethodCache.QueryableOrderByDescending();
     private static readonly MethodInfo ThenByMethod = ExpressionMethodCache.QueryableThenBy();
     private static readonly MethodInfo ThenByDescendingMethod = ExpressionMethodCache.QueryableThenByDescending();
-    public static List<(LambdaExpression KeySelector, bool Descending)> BuildOrderingInfos<T>(List<SortNode> sorts)
+    public static List<(LambdaExpression KeySelector, bool Descending)> BuildOrderingInfos<T>(
+        List<SortNode> sorts,
+        QueryOptions? options = null)
     {
         if (sorts.Count == 0)
             throw new InvalidOperationException("Keyset pagination requires at least one sort field. Provide a Sort expression or call .OrderBy() before .SeekAfter().");
-        
+
         var result = new List<(LambdaExpression, bool)>(sorts.Count);
         var parameter = Expression.Parameter(typeof(T), "x");
 
@@ -26,12 +31,26 @@ internal static class KeysetPaginationBuilder
         {
             if (string.IsNullOrWhiteSpace(sort.Field)) continue;
 
+            // Resolve through the shared field-resolution pipeline (DTO surface first),
+            // falling back to reflection for entity-only names.
+            if (options != null
+                && SortBuilder.BuildPropertyExpression(parameter, sort.Field, options, out var keyExpr)
+                && !SafePropertyResolver.TryGetCollectionElementType(keyExpr.Type, out _))
+            {
+                var keySelector = Expression.Lambda(keyExpr, parameter);
+                result.Add((keySelector, sort.Descending));
+                continue;
+            }
+
+            // Public-surface enforcement: no entity reflection fallback in DTO mode.
+            if (options != null && FieldResolver.IsDtoSurfaceActive(options)) continue;
+
             var prop = ReflectionCache.GetProperty(typeof(T), sort.Field);
             if (prop == null) continue;
 
-            var keyExpr = Expression.Property(parameter, prop);
-            var keySelector = Expression.Lambda(keyExpr, parameter);
-            result.Add((keySelector, sort.Descending));
+            var propertyExpr = Expression.Property(parameter, prop);
+            var propertySelector = Expression.Lambda(propertyExpr, parameter);
+            result.Add((propertySelector, sort.Descending));
         }
 
         return result;

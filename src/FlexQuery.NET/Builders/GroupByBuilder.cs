@@ -235,6 +235,9 @@ internal static class GroupByBuilder
             return true;
         }
 
+        // Public-surface enforcement: no entity reflection fallback in DTO mode.
+        if (FieldResolver.IsDtoSurfaceActive(options)) return false;
+
         if (!SafePropertyResolver.TryResolveChain(rootType, path, out var chain)) return false;
         if (chain.Any(p => SafePropertyResolver.TryGetCollectionElementType(p.PropertyType, out _))) return false;
         foreach (var prop in chain)
