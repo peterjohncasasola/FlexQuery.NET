@@ -5,6 +5,7 @@ using FlexQuery.NET.Execution;
 using FlexQuery.NET.Metadata;
 using FlexQuery.NET.Models;
 using FlexQuery.NET.Options;
+using FlexQuery.NET.QuerySurface;
 using FlexQuery.NET.Resolvers;
 using FlexQuery.NET.Security;
 
@@ -38,6 +39,19 @@ internal sealed class GovernanceConfigValidationRule : IValidationRule
         if (!HasGovernanceLists(execOptions)) return;
 
         var cacheKey = BuildCacheKey(targetType, execOptions);
+        // In DTO mode, governance entries are public-surface names and are checked
+        // against the public surface instead of the raw entity type.
+        if (context.QuerySurface?.ResponseType != null)
+        {
+            cacheKey += "|DTO:" + context.QuerySurface.ResponseType.FullName;
+            var dtoErrors = _cache.GetOrAdd(cacheKey, _ => ComputePublic(context.QuerySurface, execOptions));
+            for (var i = 0; i < dtoErrors.Count; i++)
+            {
+                result.Errors.Add(dtoErrors[i]);
+            }
+            return;
+        }
+
         var errors = _cache.GetOrAdd(cacheKey, _ => Compute(targetType, execOptions));
 
         for (var i = 0; i < errors.Count; i++)
@@ -71,6 +85,51 @@ internal sealed class GovernanceConfigValidationRule : IValidationRule
         ValidateIncludeList(errors, targetType, execOptions.AllowedIncludes);
 
         return errors.Count == 0 ? Array.Empty<ValidationError>() : errors;
+    }
+
+    /// <summary>
+    /// DTO-mode governance validation: every field-list entry must resolve through the
+    /// public <see cref="IQuerySurface"/>. Entity-only names (not exposed by the DTO)
+    /// are invalid configuration. <see cref="QueryGovernanceOptions.AllowedIncludes"/>
+    /// remains navigation-oriented and is validated on the entity type.
+    /// </summary>
+    private static IReadOnlyList<ValidationError> ComputePublic(IQuerySurface surface, QueryGovernanceOptions execOptions)
+    {
+        var errors = new List<ValidationError>();
+
+        ValidatePublicFieldList(errors, surface, execOptions.AllowedFields, nameof(execOptions.AllowedFields));
+        ValidatePublicFieldList(errors, surface, execOptions.BlockedFields, nameof(execOptions.BlockedFields));
+        ValidatePublicFieldList(errors, surface, execOptions.SelectableFields, nameof(execOptions.SelectableFields));
+        ValidatePublicFieldList(errors, surface, execOptions.FilterableFields, nameof(execOptions.FilterableFields));
+        ValidatePublicFieldList(errors, surface, execOptions.SortableFields, nameof(execOptions.SortableFields));
+        ValidatePublicFieldList(errors, surface, execOptions.GroupableFields, nameof(execOptions.GroupableFields));
+        ValidatePublicFieldList(errors, surface, execOptions.AggregatableFields, nameof(execOptions.AggregatableFields));
+
+        ValidateIncludeList(errors, surface.EntityType, execOptions.AllowedIncludes);
+
+        return errors.Count == 0 ? Array.Empty<ValidationError>() : errors;
+    }
+
+    private static void ValidatePublicFieldList(
+        List<ValidationError> errors,
+        IQuerySurface surface,
+        HashSet<string>? list,
+        string listName)
+    {
+        if (list is not { Count: > 0 }) return;
+
+        foreach (var entry in list)
+        {
+            if (string.IsNullOrWhiteSpace(entry) || entry.Contains('*')) continue;
+
+            if (!surface.TryResolve(entry, out _))
+            {
+                errors.Add(new ValidationError(
+                    $"Invalid governance configuration. {listName} contains '{entry}', which is not part of the public query surface for '{surface.ResponseType!.Name}'.",
+                    ValidationErrorCodes.GovernanceFieldNotFound,
+                    entry));
+            }
+        }
     }
 
     private static void ValidateFieldList(

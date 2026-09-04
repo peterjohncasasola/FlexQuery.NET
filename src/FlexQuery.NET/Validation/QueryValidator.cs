@@ -1,6 +1,7 @@
 using FlexQuery.NET.Execution;
 using FlexQuery.NET.Models;
 using FlexQuery.NET.Validation.Rules;
+using FlexQuery.NET.QuerySurface;
 
 namespace FlexQuery.NET.Validation;
 
@@ -21,6 +22,7 @@ internal sealed class QueryValidator : IQueryValidator
         _rules.Add(new SelectValidationRule());
         _rules.Add(new NavigationProjectionRequiresIncludeValidationRule());
         _rules.Add(new FieldAccessValidationRule());
+        _rules.Add(new DtoSurfaceProtectionRule());
         _rules.Add(new IncludeAccessValidationRule());
         _rules.Add(new FieldExistenceRule());
         _rules.Add(new ExpandPathValidationRule());
@@ -43,16 +45,7 @@ internal sealed class QueryValidator : IQueryValidator
         _rules.Add(new ExpandDuplicatePathValidationRule());
         _rules.Add(new ExpandExpressionContextValidationRule());
         _rules.Add(new ExpandSortOnReferenceValidationRule());
-    }
-
-    /// <summary>
-    /// Adds a custom validation rule to the pipeline.
-    /// </summary>
-    public QueryValidator AddRule(IValidationRule rule)
-    {
-        ArgumentNullException.ThrowIfNull(rule);
-        _rules.Add(rule);
-        return this;
+        _rules.Add(new ExpandPathCollectionValidationRule());
     }
 
     /// <inheritdoc />

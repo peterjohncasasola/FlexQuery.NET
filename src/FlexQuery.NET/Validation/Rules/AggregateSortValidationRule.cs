@@ -6,6 +6,7 @@ using FlexQuery.NET.Models;
 using FlexQuery.NET.Models.Aggregates;
 using FlexQuery.NET.Models.Paging;
 using FlexQuery.NET.Parsers;
+using FlexQuery.NET.Resolvers;
 
 namespace FlexQuery.NET.Validation.Rules;
 
@@ -56,8 +57,23 @@ internal sealed class AggregateSortValidationRule : IValidationRule
     {
         if (context.TargetType == null) return;
 
-        if (!ReflectionCache.TryResolvePropertyChain(context.TargetType, sort.Field, out var chain) ||
-            chain.Count == 0)
+        // Public-surface-aware resolution: in DTO mode the count target must resolve
+        // through the public surface (navigations resolve via same-name convention).
+        Type? propertyType = null;
+        if (FieldResolver.TryResolvePublicType(
+                context.QuerySurface, context.TargetType, sort.Field, context.ExecutionOptions, out var resolvedType))
+        {
+            propertyType = resolvedType;
+        }
+        else if (context.QuerySurface?.ResponseType == null
+                 && ReflectionCache.TryResolvePropertyChain(context.TargetType, sort.Field, out var chain)
+                 && chain.Count > 0)
+        {
+            // Entity-mode fallback only — never bypass the public surface in DTO mode.
+            propertyType = chain[^1].PropertyType;
+        }
+
+        if (propertyType is null)
         {
             result.Errors.Add(new ValidationError(
                 $"COUNT aggregate target '{sort.Field}' does not resolve to a valid property on type '{context.TargetType.Name}'. " +
@@ -67,11 +83,10 @@ internal sealed class AggregateSortValidationRule : IValidationRule
             return;
         }
 
-        var lastProperty = chain[^1];
-        if (!TypeClassification.IsCollectionType(lastProperty.PropertyType, out _))
+        if (!TypeClassification.IsCollectionType(propertyType, out _))
         {
             result.Errors.Add(new ValidationError(
-                $"COUNT aggregate target '{sort.Field}' resolves to property '{lastProperty.Name}' of type '{lastProperty.PropertyType.Name}', which is not a collection. " +
+                $"COUNT aggregate target '{sort.Field}' is of type '{propertyType.Name}', which is not a collection. " +
                 "COUNT may only target collection navigation properties.",
                 ValidationErrorCodes.InvalidCountTarget,
                 sort.Field));

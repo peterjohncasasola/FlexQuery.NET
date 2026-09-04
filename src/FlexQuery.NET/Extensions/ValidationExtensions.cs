@@ -2,6 +2,8 @@ using FlexQuery.NET.Models;
 using FlexQuery.NET.Validation;
 using FlexQuery.NET.Execution;
 using FlexQuery.NET.Options;
+using FlexQuery.NET.Constants;
+using FlexQuery.NET.Exceptions;
 
 namespace FlexQuery.NET;
 
@@ -35,6 +37,48 @@ public static class ValidationExtensions
     }
 
     /// <summary>
+    /// Validates the query options using the default validation pipeline, specified execution rules,
+    /// and a pre-built context that may carry additional state such as <see cref="QuerySurface"/>.
+    /// </summary>
+    /// <param name="options">The query options to validate.</param>
+    /// <param name="context">The pre-built query context.</param>
+    /// <param name="execOptions">The execution options defining server-side constraints.</param>
+    /// <returns>A <see cref="ValidationResult"/> indicating success or failure with details.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="context"/> is null.</exception>
+    public static ValidationResult ValidateOrThrow(
+        this QueryOptions options,
+        QueryContext context,
+        QueryGovernanceOptions? execOptions = null)
+    {
+        ArgumentNullException.ThrowIfNull(context);
+        execOptions ??= new QueryExecutionOptions();
+
+        if (execOptions.ExpressionMappings != null)
+        {
+            options.Items[ContextKeys.ExpressionMappings] = execOptions.ExpressionMappings;
+        }
+
+        // Publish the active DTO surface so every query operation (filter, sort, group,
+        // aggregate, projection, keyset paging) resolves public field names through the
+        // same QuerySurface/FieldDescriptor abstraction.
+        if (context.QuerySurface != null)
+        {
+            options.Items[ContextKeys.QuerySurface] = context.QuerySurface;
+        }
+
+        context.ExecutionOptions ??= execOptions;
+        var result = _defaultValidator.Validate(options, context);
+
+        if (!result.IsValid && execOptions.StrictFieldValidation)
+        {
+            var errors = string.Join("; ", result.Errors.Select(e => e.Message));
+            throw new QueryValidationException(result);
+        }
+
+        return result;
+    }
+
+    /// <summary>
     /// Validates the query options using the default validation pipeline.
     /// </summary>
     /// <typeparam name="T">The entity type being queried.</typeparam>
@@ -64,4 +108,3 @@ public static class ValidationExtensions
     }
 
 }
-

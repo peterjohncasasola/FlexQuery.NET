@@ -4,6 +4,7 @@ using FlexQuery.NET.Helpers;
 using FlexQuery.NET.Models;
 using FlexQuery.NET.Models.Aggregates;
 using FlexQuery.NET.Parsers;
+using FlexQuery.NET.Resolvers;
 using FlexQuery.NET.Security;
 
 namespace FlexQuery.NET.Validation.Rules;
@@ -21,7 +22,7 @@ internal sealed class HavingTypeCompatibilityRule : IValidationRule
         if (context.TargetType == null) return;
 
         var errors = new List<string>();
-        CollectErrors(options.Having, context.TargetType, options.Aggregates, errors);
+        CollectErrors(options.Having, context.TargetType, context, options.Aggregates, errors);
 
         foreach (var error in errors)
         {
@@ -29,24 +30,24 @@ internal sealed class HavingTypeCompatibilityRule : IValidationRule
         }
     }
 
-    private static void CollectErrors(HavingNode node, Type entityType, List<Aggregate> aggregates, List<string> errors)
+    private static void CollectErrors(HavingNode node, Type entityType, QueryContext context, List<Aggregate> aggregates, List<string> errors)
     {
         switch (node)
         {
             case HavingConditionNode c:
-                ValidateCondition(c, entityType, aggregates, errors);
+                ValidateCondition(c, entityType, context, aggregates, errors);
                 break;
             case HavingLogicalNode l:
                 foreach (var child in l.Children)
-                    CollectErrors(child, entityType, aggregates, errors);
+                    CollectErrors(child, entityType, context, aggregates, errors);
                 break;
             case HavingGroupNode g:
-                CollectErrors(g.Inner, entityType, aggregates, errors);
+                CollectErrors(g.Inner, entityType, context, aggregates, errors);
                 break;
         }
     }
 
-    private static void ValidateCondition(HavingConditionNode condition, Type entityType, List<Aggregate> aggregates, List<string> errors)
+    private static void ValidateCondition(HavingConditionNode condition, Type entityType, QueryContext context, List<Aggregate> aggregates, List<string> errors)
     {
         if (string.IsNullOrWhiteSpace(condition.Value)) return;
 
@@ -54,9 +55,10 @@ internal sealed class HavingTypeCompatibilityRule : IValidationRule
 
         if (!string.IsNullOrWhiteSpace(condition.Field))
         {
-            if (SafePropertyResolver.TryResolveChain(entityType, condition.Field, out var chain) && chain is { Count: > 0 })
+            if (FieldResolver.TryResolvePublicType(
+                    context.QuerySurface, entityType, condition.Field, context.ExecutionOptions, out var resolvedType))
             {
-                targetType = chain[^1].PropertyType;
+                targetType = resolvedType;
             }
         }
         else
@@ -66,9 +68,10 @@ internal sealed class HavingTypeCompatibilityRule : IValidationRule
                 string.Equals(a.Field, condition.Field, StringComparison.OrdinalIgnoreCase));
             if (declared is not null && !string.IsNullOrWhiteSpace(declared.Field))
             {
-                if (SafePropertyResolver.TryResolveChain(entityType, declared.Field, out var chain) && chain is { Count: > 0 })
+                if (FieldResolver.TryResolvePublicType(
+                        context.QuerySurface, entityType, declared.Field, context.ExecutionOptions, out var resolvedType))
                 {
-                    targetType = chain[^1].PropertyType;
+                    targetType = resolvedType;
                 }
             }
         }

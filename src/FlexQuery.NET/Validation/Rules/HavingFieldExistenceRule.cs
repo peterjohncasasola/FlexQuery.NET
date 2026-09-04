@@ -3,6 +3,7 @@ using FlexQuery.NET.Execution;
 using FlexQuery.NET.Helpers;
 using FlexQuery.NET.Models;
 using FlexQuery.NET.Models.Aggregates;
+using FlexQuery.NET.Resolvers;
 using FlexQuery.NET.Security;
 
 namespace FlexQuery.NET.Validation.Rules;
@@ -20,7 +21,7 @@ internal sealed class HavingFieldExistenceRule : IValidationRule
         if (context.TargetType == null) return;
 
         var errors = new List<string>();
-        CollectErrors(options.Having, context.TargetType, errors);
+        CollectErrors(options.Having, context, errors);
 
         foreach (var error in errors)
         {
@@ -29,7 +30,7 @@ internal sealed class HavingFieldExistenceRule : IValidationRule
 
         return;
 
-        static void CollectErrors(HavingNode node, Type entityType, List<string> errors)
+        static void CollectErrors(HavingNode node, QueryContext context, List<string> errors)
         {
             while (true)
             {
@@ -38,21 +39,21 @@ internal sealed class HavingFieldExistenceRule : IValidationRule
                     case HavingConditionNode c:
                         if (string.IsNullOrWhiteSpace(c.Field)) break;
 
-                        if (!SafePropertyResolver.TryResolveChain(entityType, c.Field, out var chain) || chain.Count == 0)
+                        if (!FieldResolver.TryResolvePublicType(
+                                context.QuerySurface, context.TargetType!, c.Field, context.ExecutionOptions, out var fieldType))
                         {
-                            errors.Add($"Field '{c.Field}' referenced in HAVING does not exist on type '{entityType.Name}'.");
+                            errors.Add($"Field '{c.Field}' referenced in HAVING does not exist on type '{context.TargetType!.Name}'.");
                             break;
                         }
 
-                        var lastProp = chain[^1];
-                        if (TypeHelper.IsNavigationProperty(lastProp.PropertyType))
+                        if (TypeHelper.IsNavigationProperty(fieldType))
                         {
                             errors.Add($"Field '{c.Field}' referenced in HAVING is a navigation property. Only scalar properties can be aggregated.");
                         }
 
                         break;
                     case HavingLogicalNode l:
-                        foreach (var child in l.Children) CollectErrors(child, entityType, errors);
+                        foreach (var child in l.Children) CollectErrors(child, context, errors);
                         break;
                     case HavingGroupNode g:
                         node = g.Inner;

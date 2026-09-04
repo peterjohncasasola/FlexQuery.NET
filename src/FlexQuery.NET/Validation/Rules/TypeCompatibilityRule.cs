@@ -20,17 +20,30 @@ internal sealed class TypeCompatibilityRule : IValidationRule
     {
         if (context.TargetType == null || options.Filter == null) return;
 
-        ValidateFilterGroup(options.Filter, context.TargetType, context.ExecutionOptions, result);
+        ValidateFilterGroup(options.Filter, context.TargetType, context, result, prefix: null);
     }
 
-    private void ValidateFilterGroup(FilterGroup group, Type entityType, QueryGovernanceOptions? executionOptions, ValidationResult result)
+    private void ValidateFilterGroup(
+        FilterGroup group,
+        Type entityType,
+        QueryContext context,
+        ValidationResult result,
+        string? prefix)
     {
+        var usePublicSurface = prefix is null && context.QuerySurface?.ResponseType != null;
+
         foreach (var filter in group.Filters)
         {
             if (string.IsNullOrWhiteSpace(filter.Field) || string.IsNullOrWhiteSpace(filter.Operator)) continue;
 
-            if (FieldResolver.TryResolveType(entityType, filter.Field, executionOptions, out var propertyType))
+            var resolved = usePublicSurface
+                ? FieldResolver.TryResolvePublicType(
+                    context.QuerySurface, entityType, filter.Field, context.ExecutionOptions, out var publicPropertyType)
+                : FieldResolver.TryResolveType(entityType, filter.Field, context.ExecutionOptions, out publicPropertyType);
+
+            if (resolved)
             {
+                var propertyType = publicPropertyType;
                 var op = filter.Operator.ToLowerInvariant();
 
                 // 1. Check Operator Compatibility
@@ -61,17 +74,17 @@ internal sealed class TypeCompatibilityRule : IValidationRule
 
             if (filter.ScopedFilter != null)
             {
-                if (FieldResolver.TryResolveType(entityType, filter.Field, executionOptions, out var scopedPropertyType) &&
+                if (FieldResolver.TryResolveType(entityType, filter.Field, context.ExecutionOptions, out var scopedPropertyType) &&
                     SafePropertyResolver.TryGetCollectionElementType(scopedPropertyType, out var elementType))
                 {
-                    ValidateFilterGroup(filter.ScopedFilter, elementType, executionOptions, result);
+                    ValidateFilterGroup(filter.ScopedFilter, elementType, context, result, prefix ?? filter.Field);
                 }
             }
         }
 
         foreach (var subGroup in group.Groups)
         {
-            ValidateFilterGroup(subGroup, entityType, executionOptions, result);
+            ValidateFilterGroup(subGroup, entityType, context, result, prefix);
         }
     }
 

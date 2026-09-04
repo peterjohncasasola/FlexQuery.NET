@@ -48,56 +48,60 @@ internal sealed class IncludeAccessValidationRule : IValidationRule
             }
         }
 
-        // Check expand paths - remove unauthorized ones in non-strict mode
+        // Check expand paths - remove unauthorized ones in non-strict mode.
+        // Each node's own full path is validated independently: an unauthorized
+        // descendant must not deny its authorized parent or siblings.
         if (options.Expand is not null)
         {
             for (var i = options.Expand.Count - 1; i >= 0; i--)
             {
-                if (!IsExpandPathAllowed(options.Expand[i], allowedIncludes))
+                if (!IsExpandPathAllowed(options.Expand[i], allowedIncludes, string.Empty, execOptions, result))
                 {
-                    var path = GetExpandPath(options.Expand[i]);
-                    var message = $"Expand path '{path}' is not allowed.";
-                    if (execOptions.StrictFieldValidation)
-                    {
-                        throw new QueryValidationException(message);
-                    }
-                    result.Errors.Add(new ValidationError(message, ValidationErrorCodes.IncludeAccessDenied, path));
-                    // Remove in non-strict mode
+                    // Lenient mode: remove only the unauthorized node itself.
                     options.Expand.RemoveAt(i);
                 }
             }
         }
     }
 
-    private static bool IsExpandPathAllowed(IncludeNode node, HashSet<string> allowedIncludes, string parentPath = "")
+    /// <summary>
+    /// Validates one expand node and its subtree against the whitelist.
+    /// Returns false when the node's own path is unauthorized and the node must be
+    /// removed (lenient mode). Authorized nodes with unauthorized descendants are kept:
+    /// lenient mode prunes only the unauthorized children in place, and strict mode
+    /// throws naming the exact unauthorized path.
+    /// </summary>
+    private static bool IsExpandPathAllowed(
+        IncludeNode node,
+        HashSet<string> allowedIncludes,
+        string parentPath,
+        QueryGovernanceOptions execOptions,
+        ValidationResult result)
     {
         var fullPath = string.IsNullOrEmpty(parentPath) ? node.Path : $"{parentPath}.{node.Path}";
 
         if (!allowedIncludes.Contains(fullPath))
+        {
+            var message = $"Expand path '{fullPath}' is not allowed.";
+            if (execOptions.StrictFieldValidation)
+            {
+                throw new QueryValidationException(message);
+            }
+            result.Errors.Add(new ValidationError(message, ValidationErrorCodes.IncludeAccessDenied, fullPath));
             return false;
+        }
 
         if (node.Children is { Count: > 0 })
         {
-            foreach (var child in node.Children)
+            for (var i = node.Children.Count - 1; i >= 0; i--)
             {
-                if (!IsExpandPathAllowed(child, allowedIncludes, fullPath))
-                    return false;
+                if (!IsExpandPathAllowed(node.Children[i], allowedIncludes, fullPath, execOptions, result))
+                {
+                    node.Children.RemoveAt(i);
+                }
             }
         }
 
         return true;
-    }
-
-    private static string GetExpandPath(IncludeNode node)
-    {
-        var path = node.Path;
-        if (node.Children is { Count: > 0 })
-        {
-            foreach (var child in node.Children)
-            {
-                path += "." + GetExpandPath(child);
-            }
-        }
-        return path;
     }
 }

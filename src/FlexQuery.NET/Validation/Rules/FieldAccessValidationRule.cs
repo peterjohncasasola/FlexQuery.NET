@@ -12,6 +12,7 @@ using FlexQuery.NET.Metadata;
 using FlexQuery.NET.Models.Paging;
 using FlexQuery.NET.Options;
 using FlexQuery.NET.Models.Projection;
+using FlexQuery.NET.QuerySurface;
 
 namespace FlexQuery.NET.Validation.Rules;
 
@@ -326,10 +327,58 @@ internal sealed class FieldAccessValidationRule : IValidationRule
     {
         var execOptions = context.ExecutionOptions!;
         
-        // Step 1: Normalize
-        var field = NormalizeField(rawField, execOptions);
+        // Step 1: DTO surface resolution (before entity-level normalization)
+        // For typed DTO queries, the raw field is a DTO/public surface name.
+        // Resolve it through QuerySurface first. Governance checks must use the DTO/public
+        // SurfaceName, not the underlying entity name.
+        string field;
+        ResolvedField? resolvedField = null;
+        if (context.QuerySurface?.ResponseType != null)
+        {
+            var dotIndex = rawField.IndexOf('.');
+            if (dotIndex > 0)
+            {
+                // Dotted path: the head segment must be on the public surface.
+                var head = rawField[..dotIndex];
+                if (!context.QuerySurface.TryResolve(head, out _))
+                {
+                    field = rawField;
+                    AddDenied(result, execOptions, field,
+                        $"DTO property '{head}' has no entity mapping on {context.QuerySurface.ResponseType.Name}. " +
+                        $"Call MapField<{context.QuerySurface.ResponseType.Name}>(x => x.{head}, e => e.<entityProp>) " +
+                        $"or ensure the property name matches an entity property.");
+                    return false;
+                }
 
-        // Step 2: Depth Validation
+                field = rawField;
+            }
+            else if (context.QuerySurface.TryResolve(rawField, out var resolved))
+            {
+                resolvedField = resolved;
+                field = resolved.SurfaceName;
+            }
+            else
+            {
+                field = rawField;
+                AddDenied(result, execOptions, field,
+                    $"DTO property '{field}' has no entity mapping on {context.QuerySurface.ResponseType.Name}. " +
+                    $"Call MapField<{context.QuerySurface.ResponseType.Name}>(x => x.{field}, e => e.<entityProp>) " +
+                    $"or ensure the property name matches an entity property.");
+                return false;
+            }
+        }
+        else
+        {
+            field = rawField;
+        }
+
+        // Step 2: Normalize (applies FieldMappings for entity-level aliasing when no DTO is active)
+        if (resolvedField == null)
+        {
+            field = NormalizeField(field, execOptions);
+        }
+
+        // Step 3: Depth Validation
         if (execOptions.MaxFieldDepth.HasValue)
         {
             var depth = field.Split('.', StringSplitOptions.RemoveEmptyEntries).Length;
@@ -442,7 +491,7 @@ internal sealed class FieldAccessValidationRule : IValidationRule
         if (string.IsNullOrEmpty(navPath)) return false;
 
         return IsIncludeListed(navPath, execOptions)
-               && IsNavigationPath(targetType, navPath);
+               && IsNavigationPath(targetType, navPath, context.QuerySurface);
     }
 
     private static bool IsIncludeListed(string navPath, QueryGovernanceOptions execOptions)
@@ -457,16 +506,32 @@ internal sealed class FieldAccessValidationRule : IValidationRule
         return false;
     }
 
-    private static bool IsNavigationPath(Type rootType, string path)
+    private static bool IsNavigationPath(Type rootType, string path, IQuerySurface? surface)
     {
+        // DTO mode: the navigation head may be a renamed public field; resolve the
+        // first segment through the public surface, then verify it is a navigation.
+        if (surface?.ResponseType != null)
+        {
+            var dotIndex = path.IndexOf('.');
+            var head = dotIndex < 0 ? path : path[..dotIndex];
+            if (surface.TryResolve(head, out var headField))
+            {
+                return headField.IsNavigation
+                       || IsNavigationPropertyType(headField.EntityProperty.PropertyType);
+            }
+        }
+
         if (!SafePropertyResolver.TryResolveChain(rootType, path, out var chain) || chain.Count == 0)
             return false;
 
-        var last = chain[^1];
-        if (SafePropertyResolver.TryGetCollectionElementType(last.PropertyType, out _))
+        return IsNavigationPropertyType(chain[^1].PropertyType);
+    }
+
+    private static bool IsNavigationPropertyType(Type propertyType)
+    {
+        if (SafePropertyResolver.TryGetCollectionElementType(propertyType, out _))
             return true;
 
-        var propertyType = last.PropertyType;
         return propertyType.IsClass
                && propertyType != typeof(string)
                && !TypeClassification.IsScalarType(propertyType);

@@ -20,19 +20,21 @@ internal sealed class FieldExistenceRule : IValidationRule
 
         if (options.Filter != null)
         {
-            ValidateFilterGroup(options.Filter, context.TargetType, context.ExecutionOptions, result);
+            ValidateFilterGroup(options.Filter, context, result);
         }
 
         foreach (var sort in options.Sort)
         {
             if (string.IsNullOrWhiteSpace(sort.Field)) continue;
+            if (sort.Aggregate.HasValue) continue; // Aggregate sorts are validated by AggregateSortValidationRule
             if (IsGroupedAggregateAlias(options, sort.Field)) continue;
 
-            if (!FieldResolver.TryResolveType(context.TargetType, sort.Field, context.ExecutionOptions, out _))
+            if (!FieldResolver.TryResolvePublicType(
+                    context.QuerySurface, context.TargetType, sort.Field, context.ExecutionOptions, out _))
             {
                 result.Errors.Add(new ValidationError(
-                    $"Field '{sort.Field}' does not exist on type '{context.TargetType.Name}'.", 
-                    ValidationErrorCodes.FieldNotFound, 
+                    $"Field '{sort.Field}' does not exist on type '{context.TargetType.Name}'.",
+                    ValidationErrorCodes.FieldNotFound,
                     sort.Field));
             }
         }
@@ -43,32 +45,50 @@ internal sealed class FieldExistenceRule : IValidationRule
            && options.Aggregates.Any(aggregate =>
                aggregate.Alias.Equals(field, StringComparison.OrdinalIgnoreCase));
 
-    private void ValidateFilterGroup(FilterGroup group, Type entityType, QueryGovernanceOptions? executionOptions, ValidationResult result)
+    private void ValidateFilterGroup(FilterGroup group, QueryContext context, ValidationResult result, string? prefix = null)
+        => ValidateFilterGroup(group, context.TargetType!, context, result, prefix);
+
+    private void ValidateFilterGroup(
+        FilterGroup group,
+        Type entityType,
+        QueryContext context,
+        ValidationResult result,
+        string? prefix)
     {
+        // Public-surface resolution applies to root-level fields only. Scoped filter
+        // fields and nested group fields are entity-level names on their target type.
+        var usePublicSurface = prefix is null && context.QuerySurface?.ResponseType != null;
+
         foreach (var filter in group.Filters)
         {
             if (string.IsNullOrWhiteSpace(filter.Field)) continue;
 
-            if (!FieldResolver.TryResolveType(entityType, filter.Field, executionOptions, out var propertyType))
+            var resolves = usePublicSurface
+                ? FieldResolver.TryResolvePublicType(
+                    context.QuerySurface, entityType, filter.Field, context.ExecutionOptions, out var publicPropertyType)
+                : FieldResolver.TryResolveType(entityType, filter.Field, context.ExecutionOptions, out publicPropertyType);
+
+            if (!resolves)
             {
                 result.Errors.Add(new ValidationError(
-                    $"Field '{filter.Field}' does not exist on type '{entityType.Name}'.", 
-                    ValidationErrorCodes.FieldNotFound, 
+                    $"Field '{filter.Field}' does not exist on type '{entityType.Name}'.",
+                    ValidationErrorCodes.FieldNotFound,
                     filter.Field));
                 continue;
             }
 
             if (filter.ScopedFilter != null)
             {
-                if (SafePropertyResolver.TryGetCollectionElementType(propertyType, out var elementType))
+                if (SafePropertyResolver.TryGetCollectionElementType(publicPropertyType, out var elementType))
                 {
-                    ValidateFilterGroup(filter.ScopedFilter, elementType, executionOptions, result);
+                    // Scoped filter fields are entity-level names on the element type.
+                    ValidateFilterGroup(filter.ScopedFilter, elementType, context, result, prefix ?? filter.Field);
                 }
                 else
                 {
                     result.Errors.Add(new ValidationError(
-                        $"Field '{filter.Field}' is not a collection. Scoped filters can only be applied to collections.", 
-                        ValidationErrorCodes.NotACollection, 
+                        $"Field '{filter.Field}' is not a collection. Scoped filters can only be applied to collections.",
+                        ValidationErrorCodes.NotACollection,
                         filter.Field));
                 }
             }
@@ -76,7 +96,7 @@ internal sealed class FieldExistenceRule : IValidationRule
 
         foreach (var subGroup in group.Groups)
         {
-            ValidateFilterGroup(subGroup, entityType, executionOptions, result);
+            ValidateFilterGroup(subGroup, entityType, context, result, prefix);
         }
     }
 }

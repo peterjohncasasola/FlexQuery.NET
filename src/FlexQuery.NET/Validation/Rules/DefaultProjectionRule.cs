@@ -32,24 +32,71 @@ internal static class DefaultProjectionHelper
         if (options.Select is { Count: > 0 }) return;
         if (options.HasProjection()) return;
 
+        var hasDtoSurface = ctx.QuerySurface is { ResponseType: not null };
+
+        // Build governance candidate if present
+        List<string?>? governanceCandidate = null;
         if (execOptions.SelectableFields?.Count > 0)
         {
-            options.Select = ExpandWildcardFields(execOptions.SelectableFields, ctx.TargetType);
-            return;
+            governanceCandidate = ExpandWildcardFields(execOptions.SelectableFields, ctx.TargetType)
+                .Select(n => n.Field)
+                .ToList()!;
         }
-
-        if (execOptions.RoleAllowedFields?.Count > 0 && !string.IsNullOrEmpty(execOptions.CurrentRole))
+        else if (execOptions.RoleAllowedFields?.Count > 0 && !string.IsNullOrEmpty(execOptions.CurrentRole))
         {
             if (execOptions.RoleAllowedFields.TryGetValue(execOptions.CurrentRole, out var roleFields) && roleFields.Count > 0)
             {
-                options.Select = ExpandWildcardFields(roleFields, ctx.TargetType);
-                return;
+                governanceCandidate = ExpandWildcardFields(roleFields, ctx.TargetType)
+                    .Select(n => n.Field)
+                    .ToList();
             }
         }
-
-        if (execOptions.AllowedFields?.Count > 0)
+        else if (execOptions.AllowedFields?.Count > 0)
         {
-            options.Select = ExpandWildcardFields(execOptions.AllowedFields, ctx.TargetType);
+            governanceCandidate = ExpandWildcardFields(execOptions.AllowedFields, ctx.TargetType)
+                .Select(n => n.Field)
+                .ToList();
+        }
+        else if (execOptions.BlockedFields?.Count > 0 && ctx.TargetType != null)
+        {
+            var allScalars = ReflectionCache.GetProperties(ctx.TargetType)
+                .Where(p => TypeClassification.IsScalarType(p.PropertyType))
+                .Select(p => p.Name);
+            governanceCandidate = allScalars
+                .Where(f => !WildcardMatcher.IsMatch(f, execOptions.BlockedFields))
+                .ToList()!;
+        }
+
+        if (hasDtoSurface)
+        {
+            var dtoDefaults = ctx.QuerySurface?.GetDefaultSelectFields();
+            if (governanceCandidate != null)
+            {
+                // Intersect governance candidate with resolvable DTO fields
+                if (dtoDefaults == null) return;
+                
+                var dtoDefaultSet = new HashSet<string>(dtoDefaults, ctx.QuerySurface?.FieldNameComparer);
+                var finalFields = governanceCandidate
+                    .Where(f => f != null && dtoDefaultSet.Contains(f))
+                    .ToList();
+                
+                options.Select = finalFields.Select(f => new SelectNode { Field = f, IsSynthesized = true }).ToList();
+            }
+            else
+            {
+                // No governance default: use QuerySurface defaults directly
+                if (dtoDefaults != null)
+                    options.Select = dtoDefaults
+                        .Select(f => new SelectNode { Field = f, IsSynthesized = true })
+                        .ToList();
+            }
+            return;
+        }
+
+        // Non-DTO path: preserve existing behavior
+        if (governanceCandidate != null)
+        {
+            options.Select = governanceCandidate.Select(f => new SelectNode { Field = f, IsSynthesized = true }).ToList();
             return;
         }
 
@@ -60,7 +107,7 @@ internal static class DefaultProjectionHelper
                 .Select(p => p.Name);
             options.Select = allScalars
                 .Where(f => !WildcardMatcher.IsMatch(f, execOptions.BlockedFields))
-                .Select(f => new SelectNode { Field = f })
+                .Select(f => new SelectNode { Field = f, IsSynthesized = true })
                 .ToList();
         }
     }
@@ -74,14 +121,14 @@ internal static class DefaultProjectionHelper
             {
                 if (targetType == null)
                 {
-                    result.Add(new SelectNode { Field = field });
+                    result.Add(new SelectNode { Field = field, IsSynthesized = true });
                     continue;
                 }
                 ExpandWildcard(field, targetType, result);
             }
             else
             {
-                result.Add(new SelectNode { Field = field });
+                result.Add(new SelectNode { Field = field, IsSynthesized = true });
             }
         }
         return result;
@@ -92,7 +139,7 @@ internal static class DefaultProjectionHelper
         var starIndex = pattern.IndexOf('*', StringComparison.Ordinal);
         if (starIndex < 0)
         {
-            result.Add(new SelectNode { Field = pattern });
+            result.Add(new SelectNode { Field = pattern, IsSynthesized = true });
             return;
         }
 
@@ -133,24 +180,22 @@ internal static class DefaultProjectionHelper
 
         foreach (var prop in allProps)
         {
-            if (TypeClassification.IsScalarType(prop.PropertyType))
-            {
-                var fieldPath = string.IsNullOrEmpty(prefix) ? prop.Name : $"{prefix}.{prop.Name}";
-                result.Add(new SelectNode { Field = fieldPath });
-            }
+            if (!TypeClassification.IsScalarType(prop.PropertyType)) continue;
+            
+            var fieldPath = string.IsNullOrEmpty(prefix) ? prop.Name : $"{prefix}.{prop.Name}";
+            result.Add(new SelectNode { Field = fieldPath, IsSynthesized = true });
         }
 
         foreach (var prop in allProps)
         {
-            if (!TypeClassification.IsScalarType(prop.PropertyType) && prop.PropertyType != typeof(object))
-            {
-                var childType = GetTargetType(prop.PropertyType);
-                if (childType != null && childType != type)
-                {
-                    var childPrefix = string.IsNullOrEmpty(prefix) ? prop.Name : $"{prefix}.{prop.Name}";
-                    ExpandUnderType(childType, childPrefix, result, visited);
-                }
-            }
+            if (TypeClassification.IsScalarType(prop.PropertyType) || prop.PropertyType == typeof(object)) continue;
+            
+            var childType = GetTargetType(prop.PropertyType);
+
+            if (childType == null || childType == type) continue;
+            
+            var childPrefix = string.IsNullOrEmpty(prefix) ? prop.Name : $"{prefix}.{prop.Name}";
+            ExpandUnderType(childType, childPrefix, result, visited);
         }
     }
 
