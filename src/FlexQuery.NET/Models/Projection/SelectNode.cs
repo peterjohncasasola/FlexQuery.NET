@@ -14,7 +14,7 @@ public sealed class SelectNode
     /// Orders
     /// *
     /// </summary>
-    public string Field { get; init; } = string.Empty;
+    public string? Field { get; init; } = string.Empty;
 
     /// <summary>
     /// Output alias.
@@ -26,4 +26,13 @@ public sealed class SelectNode
     /// Nested projections.
     /// </summary>
     public List<SelectNode> Children { get; } = [];
+
+    /// <summary>
+    /// True when this node was synthesized by the validator's default-projection or
+    /// wildcard-governance expansion rather than written by the API consumer. Expanded
+    /// navigation paths are part of the established default/wildcard projection
+    /// contract and are exempt from navigation-include authorization — the contract
+    /// applies only to explicitly selected navigations.
+    /// </summary>
+    public bool IsSynthesized { get; init; }
 }

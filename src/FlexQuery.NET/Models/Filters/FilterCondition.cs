@@ -6,7 +6,7 @@ namespace FlexQuery.NET.Models.Filters;
 public sealed class FilterCondition
 {
     /// <summary>The property name to filter on (supports dot-notation for nested props).</summary>
-    public string Field { get; set; } = string.Empty;
+    public string? Field { get; set; } = string.Empty;
 
     /// <summary>The comparison operator (see <see cref="Constants.FilterOperators"/>).</summary>
     public string Operator { get; set; } = "eq";

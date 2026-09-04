@@ -9,7 +9,10 @@ public abstract class FlexQueryBase
     /// <summary>The filter expression (DSL or JSON).</summary>
     public string? Filter { get; set; }
 
-    /// <summary>The sorting expression (e.g., "Name:asc,Age:desc").</summary>
+    /// <summary>
+    /// The sorting expression. Supports both direction spellings:
+    /// <c>Name:asc,Age:desc</c> (colon form) and <c>Name ASC, Age DESC</c> (space form).
+    /// </summary>
     public string? Sort { get; set; }
 
     /// <summary>The comma-separated list of fields to select.</summary>

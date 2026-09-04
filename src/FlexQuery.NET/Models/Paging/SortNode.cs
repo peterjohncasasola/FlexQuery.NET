@@ -8,7 +8,7 @@ namespace FlexQuery.NET.Models.Paging;
 public sealed class SortNode
 {
     /// <summary>The property name to sort by.</summary>
-    public string Field { get; set; } = string.Empty;
+    public string? Field { get; set; } = string.Empty;
 
     /// <summary>Aggregate function for collection sorting (sum, count, max, min, avg).</summary>
     public AggregateFunction? Aggregate { get; set; }

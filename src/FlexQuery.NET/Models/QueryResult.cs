@@ -1,4 +1,6 @@
 using System.Diagnostics;
+using System.Text.Json.Serialization;
+using FlexQuery.NET.Serialization;
 
 namespace FlexQuery.NET.Models;
 
@@ -7,6 +9,7 @@ namespace FlexQuery.NET.Models;
 /// </summary>
 /// <typeparam name="T">The item type.</typeparam>
 [DebuggerDisplay("Page={Page}, PageSize={PageSize}, Count={Data.Count}")]
+[JsonConverter(typeof(QueryResultShapeConverterFactory))]
 public sealed class QueryResult<T>
 {
     /// <summary>
@@ -63,4 +66,12 @@ public sealed class QueryResult<T>
 
     /// <summary>Serialized cursor token for the next page. Present when keyset pagination was used and there may be more results.</summary>
     public string? NextCursorToken { get; init; }
+
+    /// <summary>
+    /// When an explicit <c>select</c> is present, describes the effective public result surface.
+    /// The serializer uses this to emit only the selected output fields (under their aliases)
+    /// instead of every <typeparamref name="T"/> property. Absent for default projection.
+    /// </summary>
+    [JsonIgnore]
+    public IReadOnlyList<SelectOutputField>? ResultShape { get; set; }
 }
