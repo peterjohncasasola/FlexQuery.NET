@@ -1,4 +1,5 @@
 using FlexQuery.NET.Options;
+using FlexQuery.NET.QuerySurface;
 
 namespace FlexQuery.NET.Execution;
 
@@ -6,7 +7,7 @@ namespace FlexQuery.NET.Execution;
 /// Provides contextual information for the query validation process.
 /// This can be extended to include user roles, request metadata, etc.
 /// </summary>
-internal sealed class QueryContext
+public sealed class QueryContext
 {
     /// <summary>
     /// Optional metadata associated with the current query context.
@@ -23,4 +24,10 @@ internal sealed class QueryContext
     /// Gets or sets the server-side governance and security rules.
     /// </summary>
     public QueryGovernanceOptions? ExecutionOptions { get; set; }
+
+    /// <summary>
+    /// Gets or sets the query surface describing DTO/entity field resolution for this request.
+    /// Set by the typed DTO execution path before validation.
+    /// </summary>
+    public IQuerySurface? QuerySurface { get; set; }
 }

@@ -44,7 +44,7 @@ internal static class FlexQueryExecutionNotifier
             ctx.CancellationToken);
     }
 
-    public static async Task NotifyMaterializedAsync(this FlexQueryExecutionContext? ctx, QueryResult<object>? result, Exception? error = null)
+    public static async Task NotifyMaterializedAsync(this FlexQueryExecutionContext? ctx, object? result, Exception? error = null)
     {
         if (ctx?.Listener is null) return;
         await ctx.Listener.QueryMaterializedAsync(
