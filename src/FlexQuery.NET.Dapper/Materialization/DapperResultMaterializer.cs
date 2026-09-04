@@ -5,6 +5,9 @@ using FlexQuery.NET.Models;
 using FlexQuery.NET.Models.Projection;
 using FlexQuery.NET.Internal;
 using FlexQuery.NET.Metadata;
+using FlexQuery.NET.QuerySurface;
+using FlexQuery.NET.Dapper.Mapping;
+using FlexQuery.NET.Exceptions;
 
 namespace FlexQuery.NET.Dapper.Materialization;
 
@@ -23,8 +26,19 @@ internal static class DapperResultMaterializer
         Func<string, string>? propertyNameTransformer = null,
         Type? entityType = null)
     {
-        if (queryOptions.Includes?.Count > 0 ||
-            queryOptions.Expand?.Count > 0)
+        // Flat projection modes deliver leaf columns through single-query JOINs
+        // (SqlSelectBuilder.BuildSelectClause) — the rows ARE the flat result, so
+        // entity navigation hydration must not run: it would discard the joined leaf
+        // columns and replace them with nested navigation collections. Includes here
+        // exist only to satisfy the navigation-include authorization contract.
+        var isFlatProjection =
+            (queryOptions.ProjectionMode == ProjectionMode.Flat
+             || queryOptions.ProjectionMode == ProjectionMode.FlatMixed)
+            && queryOptions.HasProjection();
+
+        if (!isFlatProjection &&
+            (queryOptions.Includes?.Count > 0 ||
+             queryOptions.Expand?.Count > 0))
         {
             return hydrateIncludes(rows);
         }
@@ -235,6 +249,224 @@ internal static class DapperResultMaterializer
                 return instance;
             })
             .ToList();
+    }
+
+    public static IReadOnlyList<TResponse> MaterializeDto<TResponse>(
+        IEnumerable<dynamic> rows,
+        QueryOptions queryOptions,
+        IQuerySurface surface,
+        IMappingRegistry registry,
+        Type entityType)
+        where TResponse : class
+    {
+        var responseType = typeof(TResponse);
+        var responseProps = responseType.GetProperties(BindingFlags.Public | BindingFlags.Instance)
+            .Where(p => p.CanWrite)
+            .ToDictionary(p => p.Name, p => p, StringComparer.OrdinalIgnoreCase);
+
+        var mapping = registry.GetMapping(entityType);
+        var hasExplicitSelect = queryOptions.Select is { Count: > 0 };
+
+        var materialized = new List<TResponse>();
+
+        foreach (var row in rows)
+        {
+            var instance = (TResponse)Activator.CreateInstance(responseType)!;
+            var source = (IDictionary<string, object>)row;
+
+            if (!hasExplicitSelect)
+            {
+                // Default projection: map every resolvable field onto its response property.
+                foreach (var resolved in surface.GetResolvableFields())
+                {
+                    if (resolved.ResponseProperty == null) continue;
+
+                if (!TryReadValue(source, mapping, resolved.EntityProperty.Name, alias: null, out var value))
+                    continue;
+
+                if (resolved.ResponseProperty.CanWrite)
+                {
+                    resolved.ResponseProperty.SetValue(instance, Coerce(value, resolved.ResponseProperty.PropertyType));
+                }
+                }
+            }
+            else
+            {
+                // Explicit projection: bind the column value to the source ResponseProperty on
+                // TResponse. The alias is purely output/result metadata (handled by the result
+                // surface) and therefore does not require a matching TResponse property.
+                // node.Field holds the entity property name (rewritten from the DTO name).
+                foreach (var node in queryOptions.Select!)
+                {
+                    var entityPropertyName = node.Field;
+
+                    var matched = surface.GetResolvableFields()
+                        .FirstOrDefault(f => f.ResponseProperty != null
+                            && string.Equals(f.EntityProperty.Name, entityPropertyName, StringComparison.OrdinalIgnoreCase));
+                    
+                    var sourceResponseName = matched?.ResponseProperty?.Name ?? entityPropertyName;
+
+                    if (!TryReadValue(source, mapping, entityPropertyName, node.Alias, out var value))
+                        continue;
+
+                    if (responseProps.TryGetValue(sourceResponseName, out var responseProp) && responseProp.CanWrite)
+                    {
+                        responseProp.SetValue(instance, Coerce(value, responseProp.PropertyType));
+                    }
+                }
+            }
+
+            materialized.Add(instance);
+        }
+
+        return materialized;
+    }
+
+    private static object? Coerce(object? value, Type targetType)
+    {
+        if (value is null) return null;
+        var nonNull = Nullable.GetUnderlyingType(targetType) ?? targetType;
+        if (value.GetType() == nonNull) return value;
+
+        try
+        {
+            return Convert.ChangeType(value, nonNull);
+        }
+        catch (Exception)
+        {
+            return value;
+        }
+    }
+
+    private static bool TryReadValue(
+        IDictionary<string, object> source,
+        IEntityMapping mapping,
+        string entityPropertyName,
+        string? alias,
+        out object? value)
+    {
+        value = null;
+        var columns = new List<string>(3);
+        if (!string.IsNullOrWhiteSpace(alias)) columns.Add(alias!);
+
+        var columnName = mapping.GetColumnName(entityPropertyName);
+        if (!string.IsNullOrEmpty(columnName)) columns.Add(columnName);
+        columns.Add(entityPropertyName);
+
+        foreach (var column in columns)
+        {
+            if (source.TryGetValue(column, out value)) return true;
+        }
+
+        foreach (var kvp in from column in columns from kvp in source 
+                 where kvp.Key.Equals(column, StringComparison.OrdinalIgnoreCase) select kvp)
+        {
+            value = kvp.Value;
+            return true;
+        }
+
+        return false;
+    }
+
+    public static IReadOnlyList<TResponse> MaterializeGroupedDto<TResponse>(
+        IEnumerable<dynamic> rows,
+        QueryOptions queryOptions,
+        IQuerySurface? surface = null)
+        where TResponse : class
+    {
+        var responseType = typeof(TResponse);
+        var responseProps = responseType.GetProperties(BindingFlags.Public | BindingFlags.Instance)
+            .Where(p => p.CanWrite)
+            .ToDictionary(p => p.Name, p => p, StringComparer.OrdinalIgnoreCase);
+
+        // Group fields were rewritten to entity property names before SQL translation.
+        // Map each entity name back to its public DTO surface name so result identity
+        // and TResponse validation operate on public names.
+        var resultFields = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var groupField in queryOptions.GroupBy ?? [])
+        {
+            var publicName = surface != null && surface.TryResolveByEntityName(groupField, out var resolved)
+                ? resolved.SurfaceName
+                : groupField;
+            resultFields.Add(GroupByBuilder.GetProjectionName(publicName));
+        }
+        foreach (var aggregate in queryOptions.Aggregates)
+        {
+            resultFields.Add(aggregate.Alias);
+        }
+
+        var missingFields = resultFields.Except(responseProps.Keys, StringComparer.OrdinalIgnoreCase).ToList();
+        if (missingFields.Count > 0)
+        {
+            throw new FlexQueryException(
+                $"Typed response '{responseType.Name}' cannot represent grouped/aggregate result field '{missingFields[0]}'. " +
+                $"Ensure {responseType.Name} has a public writable property named '{missingFields[0]}'.");
+        }
+
+        // Row keys use entity property names (SQL aliases emitted from the rewritten
+        // group fields) or the aggregate alias; map both back to the public DTO name.
+        var entityToPublic = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var groupField in queryOptions.GroupBy ?? [])
+        {
+            var rowKey = GroupByBuilder.GetProjectionName(groupField);
+            var publicName = surface != null && surface.TryResolveByEntityName(groupField, out var resolved)
+                ? GroupByBuilder.GetProjectionName(resolved.SurfaceName)
+                : rowKey;
+            entityToPublic[rowKey] = publicName;
+        }
+
+        var materialized = new List<TResponse>();
+        foreach (var row in rows)
+        {
+            var instance = (TResponse)Activator.CreateInstance(responseType)!;
+            var source = (IDictionary<string, object>)row;
+
+            foreach (var field in resultFields)
+            {
+                if (!responseProps.TryGetValue(field, out var responseProp)) continue;
+
+                if (!TryReadGroupValue(source, field, entityToPublic, out var value)) continue;
+
+                var targetType = responseProp.PropertyType;
+                if (value != null && value.GetType() != targetType && targetType != typeof(object))
+                {
+                    value = Convert.ChangeType(value, targetType);
+                }
+
+                responseProp.SetValue(instance, value);
+            }
+
+            materialized.Add(instance);
+        }
+
+        return materialized;
+    }
+
+    private static bool TryReadGroupValue(
+        IDictionary<string, object> source,
+        string publicField,
+        Dictionary<string, string> entityToPublic,
+        out object? value)
+    {
+        value = null;
+
+        // Direct public-name hit (aggregate alias or group key), case-insensitive —
+        // SQL engines differ in alias casing (e.g. SQLite preserves 'c' for 'C').
+        foreach (var kvp in source)
+        {
+            if (!kvp.Key.Equals(publicField, StringComparison.OrdinalIgnoreCase)) continue;
+            
+            value = kvp.Value;
+            return true;
+        }
+
+        // Entity-name hit whose public identity matches this field.
+        foreach (var kvp in entityToPublic.Where(kvp => string.Equals(kvp.Value, publicField, StringComparison.OrdinalIgnoreCase)))
+        {
+            if (source.TryGetValue(kvp.Key, out value)) return true;
+        }
+
+        return false;
     }
 }
 

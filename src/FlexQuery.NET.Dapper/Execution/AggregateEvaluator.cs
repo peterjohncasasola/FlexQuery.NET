@@ -17,7 +17,8 @@ internal static class AggregateEvaluator
         QueryOptions queryOptions,
         SqlTranslator translator,
         DapperQueryOptions options,
-        CancellationToken ct)
+        CancellationToken ct,
+        Func<string, string>? publicFieldNameResolver = null)
     {
         var isGrouped = queryOptions.GroupBy is { Count: > 0 };
         if (queryOptions.Aggregates.Count == 0 || isGrouped) return null;
@@ -37,15 +38,17 @@ internal static class AggregateEvaluator
         foreach (var agg in queryOptions.Aggregates)
         {
             if (!rowDict.TryGetValue(agg.Alias, out var val)) continue;
-            
+
             var fieldName = agg.Field ?? "all";
-            
+            if (publicFieldNameResolver is not null)
+                fieldName = publicFieldNameResolver(fieldName);
+
             if (!grandTotals.TryGetValue(fieldName, out var fnDict))
             {
                 fnDict = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase);
                 grandTotals[fieldName] = fnDict;
             }
-            
+
             fnDict[agg.Function.ToKeyword()] = val;
         }
 

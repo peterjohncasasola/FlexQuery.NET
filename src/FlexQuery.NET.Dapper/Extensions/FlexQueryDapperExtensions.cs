@@ -1,9 +1,16 @@
 using System.Data.Common;
+using System.Text.Json;
+using FlexQuery.NET;
 using FlexQuery.NET.Models;
 using Microsoft.Extensions.Primitives;
 using FlexQuery.NET.Constants;
 using FlexQuery.NET.Dapper.Execution;
 using FlexQuery.NET.Dapper.Options;
+using FlexQuery.NET.QuerySurface;
+using FlexQuery.NET.Resolvers;
+using FlexQuery.NET.Serialization;
+using FlexQuery.NET.Execution;
+using FlexQuery.NET.Mapping;
 
 namespace FlexQuery.NET.Dapper;
 
@@ -140,5 +147,146 @@ public static class FlexQueryDapperExtensions
         var dapperOptions = options ?? new DapperQueryOptions();
 
         return await DapperQueryExecutor.RunAsync<T>(connection, queryOptions, dapperOptions, cancellationToken);
+    }
+
+    /// <summary>
+    /// Typed DTO overload: executes a FlexQuery against a Dapper connection and returns
+    /// strongly-typed <typeparamref name="TResponse"/> instances. DTO field names are resolved
+    /// through <see cref="QuerySurface"/>; unmapped DTO properties fail at query time.
+    /// </summary>
+    /// <remarks>
+    /// All standard FlexQuery capabilities (filter, sort, paging, keyset paging, select,
+    /// aliases, total count, Include/Expand, GroupBy, aggregates, and governance) are
+    /// supported. A feature fails only when the requested typed result shape is genuinely
+    /// incompatible with <typeparamref name="TResponse"/>.
+    /// </remarks>
+    public static async Task<QueryResult<TResponse>> FlexQueryAsync<TEntity, TResponse>(
+        this DbConnection connection,
+        FlexQueryParameters parameters,
+        Action<DapperQueryOptions>? configure = null,
+        CancellationToken cancellationToken = default)
+        where TEntity : class
+        where TResponse : class
+    {
+        var dapperOptions = new DapperQueryOptions();
+        configure?.Invoke(dapperOptions);
+
+        var effectiveSyntax = dapperOptions.QuerySyntax ?? FlexQueryCore.DefaultOptions.DefaultQuerySyntax;
+        var queryOptions = parameters.ToQueryOptions(effectiveSyntax);
+
+        return await ExecuteTypedDtoAsync<TEntity, TResponse>(connection, queryOptions, dapperOptions, cancellationToken);
+    }
+
+    public static async Task<QueryResult<TResponse>> FlexQueryAsync<TEntity, TResponse>(
+        this DbConnection connection,
+        QueryOptions queryOptions,
+        Action<DapperQueryOptions>? configure = null,
+        CancellationToken cancellationToken = default)
+        where TEntity : class
+        where TResponse : class
+    {
+        var dapperOptions = new DapperQueryOptions();
+        configure?.Invoke(dapperOptions);
+
+        return await ExecuteTypedDtoAsync<TEntity, TResponse>(connection, queryOptions, dapperOptions, cancellationToken);
+    }
+
+    public static async Task<QueryResult<TResponse>> FlexQueryAsync<TEntity, TResponse>(
+        this DbConnection connection,
+        FlexQueryParameters parameters,
+        DapperQueryOptions options,
+        CancellationToken cancellationToken = default)
+        where TEntity : class
+        where TResponse : class
+    {
+        var effectiveSyntax = options.QuerySyntax ?? FlexQueryCore.DefaultOptions.DefaultQuerySyntax;
+        var queryOptions = parameters.ToQueryOptions(effectiveSyntax);
+        return await ExecuteTypedDtoAsync<TEntity, TResponse>(connection, queryOptions, options, cancellationToken);
+    }
+
+    public static async Task<QueryResult<TResponse>> FlexQueryAsync<TEntity, TResponse>(
+        this DbConnection connection,
+        QueryOptions queryOptions,
+        DapperQueryOptions options,
+        CancellationToken cancellationToken = default)
+        where TEntity : class
+        where TResponse : class
+    {
+        return await ExecuteTypedDtoAsync<TEntity, TResponse>(connection, queryOptions, options, cancellationToken);
+    }
+
+    private static async Task<QueryResult<TResponse>> ExecuteTypedDtoAsync<TEntity, TResponse>(
+        DbConnection connection,
+        QueryOptions queryOptions,
+        DapperQueryOptions dapperOptions,
+        CancellationToken cancellationToken)
+        where TEntity : class
+        where TResponse : class
+    {
+        var surface = QuerySurfaceBuilder.Build(typeof(TEntity), typeof(TResponse), dapperOptions);
+        var ctx = new QueryContext { QuerySurface = surface, ExecutionOptions = dapperOptions, TargetType = typeof(TEntity) };
+
+        queryOptions = queryOptions.Normalize();
+        if (dapperOptions.DisablePaging) queryOptions.Paging.Disabled = true;
+
+        queryOptions.ValidateOrThrow(ctx, dapperOptions);
+
+        // Translate public include/expand paths to entity property names so the include
+        // machinery (split queries, relationship resolution) operates on the entity graph.
+        FieldResolver.TranslateIncludePathsToEntity(queryOptions, surface);
+
+        // Build the result surface from PUBLIC field names before name translation.
+        // Grouped shapes must be captured pre-rewrite so the output identity stays on
+        // DTO names rather than the internal entity property names. Ungrouped
+        // aggregates do not change the row shape — they flow to QueryResult.Aggregates.
+        var resultShape = ResultShapeBuilder.Build(queryOptions.Select, surface);
+        var isGrouped = queryOptions.GroupBy is { Count: > 0 };
+        if (isGrouped && resultShape is null)
+        {
+            resultShape = ResultShapeBuilder.BuildGroupedShape(queryOptions);
+        }
+
+        DtoFieldNameRewriter.Rewrite(queryOptions, surface);
+
+        var hasIncludeExpand = (queryOptions.Includes?.Count > 0) || (queryOptions.Expand?.Count > 0);
+
+        if (!hasIncludeExpand)
+            return await DapperQueryExecutor
+                .RunDtoAsync<TEntity, TResponse>(connection, queryOptions, dapperOptions, surface, resultShape, cancellationToken);
+        
+        var nonDtoResult = await DapperQueryExecutor.RunAsync<TEntity>(
+            connection, queryOptions, dapperOptions, cancellationToken);
+
+        // Prefer the mapping registry's TypeMap graph when the host registered one
+        // (CreateMap/ForMember/ForNavigation): nested navigations materialize
+        // recursively into DTO types — raw entity graphs never leak.
+        var typeMap = dapperOptions.MappingRegistry?.Find(typeof(TEntity), typeof(TResponse));
+
+        var data = new List<TResponse>(nonDtoResult.Data.Count);
+        foreach (var item in nonDtoResult.Data)
+        {
+            if (typeMap is not null)
+            {
+                data.Add((TResponse)TypeMapMaterializer.Materialize(typeMap, item, dapperOptions.MappingRegistry!));
+                continue;
+            }
+
+            var json = JsonSerializer.Serialize(item);
+            var dto = JsonSerializer.Deserialize<TResponse>(json);
+            if (dto is not null)
+                data.Add(dto);
+        }
+
+        return new QueryResult<TResponse>
+        {
+            Data = data,
+            TotalCount = nonDtoResult.TotalCount,
+            ResultCount = nonDtoResult.ResultCount,
+            Page = queryOptions.Paging.Page > 0 ? queryOptions.Paging.Page : 1,
+            PageSize = queryOptions.Paging.PageSize > 0 ? queryOptions.Paging.PageSize : dapperOptions.DefaultPageSize,
+            NextCursorToken = nonDtoResult.NextCursorToken,
+            ResultShape = resultShape
+        };
+
     }
 }

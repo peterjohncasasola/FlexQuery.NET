@@ -19,6 +19,8 @@ using FlexQuery.NET.Execution;
 using FlexQuery.NET.Internal;
 using FlexQuery.NET.Models;
 using FlexQuery.NET.Models.Projection;
+using FlexQuery.NET.QuerySurface;
+using FlexQuery.NET.Serialization;
 
 namespace FlexQuery.NET.Dapper.Execution;
 
@@ -52,6 +54,152 @@ internal static class DapperQueryExecutor
         await ctx.NotifyParsedAsync(queryOptions);
 
         return await ExecuteAsync<T>(connection, queryOptions, options, ctx);
+    }
+
+    public static async Task<QueryResult<TResponse>> RunDtoAsync<TEntity, TResponse>(
+        DbConnection connection,
+        QueryOptions queryOptions,
+        DapperQueryOptions options,
+        IQuerySurface surface,
+        IReadOnlyList<Models.SelectOutputField>? resultShape = null,
+        CancellationToken cancellationToken = default)
+        where TEntity : class
+        where TResponse : class
+    {
+        var ctx = options.Listener is not null
+            ? new FlexQueryExecutionContext(options.Listener, cancellationToken)
+            : null;
+
+        queryOptions.Items[ContextKeys.EntityType] = typeof(TEntity);
+
+        await ctx.NotifyParsedAsync(queryOptions);
+
+        var ct = ctx?.CancellationToken ?? cancellationToken;
+        await ConnectionHelper.EnsureOpenAsync(connection, ct);
+
+        var dialect = SqlDialectResolver.Resolve(connection);
+        var registry = options.Model?.Registry
+            ?? FlexQueryDapper.DefaultModel?.Registry
+            ?? new MappingRegistry();
+
+        var mapping = registry.GetMapping(typeof(TEntity));
+        var translator = new SqlTranslator(registry, dialect);
+
+        // Aggregates without GROUP BY are grand totals: the SQL layer handles them with a
+        // dedicated single-row aggregate query and the result flows into
+        // QueryResult.Aggregates — never into the DTO row shape.
+        var isGrouped = queryOptions.GroupBy is { Count: > 0 };
+
+        var command = translator.Translate(BuildRootOnlyOptions(queryOptions));
+        var parameters = CommandParameterAdapter.ToDynamicParameters(command);
+
+        if (ctx is not null)
+        {
+            var queryParameters =
+                command.Parameters.Select(p => new QueryParameter(p.Key, p.Value)).ToList().AsReadOnly();
+            await ctx.NotifyTranslatedAsync(command.Sql, queryParameters);
+        }
+
+        var rows = await connection.QueryAsync(
+            command.Sql,
+            parameters!,
+            commandTimeout: options.CommandTimeout,
+            commandType: CommandType.Text);
+
+        var rowsList = rows.ToList();
+
+        IReadOnlyList<TResponse> items;
+        if (isGrouped)
+        {
+            // Grouped queries have their own result shape (group keys + aliases): project
+            // into TResponse when the DTO models that shape, otherwise fall back to the
+            // dynamic grouped flow — aggregate aliases are result metadata, not row
+            // properties, and must not be required on the DTO.
+            if (!CanRepresentGroupedShape<TResponse>(queryOptions, surface))
+            {
+                var dynamicResult = await ExecuteAsync<TEntity>(connection, queryOptions, options, ctx);
+                var groupedShape = resultShape ?? ResultShapeBuilder.BuildGroupedShape(queryOptions);
+
+                var wrapped = new QueryResult<TResponse>
+                {
+                    Data = DynamicGroupedResult.WrapData<TResponse>(dynamicResult.Data),
+                    TotalCount = dynamicResult.TotalCount,
+                    ResultCount = dynamicResult.ResultCount,
+                    Page = dynamicResult.Page,
+                    PageSize = dynamicResult.PageSize,
+                    NextCursorToken = dynamicResult.NextCursorToken,
+                    Aggregates = dynamicResult.Aggregates,
+                    ResultShape = groupedShape
+                };
+
+                await ctx.NotifyMaterializedAsync(wrapped);
+                return wrapped;
+            }
+
+            items = DapperResultMaterializer.MaterializeGroupedDto<TResponse>(rowsList, queryOptions, surface);
+        }
+        else
+        {
+            items = DapperResultMaterializer.MaterializeDto<TResponse>(
+                rowsList,
+                queryOptions,
+                surface,
+                registry,
+                typeof(TEntity));
+        }
+
+        var (totalCount, resultCount) = await CountEvaluator.GetCountsAsync(connection, queryOptions, translator, command, parameters, options);
+
+        // Grand totals ride the existing aggregate metadata channel (QueryResult.Aggregates).
+        // Aggregate metadata keys use the PUBLIC field identity (DTO names) in DTO mode.
+        var grandTotals = await AggregateEvaluator.GetGrandTotalsAsync(
+            connection, queryOptions, translator, options, ct,
+            fieldName => surface.TryResolveByEntityName(fieldName, out var resolved)
+                ? resolved.SurfaceName
+                : fieldName);
+
+        await ctx.NotifyExecutedAsync(items.Count);
+
+        var effectiveShape = isGrouped
+            ? (resultShape ?? ResultShapeBuilder.BuildGroupedShape(queryOptions))
+            : resultShape;
+
+        var queryResult = queryOptions.BuildQueryResult(data: items, totalCount, aggregates: grandTotals, resultCount);
+        queryResult.ResultShape = effectiveShape;
+
+        await ctx.NotifyMaterializedAsync(queryResult);
+
+        return queryResult;
+    }
+
+    /// <summary>
+    /// Returns true when the response DTO models the full grouped result shape —
+    /// every group key and aggregate alias has a writable property. Group fields arrive
+    /// rewritten as entity names and are mapped back to their public DTO surface names.
+    /// </summary>
+    private static bool CanRepresentGroupedShape<TResponse>(QueryOptions queryOptions, IQuerySurface surface)
+        where TResponse : class
+    {
+        var writableProps = typeof(TResponse).GetProperties(BindingFlags.Public | BindingFlags.Instance)
+            .Where(p => p.CanWrite)
+            .ToDictionary(p => p.Name, StringComparer.OrdinalIgnoreCase);
+
+        foreach (var groupField in queryOptions.GroupBy ?? [])
+        {
+            var publicName = surface.TryResolveByEntityName(groupField, out var resolved)
+                ? resolved.SurfaceName
+                : groupField;
+            if (!writableProps.ContainsKey(Builders.GroupByBuilder.GetProjectionName(publicName)))
+                return false;
+        }
+
+        foreach (var aggregate in queryOptions.Aggregates)
+        {
+            if (!writableProps.ContainsKey(aggregate.Alias))
+                return false;
+        }
+
+        return true;
     }
 
     private static async Task<QueryResult<object>> ExecuteAsync<T>(
@@ -104,7 +252,16 @@ internal static class DapperQueryExecutor
             await ctx.NotifyTranslatedAsync(command.Sql, queryParameters);
         }
 
-        var hasNavigation = (queryOptions.Includes?.Count > 0) || (queryOptions.Expand?.Count > 0);
+        // Flat projection modes deliver leaf columns through the single-query JOIN in the
+        // root SQL — includes exist only to satisfy the navigation-include authorization
+        // contract and must not trigger navigation hydration/split queries.
+        var isFlatProjection =
+            (queryOptions.ProjectionMode == ProjectionMode.Flat
+             || queryOptions.ProjectionMode == ProjectionMode.FlatMixed)
+            && queryOptions.HasProjection();
+
+        var hasNavigation = !isFlatProjection &&
+                            ((queryOptions.Includes?.Count > 0) || (queryOptions.Expand?.Count > 0));
         IReadOnlyList<object> items;
 
         if (useSimpleIncludeStreaming)
@@ -187,11 +344,22 @@ internal static class DapperQueryExecutor
             return queryOptions;
         }
 
+        // Flat projection modes deliver leaf columns through the single-query JOIN — the
+        // select shape (including navigation leaf paths) must survive, otherwise the root
+        // SQL degrades to a full root-column scan and the flat output is lost.
+        var isFlatProjection =
+            (queryOptions.ProjectionMode == ProjectionMode.Flat
+             || queryOptions.ProjectionMode == ProjectionMode.FlatMixed)
+            && queryOptions.HasProjection();
+
         var rootOptions = queryOptions.CopyQueryOptions();
         rootOptions.Includes = null;
         rootOptions.Expand = null;
-        rootOptions.Select = null;
-        rootOptions.SelectTree = null;
+        if (!isFlatProjection)
+        {
+            rootOptions.Select = null;
+            rootOptions.SelectTree = null;
+        }
         return rootOptions;
     }
 
