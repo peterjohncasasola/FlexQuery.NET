@@ -71,7 +71,7 @@ internal static class DslSortParser
 
         if (AggregateFunctionHelper.IsSupported(firstSegment.ToString()))
         {
-            ParseAggregateSort(firstSegment, remaining, result, rawInput);
+            ParseAggregateSort(firstSegment, remaining, result);
             return;
         }
 
@@ -79,7 +79,8 @@ internal static class DslSortParser
     }
 
     /// <summary>
-    /// Parses a simple field sort in the format field[:direction].
+    /// Parses a simple field sort in the format <c>field[:direction]</c> or
+    /// <c>field direction</c> (e.g. <c>Name asc</c>, <c>Age DESC</c>).
     /// </summary>
     private static void ParseFieldSort(ReadOnlySpan<char> item, List<SortNode> result, string rawInput)
     {
@@ -92,8 +93,52 @@ internal static class DslSortParser
                 "Unable to parse sort expression. Empty or invalid field name.",
                 position: -1);
 
-        var field = fieldSpan.ToString();
-        var direction = colon < 0 ? QueryOptionKeys.Asc : item[(colon + 1)..].Trim().ToString();
+        string field;
+        string direction;
+
+        if (colon < 0)
+        {
+            // Space-separated direction form: the trailing whitespace-delimited token may
+            // be 'asc'/'desc'. Otherwise the whole item is the field (default ascending).
+            var trimmed = item.Trim();
+            var lastSpace = trimmed.LastIndexOf(' ');
+
+            if (lastSpace > 0)
+            {
+                var candidate = trimmed[(lastSpace + 1)..].Trim();
+                if (candidate.Equals(QueryOptionKeys.Asc, StringComparison.OrdinalIgnoreCase) ||
+                    candidate.Equals(QueryOptionKeys.Desc, StringComparison.OrdinalIgnoreCase))
+                {
+                    fieldSpan = trimmed[..lastSpace].Trim();
+                    direction = candidate.ToString();
+
+                    if (fieldSpan.IsEmpty)
+                        throw new DslParseException(
+                            "Unable to parse sort expression. Empty or invalid field name.",
+                            position: -1);
+
+                    if (!ParserUtilities.IsValidPropertyPath(fieldSpan))
+                        throw new DslParseException(
+                            $"Unable to parse sort expression. Invalid field path '{fieldSpan.ToString()}'.",
+                            position: -1);
+
+                    result.Add(new SortNode
+                    {
+                        Field = fieldSpan.ToString(),
+                        Descending = direction.Equals(QueryOptionKeys.Desc, StringComparison.OrdinalIgnoreCase)
+                    });
+                    return;
+                }
+            }
+
+            field = fieldSpan.ToString();
+            direction = QueryOptionKeys.Asc;
+        }
+        else
+        {
+            field = fieldSpan.ToString();
+            direction = item[(colon + 1)..].Trim().ToString();
+        }
 
         if (!direction.Equals(QueryOptionKeys.Asc, StringComparison.OrdinalIgnoreCase) &&
             !direction.Equals(QueryOptionKeys.Desc, StringComparison.OrdinalIgnoreCase))
@@ -123,8 +168,7 @@ internal static class DslSortParser
     private static void ParseAggregateSort(
         ReadOnlySpan<char> functionSpan,
         ReadOnlySpan<char> remaining,
-        List<SortNode> result,
-        string rawInput)
+        List<SortNode> result)
     {
         var functionName = functionSpan.ToString();
         var secondColon = remaining.IndexOf(':');

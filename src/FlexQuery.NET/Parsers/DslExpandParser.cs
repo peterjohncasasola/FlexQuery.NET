@@ -1,3 +1,4 @@
+using System.Text;
 using FlexQuery.NET.Parsers.Dsl;
 
 namespace FlexQuery.NET.Parsers;
@@ -43,6 +44,18 @@ internal static class DslExpandParser
         var lastBlock = input[blockStart..].Trim();
         if (lastBlock.Length > 0)
             result.Add(ParseExpandBlock(lastBlock));
+
+        // A navigation path may be expanded at most once per query — reject duplicate
+        // full paths deterministically (case-insensitive, consistent with field/path
+        // resolution). Merging duplicates would make take/filter/sort ambiguous.
+        var seenPaths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var ast in result)
+        {
+            var fullPath = string.Join('.', ast.Path);
+            if (!seenPaths.Add(fullPath))
+                throw new DslParseException(
+                    $"Duplicate expand path '{fullPath}'. Each navigation path may be expanded at most once per query.");
+        }
 
         return result;
     }

@@ -81,6 +81,47 @@ internal static class DslSelectParser
                 continue;
             }
 
+            // Alias via the 'as' keyword (e.g. 'CustomerFullName as CustomerName').
+            var asIndex = IndexOfAsKeyword(field.AsSpan());
+            if (asIndex >= 0)
+            {
+                var rawPath = field[..asIndex].Trim();
+                var rawAlias = field[(asIndex + 2)..].Trim();
+
+                if (rawPath.Length == 0)
+                    throw new DslParseException(
+                        "Invalid property path in 'select' parameter. " +
+                        "Property path must not be empty (e.g. 'CustomerFullName as CustomerName').",
+                        position: -1);
+
+                if (rawAlias.Length == 0)
+                    throw new DslParseException(
+                        "Invalid alias in 'select' parameter. " +
+                        "Alias must be a non-empty identifier (e.g. 'CustomerFullName as CustomerName').",
+                        position: -1);
+
+                if (string.Equals(rawAlias, "AS", StringComparison.OrdinalIgnoreCase))
+                    throw new DslParseException(
+                        "Invalid alias in 'select' parameter. " +
+                        "The identifier 'AS' is a reserved keyword and cannot be used as an alias.",
+                        position: -1);
+
+                if (!ParserUtilities.IsValidPropertyPath(rawPath.AsSpan()))
+                    throw new DslParseException(
+                        $"Invalid property path '{rawPath}' in 'select' parameter. " +
+                        "Property paths must be dot-separated identifiers (e.g. 'Id' or 'Customer.Name').",
+                        position: -1);
+
+                if (!ParserUtilities.IsValidIdentifier(rawAlias.AsSpan()))
+                    throw new DslParseException(
+                        $"Invalid alias '{rawAlias}' in 'select' parameter. " +
+                        "Aliases must be valid identifiers (e.g. 'CustomerName').",
+                        position: -1);
+
+                validated.Add(new SelectNode { Field = rawPath, Alias = rawAlias });
+                continue;
+            }
+
             if (!ParserUtilities.IsValidPropertyPath(field.AsSpan()))
                 throw new DslParseException(
                     $"Invalid property path '{field}' in 'select' parameter. " +
@@ -91,6 +132,30 @@ internal static class DslSelectParser
         }
 
         options.Select = validated;
+    }
+
+    /// <summary>
+    /// Finds the index of the standalone <c>as</c> alias keyword (case-insensitive)
+    /// within a select field. The keyword must be surrounded by whitespace so that
+    /// it is not mistaken for a substring of an identifier (e.g. "alias", "lastName").
+    /// </summary>
+    private static int IndexOfAsKeyword(ReadOnlySpan<char> field)
+    {
+        for (var i = 0; i + 1 < field.Length; i++)
+        {
+            if (char.ToLowerInvariant(field[i]) != 'a' || char.ToLowerInvariant(field[i + 1]) != 's')
+            {
+                continue;
+            }
+
+            var beforeOk = i == 0 || char.IsWhiteSpace(field[i - 1]);
+            var afterOk = i + 2 >= field.Length || char.IsWhiteSpace(field[i + 2]);
+
+            if (beforeOk && afterOk)
+                return i;
+        }
+
+        return -1;
     }
 
     /// <summary>
@@ -285,6 +350,40 @@ internal static class DslSelectParser
                 if (i == aliasStart)
                     throw new DslParseException(
                         "Empty alias in 'select' parameter. Alias must not be empty (e.g. 'Name:FullName').",
+                        position: -1);
+
+                alias = span.Slice(aliasStart, i - aliasStart).ToString();
+
+                if (string.Equals(alias, "AS", StringComparison.OrdinalIgnoreCase))
+                    throw new DslParseException(
+                        "Invalid alias in 'select' parameter. " +
+                        "The identifier 'AS' is a reserved keyword and cannot be used as an alias.",
+                        position: -1);
+
+                if (!ParserUtilities.IsValidIdentifier(alias.AsSpan()))
+                    throw new DslParseException(
+                        $"Invalid alias '{alias}' in 'select' parameter. " +
+                        "Aliases must be valid identifiers (e.g. 'FullName').",
+                        position: -1);
+            }
+            else if (i + 1 < span.Length
+                     && char.ToLowerInvariant(span[i]) == 'a'
+                     && char.ToLowerInvariant(span[i + 1]) == 's'
+                     && (i + 2 >= span.Length || char.IsWhiteSpace(span[i + 2])))
+            {
+                // 'as' keyword alias (e.g. 'Name as FullName').
+                i += 2;
+
+                while (i < span.Length && char.IsWhiteSpace(span[i]))
+                    i++;
+
+                var aliasStart = i;
+                while (i < span.Length && (char.IsLetterOrDigit(span[i]) || span[i] == '_'))
+                    i++;
+
+                if (i == aliasStart)
+                    throw new DslParseException(
+                        "Empty alias in 'select' parameter. Alias must not be empty (e.g. 'Name as FullName').",
                         position: -1);
 
                 alias = span.Slice(aliasStart, i - aliasStart).ToString();

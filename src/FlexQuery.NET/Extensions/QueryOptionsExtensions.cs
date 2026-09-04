@@ -186,7 +186,11 @@ public static class QueryOptionsExtensions
         {
             Filter = CopyFilterGroup(source.Filter),
             Sort = source.Sort.Select(CloneSortNode).ToList(),
-            Select = source.Select?.ToList(),
+            // Deep-clone select nodes: validation rules (e.g. lenient-mode removal of
+            // unauthorized navigation projections) mutate the select tree in place, and
+            // ParserCache stores cloned options — a shared node reference would let one
+            // request's mutations leak into the cache and into other requests.
+            Select = source.Select?.Select(CloneSelectNode).ToList(),
             Includes = source.Includes?.ToList(),
             Expand = source.Expand?.Select(CloneIncludeNode).ToList(),
             ProjectionMode = source.ProjectionMode,
@@ -239,6 +243,21 @@ public static class QueryOptionsExtensions
             AggregateField = sort.AggregateField,
             Descending = sort.Descending
         };
+
+    private static SelectNode CloneSelectNode(SelectNode node)
+    {
+        var clone = new SelectNode
+        {
+            Field = node.Field,
+            Alias = node.Alias,
+            IsSynthesized = node.IsSynthesized
+        };
+        foreach (var child in node.Children)
+        {
+            clone.Children.Add(CloneSelectNode(child));
+        }
+        return clone;
+    }
 
     private static IncludeNode CloneIncludeNode(IncludeNode include)
         => new()

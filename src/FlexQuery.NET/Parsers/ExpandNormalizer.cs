@@ -16,6 +16,10 @@ internal static class ExpandNormalizer
 {
     /// <summary>
     /// Normalizes a list of <see cref="ExpandAst"/> roots into <see cref="IncludeNode"/> trees.
+    /// Multiple flat dotted paths that share a prefix are merged into one tree
+    /// (e.g. <c>Orders(take=3),Orders.OrderItems(take=5)</c> produces a single root
+    /// <c>Orders</c> carrying its own options and an <c>OrderItems</c> child), so the
+    /// internal representation is hierarchical while the public syntax stays flat.
     /// </summary>
     public static List<IncludeNode> Normalize(IReadOnlyList<ExpandAst> astRoots)
     {
@@ -24,9 +28,35 @@ internal static class ExpandNormalizer
         foreach (var ast in astRoots)
         {
             var node = NormalizeNode(ast);
-            result.Add(node);
+            MergeInto(result, node);
         }
         return result;
+    }
+
+    /// <summary>
+    /// Merges <paramref name="node"/> into <paramref name="roots"/>: if a root with the
+    /// same path (case-insensitive) exists, the children and options are merged into it;
+    /// otherwise the node is appended.
+    /// </summary>
+    private static void MergeInto(List<IncludeNode> roots, IncludeNode node)
+    {
+        var existing = roots.FirstOrDefault(r =>
+            r.Path.Equals(node.Path, StringComparison.OrdinalIgnoreCase));
+
+        if (existing is null)
+        {
+            roots.Add(node);
+            return;
+        }
+
+        existing.Filter ??= node.Filter;
+        existing.Sort ??= node.Sort;
+        existing.Take ??= node.Take;
+
+        foreach (var child in node.Children)
+        {
+            MergeInto(existing.Children, child);
+        }
     }
 
     /// <summary>
