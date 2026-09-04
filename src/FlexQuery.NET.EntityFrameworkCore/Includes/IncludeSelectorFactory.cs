@@ -5,6 +5,7 @@ using FlexQuery.NET.Expressions;
 using FlexQuery.NET.Models;
 using FlexQuery.NET.Models.Paging;
 using FlexQuery.NET.Models.Projection;
+using FlexQuery.NET.Resolvers;
 
 namespace FlexQuery.NET.EntityFrameworkCore.Includes;
 
@@ -82,7 +83,18 @@ internal static class IncludeSelectorFactory
         foreach (var sortNode in sort)
         {
             var parameter = Expression.Parameter(elementType, "e");
-            if (!SortBuilder.BuildPropertyExpression(parameter, sortNode.Field, options, out var keyExpression))
+
+            // Expand sort fields are entity-level names on the navigation's element type —
+            // the root public surface does not apply here, so DTO-surface enforcement is
+            // suppressed for this scope (same semantics as scoped collection filters).
+            Expression keyExpression;
+            bool built;
+            using (FieldResolver.SuppressSurface(options))
+            {
+                built = SortBuilder.BuildPropertyExpression(parameter, sortNode.Field, options, out keyExpression!);
+            }
+
+            if (!built)
                 continue;
 
             var selectorType = typeof(Func<,>).MakeGenericType(elementType, keyExpression.Type);

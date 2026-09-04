@@ -1,3 +1,4 @@
+using System.Linq.Expressions;
 using FlexQuery.NET.Models;
 using FlexQuery.NET.Models.Projection;
 using Microsoft.EntityFrameworkCore;
@@ -20,6 +21,100 @@ internal static class IncludeBuilder
             query = ApplyNode(query, rootType, node, IncludeContext.Root, options);
 
         return query;
+    }
+
+    /// <summary>
+    /// Builds the hierarchical expansion window tree from the normalized expand nodes,
+    /// keyed by the root navigation property name (entity-level names — translation has
+    /// already run). Deep paths are supported: child windows ride along inside the
+    /// parent window node and are applied by the projection builders per level, keeping
+    /// nested collection windows correlated to their already-selected parent.
+    /// </summary>
+    public static bool TryBuildExpandTree(
+        QueryOptions options,
+        out Dictionary<string, ExpandWindowNode> expandTree)
+    {
+        expandTree = new Dictionary<string, ExpandWindowNode>(StringComparer.OrdinalIgnoreCase);
+
+        if (options.Expand is not { Count: > 0 })
+            return false;
+
+        foreach (var node in options.Expand)
+        {
+            expandTree[node.Path] = BuildWindowNode(node);
+        }
+
+        return expandTree.Count > 0;
+    }
+
+    private static ExpandWindowNode BuildWindowNode(IncludeNode node)
+    {
+        var windowNode = new ExpandWindowNode { Node = node };
+
+        foreach (var child in node.Children)
+        {
+            windowNode.Children[child.Path] = BuildWindowNode(child);
+        }
+
+        return windowNode;
+    }
+
+    /// <summary>
+    /// Determines whether the expand tree contains at least one nested (deep) level —
+    /// i.e. any root expansion carries child windows. Deep levels are applied through
+    /// the EF filtered-include chain (correlated per parent element), which is the only
+    /// portable correlated per-parent Take form; the root level is applied server-side
+    /// inside the DTO projection.
+    /// </summary>
+    public static bool HasDeepWindows(QueryOptions options)
+        => options.Expand is { Count: > 0 }
+           && options.Expand.Any(e => e.Children is { Count: > 0 });
+
+    /// <summary>
+    /// True when any expansion path carries take/sort/filter options. Expansion windows
+    /// are applied through the EF filtered-include chain (correlated per parent; the
+    /// provider renders its canonical windowed shape) followed by client-side DTO
+    /// mapping — the in-projection ordered child Take form is not translatable on all
+    /// providers (APPLY on SQLite).
+    /// </summary>
+    public static bool HasExpansionOptions(QueryOptions options)
+        => options.Expand is { Count: > 0 }
+           && options.Expand.Any(e =>
+               e.Take.HasValue || e.Filter is not null || e.Sort is { Count: > 0 });
+
+    /// <summary>
+    /// Builds root-level expansion windows (expand paths without children) for the
+    /// server-side DTO projection. Returns false when there are no root-level windows.
+    /// Deep child windows are intentionally excluded — they ride on the EF filtered
+    /// include chain (correlated per parent), see <see cref="HasDeepWindows"/>.
+    /// </summary>
+    public static bool TryBuildRootLevelWindows<T>(
+        QueryOptions options,
+        out Dictionary<string, LambdaExpression> windows)
+        where T : class
+    {
+        windows = new Dictionary<string, LambdaExpression>(StringComparer.OrdinalIgnoreCase);
+
+        if (options.Includes is not { Count: > 0 })
+            return false;
+
+        var includeTree = BuildTreeFromIncludes(options.Includes);
+        MergeExpandConfiguration(includeTree, options.Expand);
+
+        var rootType = typeof(T);
+        foreach (var node in includeTree)
+        {
+            var navigation = IncludeNavigationResolver.Resolve(rootType, node.Path);
+            if (navigation is null)
+                return false;
+
+            var selector = IncludeSelectorFactory.Build(
+                rootType, navigation, node, options, allowFilteredCollection: true);
+
+            windows[navigation.Property.Name] = selector;
+        }
+
+        return windows.Count > 0;
     }
 
     private static List<IncludeNode> BuildTreeFromIncludes(List<string> includes)
@@ -111,7 +206,7 @@ internal static class IncludeBuilder
             parentType, navigation, node, options, allowFilteredCollection: true);
 
         var method = IncludeMethodCache.Resolve(context, typeof(T), parentType, selector.ReturnType);
-        var result = method.Invoke(null, new object[] { query, selector });
+        var result = method.Invoke(null, [query, selector]);
 
         var typed = (IQueryable<T>)result!;
 
@@ -128,3 +223,5 @@ internal static class IncludeBuilder
         return typed;
     }
 }
+
+
