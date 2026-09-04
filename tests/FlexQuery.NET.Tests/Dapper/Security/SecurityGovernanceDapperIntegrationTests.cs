@@ -456,8 +456,8 @@ public class SecurityGovernanceDapperIntegrationTests
 
         options.Validate(typeof(Customer), execOptions);
 
-        options.Select.Should().ContainEquivalentOf(new SelectNode { Field = "Name" });
-        options.Select.Should().NotContainEquivalentOf(new SelectNode { Field = "Id" });
+        options.Select.Should().Contain(n => n.Field == "Name");
+        options.Select.Should().NotContain(n => n.Field == "Id");
     }
 
     [Fact]
@@ -732,3 +732,5 @@ public class SecurityGovernanceDapperIntegrationTests
         public string Name { get; set; } = string.Empty;
     }
 }
+
+

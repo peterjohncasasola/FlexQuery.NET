@@ -10,7 +10,8 @@ public class FlatProjectionTests : DapperApiTestBase
     [Fact]
     public async Task FlatMode_WithSingleSelect_ProjectsLeafFieldsOnly()
     {
-        var response = await Client.GetAsync("/api/users?mode=flat&select=Orders.Total,Orders.Number:OrderNumber");
+        // Dotted navigation selections require the exact include path (global contract).
+        var response = await Client.GetAsync("/api/users?mode=flat&include=Orders&select=Orders.Total,Orders.Number:OrderNumber");
 
         response.EnsureSuccessStatusCode();
         var json = await response.Content.ReadFromJsonAsync<JsonElement>();
@@ -28,7 +29,7 @@ public class FlatProjectionTests : DapperApiTestBase
     [Fact]
     public async Task FlatMixedMode_WithRootAndNestedFields_ProjectsAllFieldsInSingleRow()
     {
-        var response = await Client.GetAsync("/api/users?mode=flat-mixed&select=Name:customerName,Orders.Total,Orders.Number:orderNumber");
+        var response = await Client.GetAsync("/api/users?mode=flat-mixed&include=Orders&select=Name:customerName,Orders.Total,Orders.Number:orderNumber");
 
         response.EnsureSuccessStatusCode();
         var json = await response.Content.ReadFromJsonAsync<JsonElement>();
@@ -49,7 +50,7 @@ public class FlatProjectionTests : DapperApiTestBase
     [Fact]
     public async Task FlatMode_MultiLevelNestedCollection_ProjectsCorrectly()
     {
-        var response = await Client.GetAsync("/api/users?mode=flat&select=Orders.OrderItems.Sku,Orders.OrderItems.Id");
+        var response = await Client.GetAsync("/api/users?mode=flat&include=Orders.OrderItems&select=Orders.OrderItems.Sku,Orders.OrderItems.Id");
 
         response.EnsureSuccessStatusCode();
         var json = await response.Content.ReadFromJsonAsync<JsonElement>();
