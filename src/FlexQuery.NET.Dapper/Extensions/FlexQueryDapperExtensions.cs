@@ -247,7 +247,7 @@ public static class FlexQueryDapperExtensions
             resultShape = ResultShapeBuilder.BuildGroupedShape(queryOptions);
         }
 
-        DtoFieldNameRewriter.Rewrite(queryOptions, surface);
+        DtoFieldNameRewriter.Rewrite(queryOptions, surface, dapperOptions.MappingRegistry);
 
         var hasIncludeExpand = (queryOptions.Includes?.Count > 0) || (queryOptions.Expand?.Count > 0);
 

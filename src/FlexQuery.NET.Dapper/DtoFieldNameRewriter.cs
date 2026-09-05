@@ -1,3 +1,4 @@
+using FlexQuery.NET.Mapping;
 using FlexQuery.NET.QuerySurface;
 using FlexQuery.NET.Models;
 using FlexQuery.NET.Models.Filters;
@@ -13,19 +14,23 @@ namespace FlexQuery.NET.Dapper;
 /// Rewrites DTO field names in <see cref="QueryOptions"/> to their underlying entity
 /// property names using <see cref="IQuerySurface"/>. This allows the existing Dapper
 /// SQL builders to operate unchanged, because they see entity field names.
+/// Nested select children are rewritten through the registered nested
+/// <see cref="ITypeMap"/> graph (CreateMap/ForMember), so renamed members — including
+/// collection element fields such as <c>OrderResponse.DeliveryDate ←
+/// Order.ExpectedDeliveryDate</c> — resolve to their entity property names.
 /// </summary>
 internal static class DtoFieldNameRewriter
 {
     /// <summary>
     /// Rewrites DTO field names to entity field names in place for the typed DTO path.
     /// </summary>
-    public static void Rewrite(QueryOptions options, IQuerySurface surface)
+    public static void Rewrite(QueryOptions options, IQuerySurface surface, IQueryMappingRegistry? mappingRegistry = null)
     {
         if (options.Select is { Count: > 0 })
         {
             for (var i = 0; i < options.Select.Count; i++)
             {
-                options.Select[i] = RewriteSelectNode(options.Select[i], surface);
+                options.Select[i] = RewriteSelectNode(options.Select[i], surface, mappingRegistry);
             }
         }
 
@@ -79,18 +84,130 @@ internal static class DtoFieldNameRewriter
         return resolved.EntityProperty.Name;
     }
 
-    private static SelectNode RewriteSelectNode(SelectNode node, IQuerySurface surface)
+    private static SelectNode RewriteSelectNode(SelectNode node, IQuerySurface surface, IQueryMappingRegistry? mappingRegistry)
     {
+        var dtoName = node.Field;
         var rewritten = new SelectNode
         {
-            Field = RewriteField(node.Field, surface),
+            Field = RewriteField(dtoName, surface),
             Alias = node.Alias
         };
+
+        // Navigation children project against the navigation's element surface, not the
+        // root surface. Resolve the registered nested TypeMap (entity element → DTO
+        // element) so child field names rewrite through ForMember metadata — the same
+        // resolution the EF Core projection builder performs.
+        if (node.Children is { Count: > 0 }
+            && mappingRegistry is not null
+            && surface.TryResolve(dtoName, out var parentField)
+            && TryResolveNestedMap(parentField, mappingRegistry, out var nestedMap))
+        {
+            foreach (var child in node.Children)
+            {
+                rewritten.Children.Add(RewriteNestedChild(child, nestedMap, mappingRegistry));
+            }
+
+            return rewritten;
+        }
+
         foreach (var child in node.Children)
         {
-            rewritten.Children.Add(RewriteSelectNode(child, surface));
+            rewritten.Children.Add(RewriteSelectNode(child, surface, mappingRegistry));
         }
+
         return rewritten;
+    }
+
+    /// <summary>
+    /// Rewrites a select child under a navigation through its registered TypeMap.
+    /// Direct property mappings (explicit ForMember and same-name convention) rewrite to
+    /// the underlying entity property name; computed expressions have no single entity
+    /// column and keep the public name. Deeper navigation children recurse through the
+    /// member's own registered nested map.
+    /// </summary>
+    private static SelectNode RewriteNestedChild(SelectNode child, ITypeMap map, IQueryMappingRegistry registry)
+    {
+        var field = child.Field;
+
+        if (map.TryResolveDestinationMember(child.Field ?? string.Empty, out var member))
+        {
+            // Direct property mappings (explicit ForMember and same-name convention)
+            // project the underlying entity property; computed expressions have no single
+            // entity column to project and keep the public name.
+            if (member.SourceProperty is { } sourceProperty)
+            {
+                field = sourceProperty.Name;
+            }
+
+            if (child.Children is { Count: > 0 }
+                && TryGetElementOrSelf(member.SourceValueType, out var childEntityElement)
+                && TryGetElementOrSelf(member.DestinationValueType, out var childDtoElement)
+                && childEntityElement != childDtoElement
+                && registry.Find(childEntityElement, childDtoElement) is { } childMap)
+            {
+                var rewrittenBranch = new SelectNode { Field = field, Alias = child.Alias };
+                foreach (var grandChild in child.Children)
+                {
+                    rewrittenBranch.Children.Add(RewriteNestedChild(grandChild, childMap, registry));
+                }
+
+                return rewrittenBranch;
+            }
+        }
+
+        var rewritten = new SelectNode { Field = field, Alias = child.Alias };
+        foreach (var grandChild in child.Children)
+        {
+            rewritten.Children.Add(grandChild);
+        }
+
+        return rewritten;
+    }
+
+    private static bool TryResolveNestedMap(
+        ResolvedField field,
+        IQueryMappingRegistry registry,
+        out ITypeMap nestedMap)
+    {
+        nestedMap = null!;
+
+        if (field.ResponseProperty is null)
+            return false;
+
+        if (!TryGetElementOrSelf(field.EntityProperty.PropertyType, out var entityElementType)
+            || !TryGetElementOrSelf(field.ResponseProperty.PropertyType, out var dtoElementType))
+            return false;
+
+        if (entityElementType == dtoElementType)
+            return false;
+
+        nestedMap = registry.Find(entityElementType, dtoElementType)!;
+        return nestedMap is not null;
+    }
+
+    private static bool TryGetElementOrSelf(Type type, out Type elementType)
+    {
+        if (type == typeof(string) || !typeof(System.Collections.IEnumerable).IsAssignableFrom(type))
+        {
+            elementType = type;
+            return true;
+        }
+
+        if (type.IsArray)
+        {
+            elementType = type.GetElementType() ?? type;
+            return true;
+        }
+
+        var genericArguments = type.GetGenericArguments();
+        if (genericArguments.Length == 1)
+        {
+            elementType = genericArguments[0];
+            return true;
+        }
+
+        elementType = type;
+        return false;
     }
 
     private static SortNode RewriteSort(SortNode node, IQuerySurface surface)

@@ -1,4 +1,4 @@
-using System.Data;
+﻿using System.Data;
 using System.Data.Common;
 using System.Diagnostics;
 using System.Reflection;
@@ -87,7 +87,7 @@ internal static class DapperQueryExecutor
 
         // Aggregates without GROUP BY are grand totals: the SQL layer handles them with a
         // dedicated single-row aggregate query and the result flows into
-        // QueryResult.Aggregates — never into the DTO row shape.
+        // QueryResult.Aggregates â€” never into the DTO row shape.
         var isGrouped = queryOptions.GroupBy is { Count: > 0 };
 
         var command = translator.Translate(BuildRootOnlyOptions(queryOptions));
@@ -113,7 +113,7 @@ internal static class DapperQueryExecutor
         {
             // Grouped queries have their own result shape (group keys + aliases): project
             // into TResponse when the DTO models that shape, otherwise fall back to the
-            // dynamic grouped flow — aggregate aliases are result metadata, not row
+            // dynamic grouped flow â€” aggregate aliases are result metadata, not row
             // properties, and must not be required on the DTO.
             if (!CanRepresentGroupedShape<TResponse>(queryOptions, surface))
             {
@@ -173,7 +173,7 @@ internal static class DapperQueryExecutor
     }
 
     /// <summary>
-    /// Returns true when the response DTO models the full grouped result shape —
+    /// Returns true when the response DTO models the full grouped result shape â€”
     /// every group key and aggregate alias has a writable property. Group fields arrive
     /// rewritten as entity names and are mapped back to their public DTO surface names.
     /// </summary>
@@ -253,7 +253,7 @@ internal static class DapperQueryExecutor
         }
 
         // Flat projection modes deliver leaf columns through the single-query JOIN in the
-        // root SQL — includes exist only to satisfy the navigation-include authorization
+        // root SQL â€” includes exist only to satisfy the navigation-include authorization
         // contract and must not trigger navigation hydration/split queries.
         var isFlatProjection =
             (queryOptions.ProjectionMode == ProjectionMode.Flat
@@ -344,7 +344,7 @@ internal static class DapperQueryExecutor
             return queryOptions;
         }
 
-        // Flat projection modes deliver leaf columns through the single-query JOIN — the
+        // Flat projection modes deliver leaf columns through the single-query JOIN â€” the
         // select shape (including navigation leaf paths) must survive, otherwise the root
         // SQL degrades to a full root-column scan and the flat output is lost.
         var isFlatProjection =
@@ -381,54 +381,21 @@ internal static class DapperQueryExecutor
         if (rootItems.Count == 0)
             return Array.Empty<object>();
 
-        var expandNodes = queryOptions.Expand ?? new List<IncludeNode>();
-
-        foreach (var expandNode in expandNodes)
-            ct.ThrowIfCancellationRequested();
-
-        if (expandNodes.Count > 0)
+        if (queryOptions.Includes is { Count: > 0 } || queryOptions.Expand is { Count: > 0 })
         {
-            await DapperRowHydrator.HydrateSplitQueryIncludesAsync(
-                rootItems,
-                mapping,
-                registry,
-                dialect,
-                connection,
-                expandNodes,
-                new SqlParameterContext(dialect),
-                new SqlTranslator(registry, dialect),
-                ct);
-
-            if (queryOptions.Includes is { Count: > 0 })
+            var mergedIncludeTree = BuildMergedIncludeTree(queryOptions);
+            if (mergedIncludeTree.Count > 0)
             {
-                var expandedRootPaths = new HashSet<string>(
-                    expandNodes.Select(node => node.Path),
-                    StringComparer.OrdinalIgnoreCase);
-
-                foreach (var includePath in queryOptions.Includes.Where(path => !expandedRootPaths.Contains(path)))
-                {
-                    ct.ThrowIfCancellationRequested();
-                    await DapperRowHydrator.LoadNavigationAsync(
-                        rootItems.Cast<object>().ToList(),
-                        mapping,
-                        registry,
-                        dialect,
-                        connection,
-                        includePath,
-                        new SqlParameterContext(dialect),
-                        new SqlTranslator(registry, dialect),
-                        expandNode: null,
-                        ct);
-                }
-            }
-        }
-        else if (queryOptions.Includes is { Count: > 0 })
-        {
-            foreach (var includePath in queryOptions.Includes)
-            {
-                ct.ThrowIfCancellationRequested();
-                await LoadIncludeViaSplitQueryAsync(
-                    connection, rootItems, mapping, registry, dialect, includePath, new SqlTranslator(registry, dialect), ct);
+                await DapperRowHydrator.HydrateSplitQueryIncludesAsync(
+                    rootItems,
+                    mapping,
+                    registry,
+                    dialect,
+                    connection,
+                    mergedIncludeTree,
+                    new SqlParameterContext(dialect),
+                    new SqlTranslator(registry, dialect),
+                    ct);
             }
         }
 
@@ -449,73 +416,47 @@ internal static class DapperQueryExecutor
         return projected;
     }
 
-    private static async Task LoadIncludeViaSplitQueryAsync<T>(
-        DbConnection connection,
-        IReadOnlyList<T> roots,
-        IEntityMapping rootMapping,
-        IMappingRegistry registry,
-        ISqlDialect dialect,
-        string navigationPath,
-        SqlTranslator sqlTranslator,
-        CancellationToken ct)
-        where T : class
+    private static List<IncludeNode> BuildMergedIncludeTree(QueryOptions queryOptions)
     {
-        var rel = rootMapping.GetRelationship(navigationPath);
-        if (rel?.TargetType == null) return;
+        var tree = new Dictionary<string, IncludeNode>(StringComparer.OrdinalIgnoreCase);
 
-        var pkProperty = rootMapping.GetKeyProperties().FirstOrDefault()
-            ?? rootMapping.GetProperties().FirstOrDefault(p => p.Equals("Id", StringComparison.OrdinalIgnoreCase))
-            ?? rootMapping.GetProperties().First();
+        foreach (var node in queryOptions.Expand ?? [])
+            tree[node.Path] = node;
 
-        var rootPks = new List<object?>();
-        foreach (var root in roots)
+        foreach (var includePath in queryOptions.Includes ?? [])
         {
-            var pkVal = root.GetType().GetProperty(pkProperty)?.GetValue(root);
-            if (pkVal != null) rootPks.Add(pkVal);
+            var segments = includePath.Split('.', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+            if (segments.Length == 0)
+                continue;
+
+            IncludeNode? current = null;
+            var currentPath = "";
+            foreach (var segment in segments)
+            {
+                currentPath = currentPath.Length == 0 ? segment : $"{currentPath}.{segment}";
+
+                if (current is null)
+                {
+                    if (!tree.TryGetValue(currentPath, out current))
+                    {
+                        current = new IncludeNode { Path = segment };
+                        tree[currentPath] = current;
+                    }
+
+                    continue;
+                }
+
+                var child = current.Children.FirstOrDefault(c => c.Path.Equals(segment, StringComparison.OrdinalIgnoreCase));
+                if (child is null)
+                {
+                    child = new IncludeNode { Path = segment };
+                    current.Children.Add(child);
+                }
+
+                current = child;
+            }
         }
 
-        if (rootPks.Count == 0) return;
-
-        var parameters = new SqlParameterContext(dialect);
-        var sql = sqlTranslator.BuildIncludeSql(
-            navigationPath,
-            rootMapping,
-            registry.GetMapping(rel.TargetType),
-            parameters,
-            rootPks);
-
-        if (string.IsNullOrEmpty(sql)) return;
-
-        var rows = await connection.QueryAsync(
-            sql,
-            parameters.RawParameters,
-            commandTimeout: null,
-            commandType: CommandType.Text);
-
-        var rowList = rows.ToList();
-        if (!rowList.Any()) return;
-
-        var targetMapping = registry.GetMapping(rel.TargetType);
-        var navPrefix = navigationPath + "_";
-        var hydrated = DapperRowHydrator.HydrateCoreNonGeneric(
-            rowList, targetMapping, registry, new List<string> { string.Empty }, null, navPrefix).ToList();
-
-        var rootPkPropInfo = roots[0].GetType().GetProperty(pkProperty, BindingFlags.Public | BindingFlags.Instance | BindingFlags.IgnoreCase);
-        if (rootPkPropInfo == null) return;
-
-        var rootIndex = roots.ToDictionary(rootPkPropInfo.GetValue, r => r);
-
-        foreach (var child in hydrated)
-        {
-            var childType = child.GetType();
-            var childFkProp = childType.GetProperty(rel.ForeignKey, BindingFlags.Public | BindingFlags.Instance | BindingFlags.IgnoreCase);
-            if (childFkProp == null) continue;
-
-            var childFk = childFkProp.GetValue(child);
-            if (childFk == null) continue;
-
-            if (rootIndex.TryGetValue(childFk, out var root))
-                DapperRowHydrator.AddChildToParent(root, navigationPath, child);
-        }
+        return tree.Values.ToList();
     }
 }
