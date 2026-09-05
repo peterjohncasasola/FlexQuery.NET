@@ -6,13 +6,14 @@ using FlexQuery.NET.Samples.WebApi.Data;
 using FlexQuery.NET.Samples.WebApi.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 
 namespace FlexQuery.NET.Samples.WebApi.Controllers;
 
 [ApiController]
 [Route("api/dapper/customers")]
 [Produces("application/json")]
-public sealed class DapperCustomersController(AppDbContext db) : ControllerBase
+public sealed class DapperCustomersController(AppDbContext db, ILoggerFactory loggerFactory) : ControllerBase
 {
     [HttpGet]
     [ProducesResponseType(typeof(QueryResult<Customer>), 200)]
@@ -28,7 +29,11 @@ public sealed class DapperCustomersController(AppDbContext db) : ControllerBase
 
         var result = await connection.FlexQueryAsync<Customer>(parameters,
             cancellationToken: cancellationToken,
-            configure: cfg => cfg.Listener = collector);
+            configure: cfg =>
+            {
+                cfg.Listener = collector;
+                cfg.LoggerFactory = loggerFactory;
+            });
 
         sw.Stop();
 
@@ -56,7 +61,8 @@ public sealed class DapperCustomersController(AppDbContext db) : ControllerBase
         var connection = db.Database.GetDbConnection();
 
         var result = await connection.FlexQueryAsync<Customer, CustomerDto>(parameters,
-            cancellationToken: cancellationToken);
+            cancellationToken: cancellationToken,
+            configure: cfg => cfg.LoggerFactory = loggerFactory);
 
         return Ok(result);
     }

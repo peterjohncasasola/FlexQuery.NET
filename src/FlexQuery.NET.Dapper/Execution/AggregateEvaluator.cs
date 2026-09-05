@@ -1,12 +1,14 @@
 using System.Data;
 using System.Data.Common;
 using Dapper;
+using FlexQuery.NET.Dapper.Diagnostics;
 using FlexQuery.NET.Dapper.Options;
 using FlexQuery.NET.Dapper.Sql.Adapters;
 using FlexQuery.NET.Dapper.Sql.Translators;
 using FlexQuery.NET.Models;
 using FlexQuery.NET.Models.Aggregates;
 using FlexQuery.NET.Parsers;
+using Microsoft.Extensions.Logging;
 
 namespace FlexQuery.NET.Dapper.Execution;
 
@@ -18,13 +20,16 @@ internal static class AggregateEvaluator
         SqlTranslator translator,
         DapperQueryOptions options,
         CancellationToken ct,
-        Func<string, string>? publicFieldNameResolver = null)
+        Func<string, string>? publicFieldNameResolver = null,
+        ILogger? sqlLogger = null)
     {
         var isGrouped = queryOptions.GroupBy is { Count: > 0 };
         if (queryOptions.Aggregates.Count == 0 || isGrouped) return null;
 
         var aggCommand = translator.TranslateAggregates(queryOptions);
         var aggParameters = CommandParameterAdapter.ToDynamicParameters(aggCommand);
+
+        DapperSqlLog.Command(sqlLogger, aggCommand.Sql, aggCommand.Parameters);
 
         var aggResult = await connection.QueryFirstOrDefaultAsync(
             aggCommand.Sql, aggParameters,

@@ -1,12 +1,14 @@
 using System.Data;
 using System.Data.Common;
 using Dapper;
+using FlexQuery.NET.Dapper.Diagnostics;
 using FlexQuery.NET.Dapper.Options;
 using FlexQuery.NET.Dapper.Sql.Adapters;
 using FlexQuery.NET.Dapper.Sql.Builders;
 using FlexQuery.NET.Dapper.Sql.Models;
 using FlexQuery.NET.Dapper.Sql.Translators;
 using FlexQuery.NET.Models;
+using Microsoft.Extensions.Logging;
 
 namespace FlexQuery.NET.Dapper.Execution;
 
@@ -18,7 +20,8 @@ internal static class CountEvaluator
         SqlTranslator translator,
         SqlCommand mainCommand,
         DynamicParameters? mainParams,
-        DapperQueryOptions options)
+        DapperQueryOptions options,
+        ILogger? sqlLogger = null)
     {
         
         var shouldIncludeCount = options.IncludeTotalCount && (queryOptions.IncludeCount ?? true);
@@ -26,6 +29,8 @@ internal static class CountEvaluator
 
         var sourceCountCommand = translator.TranslateSourceCount(queryOptions);
         var sourceCountParameters = CommandParameterAdapter.ToDynamicParameters(sourceCountCommand);
+
+        DapperSqlLog.Command(sqlLogger, sourceCountCommand.Sql, sourceCountCommand.Parameters);
 
         var totalCount = (int)await connection.QuerySingleAsync<long>(
             sourceCountCommand.Sql, sourceCountParameters,
@@ -36,6 +41,14 @@ internal static class CountEvaluator
                 SqlCountBuilder.ExtractCountSql(mainCommand.Sql), mainParams!,
                 commandTimeout: options.CommandTimeout, commandType: CommandType.Text)
             : totalCount;
+
+        if (resultCount != totalCount)
+        {
+            DapperSqlLog.Command(
+                sqlLogger,
+                SqlCountBuilder.ExtractCountSql(mainCommand.Sql),
+                mainCommand.Parameters);
+        }
 
         return (totalCount, resultCount);
     }

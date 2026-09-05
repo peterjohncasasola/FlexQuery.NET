@@ -5,10 +5,12 @@ using System.Diagnostics;
 using System.Linq.Expressions;
 using System.Reflection;
 using FlexQuery.NET.Builders;
+using FlexQuery.NET.Dapper.Diagnostics;
 using FlexQuery.NET.Dapper.Mapping;
 using FlexQuery.NET.Dapper.Sql.Builders;
 using FlexQuery.NET.Internal;
 using FlexQuery.NET.Metadata;
+using Microsoft.Extensions.Logging;
 
 namespace FlexQuery.NET.Dapper.Materialization;
 
@@ -20,7 +22,8 @@ internal static class SimpleIncludeStreamingMaterializer
         IEntityMapping rootMapping,
         int? commandTimeout,
         SelectionNode rootProjection,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        ILogger? sqlLogger = null)
     {
         await using var dbCommand = connection.CreateCommand();
         dbCommand.CommandText = command.Sql;
@@ -35,6 +38,8 @@ internal static class SimpleIncludeStreamingMaterializer
             dbParameter.Value = parameter.Value ?? DBNull.Value;
             dbCommand.Parameters.Add(dbParameter);
         }
+
+        DapperSqlLog.Command(sqlLogger, dbCommand.CommandText, command.Parameters);
 
         await using var reader = await dbCommand.ExecuteReaderAsync(cancellationToken);
 
@@ -260,7 +265,8 @@ internal static class SimpleIncludeStreamingMaterializer
         SimpleIncludeSqlCommand command,
         IEntityMapping rootMapping,
         int? commandTimeout,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        ILogger? sqlLogger = null)
         where T : class
     {
         await using var dbCommand = connection.CreateCommand();
@@ -276,6 +282,8 @@ internal static class SimpleIncludeStreamingMaterializer
             dbParameter.Value = parameter.Value ?? DBNull.Value;
             dbCommand.Parameters.Add(dbParameter);
         }
+
+        DapperSqlLog.Command(sqlLogger, dbCommand.CommandText, command.Parameters);
 
         await using var reader = await dbCommand.ExecuteReaderAsync(cancellationToken);
 

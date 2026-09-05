@@ -3,11 +3,13 @@ using System.Data.Common;
 using System.Reflection;
 using Dapper;
 using FlexQuery.NET.Dapper.Dialects;
+using FlexQuery.NET.Dapper.Diagnostics;
 using FlexQuery.NET.Dapper.Mapping;
 using FlexQuery.NET.Dapper.Sql.Models;
 using FlexQuery.NET.Dapper.Sql.Translators;
 using FlexQuery.NET.Models.Paging;
 using FlexQuery.NET.Models.Projection;
+using Microsoft.Extensions.Logging;
 
 namespace FlexQuery.NET.Dapper.Materialization;
 
@@ -60,7 +62,8 @@ internal static class DapperRowHydrator
         List<IncludeNode> expandNodes,
         SqlParameterContext sharedParameters,
         SqlTranslator sqlTranslator,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        ILogger? sqlLogger = null)
         where T : class
     {
         if (roots.Count == 0) return roots;
@@ -77,7 +80,8 @@ internal static class DapperRowHydrator
                 node,
                 sharedParameters,
                 sqlTranslator,
-                cancellationToken);
+                cancellationToken,
+                sqlLogger);
         }
 
         return roots;
@@ -92,7 +96,8 @@ internal static class DapperRowHydrator
         IncludeNode node,
         SqlParameterContext sharedParameters,
         SqlTranslator sqlTranslator,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        ILogger? sqlLogger = null)
     {
         if (parents.Count == 0) return;
 
@@ -106,7 +111,8 @@ internal static class DapperRowHydrator
             sharedParameters,
             sqlTranslator,
             node,
-            cancellationToken);
+            cancellationToken,
+            sqlLogger);
 
         if (loadedChildren.Count == 0 || node.Children.Count == 0)
             return;
@@ -127,7 +133,8 @@ internal static class DapperRowHydrator
                 childNode,
                 sharedParameters,
                 sqlTranslator,
-                cancellationToken);
+                cancellationToken,
+                sqlLogger);
         }
     }
 
@@ -141,12 +148,15 @@ internal static class DapperRowHydrator
         SqlParameterContext parameters,
         SqlTranslator sqlTranslator,
         IncludeNode? expandNode,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        ILogger? sqlLogger = null)
     {
         if (parents.Count == 0) return [];
 
         var sql = BuildIncludeSql(navigationPath, parentMapping, registry, dialect, sqlTranslator, expandNode, parents, parameters);
         if (string.IsNullOrEmpty(sql)) return [];
+
+        DapperSqlLog.Command(sqlLogger, sql, parameters.RawParameters);
 
         var rows = await connection.QueryAsync(sql, parameters.RawParameters, commandType: CommandType.Text);
         var rowList = rows.ToList();
