@@ -34,6 +34,11 @@ public class DtoIncludeGraphBoundaryTests : IDisposable
         _db.Database.OpenConnection();
         _db.Database.EnsureCreated();
         SampleData.Seed(_db);
+        _db.Database.ExecuteSqlRaw("""
+            INSERT INTO Addresses (Id, Street, City, CustomerId, CustomerId1) VALUES
+                (1, '5th Ave 1', 'New York', 1, 1),
+                (2, 'Baker St 3', 'London', 2, 2);
+            """);
     }
 
     public void Dispose()
@@ -52,7 +57,13 @@ public class DtoIncludeGraphBoundaryTests : IDisposable
     {
         public int Id { get; set; }
         public string Status { get; set; } = string.Empty;
-        public List<OrderItemDto> OrderItems { get; set; } = [];
+        public List<OrderItemDto>? OrderItems { get; set; }
+    }
+
+    public class AddressDto
+    {
+        public int Id { get; set; }
+        public string? City { get; set; }
     }
 
     public class CustomerDto
@@ -60,6 +71,7 @@ public class DtoIncludeGraphBoundaryTests : IDisposable
         public int Id { get; set; }
         public string Name { get; set; } = string.Empty;
         public List<OrderDto> Orders { get; set; } = [];
+        public List<AddressDto>? Addresses { get; set; }
     }
 
     private static Action<FlexQuery.NET.EntityFrameworkCore.Options.EfCoreQueryOptions> ConfigureMaps()
@@ -69,6 +81,7 @@ public class DtoIncludeGraphBoundaryTests : IDisposable
                 .ForNavigation(d => d.Orders, e => e.Orders);
             opt.CreateMap<Order, OrderDto>();
             opt.CreateMap<OrderItem, OrderItemDto>();
+            opt.CreateMap<Address, AddressDto>();
         };
 
     private List<string> DataQueries()
@@ -78,8 +91,10 @@ public class DtoIncludeGraphBoundaryTests : IDisposable
                         && s.Contains("Orders", StringComparison.Ordinal))
             .ToList();
 
+    private static readonly int[] OrderlessCustomerIds = [4, 5, 6, 7, 8, 9, 10];
+
     [Fact]
-    public async Task Include_WithExpandTake_DoesNotMaterializeUnrequestedNestedNavigation()
+    public async Task Include_WithExpandTake_DoesNotMaterializeUnrequestedNavigations()
     {
         var result = await _db.Customers.FlexQueryAsync<Customer, CustomerDto>(
             new FlexQueryParameters
@@ -90,23 +105,21 @@ public class DtoIncludeGraphBoundaryTests : IDisposable
             },
             ConfigureMaps());
 
-        // Alice (id=1) has 2 orders; the take applies per parent.
+        result.Data.Should().HaveCount(10);
+
         var alice = result.Data.Single(c => c.Id == 1);
         alice.Orders.Should().HaveCount(1);
+        alice.Orders.Should().OnlyContain(o => o.OrderItems == null || o.OrderItems.Count == 0);
+        alice.Addresses.Should().BeNull();
 
-        // The declared-but-unrequested nested navigation must NOT be materialized.
-        alice.Orders.Should().OnlyContain(o => o.OrderItems == null || o.OrderItems.Count == 0,
-            "OrderItems was not included — the DTO-declared nested navigation must stay at its default");
-
-        // And it must never enter the SQL: no OrderItems columns in the data query.
         var dataQueries = DataQueries();
         dataQueries.Should().NotBeEmpty();
-        dataQueries.Should().NotContain(q => q.Contains("OrderItems", StringComparison.Ordinal),
-            "the generated SQL must only cover the requested navigation graph");
+        dataQueries.Should().NotContain(q => q.Contains("OrderItems", StringComparison.Ordinal));
+        dataQueries.Should().NotContain(q => q.Contains("Addresses", StringComparison.Ordinal));
     }
 
     [Fact]
-    public async Task Include_Alone_DoesNotMaterializeUnrequestedNestedNavigation()
+    public async Task Include_Alone_DoesNotMaterializeUnrequestedNavigations()
     {
         var result = await _db.Customers.FlexQueryAsync<Customer, CustomerDto>(
             new FlexQueryParameters
@@ -116,15 +129,24 @@ public class DtoIncludeGraphBoundaryTests : IDisposable
             },
             ConfigureMaps());
 
+        result.Data.Should().HaveCount(10);
+
         var alice = result.Data.Single(c => c.Id == 1);
         alice.Orders.Should().HaveCount(2);
-        alice.Orders.Should().OnlyContain(o => o.OrderItems == null || o.OrderItems.Count == 0,
-            "OrderItems was not included — the DTO-declared nested navigation must stay at its default");
+        alice.Orders.Should().OnlyContain(o => o.OrderItems == null || o.OrderItems.Count == 0);
+        alice.Addresses.Should().BeNull();
+
+        foreach (var id in OrderlessCustomerIds)
+        {
+            var customer = result.Data.Single(c => c.Id == id);
+            customer.Orders.Should().BeEmpty($"customer {id} has no orders and must remain");
+            customer.Addresses.Should().BeNull();
+        }
 
         var dataQueries = DataQueries();
         dataQueries.Should().NotBeEmpty();
-        dataQueries.Should().NotContain(q => q.Contains("OrderItems", StringComparison.Ordinal),
-            "the generated SQL must only cover the requested navigation graph");
+        dataQueries.Should().NotContain(q => q.Contains("OrderItems", StringComparison.Ordinal));
+        dataQueries.Should().NotContain(q => q.Contains("Addresses", StringComparison.Ordinal));
     }
 
     [Fact]
@@ -138,14 +160,77 @@ public class DtoIncludeGraphBoundaryTests : IDisposable
             },
             ConfigureMaps());
 
-        // Explicitly included: the nested graph is materialized.
         var alice = result.Data.Single(c => c.Id == 1);
         var order10001 = alice.Orders.Single(o => o.Id == 10001);
         order10001.OrderItems.Should().HaveCount(2);
+        alice.Addresses.Should().BeNull();
 
         var dataQueries = DataQueries();
         dataQueries.Should().NotBeEmpty();
-        dataQueries.Should().Contain(q => q.Contains("OrderItems", StringComparison.Ordinal),
-            "OrderItems was explicitly included and must be queried");
+        dataQueries.Should().Contain(q => q.Contains("OrderItems", StringComparison.Ordinal));
+        dataQueries.Should().NotContain(q => q.Contains("Addresses", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public async Task Include_SiblingNavigation_MaterializesOnlyRequestedGraph()
+    {
+        var result = await _db.Customers.FlexQueryAsync<Customer, CustomerDto>(
+            new FlexQueryParameters
+            {
+                Include = "Orders,Addresses",
+                PageSize = 100
+            },
+            ConfigureMaps());
+
+        var alice = result.Data.Single(c => c.Id == 1);
+        alice.Orders.Should().HaveCount(2);
+        alice.Addresses.Should().NotBeNull();
+        alice.Addresses.Should().ContainSingle(a => a.Id == 1);
+        alice.Orders.Should().OnlyContain(o => o.OrderItems == null || o.OrderItems.Count == 0);
+
+        var dataQueries = DataQueries();
+        dataQueries.Should().NotBeEmpty();
+        dataQueries.Should().Contain(q => q.Contains("Addresses", StringComparison.Ordinal));
+        dataQueries.Should().NotContain(q => q.Contains("OrderItems", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public async Task Include_NestedPath_WithWindows_MaterializesRequestedGraph_WithWindowsApplied()
+    {
+        using var db = SharedTestDbContext.CreateInMemorySeeded();
+        db.Orders.AddRange(
+            new Order
+            {
+                Id = 10006, CustomerId = 2, Status = "Delivered", Total = 10m, Number = "SO-EXP-1",
+                OrderDate = new DateTime(2026, 1, 2, 0, 0, 0, DateTimeKind.Utc),
+                OrderItems = [new OrderItem { Id = 10, OrderId = 10006, Quantity = 1, Price = 5m, Sku = "SKU-E10" }]
+            },
+            new Order
+            {
+                Id = 10005, CustomerId = 2, Status = "Delivered", Total = 20m, Number = "SO-EXP-2",
+                OrderDate = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc),
+                OrderItems = [new OrderItem { Id = 12, OrderId = 10005, Quantity = 2, Price = 10m, Sku = "SKU-E12" }]
+            });
+        db.SaveChanges();
+
+        var result = await db.Customers.FlexQueryAsync<Customer, CustomerDto>(
+            new FlexQueryParameters
+            {
+                Include = "Orders,Orders.OrderItems",
+                Expand = "Orders(take=1;filter=Status:eq:Delivered;sort=Id:desc),Orders.OrderItems(take=5)",
+                PageSize = 100
+            },
+            ConfigureMaps());
+
+        result.Data.Should().HaveCount(10);
+
+        var bob = result.Data.Single(c => c.Id == 2);
+        var bobOrder = bob.Orders.Should().ContainSingle().Subject;
+        bobOrder.Id.Should().Be(10006);
+        bobOrder.OrderItems.Select(i => i.Id).Should().Equal([10]);
+
+        var alice = result.Data.Single(c => c.Id == 1);
+        alice.Orders.Should().BeEmpty();
+        alice.Addresses.Should().BeNull();
     }
 }
