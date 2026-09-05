@@ -18,6 +18,10 @@ public static class SharedFlexQueryModel
             .HasMany(c => c.Orders)
             .HasForeignKey("CustomerId");
 
+        builder.Entity<Customer>()
+            .HasMany(c => c.Addresses)
+            .HasForeignKey("CustomerId");
+
         builder.Entity<Order>()
             .ToTable("Orders")
             .HasMany(o => o.OrderItems)

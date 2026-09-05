@@ -29,7 +29,7 @@ public static class SampleData
             alice.Profile = aliceProfile;
             profiles.Add(aliceProfile);
 
-            var order1 = new Order { Id = 10001, Total = 150.0m, Status = "Shipped", Number = "SO-001", OrderItems = [] };
+            var order1 = new Order { Id = 10001, Total = 150.0m, Status = "Shipped", Number = "SO-001", ExpectedDeliveryDate = new DateTime(2023, 1, 15), OrderItems = [] };
             orderItems.AddRange([
                 new OrderItem { Id = 1, Quantity = 2, Price = 25.0m, Sku = "SKU-AAA" },
                 new OrderItem { Id = 2, Quantity = 1, Price = 10.0m, Sku = "SKU-BBB" }
