@@ -32,8 +32,7 @@ internal static class DtoProjectionBuilder
 
     private static readonly MethodInfo EnumerableToListMethod = typeof(Enumerable)
         .GetMethods(BindingFlags.Public | BindingFlags.Static)
-        .First(m => m.Name == nameof(Enumerable.ToList)
-                    && m.IsGenericMethodDefinition
+        .First(m => m is { Name: nameof(Enumerable.ToList), IsGenericMethodDefinition: true }
                     && m.GetParameters().Length == 1);
 
     public static Expression<Func<TEntity, TResponse>> Build<TEntity, TResponse>(
@@ -49,6 +48,8 @@ internal static class DtoProjectionBuilder
         var entityParam = Expression.Parameter(typeof(TEntity), "x");
         var responseType = typeof(TResponse);
 
+        var allowedNavigationPaths = RequestedNavigationGraph.Collect(queryOptions);
+
         var fieldsToProject = fieldsOverride ??
             (queryOptions.Select is { Count: > 0 }
                 ? queryOptions.Select
@@ -59,7 +60,7 @@ internal static class DtoProjectionBuilder
         {
             var sourceField = selectNode.Field;
 
-            if (!surface.TryResolve(sourceField, out var resolved))
+            if (!surface.TryResolve(sourceField ?? "", out var resolved))
             {
                 throw new FlexQueryException(
                     $"Cannot project source field '{sourceField}' on {responseType.Name}. " +
@@ -111,14 +112,14 @@ internal static class DtoProjectionBuilder
                     if (selectNode.Children is { Count: > 0 })
                     {
                         entityExprBody = BuildNestedChildProjection(
-                            windowBody, selectNode.Children, responseProp.PropertyType, queryOptions, mappingRegistry, depth: 1,
+                            windowBody, selectNode.Children, responseProp.PropertyType, queryOptions, mappingRegistry,
                             expandChildren: expandWindow!.Children);
                     }
                     else
                     {
                         entityExprBody = ProjectNestedMemberNavigation(
                             windowBody, responseProp.PropertyType, mappingRegistry!, depth: 1,
-                            expandWindow!.Children);
+                            expandWindow!.Children, resolved.EntityProperty.Name, allowedNavigationPaths);
                     }
                 }
                 else if (selectNode.Children is { Count: > 0 })
@@ -128,7 +129,7 @@ internal static class DtoProjectionBuilder
                     // server-side expression tree: window → Select(child projections) → ToList.
                     var windowBody = hasWindow ? ReplaceParameter(window!, entityParam) : entityExprBody;
                     entityExprBody = BuildNestedChildProjection(
-                        windowBody, selectNode.Children, responseProp.PropertyType, queryOptions, mappingRegistry, depth: 1,
+                        windowBody, selectNode.Children, responseProp.PropertyType, queryOptions, mappingRegistry,
                         expandChildren: null);
                 }
                 else if (hasWindow)
@@ -136,7 +137,8 @@ internal static class DtoProjectionBuilder
                     // Server-side expand window bound directly; DTO-typed navigation element
                     // types project through the registered nested TypeMap graph.
                     entityExprBody = ProjectNestedMemberNavigation(
-                        ReplaceParameter(window!, entityParam), responseProp.PropertyType, mappingRegistry!, depth: 1, null);
+                        ReplaceParameter(window!, entityParam), responseProp.PropertyType, mappingRegistry!, depth: 1, null,
+                        resolved.EntityProperty.Name, allowedNavigationPaths);
                 }
                 else
                 {
@@ -144,7 +146,8 @@ internal static class DtoProjectionBuilder
                     // Cut the graph at the entity boundary for entity-typed members; DTO-typed
                     // members project through the registered nested TypeMap graph.
                     entityExprBody = mappingRegistry is not null
-                        ? ProjectNestedMemberNavigation(entityExprBody, responseProp.PropertyType, mappingRegistry, depth: 1, null)
+                        ? ProjectNestedMemberNavigation(entityExprBody, responseProp.PropertyType, mappingRegistry, depth: 1,
+                            expandChildren: null, navigationPath: resolved.EntityProperty.Name, allowedNavigationPaths: allowedNavigationPaths)
                         : BuildNavigationCutProjection(entityExprBody, responseProp.PropertyType);
                 }
             }
@@ -184,7 +187,7 @@ internal static class DtoProjectionBuilder
         var node = window.Node;
         var elementType = UnwrapCollection(navigationBody.Type);
 
-        Expression body = navigationBody;
+        var body = navigationBody;
 
         if (node.Filter is not null)
         {
@@ -208,7 +211,7 @@ internal static class DtoProjectionBuilder
 
         if (node.Sort is { Count: > 0 })
         {
-            Expression result = body;
+            var result = body;
             var ordered = false;
 
             foreach (var sortNode in node.Sort)
@@ -260,7 +263,7 @@ internal static class DtoProjectionBuilder
     }
 
     private static Type UnwrapCollection(Type type)
-        => SafePropertyResolver.TryGetCollectionElementType(type, out var element) && element is not null
+        => SafePropertyResolver.TryGetCollectionElementType(type, out var element)
             ? element
             : type;
 
@@ -276,32 +279,33 @@ internal static class DtoProjectionBuilder
         Type responseType,
         IQueryMappingRegistry registry,
         int depth,
-        IReadOnlyDictionary<string, ExpandWindowNode>? expandChildren)
+        IReadOnlyDictionary<string, ExpandWindowNode>? expandChildren,
+        string navigationPath,
+        IReadOnlySet<string> allowedNavigationPaths)
     {
         if (navigationBody.Type == typeof(string))
             return navigationBody;
 
-        var isCollection = SafePropertyResolver.TryGetCollectionElementType(responseType, out var dtoElement)
-                           && dtoElement is not null;
+        var isCollection = SafePropertyResolver.TryGetCollectionElementType(responseType, out var dtoElement);
         var entityElementType = ResolveEntityElementType(navigationBody, isCollection ? dtoElement : null);
-        var responseElementType = dtoElement;
 
         if (isCollection
-            && responseElementType is not null
-            && responseElementType != entityElementType
-            && registry.Find(entityElementType, responseElementType) is { } nestedCollectionMap)
+            && dtoElement != entityElementType
+            && registry.Find(entityElementType, dtoElement) is { } nestedCollectionMap)
         {
             var elementParam = Expression.Parameter(entityElementType, "e");
-            var memberInit = BuildTypeMapMemberInit(nestedCollectionMap, registry, depth, elementParam, expandChildren);
+            var memberInit = BuildTypeMapMemberInit(nestedCollectionMap, registry, depth, elementParam, expandChildren,
+                navigationPath, allowedNavigationPaths);
             var selector = Expression.Lambda(memberInit, elementParam);
 
             var selectCall = Expression.Call(
-                EnumerableSelectMethod.MakeGenericMethod(entityElementType, responseElementType),
+                EnumerableSelectMethod.MakeGenericMethod(entityElementType, dtoElement),
                 navigationBody,
                 selector);
-            var toList = Expression.Call(EnumerableToListMethod.MakeGenericMethod(responseElementType), selectCall);
+            
+            var toList = Expression.Call(EnumerableToListMethod.MakeGenericMethod(dtoElement), selectCall);
             return responseType.IsAssignableFrom(toList.Type)
-                ? (toList.Type == responseType ? toList : Expression.Convert(toList, responseType))
+                ? toList.Type == responseType ? toList : Expression.Convert(toList, responseType)
                 : toList;
         }
 
@@ -310,7 +314,8 @@ internal static class DtoProjectionBuilder
             && registry.Find(navigationBody.Type, responseType) is { } nestedReferenceMap)
         {
             var referenceParam = Expression.Parameter(navigationBody.Type, "e");
-            var memberInit = BuildTypeMapMemberInit(nestedReferenceMap, registry, depth, referenceParam, expandChildren);
+            var memberInit = BuildTypeMapMemberInit(nestedReferenceMap, registry, depth, referenceParam, expandChildren,
+                navigationPath, allowedNavigationPaths);
             var projectedBody = ReplaceParameter(
                 Expression.Lambda(memberInit, referenceParam),
                 navigationBody);
@@ -318,7 +323,7 @@ internal static class DtoProjectionBuilder
             var nullValue = Expression.Constant(null, responseType);
 
             return responseType.IsAssignableFrom(projectedBody.Type)
-                ? (Expression)Expression.Condition(notNull, Expression.Convert(projectedBody, responseType), nullValue)
+                ? Expression.Condition(notNull, Expression.Convert(projectedBody, responseType), nullValue)
                 : projectedBody;
         }
 
@@ -354,18 +359,15 @@ internal static class DtoProjectionBuilder
         Type responseType,
         QueryOptions queryOptions,
         IQueryMappingRegistry? mappingRegistry,
-        int depth,
         IReadOnlyDictionary<string, ExpandWindowNode>? expandChildren = null)
     {
         Type elementType;
         Type projectionType;
-        var isCollection = SafePropertyResolver.TryGetCollectionElementType(responseType, out var collectionElement)
-                           && collectionElement is not null;
+        var isCollection = SafePropertyResolver.TryGetCollectionElementType(responseType, out var collectionElement);
 
         if (isCollection)
         {
             elementType = SafePropertyResolver.TryGetCollectionElementType(windowBody.Type, out var windowElement)
-                && windowElement is not null
                 ? windowElement
                 : collectionElement!;
             projectionType = collectionElement!;
@@ -432,7 +434,7 @@ internal static class DtoProjectionBuilder
             if (child.Children is { Count: > 0 })
             {
                 childAccess = BuildNestedChildProjection(
-                    childAccess, child.Children, responseProp.PropertyType, queryOptions, mappingRegistry, depth + 1);
+                    childAccess, child.Children, responseProp.PropertyType, queryOptions, mappingRegistry);
             }
             else if (!TypeClassification.IsScalarType(responseProp.PropertyType))
             {
@@ -491,7 +493,9 @@ internal static class DtoProjectionBuilder
         IQueryMappingRegistry registry,
         int depth,
         ParameterExpression elementParam,
-        IReadOnlyDictionary<string, ExpandWindowNode>? expandChildren = null)
+        IReadOnlyDictionary<string, ExpandWindowNode>? expandChildren = null,
+        string? navigationPath = null,
+        IReadOnlySet<string>? allowedNavigationPaths = null)
     {
         var bindings = new List<MemberBinding>();
 
@@ -505,8 +509,25 @@ internal static class DtoProjectionBuilder
 
             if (propertyMap.IsNavigation && depth < MaxNestedProjectionDepth)
             {
+                var entityNavName = propertyMap.SourceProperty?.Name ?? destProp.Name;
+                var childPath = navigationPath is null ? null : $"{navigationPath}.{entityNavName}";
+                var destinationPath = navigationPath is null ? null : $"{navigationPath}.{destProp.Name}";
+
+                if (navigationPath is not null
+                    && allowedNavigationPaths is not null
+                    && (childPath is null
+                        || !(allowedNavigationPaths.Contains(childPath)
+                             || (destinationPath is not null && allowedNavigationPaths.Contains(destinationPath)))))
+                {
+                    continue;
+                }
+
                 ExpandWindowNode? childWindow = null;
-                expandChildren?.TryGetValue(destProp.Name, out childWindow);
+                if (expandChildren is not null)
+                {
+                    if (!expandChildren.TryGetValue(destProp.Name, out childWindow))
+                        expandChildren.TryGetValue(entityNavName, out childWindow);
+                }
 
                 if (childWindow is not null)
                 {
@@ -515,7 +536,9 @@ internal static class DtoProjectionBuilder
                     value = ApplyExpandWindow(value, childWindow, new QueryOptions());
                 }
 
-                value = ProjectNestedMemberNavigation(value, destProp.PropertyType, registry, depth + 1, childWindow?.Children);
+                if (childPath != null && allowedNavigationPaths != null)
+                        value = ProjectNestedMemberNavigation(value, destProp.PropertyType, registry, depth + 1,
+                            childWindow?.Children, childPath, allowedNavigationPaths);
             }
 
             if (value.Type != destProp.PropertyType)
@@ -535,32 +558,10 @@ internal static class DtoProjectionBuilder
         return Expression.MemberInit(Expression.New(map.DestinationType), bindings);
     }
 
-    /// <summary>
-    /// Builds the element selector lambda for a nested type map:
-    /// <c>e => new TDestination { ... }</c>. The lambda parameter is created here and
-    /// passed into the body builder so parameter identity matches — a body built against
-    /// a different parameter instance would leave an unbound parameter that EF Core
-    /// cannot translate.
-    /// </summary>
-    private static LambdaExpression BuildTypeMapSelector(
-        ITypeMap map,
-        IQueryMappingRegistry registry,
-        int depth)
-    {
-        var elementParam = Expression.Parameter(map.SourceType, "e");
-        var memberInit = BuildTypeMapMemberInit(map, registry, depth, elementParam);
-        return Expression.Lambda(memberInit, elementParam);
-    }
-
     private static Type ResolveEntityElementType(Expression navigationBody, Type? dtoElement)
     {
-        if (SafePropertyResolver.TryGetCollectionElementType(navigationBody.Type, out var entityElement)
-            && entityElement is not null)
-        {
-            return entityElement;
-        }
-
-        return navigationBody.Type;
+        return SafePropertyResolver.TryGetCollectionElementType(navigationBody.Type, out var entityElement) 
+            ? entityElement : navigationBody.Type;
     }
 
     /// <summary>

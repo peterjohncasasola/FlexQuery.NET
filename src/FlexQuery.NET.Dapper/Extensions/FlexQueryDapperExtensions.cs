@@ -6,6 +6,7 @@ using Microsoft.Extensions.Primitives;
 using FlexQuery.NET.Constants;
 using FlexQuery.NET.Dapper.Execution;
 using FlexQuery.NET.Dapper.Options;
+using FlexQuery.NET.Mapping;
 using FlexQuery.NET.QuerySurface;
 using FlexQuery.NET.Resolvers;
 using FlexQuery.NET.Serialization;
@@ -259,15 +260,19 @@ public static class FlexQueryDapperExtensions
 
         // Prefer the mapping registry's TypeMap graph when the host registered one
         // (CreateMap/ForMember/ForNavigation): nested navigations materialize
-        // recursively into DTO types — raw entity graphs never leak.
+        // recursively into DTO types — raw entity graphs never leak. Only the requested
+        // include/expand navigation paths are materialized; DTO-declared deeper
+        // navigations stay at their DTO default.
         var typeMap = dapperOptions.MappingRegistry?.Find(typeof(TEntity), typeof(TResponse));
+        var allowedNavigationPaths = RequestedNavigationGraph.Collect(queryOptions);
 
         var data = new List<TResponse>(nonDtoResult.Data.Count);
         foreach (var item in nonDtoResult.Data)
         {
             if (typeMap is not null)
             {
-                data.Add((TResponse)TypeMapMaterializer.Materialize(typeMap, item, dapperOptions.MappingRegistry!));
+                data.Add((TResponse)TypeMapMaterializer.Materialize(
+                    typeMap, item, dapperOptions.MappingRegistry!, allowedNavigationPaths: allowedNavigationPaths));
                 continue;
             }
 

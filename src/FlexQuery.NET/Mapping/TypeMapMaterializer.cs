@@ -2,7 +2,6 @@ using System.Collections;
 using System.Collections.Concurrent;
 using System.Linq.Expressions;
 using System.Reflection;
-using FlexQuery.NET.Models.Projection;
 
 namespace FlexQuery.NET.Mapping;
 
@@ -18,7 +17,13 @@ internal static class TypeMapMaterializer
     /// <summary>
     /// Materializes a single entity into the type map's destination type.
     /// </summary>
-    public static object Materialize(ITypeMap map, object entity, IQueryMappingRegistry registry, int depth = 0)
+    public static object Materialize(
+        ITypeMap map,
+        object entity,
+        IQueryMappingRegistry registry,
+        int depth = 0,
+        string navigationPath = "",
+        IReadOnlySet<string>? allowedNavigationPaths = null)
     {
         var destination = Activator.CreateInstance(map.DestinationType)!;
 
@@ -32,7 +37,22 @@ internal static class TypeMapMaterializer
 
             if (propertyMap.IsNavigation && depth < MaxDepth)
             {
-                value = ProjectNavigation(value, propertyMap, registry, depth);
+                var entityNavName = propertyMap.SourceProperty?.Name ?? propertyMap.DestinationName;
+                var childPath = navigationPath.Length == 0
+                    ? entityNavName
+                    : $"{navigationPath}.{entityNavName}";
+                var destinationPath = navigationPath.Length == 0
+                    ? propertyMap.DestinationName
+                    : $"{navigationPath}.{propertyMap.DestinationName}";
+
+                if (allowedNavigationPaths is not null
+                    && !allowedNavigationPaths.Contains(childPath)
+                    && !allowedNavigationPaths.Contains(destinationPath))
+                {
+                    continue;
+                }
+
+                value = ProjectNavigation(value, propertyMap, registry, depth, childPath, allowedNavigationPaths);
             }
             else if (propertyMap.IsNavigation)
             {
@@ -42,24 +62,17 @@ internal static class TypeMapMaterializer
             if (value is not null && !destProp.PropertyType.IsInstanceOfType(value))
             {
                 var targetType = Nullable.GetUnderlyingType(destProp.PropertyType) ?? destProp.PropertyType;
-                if (targetType.IsInstanceOfType(value))
+                try
                 {
-                    value = value;
+                    value = Convert.ChangeType(value, targetType);
                 }
-                else
+                catch (InvalidCastException)
                 {
-                    try
-                    {
-                        value = Convert.ChangeType(value, targetType);
-                    }
-                    catch (InvalidCastException)
-                    {
-                        continue; // skip members the registered mapping cannot coerce
-                    }
-                    catch (FormatException)
-                    {
-                        continue;
-                    }
+                    continue;
+                }
+                catch (FormatException)
+                {
+                    continue;
                 }
             }
 
@@ -74,7 +87,13 @@ internal static class TypeMapMaterializer
     /// nested registered type map. When no nested map is registered the value is dropped
     /// (set to null) so raw entity graphs never leak into nested DTO graphs.
     /// </summary>
-    private static object? ProjectNavigation(object value, PropertyMap propertyMap, IQueryMappingRegistry registry, int depth)
+    private static object? ProjectNavigation(
+        object? value,
+        PropertyMap propertyMap,
+        IQueryMappingRegistry registry,
+        int depth,
+        string navigationPath,
+        IReadOnlySet<string>? allowedNavigationPaths)
     {
         var dtoElementType = TryGetElementOrSelf(propertyMap.DestinationValueType);
         var entityElementType = TryGetElementOrSelf(propertyMap.SourceValueType);
@@ -101,22 +120,21 @@ internal static class TypeMapMaterializer
         if (value is null)
             return null;
 
-        if (value is IEnumerable enumerable and not string)
+        if (value is not (IEnumerable enumerable and not string))
+            return Materialize(nestedMap, value, registry, depth + 1, navigationPath, allowedNavigationPaths);
+        
+        var listType = typeof(List<>).MakeGenericType(dtoElementType);
+        var list = (IList)Activator.CreateInstance(listType)!;
+        var add = listType.GetMethod("Add")!;
+
+        foreach (var item in enumerable)
         {
-            var listType = typeof(List<>).MakeGenericType(dtoElementType);
-            var list = (IList)Activator.CreateInstance(listType)!;
-            var add = listType.GetMethod("Add")!;
-
-            foreach (var item in enumerable)
-            {
-                if (item is null) continue;
-                add.Invoke(list, [Materialize(nestedMap, item, registry, depth + 1)]);
-            }
-
-            return list;
+            if (item is null) continue;
+            add.Invoke(list, [Materialize(nestedMap, item, registry, depth + 1, navigationPath, allowedNavigationPaths)]);
         }
 
-        return Materialize(nestedMap, value, registry, depth + 1);
+        return list;
+
     }
 
     private static Type? TryGetElementOrSelf(Type type)
