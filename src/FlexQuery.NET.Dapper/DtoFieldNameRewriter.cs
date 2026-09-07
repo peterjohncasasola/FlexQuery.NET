@@ -7,6 +7,7 @@ using FlexQuery.NET.Models.Aggregates;
 using FlexQuery.NET.Models.Paging;
 using FlexQuery.NET.Exceptions;
 using FlexQuery.NET.Metadata;
+using System.Reflection;
 
 namespace FlexQuery.NET.Dapper;
 
@@ -64,6 +65,255 @@ internal static class DtoFieldNameRewriter
         {
             options.Having = RewriteHaving(options.Having, surface);
         }
+
+        // Expand-block fields (filter/sort per navigation level) resolve against the
+        // navigation element's TypeMap, not the root surface — rewrite them through the
+        // registered nested map graph so ForMember renames like
+        // OrderResponse.DeliveryDate ← Order.ExpectedDeliveryDate translate to entity
+        // column names before SQL generation.
+        if (options.Expand is { Count: > 0 })
+        {
+            RewriteExpandNodes(options.Expand, surface, mappingRegistry);
+        }
+    }
+
+    private static void RewriteExpandNodes(
+        List<IncludeNode> nodes,
+        IQuerySurface surface,
+        IQueryMappingRegistry? mappingRegistry,
+        ITypeMap? parentMap = null,
+        Type? parentEntityType = null)
+    {
+        foreach (var node in nodes)
+        {
+            // Each expand node's path may contain dotted segments ("Orders.OrderItems")
+            // after TranslateIncludePathsToEntity resolves only the root segment — walk
+            // segment-by-segment so every level's filter/sort resolves against its own
+            // element TypeMap.
+            RewriteExpandChain(
+                node,
+                node.Path,
+                surface,
+                mappingRegistry,
+                parentMap,
+                parentEntityType,
+                walkedPath: string.Empty);
+        }
+    }
+
+    private static void RewriteExpandChain(
+        IncludeNode node,
+        string remainingPath,
+        IQuerySurface surface,
+        IQueryMappingRegistry? mappingRegistry,
+        ITypeMap? parentMap,
+        Type? parentEntityType,
+        string walkedPath)
+    {
+        if (mappingRegistry is null)
+            return;
+
+        if (string.IsNullOrEmpty(remainingPath))
+        {
+            // The chain for THIS node is exhausted; its filter/sort have been rewritten
+            // by the last segment call. Descend into child nodes.
+            if (node.Children is { Count: > 0 })
+            {
+                foreach (var child in node.Children)
+                {
+                    RewriteExpandChain(
+                        child,
+                        child.Path,
+                        surface,
+                        mappingRegistry,
+                        parentMap,
+                        parentEntityType,
+                        walkedPath);
+                }
+            }
+            return;
+        }
+
+        var dotIndex = remainingPath.IndexOf('.');
+        var segment = dotIndex < 0 ? remainingPath : remainingPath[..dotIndex];
+        var rest = dotIndex < 0 ? string.Empty : remainingPath[(dotIndex + 1)..];
+        var fullPath = walkedPath.Length == 0 ? segment : $"{walkedPath}.{segment}";
+
+        // Resolve this segment's member: on the parent map (DTO destination name first,
+        // then raw entity property name), via reflection on the parent entity type when
+        // the parent level is entity-typed (pass-through), or via the root surface at
+        // the top level.
+        PropertyMap? member = null;
+        Type? entityElementType = null;
+        Type? dtoElementType = null;
+
+        if (parentMap is not null)
+        {
+            member = ResolveMemberOnMap(parentMap, segment);
+            if (member is not null)
+            {
+                entityElementType = NavigationElementType(member.SourceValueType);
+                dtoElementType = NavigationElementType(member.DestinationValueType);
+            }
+        }
+        else if (parentEntityType is not null)
+        {
+            var navigation = parentEntityType.GetProperty(
+                segment, BindingFlags.Public | BindingFlags.Instance | BindingFlags.IgnoreCase);
+            if (navigation is null || !TryGetElementOrSelf(navigation.PropertyType, out var element))
+                return;
+
+            entityElementType = element;
+            dtoElementType = element;   // pass-through level — no map metadata available
+        }
+        else if (surface.TryResolve(segment, out var resolved))
+        {
+            entityElementType = NavigationElementType(resolved.EntityProperty.PropertyType);
+            dtoElementType = NavigationElementType(resolved.ResponseProperty?.PropertyType ?? resolved.EntityProperty.PropertyType);
+        }
+
+        if (entityElementType is null)
+            return;
+
+        var isNestedPair = dtoElementType is not null && entityElementType != dtoElementType;
+        var elementMap = mappingRegistry.Find(entityElementType, isNestedPair ? dtoElementType! : entityElementType);
+
+        if (rest.Length == 0)
+        {
+            // Last segment of this node's path: its filter/sort run against the
+            // element entity type — rewrite through the element's registered map.
+            if (node.Filter is not null)
+                node.Filter = RewriteExpandFilter(node.Filter, fullPath, entityElementType, elementMap);
+
+            if (node.Sort is { Count: > 0 })
+            {
+                for (var i = 0; i < node.Sort.Count; i++)
+                {
+                    node.Sort[i] = RewriteExpandSort(node.Sort[i], fullPath, entityElementType, elementMap);
+                }
+            }
+
+            // Children start one level deeper (element entity type).
+            foreach (var child in node.Children)
+            {
+                RewriteExpandChain(
+                    child,
+                    child.Path,
+                    surface,
+                    mappingRegistry,
+                    elementMap,
+                    entityElementType,
+                    fullPath);
+            }
+
+            return;
+        }
+
+        // More segments remain in this node's path: descend into the element entity
+        // type and keep walking.
+        RewriteExpandChain(
+            node,
+            rest,
+            surface,
+            mappingRegistry,
+            elementMap,
+            entityElementType,
+            fullPath);
+    }
+
+    private static PropertyMap? ResolveMemberOnMap(ITypeMap map, string segment)
+    {
+        if (map.TryResolveDestinationMember(segment, out var resolved))
+            return resolved;
+
+        var sourceProp = map.SourceType.GetProperty(
+            segment, BindingFlags.Public | BindingFlags.Instance | BindingFlags.IgnoreCase);
+        if (sourceProp is null)
+            return null;
+
+        return map.PropertyMaps.FirstOrDefault(m =>
+            m.SourceProperty?.Name.Equals(sourceProp.Name, StringComparison.OrdinalIgnoreCase) == true);
+    }
+
+    private static Type? NavigationElementType(Type type)
+        => TryGetElementOrSelf(type, out var element) ? element : null;
+
+    private static FilterGroup RewriteExpandFilter(FilterGroup group, string fullPath, Type entityElementType, ITypeMap? map)
+    {
+        var rewritten = new FilterGroup { Logic = group.Logic };
+        foreach (var filter in group.Filters)
+        {
+            rewritten.Filters.Add(RewriteExpandFilterCondition(filter, fullPath, entityElementType, map));
+        }
+        foreach (var child in group.Groups)
+        {
+            rewritten.Groups.Add(RewriteExpandFilter(child, fullPath, entityElementType, map));
+        }
+        return rewritten;
+    }
+
+    private static FilterCondition RewriteExpandFilterCondition(FilterCondition condition, string fullPath, Type entityElementType, ITypeMap? map)
+    {
+        var rewritten = new FilterCondition
+        {
+            Field = condition.Field,
+            Operator = condition.Operator,
+            Value = condition.Value,
+            ScopedFilter = condition.ScopedFilter is null
+                ? null
+                : RewriteExpandFilter(condition.ScopedFilter, fullPath, entityElementType, map)
+        };
+
+        // Scoped collection filters (Orders.Count(...)) switch target entity — leave
+        // those fields for the scoped rewrite path.
+        if (condition.ScopedFilter is not null)
+            return rewritten;
+
+        rewritten.Field = ResolveExpandField(condition.Field, fullPath, entityElementType, map);
+        return rewritten;
+    }
+
+    private static SortNode RewriteExpandSort(SortNode node, string fullPath, Type entityElementType, ITypeMap? map)
+    {
+        var rewritten = new SortNode
+        {
+            Field = node.Field,
+            Descending = node.Descending
+        };
+
+        if (!node.Aggregate.HasValue)
+        {
+            rewritten.Field = ResolveExpandField(node.Field, fullPath, entityElementType, map);
+            return rewritten;
+        }
+
+        rewritten.Aggregate = node.Aggregate;
+        rewritten.AggregateField = node.AggregateField;
+
+        return rewritten;
+    }
+
+    private static string? ResolveExpandField(string? field, string fullPath, Type entityElementType, ITypeMap? map)
+    {
+        if (string.IsNullOrEmpty(field)) return field;
+
+        // Renamed DTO members rewrite through the level's registered TypeMap.
+        if (map is not null && map.TryResolveDestinationMember(field, out var member))
+            return member.SourceProperty?.Name ?? field;
+
+        // Entity-named fields pass through unchanged — but a field that exists on
+        // neither the level's map nor its entity type is a request error; fail with a
+        // precise message instead of letting an unknown column reach the database.
+        if (entityElementType.GetProperty(
+                field, BindingFlags.Public | BindingFlags.Instance | BindingFlags.IgnoreCase) is null)
+        {
+            throw new FlexQueryException(
+                $"Field '{field}' is not part of the expand surface for '{fullPath}'. " +
+                "Expand filter and sort fields must belong to the expanded collection's element type " +
+                "(using public DTO names when a CreateMap is registered for it).");
+        }
+
+        return field;
     }
 
     private static string? RewriteField(string? field, IQuerySurface surface)
