@@ -1,0 +1,189 @@
+---
+title: Grouping & Aggregates
+description: GROUP BY, aggregate functions, HAVING, and grouped results.
+section: Guides
+---
+
+import { Callout } from '@/components/callout'
+import { ApiTable } from '@/components/api-table'
+
+# Grouping & Aggregates
+
+Dashboards, reports, and summary bars all answer the same kind of question: *how many*, *how
+much*, *what is the average* — per category. SQL answers it with `GROUP BY`, aggregate
+functions, and `HAVING`. FlexQuery exposes the same trio through query parameters, so a
+client can pivot raw rows into summary rows without a bespoke endpoint per report.
+
+## The three parameters
+
+| Parameter | Role | SQL equivalent |
+|---|---|---|
+| `groupBy` | Declares the group keys — the dimensions to summarize by. | `GROUP BY` |
+| `aggregate` | Declares computed values per group. | `SUM(x)`, `COUNT(*)`, … in `SELECT` |
+| `having` | Filters groups by their computed values. | `HAVING` |
+
+A grouped query returns **one row per group**, not per entity — the result shape changes
+fundamentally, which is why grouping interacts differently with sorting, paging, and
+projection than plain queries do.
+
+## GroupBy
+
+```http
+GET /api/orders?groupBy=Status
+```
+
+Multiple keys group by a combination: `groupBy=Status,CustomerId` produces one row per
+distinct (Status, CustomerId) pair.
+
+## Aggregates
+
+Aggregates use a dedicated `aggregate` parameter with `function:field` pairs:
+
+```http
+GET /api/orders?groupBy=Status&aggregate=sum:Total,count:Id,avg:Age
+```
+
+<ApiTable>
+  <thead>
+    <tr><th>Function</th><th>Example</th><th>Notes</th></tr>
+  </thead>
+  <tbody>
+    <tr><td><code>sum</code></td><td><code>sum:Total</code></td><td>Numeric fields.</td></tr>
+    <tr><td><code>count</code></td><td><code>count:Id</code></td><td>Rows per group.</td></tr>
+    <tr><td><code>avg</code> (or <code>average</code>)</td><td><code>avg:Age</code></td><td>Numeric fields.</td></tr>
+    <tr><td><code>min</code></td><td><code>min:OrderDate</code></td><td>Orderable fields.</td></tr>
+    <tr><td><code>max</code></td><td><code>max:OrderDate</code></td><td>Orderable fields.</td></tr>
+  </tbody>
+</ApiTable>
+
+### Aliases
+
+Each aggregate produces an output field. By default the alias is PascalCase — `sum:Total`
+becomes `SumTotal`. Declare explicit aliases with a third segment:
+
+```http
+GET /api/orders?groupBy=Status&aggregate=sum:Total:totalSales
+```
+
+Rules:
+
+- Aliases must be valid identifiers and unique across the query.
+- Wildcard aggregates (`sum:*`) are rejected.
+- Aggregates referenced by `having` or aggregate-sorts must be declared here — undeclared
+  references fail validation.
+
+## Having
+
+`having` filters *groups* (not rows) by computed values. It reuses the aggregate grammar for
+the left side and combines conditions with `AND` / `OR` and parentheses:
+
+```http
+GET /api/orders?groupBy=Status&aggregate=sum:Total,count:Id&having=sum:Total:gt:100
+GET /api/orders?groupBy=Status&aggregate=sum:Total,count:Id&having=count:Id:gte:5 AND sum:Total:lt:1000
+```
+
+Rules:
+
+- `having` without `groupBy` is a validation error — there is nothing to filter groups by.
+- Every aggregate referenced must be declared in `aggregate`.
+- Operators must be valid for the aggregate's result type.
+
+## Pipeline order for grouped queries
+
+Grouped queries follow SQL semantics exactly:
+
+```
+filter (WHERE)      → narrows rows that feed the groups
+group + aggregates  → groups form; aggregates compute per group
+having              → prunes groups by computed values
+sort                → orders groups (keys and aggregates only)
+paging              → slices a page of groups
+```
+
+`TotalCount` on a grouped query is the number of groups **after HAVING** — paging metadata
+stays consistent with what the client sees.
+
+## Complete worked example
+
+A revenue-by-status report with filtering and a HAVING floor:
+
+```csharp
+[HttpGet("api/orders/revenue")]
+public async Task<IActionResult> Revenue(
+    [FromQuery] FlexQueryParameters parameters,
+    CancellationToken cancellationToken)
+{
+    var result = await db.Orders
+        .AsNoTracking()
+        .FlexQueryAsync(parameters, opt =>
+        {
+            opt.GroupableFields = ["Status"];
+            opt.AggregatableFields = ["Total", "Id"];
+        }, cancellationToken);
+
+    return Ok(result);
+}
+```
+
+Request:
+
+```http
+GET /api/orders/revenue?groupBy=Status&aggregate=sum:Total,count:Id&having=sum:Total:gt:1000&sort=sum:Total:desc
+```
+
+Response:
+
+```json
+{
+  "data": [
+    { "status": "Active", "sumTotal": 15230.00, "countId": 48 },
+    { "status": "Pending", "sumTotal": 8110.50, "countId": 21 }
+  ],
+  "aggregates": {
+    "Active": { "sum:Total": "15230.00", "count:Id": "48" },
+    "Pending": { "sum:Total": "8110.50", "count:Id": "21" }
+  },
+  "totalCount": 2,
+  "page": 1,
+  "pageSize": 20,
+  "totalPages": 1
+}
+```
+
+`Data` carries the projected group rows (keys + aggregate aliases); `Aggregates` exposes the
+raw per-group dictionary for clients that need machine-readable aggregate values.
+
+## Governance
+
+- `GroupableFields` whitelists group keys.
+- `AggregatableFields` whitelists aggregate targets — critical, because aggregates like
+  `avg:Salary` leak distribution data even when individual rows are blocked.
+- Sorting grouped queries is restricted to group keys and declared aggregates; unrelated
+  sorts fail validation.
+
+## Interaction with other features
+
+- **Includes**: grouped rows cannot carry arbitrary navigation collections — grouping plus
+  unrelated includes is rejected.
+- **Projection**: `select` on a grouped query is constrained to keys and aggregate aliases
+  (the group-by projection rule).
+- **Distinct**: orthogonal — `distinct=true` deduplicates the *ungrouped* stream and is not
+  combined with grouping.
+
+## Common mistakes
+
+<Callout variant="warning" title="Referencing undeclared aggregates in having">
+  <code>having=sum:Total:gt:100</code> without <code>aggregate=sum:Total</code> fails. The
+  HAVING expression must reference aggregates that actually exist.
+</Callout>
+
+<Callout variant="warning" title="Aggregating without grouping">
+  <code>aggregate=sum:Total</code> alone does not produce a single grand-total row —
+  aggregates are computed per group, and grouping is what defines the groups. Add
+  <code>groupBy</code> (even a constant-ish key) to get summary rows.
+</Callout>
+
+<Callout variant="warning" title="Expecting raw-row metadata">
+  <code>TotalCount</code> is the group count on grouped queries. A client showing "137
+  orders" needs the ungrouped count — run that query without grouping.
+</Callout>

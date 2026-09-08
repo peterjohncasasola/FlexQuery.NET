@@ -1,0 +1,181 @@
+---
+title: Query Syntax
+description: The three query languages — DSL, FQL, and MiniOData — and how to select them.
+section: Core Concepts
+---
+
+import { Callout } from '@/components/callout'
+
+# Query Syntax
+
+FlexQuery accepts three query languages on the same endpoint. All three parse into the same
+internal `QueryOptions` model — which means every feature in this documentation (filtering,
+expand, aggregates, paging) works identically regardless of the syntax a client uses. The
+syntax is a client-facing choice, not a server-side fork.
+
+| Syntax | Enum value | Style | Extra package |
+|---|---|---|---|
+| Native DSL | `QuerySyntax.NativeDsl` | `filter=Status:eq:Active` | built-in |
+| FQL | `QuerySyntax.Fql` | `filter=Status = 'Active'` | `FlexQuery.NET.Parsers.Fql` |
+| MiniOData | `QuerySyntax.MiniOData` | `$filter=Status eq 'Active'` | `FlexQuery.NET.Parsers.MiniOData` |
+
+**Choosing a syntax**: DSL is compact and URL-friendly — the default. FQL reads like SQL and
+suits developer-facing tools. MiniOData eases migration from OData consumers.
+
+## Selecting the syntax
+
+### Globally
+
+```csharp
+FlexQueryCore.Configure(options =>
+{
+    options.DefaultQuerySyntax = QuerySyntax.Fql;
+});
+```
+
+### Per request
+
+```csharp
+var result = await db.Customers
+    .FlexQueryAsync(parameters, opt =>
+        opt.QuerySyntax = QuerySyntax.MiniOData, cancellationToken);
+```
+
+## Registering parsers
+
+The DSL parser is built in. FQL and MiniOData live in separate packages and must be
+registered once at startup:
+
+```csharp
+using FlexQuery.NET.Parsers.Fql;
+using FlexQuery.NET.Parsers.MiniOData;
+
+Fql.Register();
+MiniOData.Register();
+```
+
+Registration before any execution; requesting an unregistered syntax throws
+`ParserNotRegisteredException`.
+
+## Parameter map
+
+Both languages use the same parameter keys; only the expression grammar differs.
+
+| Parameter | DSL example | FQL example | MiniOData |
+|---|---|---|---|
+| Filter | `filter=Status:eq:Active` | `filter=Status = 'Active'` | `$filter=Status eq 'Active'` |
+| Sort | `sort=Name:asc,Age:desc` | `sort=Name ASC, Age DESC` | `$orderby=Name asc, Age desc` |
+| Select | `select=Id,Name,Orders.Total` | `select=Id,Name` | `$select=Id,Name` |
+| Include | `include=Orders` | `include=Orders` | `$expand=Orders` |
+| GroupBy | `groupBy=Status` | `groupBy=Status` | — |
+| Aggregate | `aggregate=sum:Total,count:Id` | `aggregate=sum:Total,count:Id` | — |
+| Having | `having=sum:Total:gt:100` | `having=sum(Total) > 100` | — |
+| Page / PageSize | `page=1&pageSize=20` | same | same |
+| Distinct | `distinct=true` | same | same |
+| Mode | `mode=Flat` | same | same |
+| Cursor / keyset | `useKeysetPagination=true&cursor=...` | same | same |
+
+<Callout variant="note" title="MiniOData scope">
+  The MiniOData parser supports <code>$filter</code>, <code>$orderby</code>,
+  <code>$select</code>, and <code>$expand</code>. Grouping, aggregates, and having are
+  DSL/FQL features.
+</Callout>
+
+## DSL filter grammar
+
+```
+filter    = condition ((AND|OR) condition)*
+condition = field:operator:value
+field     = property.path (dot-separated navigation)
+value     = literal (unquoted single token or 'quoted string')
+```
+
+- Logical keywords `AND` / `OR` combine conditions — symbolic forms (`&&`, `||`) are not
+  supported in v4.
+- Collection operators (`any`, `all`, `count`) target collection navigations:
+  `Orders:any:Total:gt:100`.
+- Values containing spaces or reserved keywords must be quoted: `City:eq:'New York'`.
+- Null-check operators take no value: `DeletedAt:isnull`.
+
+## FQL filter grammar
+
+```
+filter    = condition ((AND|OR) condition)*
+condition = field operator value
+operator  = = | != | > | >= | < | <= | contains | startswith | endswith |
+            like | IS NULL | IS NOT NULL | IN | NOT IN | BETWEEN
+value     = 'quoted literal' | number | boolean
+```
+
+FQL is SQL-inspired: values are quoted strings, operators are words or symbols, and
+parentheses group expressions:
+
+```
+filter=Status = 'Active' AND (Age >= 18 OR City = 'Berlin')
+```
+
+## Aggregate syntax
+
+Aggregates use the dedicated `aggregate` parameter with `function:field` pairs:
+
+```
+aggregate=sum:Total,count:Id,avg:Age
+```
+
+- Functions: `sum`, `count`, `avg` (or `average`), `min`, `max`.
+- Aliases are generated in PascalCase by default (`sum:Total` → output field `SumTotal`);
+  explicit aliases use `function:field:alias`.
+- Aggregates combine with `groupBy`; `having` references declared aggregates:
+  `having=sum:Total:gt:100`.
+
+FQL aggregate sort spelling uses function parentheses: `sort=SUM(Total) DESC`.
+
+## Sort syntax
+
+Both direction spellings are accepted:
+
+```
+sort=Name:asc,Age:desc      (colon form)
+sort=Name ASC, Age DESC     (space form)
+```
+
+Aggregate sorts use `function:target:direction` (DSL) or `SUM(Field) DESC` (FQL) — see
+[Sorting](/docs/guides/sorting).
+
+## Complete worked example
+
+One endpoint, three syntaxes, same result:
+
+```csharp
+[HttpGet("api/customers")]
+public async Task<IActionResult> Get(
+    [FromQuery] FlexQueryParameters parameters,
+    CancellationToken cancellationToken)
+{
+    var result = await db.Customers
+        .AsNoTracking()
+        .FlexQueryAsync(parameters, opt =>
+            opt.QuerySyntax = /* pick per request or leave default */, cancellationToken);
+    return Ok(result);
+}
+```
+
+```http
+GET /api/customers?filter=Status:eq:Active AND Age:gte:18        (DSL)
+GET /api/customers?filter=Status = 'Active' AND Age >= 18        (FQL)
+GET /api/customers?$filter=Status eq 'Active' and Age ge 18      (MiniOData)
+```
+
+All three produce identical results.
+
+## Common mistakes
+
+<Callout variant="warning" title="Mixing syntaxes in one request">
+  <code>filter=Status = 'Active'&amp;sort=Name:asc</code> mixes FQL filter syntax with DSL
+  sort syntax. The whole request parses with one syntax — use one language per request.
+</Callout>
+
+<Callout variant="warning" title="Forgetting parser registration">
+  A global <code>DefaultQuerySyntax = QuerySyntax.Fql</code> without
+  <code>Fql.Register()</code> throws <code>ParserNotRegisteredException</code> on first use.
+</Callout>

@@ -1,0 +1,183 @@
+---
+title: Paging
+description: Offset paging, clamping, disabling paging, total counts, and when to use keyset.
+section: Guides
+---
+
+import { Callout } from '@/components/callout'
+
+# Paging
+
+Paging controls *how many* rows a response contains. It exists to protect both sides: the
+database from unbounded scans, the client (and your serialization layer) from
+megabyte-scale payloads. FlexQuery ships two paging modes — offset paging by default and
+keyset (cursor) paging as an opt-in — and both compose with every other feature.
+
+## Offset paging
+
+The client specifies a page number and size:
+
+```http
+GET /api/customers?page=3&pageSize=20
+```
+
+Internally this becomes `OFFSET 40 FETCH NEXT 20 ROWS ONLY` (or the dialect equivalent).
+`page` is 1-based; `PagingOptions.Skip` computes `(Page - 1) * PageSize`.
+
+## Defaults and clamping
+
+All paging values are validated and clamped at usage time — a hostile or buggy client
+cannot force `pageSize=1000000` or a negative page:
+
+| Input | Clamped to |
+|---|---|
+| `page=0` or negative | `1` |
+| `pageSize=0` or negative | `1` |
+| `pageSize` above limit | configured `MaxPageSize` (default `1000`) |
+
+Configure the limits globally and/or per request:
+
+```csharp
+FlexQueryCore.Configure(options =>
+{
+    options.DefaultPageSize = 20;   // when client omits pageSize
+    options.MaxPageSize = 200;      // client ceiling
+    options.IncludeTotalCount = true;
+});
+```
+
+```csharp
+// Per-request override — wins over global
+opt.MaxPageSize = 50;
+```
+
+Strict validation also guards the *parameter shape*: malformed `page`, `pageSize`, or
+`distinct` values fail with a parse error rather than silently defaulting.
+
+## Total count and paging metadata
+
+When `IncludeTotalCount` is enabled (default), FlexQuery runs a second, cheap query —
+`COUNT(*)` over the filtered set, independent of paging — and the result carries full
+metadata:
+
+```json
+{
+  "data": [ /* 20 rows */ ],
+  "totalCount": 137,
+  "resultCount": 20,
+  "page": 3,
+  "pageSize": 20,
+  "totalPages": 7,
+  "hasNextPage": true,
+  "hasPreviousPage": true
+}
+```
+
+Clients use `hasNextPage` for "next" buttons and `totalPages` for page-number UIs.
+
+<Callout variant="tip" title="Skip the count query when the client scrolls forward">
+  The count query costs a database round trip. Infinite-scroll clients never show totals —
+  send <code>includeCount=false</code> (or <code>opt.IncludeTotalCount = false</code>) and
+  FlexQuery skips the count query entirely.
+</Callout>
+
+## Disabling paging
+
+Some endpoints legitimately return everything — exports, small lookup tables, internal
+tools. Paging can be disabled in three ways:
+
+```csharp
+// Per request
+opt.DisablePaging = true;
+
+// Fluent
+var options = Query.Create().DisablePaging().Build();
+
+// Options model
+options.Paging = new PagingOptions { Disabled = true };
+```
+
+<Callout variant="danger" title="Guard unpaged endpoints">
+  A paged-off endpoint with no row cap is a denial-of-service vector. Combine
+  <code>DisablePaging</code> with upstream filters that bound the result set, or apply your
+  own <code>Take()</code> before FlexQuery sees the query.
+</Callout>
+
+## Complete worked example
+
+A customer list endpoint with paging governance:
+
+```csharp
+[ApiController]
+[Route("api/customers")]
+public sealed class CustomersController(AppDbContext db) : ControllerBase
+{
+    [HttpGet]
+    public async Task<IActionResult> Get(
+        [FromQuery] FlexQueryParameters parameters,
+        CancellationToken cancellationToken)
+    {
+        var result = await db.Customers
+            .AsNoTracking()
+            .FlexQueryAsync(parameters, opt =>
+            {
+                opt.MaxPageSize = 100;            // ceiling for this endpoint
+                opt.DefaultSortField = "Id";      // stable page boundaries
+            }, cancellationToken);
+
+        return Ok(new
+        {
+            data = result.Data,
+            page = result.Page,
+            pageSize = result.PageSize,
+            total = result.TotalCount,
+            hasNext = result.HasNextPage,
+        });
+    }
+}
+```
+
+Requests and behavior:
+
+```http
+GET /api/customers?page=2&pageSize=10        → rows 11–20, totalCount present
+GET /api/customers?pageSize=500              → clamped to 100 (endpoint ceiling)
+GET /api/customers?page=0                    → treated as page 1
+GET /api/customers?includeCount=false        → totalCount omitted, count query skipped
+```
+
+## Keyset vs offset: which mode when
+
+| Scenario | Mode | Why |
+|---|---|---|
+| Admin tables with page-number navigation | Offset | Random page access needed. |
+| Infinite scroll / feeds | Keyset | Deep offset pages get slower linearly; keyset seeks. |
+| "Load more" mobile clients | Keyset | Forward-only navigation fits the cursor model. |
+| Exports | Paging disabled | Full result set (with an upstream cap). |
+
+Deep-offset cost grows with page number: `OFFSET 100000` still makes the database walk
+100,000 rows. Keyset pagination replaces the offset with a `WHERE` predicate on the ordered
+key, so page 10,000 costs the same as page 1 — see
+[Keyset Pagination](/docs/guides/keyset-pagination).
+
+## Interaction with other features
+
+- **Grouping**: for grouped queries, paging applies to *groups* after HAVING; `TotalCount`
+  is the number of surviving groups, not raw rows.
+- **Expand**: include-only joins are excluded from the count query, so navigation hydration
+  does not skew totals.
+- **Keyset mode**: offset parameters and an explicit cursor are mutually exclusive — the
+  pagination-mode validation rejects the conflict.
+
+## Common mistakes
+
+<Callout variant="warning" title="Non-deterministic unpaged order">
+  Without a sort (or a configured <code>DefaultSortField</code>), database row order is
+  arbitrary and pages can overlap. Always pair paging with a sort — ideally ending in a
+  unique column.
+</Callout>
+
+<Callout variant="warning" title="Trusting client pageSize">
+  Never rely on client-side clamping. Set <code>MaxPageSize</code> per endpoint; the
+  built-in 1000 ceiling is a backstop, not a design.
+</Callout>

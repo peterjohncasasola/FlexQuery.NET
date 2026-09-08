@@ -1,0 +1,255 @@
+---
+title: Filtering
+description: Filter operators, value formats, logical combination, and collection filters.
+section: Guides
+---
+
+import { ApiTable } from '@/components/api-table'
+import { Callout } from '@/components/callout'
+
+# Filtering
+
+Filtering is the mechanism that turns a fixed "give me everything" endpoint into a flexible
+one: the client describes *which rows* it wants, and FlexQuery translates that description
+into a `WHERE` clause executed entirely by the database.
+
+## Why it exists
+
+Without a query engine, every filter combination becomes a hand-written branch:
+
+```csharp
+if (status is not null && city is not null && minAge is not null) { /* ... */ }
+```
+
+This scales badly — ten optional filters produce a combinatorial explosion of overloads,
+each a potential SQL injection or translation bug. FlexQuery collapses all of it into one
+parameterized pipeline: the client sends `filter=...`, the engine parses it into a filter
+tree, validates every field and operator against your governance rules, and composes a safe
+expression tree that EF Core (or the Dapper SQL builder) translates to parameterized SQL.
+
+<Callout variant="tip" title="Injection safety by design">
+  Client input never becomes raw SQL. Values are bound as parameters and fields are resolved
+  against real CLR properties — an unknown field name fails validation before any expression
+  is built.
+</Callout>
+
+## Filter grammar
+
+The native DSL expresses a condition as three colon-separated parts:
+
+```
+field:operator:value
+```
+
+Conditions combine with the `AND` and `OR` keywords (no symbolic `&&`/`||` in v4), and
+parentheses group sub-expressions:
+
+```
+filter=Status:eq:Active
+filter=Status:eq:Active AND Age:gte:18
+filter=(Status:eq:Active OR Status:eq:Pending) AND Age:gte:18
+```
+
+FQL uses a SQL-inspired form instead — values are quoted, operators are words or symbols:
+
+```
+filter=Status = 'Active' AND Age >= 18
+filter=Status IN ('Active', 'Pending') OR DeletedAt IS NOT NULL
+```
+
+Both languages parse into the same `FilterGroup` tree, so everything below applies to
+whichever syntax your clients use.
+
+## Operators
+
+### Comparison
+
+<ApiTable>
+  <thead>
+    <tr><th>Operator</th><th>DSL example</th><th>FQL example</th><th>Meaning</th></tr>
+  </thead>
+  <tbody>
+    <tr><td><code>eq</code></td><td><code>Status:eq:Active</code></td><td><code>Status = 'Active'</code></td><td>Equality</td></tr>
+    <tr><td><code>neq</code></td><td><code>Status:neq:Active</code></td><td><code>Status != 'Active'</code></td><td>Inequality</td></tr>
+    <tr><td><code>gt</code></td><td><code>Total:gt:100</code></td><td><code>Total &gt; 100</code></td><td>Greater than</td></tr>
+    <tr><td><code>gte</code></td><td><code>Total:gte:100</code></td><td><code>Total &gt;= 100</code></td><td>Greater than or equal</td></tr>
+    <tr><td><code>lt</code></td><td><code>Total:lt:500</code></td><td><code>Total &lt; 500</code></td><td>Less than</td></tr>
+    <tr><td><code>lte</code></td><td><code>Total:lte:500</code></td><td><code>Total &lt;= 500</code></td><td>Less than or equal</td></tr>
+  </tbody>
+</ApiTable>
+
+### String matching
+
+<ApiTable>
+  <thead>
+    <tr><th>Operator</th><th>DSL example</th><th>Meaning</th></tr>
+  </thead>
+  <tbody>
+    <tr><td><code>contains</code></td><td><code>Name:contains:ana</code></td><td>Substring search</td></tr>
+    <tr><td><code>startswith</code></td><td><code>Name:startswith:A</code></td><td>Prefix match</td></tr>
+    <tr><td><code>endswith</code></td><td><code>Name:endswith:son</code></td><td>Suffix match</td></tr>
+    <tr><td><code>like</code></td><td><code>Name:like:%ana%</code></td><td>SQL LIKE pattern (EF Core-specific handler)</td></tr>
+  </tbody>
+</ApiTable>
+
+### Null checks
+
+Null-check operators take no value:
+
+```
+filter=DeletedAt:isnull
+filter=DeletedAt:isnotnull
+```
+
+### Set membership and ranges
+
+```
+filter=Status:in:('Active','Pending')      // DSL — parenthesized list
+filter=Status:notin:('Cancelled')
+filter=Age:between:18-65                   // DSL — inclusive range, dash-separated
+```
+
+### Collection operators
+
+Collection operators apply a nested condition to the *elements* of a collection navigation —
+the SQL equivalent of `EXISTS` subqueries:
+
+```
+filter=Orders:any:Total:gt:500        // at least one order over 500
+filter=Orders:all:Status:eq:Paid      // every order is paid
+filter=Orders:count:gte:3             // at least three orders
+```
+
+The part before the operator names the collection navigation; everything after it is an
+ordinary condition evaluated per element.
+
+<Callout variant="note" title="Operator aliases are normalized">
+  Common spellings map to the canonical operators — <code>=</code>, <code>==</code>, and
+  <code>equals</code> all become <code>eq</code>; <code>&gt;</code> becomes <code>gt</code>;
+  <code>sw</code> becomes <code>startswith</code>; <code>cn</code> becomes
+  <code>contains</code>. Client ergonomics are free; your governance config only ever sees
+  the canonical names.
+</Callout>
+
+## Value formats
+
+Values are parsed according to the field's CLR type:
+
+- **Unquoted tokens** work for identifiers, numbers, and booleans: `Age:gte:18`,
+  `IsActive:eq:true`.
+- **Quoted strings** are required when the value contains spaces or could collide with
+  reserved keywords: `City:eq:'New York'`.
+- **Dates** use .NET-parseable formats: `CreatedAt:gte:2026-01-01`.
+- **Navigation paths** are dot-separated and must point at scalar properties:
+  `Address.City:eq:Berlin`.
+
+A quoted value inside FQL filters may contain commas and semicolons — the tokenizer handles
+quoting before option separators are split.
+
+## Complete worked example
+
+A customer-search endpoint with role-checked fields:
+
+```csharp
+using FlexQuery.NET;
+using FlexQuery.NET.Models;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+
+[ApiController]
+[Route("api/customers")]
+public sealed class CustomersController(AppDbContext db) : ControllerBase
+{
+    [HttpGet]
+    public async Task<IActionResult> Search(
+        [FromQuery] FlexQueryParameters parameters,
+        CancellationToken cancellationToken)
+    {
+        var result = await db.Customers
+            .AsNoTracking()
+            .FlexQueryAsync(parameters, opt =>
+            {
+                opt.FilterableFields = ["Status", "Age", "City", "Email", "Orders.Total"];
+                opt.AllowedOperators = new()
+                {
+                    ["Age"] = ["gte", "lt", "between"],
+                };
+            }, cancellationToken);
+
+        return Ok(result);
+    }
+}
+```
+
+Request:
+
+```http
+GET /api/customers?filter=(Status:eq:Active AND Age:between:18-65) OR City:eq:'Berlin'
+```
+
+Response:
+
+```json
+{
+  "data": [
+    { "id": 4, "firstName": "Jonas", "city": "Berlin", "status": "Active" },
+    { "id": 7, "firstName": "Ana", "city": "Berlin", "status": "Active" }
+  ],
+  "totalCount": 2,
+  "page": 1,
+  "pageSize": 20,
+  "totalPages": 1
+}
+```
+
+Generated SQL (conceptually — EF Core translation):
+
+```sql
+SELECT [c].[Id], [c].[FirstName], [c].[City], [c].[Status]
+FROM [Customers] AS [c]
+WHERE ([c].[Status] = @__p0 AND [c].[Age] BETWEEN @__p1 AND @__p2)
+   OR ([c].[City] = @__p3)
+```
+
+Every filter value is a parameter — the SQL text is fixed regardless of input.
+
+## Configuration and governance
+
+| Option | Effect |
+|---|---|
+| `AllowedFields` / `BlockedFields` | Global allow/deny lists for any operation. |
+| `FilterableFields` | Restricts filtering to these fields only. |
+| `AllowedOperators[field]` | Per-field operator allow-list (`AllowOperators(field, ...)` helper). |
+| `MaxFieldDepth` | Caps navigation-path depth (e.g. `Orders.Items.Price` = depth 3). |
+| `StrictFieldValidation` | When true (default), violations throw `QueryValidationException`. |
+
+With the configuration above, `filter=Salary:gt:100` and
+`filter=Age:gt:18` (operator not allowed) both fail validation before touching the database.
+
+## Rules and limitations
+
+- Field paths must resolve to real properties; typos are validation errors, not empty
+  results.
+- `like` requires the EF Core provider; other providers should use
+  `contains`/`startswith`/`endswith`.
+- Operators must be type-compatible with the field — `Age:contains:25` fails the
+  type-compatibility rule.
+- `AND`/`OR` are keywords; symbolic logical operators are rejected in v4.
+- Null-check operators take no value; supplying one is a parse error.
+
+## Common mistakes
+
+<Callout variant="warning" title="Unquoted values with spaces">
+  <code>filter=City:eq:New York</code> fails because the value tokenizes into two parts.
+  Quote it: <code>filter=City:eq:'New York'</code>.
+</Callout>
+
+<Callout variant="warning" title="Filtering on a navigation without a scalar">
+  <code>filter=Orders:gte:3</code> is not valid — a bare collection is not comparable. Use
+  the <code>count</code> collection operator: <code>filter=Orders:count:gte:3</code>.
+</Callout>
+
+<Callout variant="warning" title="Assuming OR binds tighter than AND">
+  Without parentheses, conditions combine left-to-right in the order written. Group
+  explicitly: <code>(A OR B) AND C</code>.
+</Callout>

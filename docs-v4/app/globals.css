@@ -1,0 +1,108 @@
+@import 'tailwindcss';
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme {
+  --font-sans: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  --font-mono: ui-monospace, 'Cascadia Code', 'Source Code Pro', Menlo, Consolas, 'Liberation Mono', monospace;
+
+  --color-brand-50: #eef2ff;
+  --color-brand-100: #e0e7ff;
+  --color-brand-200: #c7d2fe;
+  --color-brand-300: #a5b4fc;
+  --color-brand-400: #818cf8;
+  --color-brand-500: #6366f1;
+  --color-brand-600: #4f46e5;
+  --color-brand-700: #4338ca;
+  --color-brand-800: #3730a3;
+  --color-brand-900: #312e81;
+  --color-brand-950: #1e1b4b;
+
+  --color-accent-400: #22d3ee;
+  --color-accent-500: #06b6d4;
+  --color-accent-600: #0891b2;
+}
+
+html {
+  scroll-behavior: smooth;
+  scroll-padding-top: 6rem;
+}
+
+body {
+  @apply bg-white text-zinc-900 antialiased dark:bg-zinc-950 dark:text-zinc-100;
+}
+
+/* ---- Shiki dual-theme code highlighting ---- */
+html.dark .shiki,
+html.dark .shiki span {
+  color: var(--shiki-dark) !important;
+  background-color: var(--shiki-dark-bg) !important;
+  font-style: var(--shiki-dark-font-style) !important;
+  font-weight: var(--shiki-dark-font-weight) !important;
+  text-decoration: var(--shiki-dark-text-decoration) !important;
+}
+
+/* ---- Prose styles for MDX content ---- */
+.prose-doc {
+  @apply text-[15px] leading-7 text-zinc-700 dark:text-zinc-300;
+}
+
+.prose-doc h1 {
+  @apply mt-2 mb-6 scroll-mt-28 text-3xl font-bold tracking-tight text-zinc-900 dark:text-white;
+}
+
+.prose-doc h2 {
+  @apply mt-12 mb-4 scroll-mt-28 border-b border-zinc-200 pb-2 text-xl font-semibold tracking-tight text-zinc-900 dark:border-zinc-800 dark:text-white;
+}
+
+.prose-doc h3 {
+  @apply mt-8 mb-3 scroll-mt-28 text-lg font-semibold text-zinc-900 dark:text-white;
+}
+
+.prose-doc h4 {
+  @apply mt-6 mb-2 scroll-mt-28 text-base font-semibold text-zinc-900 dark:text-white;
+}
+
+.prose-doc p {
+  @apply my-4;
+}
+
+.prose-doc ul {
+  @apply my-4 list-disc space-y-1.5 pl-6;
+}
+
+.prose-doc ol {
+  @apply my-4 list-decimal space-y-1.5 pl-6;
+}
+
+.prose-doc li::marker {
+  @apply text-zinc-400 dark:text-zinc-600;
+}
+
+.prose-doc code:not(pre code) {
+  @apply rounded-md border border-zinc-200 bg-zinc-100 px-1.5 py-0.5 font-mono text-[13px] font-medium text-brand-700 dark:border-zinc-800 dark:bg-zinc-800/60 dark:text-brand-300;
+}
+
+.prose-doc table {
+  @apply my-6 block w-full max-w-full overflow-x-auto text-sm;
+}
+
+.prose-doc th {
+  @apply border-b border-zinc-200 bg-zinc-50 px-4 py-2.5 text-left font-semibold text-zinc-900 dark:border-zinc-800 dark:bg-zinc-900 dark:text-white;
+}
+
+.prose-doc td {
+  @apply border-b border-zinc-100 px-4 py-2.5 align-top dark:border-zinc-800/70;
+}
+
+.prose-doc blockquote {
+  @apply my-4 border-l-4 border-brand-500 pl-4 text-zinc-600 italic dark:text-zinc-400;
+}
+
+.prose-doc hr {
+  @apply my-8 border-zinc-200 dark:border-zinc-800;
+}
+
+.prose-doc strong {
+  @apply font-semibold text-zinc-900 dark:text-zinc-100;
+}

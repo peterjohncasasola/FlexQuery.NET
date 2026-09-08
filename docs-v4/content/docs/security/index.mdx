@@ -1,0 +1,153 @@
+---
+title: Security & Governance
+description: Field access, governance sets, roles, and safe expression building.
+section: Security
+---
+
+import { Callout } from '@/components/callout'
+
+# Security & Governance
+
+FlexQuery treats client-supplied queries as untrusted input. A query parameter is an
+executable description of database work — which columns to read, which relations to
+traverse, which values to compare — and a misconfigured dynamic API can leak rows the client
+should never see, even when every individual response row is "theirs". Security in FlexQuery
+is a declaration model: you declare what is allowed, and everything else fails validation
+before any query executes.
+
+## The governance model
+
+All governance lives on `QueryGovernanceOptions` — the base of every execution-options
+type — so the same knobs are available globally, per request, and per endpoint via
+`[FieldAccess]`.
+
+| Option | Purpose |
+|---|---|
+| `AllowedFields` | Global allow-list of fields. |
+| `BlockedFields` | Deny-list of fields. |
+| `FilterableFields` | Fields clients may filter on. |
+| `SortableFields` | Fields clients may sort by. |
+| `SelectableFields` | Fields clients may select. |
+| `GroupableFields` | Fields clients may group by. |
+| `AggregatableFields` | Fields clients may aggregate. |
+| `AllowedIncludes` | Navigation paths clients may include/expand. |
+| `AllowedOperators` | Per-field operator allow-lists. |
+| `DefaultSortField` / `DefaultSortDescending` | Default ordering. |
+| `MaxFieldDepth` | Maximum nested path depth. |
+| `StrictFieldValidation` | Throw on unauthorized field access (default true). |
+| `RoleAllowedFields` + `CurrentRole` | Role-based field access. |
+| `AllowedFieldsResolver` | Custom resolver: type → allowed fields. |
+
+## Why per-operation sets exist
+
+A single allow-list is too coarse. A field can be safe to *display* but dangerous to
+*filter on*:
+
+- **Sortable** but sensitive: sorting by `Ssn` lets a client probe data distribution
+  through ordering even if values never appear in responses.
+- **Aggregatable** but sensitive: `avg:Salary` leaks statistical information even when no
+  individual salary row is visible.
+- **Filterable** but sensitive: `DeletedAt:isnull`-style probes reveal record existence.
+
+Per-operation sets let you express exactly that: visible but not sortable, filterable only
+by admin, aggregatable never.
+
+## Operator allow-lists
+
+`AllowedOperators` restricts which comparison operators a field accepts — e.g. `Age` may
+support range checks but not `contains`:
+
+```csharp
+opt.AllowOperators("Age", "gte", "lt", "between");
+```
+
+## Role-based access
+
+```csharp
+opt.RoleAllowedFields = new()
+{
+    ["admin"] = ["Id", "Name", "Ssn", "Salary"],
+    ["support"] = ["Id", "Name", "Email"],
+};
+opt.CurrentRole = user.IsInRole("admin") ? "admin" : "support";
+```
+
+Roles map to field sets; the resolved role's set becomes the effective allow-list. For
+dynamic scenarios, `AllowedFieldsResolver` supplies a custom `type → fields` function.
+
+## Expression-level safety
+
+Governance decides *what* is addressable; the expression builder guarantees *how* addressing
+happens:
+
+- Filters are never evaluated client-side; everything composes into expression trees (EF
+  Core) or parameterized SQL (Dapper).
+- Field access resolves through safe property resolution — arbitrary member access cannot be
+  injected.
+- Operator factories are a fixed registry; unknown operators fail validation.
+- Unknown fields fail validation before any expression is built.
+
+## Wildcards
+
+Allowed-field sets support wildcard patterns (e.g. `Order*`) via the built-in wildcard
+matcher, including nested wildcard locking for governance-review scenarios.
+
+## Static field registry
+
+For applications that pre-declare allowed fields per entity type:
+
+```csharp
+FieldRegistry.Register<Customer>(["Id", "Name", "Email"]);
+bool ok = FieldRegistry.IsAllowed(typeof(Customer), "Email");
+```
+
+## Complete worked example
+
+A multi-tenant, role-aware endpoint:
+
+```csharp
+[HttpGet("api/customers")]
+public async Task<IActionResult> Get(
+    [FromQuery] FlexQueryParameters parameters,
+    ClaimsPrincipal user,
+    CancellationToken cancellationToken)
+{
+    var result = await db.Customers
+        .Where(c => c.TenantId == user.GetTenantId())   // tenant isolation first
+        .FlexQueryAsync(parameters, opt =>
+        {
+            opt.RoleAllowedFields = new()
+            {
+                ["admin"] = ["Id", "Name", "Email", "Ssn"],
+                ["user"] = ["Id", "Name", "Email"],
+            };
+            opt.CurrentRole = user.IsInRole("admin") ? "admin" : "user";
+            opt.AllowedIncludes = ["Orders"];
+            opt.MaxFieldDepth = 3;
+        }, cancellationToken);
+
+    return Ok(result);
+}
+```
+
+Defense in depth in one example: tenant scoping happens *before* FlexQuery sees the
+queryable; role-based field sets govern what is addressable; includes are whitelisted; and
+path depth is capped.
+
+## Defense-in-depth checklist
+
+1. Configure `AllowedFields` or per-operation sets for every endpoint — never ship with
+   only the global defaults.
+2. Keep `StrictFieldValidation = true`; silent field dropping hides governance drift.
+3. Restrict includes with `AllowedIncludes` (prevents traversing unauthorized graphs).
+4. Bound paging with `MaxPageSize`.
+5. Bound path depth with `MaxFieldDepth`.
+6. Restrict operators per field where the data model demands it (`AllowedOperators`).
+7. Scope the `IQueryable` upstream (tenant/ownership filters) — FlexQuery governs fields,
+   not row-level access.
+
+<Callout variant="warning" title="Row-level security is yours">
+  FlexQuery's governance is field-level. Which *rows* a caller may see (tenancy,
+  ownership, soft deletes) belongs in your queryable — filter it before
+  <code>FlexQueryAsync</code>.
+</Callout>

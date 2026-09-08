@@ -1,0 +1,139 @@
+---
+title: Diagnostics & Observability
+description: Execution listeners, collectors, reports, and SQL inspection.
+section: Diagnostics
+---
+
+import { Callout } from '@/components/callout'
+
+# Diagnostics & Observability
+
+Dynamic queries are hard to debug precisely because they are dynamic: the SQL that executed
+depends on the request. `FlexQuery.NET.Diagnostics` exposes the pipeline as a stream of
+events — parse, translate, execute, materialize — that you can log, collect into a report,
+or inspect per stage. When a query misbehaves, the answer is in the events, not in guesses.
+
+## Execution events
+
+Implement `IFlexQueryExecutionListener` (namespace `FlexQuery.NET.Execution`) to observe the
+four pipeline stages:
+
+| Event | Contains |
+|---|---|
+| `QueryParsedEvent` | Parsed `QueryOptions` snapshot — what the client actually asked for. |
+| `QueryTranslatedEvent` | Provider translation output (e.g. the generated SQL). |
+| `QueryExecutedEvent` | Execution timing and outcome. |
+| `QueryMaterializedEvent` | Materialization details (result shape). |
+
+Attach a listener per request through the execution options:
+
+```csharp
+opt.Listener = myListener;
+```
+
+## Built-in listeners
+
+- **`ConsoleExecutionListener`** — writes each stage to the console; ideal for development.
+- **`FlexQueryDiagnosticsCollector`** — accumulates all events in memory for programmatic
+  inspection.
+
+```csharp
+var collector = new FlexQueryDiagnosticsCollector();
+var result = await db.Customers.FlexQueryAsync(parameters, opt => opt.Listener = collector);
+
+FlexQueryDiagnosticsReport report =
+    collector.BuildReport(provider: "EF Core", translator: "Sqlite");
+
+collector.Clear();
+```
+
+`BuildReport` aggregates the collected events into a `FlexQueryDiagnosticsReport` covering
+all four stages with durations — useful for request-scoped debug endpoints (the sample
+application wraps this in a `DiagnosticsHelper` that attaches a `__diagnostics` object to
+responses during development).
+
+<Callout variant="tip" title="Debug endpoints, not production payloads">
+  Attaching diagnostics to every production response leaks schema details. Gate them behind
+  configuration, an admin role, or a query-string flag.
+</Callout>
+
+## SQL inspection
+
+Two provider-specific paths to the actual SQL:
+
+### EF Core — ToSqlPreview
+
+```csharp
+string sql = query.ToSqlPreview();            // translated SQL, nothing executed
+var plan = query.ExplainProjection(options);  // projection plan explanation
+```
+
+`ToSqlPreview` uses EF Core's `ToQueryString()` under the hood and works after dynamic
+projections are applied. `ExplainProjection` returns a human-readable plan: selected
+fields, navigation usage, and optimization notes.
+
+### Dapper — SQL execution logging
+
+Every Dapper command logs an Information-level entry right before execution under logger
+category `FlexQuery.NET.Dapper`. The entry contains the final SQL formatted for readability,
+preceded by a `DECLARE` block embedding the parameter values — copy-paste-ready:
+
+```sql
+DECLARE @p0 BIGINT = 42;
+
+SELECT [o].[Id], [o].[Total]
+FROM [Orders] AS [o]
+WHERE [o].[CustomerId] = @p0
+```
+
+The logging helper only reads the SQL and parameters already passed to Dapper — it never
+mutates or executes anything, and it short-circuits to a no-op when the logger is null or
+Information level is disabled.
+
+## Complete worked example
+
+A timing endpoint for investigating a slow query:
+
+```csharp
+[HttpGet("api/debug/customers")]
+public async Task<IActionResult> DebugQuery(
+    [FromQuery] FlexQueryParameters parameters,
+    CancellationToken cancellationToken)
+{
+    var collector = new FlexQueryDiagnosticsCollector();
+    var sw = Stopwatch.StartNew();
+
+    var result = await db.Customers
+        .AsNoTracking()
+        .FlexQueryAsync(parameters, opt => opt.Listener = collector, cancellationToken);
+
+    sw.Stop();
+    var report = collector.BuildReport(provider: "EF Core", translator: "Sqlite");
+
+    return Ok(new
+    {
+        result.TotalCount,
+        elapsedMs = sw.Elapsed.TotalMilliseconds,
+        diagnostics = report,
+    });
+}
+```
+
+## SQL formatter utilities
+
+The shared `FlexQuery.NET.SqlFormatting` namespace (in the Diagnostics package) exposes the
+SQL formatter used across providers — the same one that renders Dapper logs and translated
+SQL — for building custom tooling.
+
+## Common mistakes
+
+<Callout variant="warning" title="Collector reuse across requests">
+  A <code>FlexQueryDiagnosticsCollector</code> accumulates events — one instance per
+  request, and <code>Clear()</code> between uses. A shared instance mixes events from
+  concurrent requests.
+</Callout>
+
+<Callout variant="warning" title="Ignoring the translate stage">
+  When results look wrong, compare the parsed options (stage 1) against the translated SQL
+  (stage 2) before suspecting execution — most surprises are translation-visible.
+</Callout>

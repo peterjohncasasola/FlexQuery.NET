@@ -1,0 +1,179 @@
+---
+title: Recipes
+description: Common real-world patterns with FlexQuery.NET.
+section: Resources
+---
+
+import { Callout } from '@/components/callout'
+
+# Recipes
+
+Practical patterns assembled from the building blocks in the guides. Each recipe states the
+problem, the approach, and the working code.
+
+## Cursor-driven infinite scroll
+
+**Problem**: a feed or list that clients scroll through indefinitely; offset pages get
+slower and rows shift between requests.
+
+**Approach**: keyset pagination with a deterministic sort (unique trailing `Id`):
+
+```http
+GET /api/feed?useKeysetPagination=true&pageSize=30&sort=CreatedAt:desc,Id:desc
+```
+
+```csharp
+var result = await db.Posts.FlexQueryAsync(parameters, cancellationToken);
+
+return Ok(new
+{
+    items = result.Data,
+    nextCursor = result.NextCursorToken,   // null = end of feed
+});
+```
+
+The client appends `cursor=<nextCursor>` to the next request. Deterministic ordering is
+mandatory — see [Keyset Pagination](/docs/guides/keyset-pagination).
+
+## Role-based field visibility
+
+**Problem**: admins see more fields than support staff on the same endpoint.
+
+**Approach**: role-mapped field sets resolved from the principal:
+
+```csharp
+var result = await db.Employees.FlexQueryAsync(parameters, opt =>
+{
+    opt.RoleAllowedFields = new()
+    {
+        ["admin"] = ["Id", "Name", "Email", "Salary"],
+        ["support"] = ["Id", "Name", "Email"],
+    };
+    opt.CurrentRole = user.IsInRole("admin") ? "admin" : "support";
+}, cancellationToken);
+```
+
+Requests outside the mapped roles fail validation — add a fallback role or map every role.
+
+## Faceted dashboard with AG Grid
+
+**Problem**: an analytics grid where users group by a column and see sums/counts per group,
+with server-side paging.
+
+**Approach**: AG Grid SSRM's row-group/value columns map directly to grouping and
+aggregates — no custom code:
+
+```csharp
+[HttpPost("api/aggrid/orders")]
+public async Task<IActionResult> Rows([FromBody] AgGridRequest request, CancellationToken ct)
+{
+    var options = request.ToQueryOptions();   // rowGroupCols → groupBy, valueCols → aggregate
+
+    var result = await db.Orders.FlexQueryAsync(options, cancellationToken: ct);
+
+    return Ok(result.ToAgGridServerSideResponse(
+        result.TotalCount ?? result.Data.Count, request));
+}
+```
+
+## Export endpoint (no paging)
+
+**Problem**: an export job needs the full result set.
+
+**Approach**: disable paging, skip the count query, and cap upstream:
+
+```csharp
+var scoped = db.Orders.Where(o => o.CreatedAt >= since);   // upstream cap
+
+var result = await scoped.FlexQueryAsync(parameters, opt =>
+{
+    opt.DisablePaging = true;
+    opt.IncludeCount = false;   // skip the count query — export doesn't need it
+}, cancellationToken);
+```
+
+<Callout variant="danger" title="Always cap unpaged queries">
+  Combine <code>DisablePaging</code> with an upstream filter that bounds the set — an
+  unpaged endpoint over an unbounded table is a denial-of-service vector.
+</Callout>
+
+## Search endpoint with contains + sort
+
+**Problem**: free-text search across name and email, ranked alphabetically.
+
+**Approach**: OR'd substring filters with a deterministic sort:
+
+```http
+GET /api/customers?filter=Name:contains:ana OR Email:contains:ana&sort=Name:asc,Id:asc
+```
+
+```csharp
+var result = await db.Customers
+    .FlexQueryAsync(parameters, opt =>
+        opt.FilterableFields = ["Name", "Email"], cancellationToken);
+```
+
+For a `LIKE`-pattern search (wildcards authored by the client), use the EF
+Core-specific `like` operator instead of `contains`.
+
+## Per-tenant data isolation
+
+**Problem**: every query must be scoped to the caller's tenant, no matter what the client
+asks for.
+
+**Approach**: wrap the queryable *before* FlexQuery sees it — FlexQuery governs fields, you
+govern rows:
+
+```csharp
+var scoped = db.Orders.Where(o => o.TenantId == tenantId);
+var result = await scoped.FlexQueryAsync(parameters, cancellationToken);
+```
+
+Combine with `RoleAllowedFields` for column-level isolation.
+
+## Public API with a strict surface
+
+**Problem**: a public read-only endpoint exposing exactly three fields, no includes, no
+deep paths.
+
+**Approach**: `[FieldAccess]` declares the whole contract on the controller:
+
+```csharp
+[FieldAccess(
+    Allowed = ["Id", "City", "Status"],
+    Sortable = ["Id", "City"],
+    AllowedIncludes = [],
+    DefaultSortField = "Id",
+    MaxDepth = 2)]
+```
+
+With `AddFlexQuerySecurity()` registered, violations fail validation; the response surface
+is enforced at serialization too.
+
+## DTO-shaped responses for mobile clients
+
+**Problem**: mobile clients need small payloads with domain vocabulary names.
+
+**Approach**: typed DTO projection with a per-query map:
+
+```csharp
+var result = await db.Customers
+    .FlexQueryAsync<Customer, CustomerSlimDto>(parameters,
+        opt => opt.CreateMap<Customer, CustomerSlimDto>()
+            .ForMember(dto => dto.Name, entity => entity.FirstName),
+        cancellationToken);
+```
+
+Combine with a tight `select` to minimize payload size — see
+[Typed DTO Projection](/docs/guides/typed-dto-projection).
+
+## Multi-step wizard state via cursors
+
+**Problem**: a multi-page wizard needs to resume mid-result-set.
+
+**Approach**: pass the cursor through the wizard's state; keyset pages are stable because
+they are key-based, not offset-based:
+
+```http
+GET /api/customers?useKeysetPagination=true&pageSize=10&sort=Id:asc&cursor=<state.cursor>
+```

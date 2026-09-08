@@ -1,0 +1,129 @@
+---
+title: Kendo UI
+description: Kendo UI DataSource request adapter.
+section: Integrations
+---
+
+import { Callout } from '@/components/callout'
+
+# Kendo UI
+
+Kendo UI's DataSource posts its state as a JSON request — page, page size, sort descriptors,
+and a filter descriptor tree with nested `and`/`or` logic. `FlexQuery.NET.Adapters.Kendo`
+maps that request onto `QueryOptions` so a Kendo grid speaks to your database through the
+full FlexQuery pipeline.
+
+## What the adapter maps
+
+| Kendo concept | FlexQuery target |
+|---|---|
+| `page` / `pageSize` (or `skip` / `take`) | Paging options |
+| `sort` descriptors (`field`, `dir`) | Sort nodes |
+| `filter` descriptor tree (`logic`, `filters`) | Filter groups with nested logic |
+
+Nested filter trees translate faithfully — a Kendo filter with `logic: "or"` containing
+sub-filters becomes an OR group, recursively.
+
+## Convert the request
+
+```csharp
+using FlexQuery.NET.Adapters.Kendo;
+
+[HttpPost("api/kendo/customers")]
+public async Task<IActionResult> Read(
+    [FromBody] KendoRequest request,
+    CancellationToken ct)
+{
+    var options = request.ToQueryOptions();
+
+    var result = await db.Customers
+        .FlexQueryAsync(options, cancellationToken: ct);
+
+    return Ok(new
+    {
+        data = result.Data,
+        total = result.TotalCount ?? result.Data.Count,   // Kendo expects `total`
+    });
+}
+```
+
+Kendo's expected response shape is `{ data, total }` — map from the `QueryResult` envelope,
+which already carries both.
+
+## Applying onto existing options
+
+Merge the Kendo request into endpoint defaults:
+
+```csharp
+var options = new QueryOptions { /* your defaults */ };
+options.ApplyKendoRequest(kendoRequest);
+```
+
+## Parsing raw JSON
+
+For minimal APIs or when the DataSource payload arrives as `JsonElement`:
+
+```csharp
+var options = jsonElement.ToQueryOptions();
+```
+
+## Complete worked example
+
+A server-filtered, server-sorted Kendo grid:
+
+```javascript
+// Client side
+$("#grid").kendoGrid({
+    dataSource: {
+        transport: { read: { url: "/api/kendo/customers", type: "POST" } },
+        serverPaging: true,
+        serverSorting: true,
+        serverFiltering: true,
+        pageSize: 20,
+        schema: { data: "data", total: "total" },
+    },
+    sortable: true,
+    filterable: true,
+    pageable: true,
+});
+```
+
+```csharp
+// Server side — the endpoint above
+[HttpPost("api/kendo/customers")]
+public async Task<IActionResult> Read([FromBody] KendoRequest request, CancellationToken ct)
+{
+    var options = request.ToQueryOptions();
+
+    var result = await db.Customers
+        .FlexQueryAsync(options, opt =>
+            opt.AllowedFields = ["Id", "FirstName", "City", "Status"],
+        ct);
+
+    return Ok(new { data = result.Data, total = result.TotalCount ?? result.Data.Count });
+}
+```
+
+Client-side filtering in the Kendo filter row produces, for example:
+
+```json
+{ "filter": { "logic": "and", "filters": [
+    { "field": "City", "operator": "eq", "value": "Berlin" },
+    { "field": "Status", "operator": "neq", "value": "Cancelled" }
+] } }
+```
+
+…which FlexQuery executes as a validated, parameterized `WHERE City = @p0 AND Status <> @p1`.
+
+<Callout variant="tip" title="Governance still applies">
+  Kendo-produced options pass through the same validation pipeline — grid columns must be
+  in <code>AllowedFields</code>, and server-side defaults you set before
+  <code>ApplyKendoRequest</code> survive the merge.
+</Callout>
+
+## Common mistakes
+
+<Callout variant="warning" title="Returning QueryResult directly">
+  Kendo expects the payload shape <code>&#123; data, total &#125;</code>. Returning the full FlexQuery envelope breaks
+  the grid's schema binding — project the two fields explicitly.
+</Callout>

@@ -1,0 +1,190 @@
+---
+title: Sorting
+description: Multi-column sorting, directions, default sorts, and aggregate sorts.
+section: Guides
+---
+
+import { Callout } from '@/components/callout'
+
+# Sorting
+
+Sorting determines the order of rows in a response. It looks trivial — until clients need
+"newest first, then by name", a default order for unsorted requests, and deterministic
+paging. FlexQuery handles all three in one pipeline stage that translates directly to
+`ORDER BY` on the database.
+
+## Why it exists
+
+Client-driven sorting without a query engine means whitelisting sort keys by hand and
+string-building `ORDER BY` — a classic injection surface. FlexQuery parses the `sort`
+parameter into typed `SortNode`s, validates every field against `SortableFields`, and emits
+a parameter-safe ordering expression. The result is predictable, translatable ordering with
+no string concatenation.
+
+## Syntax
+
+FlexQuery accepts two direction spellings, so both machine- and human-authored clients are
+comfortable:
+
+```http
+GET /api/customers?sort=LastName:asc
+GET /api/customers?sort=LastName ASC, CreatedAt DESC
+```
+
+| Form | Example | Notes |
+|---|---|---|
+| Colon form | `field:asc`, `field:desc` | Native DSL canonical form. |
+| Space form | `field asc`, `field desc` | FQL-style; case-insensitive. |
+| Bare field | `field` | Defaults to ascending. |
+| Aggregate sort | `sum:Total:desc` (DSL), `SUM(Total) DESC` (FQL) | Grouped queries only. |
+
+Multiple fields are comma-separated; the first field has the highest priority:
+
+```http
+GET /api/customers?sort=Status:asc,LastName:desc
+```
+
+## How it works in the pipeline
+
+Sorting runs **after** filtering and grouping/having, and **before** paging. That ordering
+matters:
+
+1. Filters narrow the rows.
+2. Groups form (if any) and HAVING prunes them.
+3. Sort orders the surviving rows/groups.
+4. Paging slices a page from the sorted sequence.
+
+Because the sort is part of the translated SQL, ordering is stable across pages: an
+`OFFSET` page 2 continues exactly where page 1 ended.
+
+## Sorting navigation properties
+
+Dot paths sort through navigations. The navigation must be loaded (`include` or `expand`)
+when it also appears in the response shape:
+
+```http
+GET /api/customers?include=Address&sort=Address.City:asc
+```
+
+For collection navigations, sorting by *aggregate of the collection* is a grouped-query
+feature — see below.
+
+## Default sort
+
+When the client sends no `sort`, a configured default applies. This is important for two
+reasons: results are predictable, and databases return unspecified order arbitrarily —
+especially across pages.
+
+```csharp
+var result = await db.Customers.FlexQueryAsync(parameters, opt =>
+{
+    opt.DefaultSortField = "LastName";
+    opt.DefaultSortDescending = false;
+}, cancellationToken);
+```
+
+The `[FieldAccess]` attribute supports the same settings per endpoint:
+
+```csharp
+[FieldAccess(Sortable = ["LastName", "CreatedAt"], DefaultSortField = "CreatedAt",
+             DefaultSortDirection = "desc")]
+```
+
+## Governance
+
+- `SortableFields` (or `[FieldAccess(Sortable = ...)]`) whitelists sortable fields. Anything
+  else fails validation in strict mode — this prevents clients from sorting by indexed but
+  sensitive columns (e.g. `Ssn`) to probe data distribution.
+- Sorting grouped queries is restricted to group keys and declared aggregates (see below).
+
+## Aggregate sorts (grouped queries)
+
+In a grouped query, rows are groups — so sorting must reference either a group key or an
+aggregate value. Declare the aggregate, then sort by it:
+
+```http
+GET /api/orders?groupBy=Status&aggregate=sum:Total,count:Id&sort=sum:Total:desc
+```
+
+FQL aggregate-sort spelling uses function parentheses:
+
+```http
+GET /api/orders?groupBy=Status&aggregate=sum:Total&sort=SUM(Total) DESC
+```
+
+Rules enforced by validation:
+
+- Every aggregate used in `sort` must reference a declared aggregate (or at least be
+  type-compatible with one).
+- `count` aggregates in sorts must target collection navigation properties — sorting by
+  `count:FirstName` is rejected.
+- Sorting grouped results by fields that are neither group keys nor aggregates is rejected;
+  the grouped shape has no meaningful per-row value for them.
+
+## Complete worked example
+
+An orders dashboard sorted by revenue, with a deterministic tiebreaker:
+
+```csharp
+[HttpGet("api/orders/summary")]
+public async Task<IActionResult> Summary(
+    [FromQuery] FlexQueryParameters parameters,
+    CancellationToken cancellationToken)
+{
+    var result = await db.Orders
+        .AsNoTracking()
+        .FlexQueryAsync(parameters, opt =>
+        {
+            opt.SortableFields = ["Status", "OrderDate", "SumTotal", "CountId"];
+            opt.DefaultSortField = "Status";
+        }, cancellationToken);
+
+    return Ok(result);
+}
+```
+
+Request:
+
+```http
+GET /api/orders/summary?groupBy=Status&aggregate=sum:Total,count:Id&sort=sum:Total:desc,Status:asc
+```
+
+Response:
+
+```json
+{
+  "data": [
+    { "status": "Active", "sumTotal": 15230.00, "countId": 48 },
+    { "status": "Pending", "sumTotal": 8110.50, "countId": 21 }
+  ],
+  "aggregates": {
+    "Active": { "sum:Total": "15230.00", "count:Id": "48" },
+    "Pending": { "sum:Total": "8110.50", "count:Id": "21" }
+  },
+  "totalCount": 2,
+  "page": 1,
+  "pageSize": 20
+}
+```
+
+## Keyset pagination and deterministic ordering
+
+<Callout variant="warning" title="Non-unique sorts break keyset paging">
+  Keyset pagination seeks using the sorted columns as the cursor. With a non-unique sort
+  such as <code>sort=CreatedAt:desc</code>, rows sharing the same timestamp can be skipped
+  or duplicated across pages. Always end the sort with a unique column:
+  <code>sort=CreatedAt:desc,Id:desc</code>.
+</Callout>
+
+## Common mistakes
+
+<Callout variant="warning" title="Sorting on a field that is not selected">
+  Sorting works independently of <code>select</code> — <code>sort=CreatedAt:desc</code>
+  orders correctly even if <code>CreatedAt</code> is not in the output. But the field must
+  still exist and be sortable.
+</Callout>
+
+<Callout variant="warning" title="Expecting stable pagination without a default sort">
+  If clients may omit <code>sort</code>, configure <code>DefaultSortField</code> — otherwise
+  page boundaries are undefined and rows can repeat or vanish between pages.
+</Callout>

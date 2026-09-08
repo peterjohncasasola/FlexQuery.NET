@@ -1,0 +1,139 @@
+---
+title: Query Result
+description: The QueryResult<T> shape returned by every execution method.
+section: Core Concepts
+---
+
+import { ApiTable } from '@/components/api-table'
+import { Callout } from '@/components/callout'
+
+# Query Result
+
+Every execution method returns `QueryResult<T>` — a uniform envelope that pairs the page of
+data with the metadata clients need for pagination UIs, aggregate displays, and cursor-based
+navigation. Because the envelope is the same for EF Core and Dapper, dynamic and typed
+results, your response contract never changes when the query does.
+
+## Properties
+
+<ApiTable>
+  <thead>
+    <tr><th>Property</th><th>Type</th><th>Description</th></tr>
+  </thead>
+  <tbody>
+    <tr><td><code>Data</code></td><td><code>IReadOnlyList&lt;T&gt;</code></td><td>The page of results (entities, projected objects, or DTOs).</td></tr>
+    <tr><td><code>TotalCount</code></td><td><code>int?</code></td><td>Total matching rows — or groups, on grouped queries. Null when counting is disabled.</td></tr>
+    <tr><td><code>ResultCount</code></td><td><code>int?</code></td><td>Rows in the current page.</td></tr>
+    <tr><td><code>Page</code></td><td><code>int</code></td><td>Current 1-based page number.</td></tr>
+    <tr><td><code>PageSize</code></td><td><code>int</code></td><td>Effective page size (after clamping).</td></tr>
+    <tr><td><code>TotalPages</code></td><td><code>int</code></td><td>Computed from total count and page size.</td></tr>
+    <tr><td><code>HasNextPage</code></td><td><code>bool</code></td><td>A next page exists.</td></tr>
+    <tr><td><code>HasPreviousPage</code></td><td><code>bool</code></td><td>A previous page exists.</td></tr>
+    <tr><td><code>Aggregates</code></td><td><code>Dictionary&lt;string, Dictionary&lt;string, object&gt;&gt;?</code></td><td>Raw per-group aggregate values (grouped queries only).</td></tr>
+    <tr><td><code>NextCursorToken</code></td><td><code>string?</code></td><td>Cursor for the next keyset page (keyset mode only).</td></tr>
+    <tr><td><code>ResultShape</code></td><td><code>IReadOnlyList&lt;SelectOutputField&gt;?</code></td><td>The effective output surface when an explicit <code>select</code> is present.</td></tr>
+  </tbody>
+</ApiTable>
+
+Null-valued optional members (e.g. `aggregates` on non-grouped queries) are omitted from
+the serialized payload.
+
+## Serialization example
+
+```json
+{
+  "data": [ /* 20 rows */ ],
+  "totalCount": 137,
+  "resultCount": 20,
+  "page": 3,
+  "pageSize": 20,
+  "totalPages": 7,
+  "hasNextPage": true,
+  "hasPreviousPage": true
+}
+```
+
+Clients can build complete pagination UIs from this envelope alone: page numbers
+(`totalPages`), next/previous buttons (`hasNextPage`/`hasPreviousPage`), and row counts
+(`totalCount`).
+
+## Result shape and serialization enforcement
+
+When an explicit `select` is present, `ResultShape` describes the effective output surface —
+each output field with its name and source path. Serialization enforces this surface when
+the shape converter is registered (`AddFlexQuerySecurity()` / `AddFlexQueryJson()`):
+anything outside the selected surface is removed from the payload, and aliases are applied
+on the way out. Clients therefore never see fields the query did not ask for, even when the
+underlying materialized object carries more.
+
+## Grouped queries
+
+For grouped queries, `Data` contains one entry per group (group keys plus aggregate
+aliases), and `Aggregates` exposes the raw per-group dictionary keyed by group key:
+
+```json
+{
+  "data": [
+    { "status": "Active", "sumTotal": 1250.00, "countId": 14 }
+  ],
+  "aggregates": {
+    "Active": { "sum:Total": "1250.00", "count:Id": "14" }
+  },
+  "totalCount": 1,
+  "page": 1,
+  "pageSize": 20
+}
+```
+
+`totalCount` is the number of groups after `having` — see
+[Grouping & Aggregates](/docs/guides/grouping) for the full semantics.
+
+## Keyset pagination
+
+When keyset mode is active, `NextCursorToken` carries the opaque, versioned cursor for the
+next page. It is `null` when the result set is exhausted — the standard end-of-scroll
+signal:
+
+```json
+{
+  "data": [ /* 50 rows */ ],
+  "nextCursorToken": "eyJ2IjoxLCJ2YWx1ZXMiOlsiMjAyNi0wOS0wOCIsIjEwMDAiXSwidCI6InN0cmluZyJ9",
+  "pageSize": 50
+}
+```
+
+Pass it back as the `cursor` parameter — see
+[Keyset Pagination](/docs/guides/keyset-pagination).
+
+## Complete worked example
+
+Shaping a stable public response from the envelope:
+
+```csharp
+var result = await db.Customers.FlexQueryAsync(parameters, cancellationToken);
+
+return Ok(new
+{
+    items = result.Data,
+    pagination = new
+    {
+        page = result.Page,
+        pageSize = result.PageSize,
+        total = result.TotalCount,
+        totalPages = result.TotalPages,
+    },
+    nextCursor = result.NextCursorToken,
+});
+```
+
+## Common mistakes
+
+<Callout variant="warning" title="Reading TotalCount when counting is disabled">
+  With <code>includeCount=false</code>, <code>TotalCount</code> is null — clients using it
+  for "N results" UIs must handle that. Only rely on it when counting is enabled.
+</Callout>
+
+<Callout variant="warning" title="Assuming Aggregates is populated">
+  <code>Aggregates</code> is populated only for grouped queries. On plain queries it is
+  null — guard before reading.
+</Callout>

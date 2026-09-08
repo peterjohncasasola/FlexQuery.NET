@@ -1,0 +1,149 @@
+---
+title: Dapper
+description: FlexQuery for Dapper — model mapping, SQL generation, dialects, and logging.
+section: Providers
+---
+
+import { Callout } from '@/components/callout'
+
+# Dapper
+
+`FlexQuery.NET.Dapper` generates and executes SQL directly against a `DbConnection` via
+Dapper — no ORM required. Because there is no DbContext to reflect over, the package asks
+you to declare a model: tables, keys, and relationships. From that model it builds complete
+SQL — select list, joins, WHERE, GROUP BY/HAVING, ORDER BY, paging — and hydrates results.
+
+## Setup
+
+Configure the model once at startup:
+
+```csharp
+FlexQueryDapper.Configure(options =>
+{
+    options.CommandTimeout = 30;
+
+    options.Model.Entity<Customer>(entity =>
+    {
+        entity.ToTable("Customers");
+        entity.HasKey(c => c.Id);
+        entity.HasMany(c => c.Orders).WithOne().HasForeignKey(o => o.CustomerId);
+    });
+
+    options.Model.Entity<Order>(entity =>
+    {
+        entity.ToTable("Orders");
+        entity.HasKey(o => o.Id);
+    });
+});
+```
+
+The SQL dialect (identifier quoting, paging syntax) is **auto-detected from the connection**
+at runtime — no manual dialect configuration.
+
+<Callout variant="note" title="ModelBuilder API">
+  <code>Entity&lt;T&gt;()</code>, <code>ApplyConfiguration&lt;T&gt;(IEntityTypeConfiguration&lt;T&gt;)</code>,
+  and <code>ApplyConfigurationsFromAssembly(assembly)</code> are supported — EF-style
+  configuration classes work unchanged.
+</Callout>
+
+## Execution methods
+
+All methods live on `FlexQueryDapperExtensions` in namespace `FlexQuery.NET.Dapper` and
+extend `DbConnection`. Every overload accepts a `CancellationToken`.
+
+### Dynamic results
+
+```csharp
+await using var connection = new SqliteConnection(connectionString);
+
+// From FlexQueryParameters
+var result = await connection.FlexQueryAsync<Customer>(parameters, cancellationToken: cancellationToken);
+
+// From FlexQueryParameters with per-call options
+var result = await connection.FlexQueryAsync<Customer>(
+    parameters, opt => opt.MaxPageSize = 100, cancellationToken);
+
+// From raw query-string values (IDictionary<string, StringValues>)
+var result = await connection.FlexQueryAsync<Customer>(queryStringValues, cancellationToken);
+```
+
+### Typed DTO results
+
+```csharp
+var result = await connection.FlexQueryAsync<Customer, CustomerDto>(
+    parameters, cancellationToken: cancellationToken);
+```
+
+<Callout variant="warning" title="Cancellation scope">
+  Cancellation is observed while opening the connection, during diagnostics callbacks, and
+  during materialization. Dapper's <code>QueryAsync</code> does not currently accept a
+  token, so a running SQL command cannot be interrupted once started.
+</Callout>
+
+## SQL generation
+
+FlexQuery builds the full statement for you:
+
+- **Select list** — surface-aware: with a `select`, only those columns appear; in typed
+  scenarios, property names are rewritten through the type map (including JSON naming
+  conventions).
+- **Joins** — generated for includes; include-only joins are excluded from the count query
+  so join multiplication never inflates totals.
+- **WHERE / GROUP BY / HAVING** — the same semantics as the EF Core pipeline, expressed in
+  dialect-correct SQL.
+- **Paging** — offset (`LIMIT/OFFSET` or dialect equivalent) or keyset seek predicates.
+- **Expand** — branches generate joins/subqueries with per-branch filter/sort/take.
+
+## SQL logging
+
+When an `ILogger` is available, every Dapper command logs an Information-level entry right
+before execution under category `FlexQuery.NET.Dapper`. The entry contains the final SQL —
+formatted for readability — preceded by a `DECLARE` block embedding the parameter values,
+making it copy-paste-ready for query tools:
+
+```sql
+DECLARE @p0 NVARCHAR(MAX) = 'Active';
+
+SELECT [c].[Id], [c].[FirstName], [c].[Status]
+FROM [Customers] AS [c]
+WHERE [c].[Status] = @p0
+```
+
+Logging is strictly non-invasive: it only reads the SQL and parameters already passed to
+Dapper, and it is a no-op when the logger is null or Information is disabled.
+
+## Complete worked example
+
+A minimal API endpoint over Dapper:
+
+```csharp
+app.MapGet("/api/dapper/orders", async (
+    FlexQueryParameters parameters,
+    SqliteConnection connection,
+    CancellationToken ct) =>
+{
+    var result = await connection.FlexQueryAsync<Order>(parameters,
+        opt => opt.AllowedFields = ["Id", "OrderDate", "Status", "Total"],
+        ct);
+
+    return Results.Ok(result);
+});
+```
+
+```http
+GET /api/dapper/orders?filter=Total:gt:100&sort=OrderDate:desc&pageSize=20
+```
+
+## Common mistakes
+
+<Callout variant="warning" title="Querying an entity that is not in the model">
+  The model must cover every queried entity and its included relationships — missing
+  mappings surface as resolution errors at execution. Register all entities during
+  <code>Configure</code>, or use
+  <code>ApplyConfigurationsFromAssembly</code> to sweep the whole assembly.
+</Callout>
+
+<Callout variant="warning" title="Passing a closed connection of the wrong provider">
+  Dialect auto-detection inspects the connection. Pass the actual connection of the target
+  provider; a wrapper or mismatched connection produces wrong dialect SQL.
+</Callout>

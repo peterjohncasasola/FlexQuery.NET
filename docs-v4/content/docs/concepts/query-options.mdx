@@ -1,0 +1,118 @@
+---
+title: Query Options
+description: The QueryOptions model — every option the pipeline understands.
+section: Core Concepts
+---
+
+import { ApiTable } from '@/components/api-table'
+import { Callout } from '@/components/callout'
+
+# Query Options
+
+`QueryOptions` (namespace `FlexQuery.NET.Models`) is the *parsed* form of a request — the
+single model every execution method consumes, regardless of where the request came from
+(query string, fluent builder, or adapter). Understanding its properties means understanding
+everything the pipeline can do.
+
+## How a request becomes options
+
+Three equivalent paths, one destination:
+
+```csharp
+// 1. From FlexQueryParameters (query-string binding)
+var options = parameters.ToQueryOptions();                    // global default syntax
+var options2 = parameters.ToQueryOptions(QuerySyntax.Fql);    // explicit syntax
+
+// 2. From a raw dictionary
+var options3 = QueryOptionsParser.Parse(queryStringValues);
+
+// 3. Built in code (fluent API)
+var options4 = Query.Create()
+    .Filter(f => f.Field("Status").Eq("Active"))
+    .Page(1, 20)
+    .Build();
+```
+
+Most endpoints skip explicit construction entirely — `FlexQueryAsync(parameters, ...)`
+converts internally. Constructing `QueryOptions` yourself matters when composing: adapter
+output, pre-built saved queries, or merging client input with server-side structure.
+
+## Properties
+
+<ApiTable>
+  <thead>
+    <tr><th>Property</th><th>Type</th><th>Description</th></tr>
+  </thead>
+  <tbody>
+    <tr><td><code>Filter</code></td><td><code>FilterGroup?</code></td><td>Filter expression tree — conditions, nested groups, logic operators. See <a href="/docs/guides/filtering">Filtering</a>.</td></tr>
+    <tr><td><code>Sort</code></td><td><code>List&lt;SortNode&gt;</code></td><td>Ordered sort specs (field, direction, optional aggregate). See <a href="/docs/guides/sorting">Sorting</a>.</td></tr>
+    <tr><td><code>Select</code></td><td><code>List&lt;SelectNode&gt;?</code></td><td>Projection tree — fields, aliases, nested selections. See <a href="/docs/guides/projection">Projection</a>.</td></tr>
+    <tr><td><code>Includes</code></td><td><code>List&lt;string&gt;?</code></td><td>Navigation paths to include with all scalars. See <a href="/docs/guides/include">Include</a>.</td></tr>
+    <tr><td><code>Expand</code></td><td><code>List&lt;IncludeNode&gt;?</code></td><td>Expansion trees with per-branch filter/sort/take. See <a href="/docs/guides/expand">Expand</a>.</td></tr>
+    <tr><td><code>ProjectionMode</code></td><td><code>ProjectionMode</code></td><td>Output shaping: <code>Nested</code> (default), <code>Flat</code>, <code>FlatMixed</code>.</td></tr>
+    <tr><td><code>GroupBy</code></td><td><code>List&lt;string&gt;?</code></td><td>Group key fields.</td></tr>
+    <tr><td><code>Aggregates</code></td><td><code>List&lt;Aggregate&gt;</code></td><td>Aggregate specs (typed <code>AggregateFunction</code> + field + alias).</td></tr>
+    <tr><td><code>Having</code></td><td><code>HavingNode?</code></td><td>Condition tree over aggregate values.</td></tr>
+    <tr><td><code>Distinct</code></td><td><code>bool?</code></td><td>Applies <code>Distinct()</code>.</td></tr>
+    <tr><td><code>Paging</code></td><td><code>PagingOptions</code></td><td>Page, PageSize (clamped 1–1000), Disabled flag.</td></tr>
+    <tr><td><code>IncludeCount</code></td><td><code>bool?</code></td><td>Whether the total count is computed.</td></tr>
+  </tbody>
+</ApiTable>
+
+## The three request models
+
+| Model | Use when | Where |
+|---|---|---|
+| `FlexQueryParameters` | ASP.NET Core `[FromQuery]` binding of raw strings. | `FlexQuery.NET.Models` |
+| `FlexQueryRequest` | Strongly-typed request objects (OpenAPI-documented bodies). | `FlexQuery.NET.Models` |
+| `QueryOptions` | Composed server-side, adapter output, saved queries. | `FlexQuery.NET.Models` |
+
+`FlexQueryRequest` and `FlexQueryParameters` both expose `ToQueryOptions()` (with an
+optional syntax override); `QueryOptionsParser.Parse` handles raw dictionaries for
+minimal-API and adapter scenarios.
+
+## Projection modes in detail
+
+| Mode | Behavior |
+|---|---|
+| `Nested` | Nested selections produce nested objects — the natural hierarchical shape. |
+| `Flat` | Nested collections flatten with `SelectMany` into a leaf-level rowset (SQL-join semantics). |
+| `FlatMixed` | Root scalars and nested-collection fields share one output row. |
+
+## Complete worked example
+
+Composing client input with server-side constraints:
+
+```csharp
+[HttpGet("api/orders/search")]
+public async Task<IActionResult> Search(
+    [FromQuery] FlexQueryParameters clientParams,
+    CancellationToken cancellationToken)
+{
+    var options = clientParams.ToQueryOptions();   // client-driven part
+
+    // server-side composition — clients cannot override these
+    options.GroupBy = ["Status"];
+    options.Aggregates.Add(new Aggregate
+    {
+        Function = AggregateFunction.Sum,
+        Field = "Total",
+        Alias = "SumTotal",
+    });
+
+    var result = await db.Orders.FlexQueryAsync(options, cancellationToken);
+    return Ok(result);
+}
+```
+
+## Common mistakes
+
+<Callout variant="warning" title="Building QueryOptions but bypassing validation">
+  Options built in code flow through the same validation as parsed requests. Hand-built
+  options with unknown fields still fail — by design.
+</Callout>
+
+<Callout variant="warning" title="Mutating options after execution starts">
+  <code>QueryOptions</code> is consumed by the pipeline; mutate it before calling
+  <code>FlexQueryAsync</code>, not concurrently with it.
+</Callout>

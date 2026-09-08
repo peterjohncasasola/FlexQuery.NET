@@ -1,0 +1,181 @@
+---
+title: Entity Framework Core
+description: FlexQueryAsync for EF Core — execution, includes, no-tracking, and SQL preview.
+section: Providers
+---
+
+import { Callout } from '@/components/callout'
+
+# Entity Framework Core
+
+`FlexQuery.NET.EntityFrameworkCore` executes FlexQuery pipelines against `IQueryable<T>`
+sources with full SQL translation. The package has one job: take the validated
+`QueryOptions` and compose them into EF Core expression trees — including split-query
+include hydration — so the database does all the work.
+
+## Setup
+
+```csharp
+FlexQueryEFCore.Configure(options =>
+{
+    options.UseNoTracking = true;
+});
+```
+
+`FlexQueryEFCore.Setup()` (no delegate) only registers the EF Core-specific operator
+handlers (such as `like`). `UseNoTracking` defaults FlexQuery's execution to no-tracking;
+configuration becomes immutable after the first call.
+
+## Execution methods
+
+All methods live on `QueryableEfCoreExtensions` in namespace
+`FlexQuery.NET.EntityFrameworkCore`. Every overload accepts a `CancellationToken`.
+
+### Dynamic results
+
+```csharp
+// From FlexQueryParameters (query-string bound) — the common endpoint pattern
+var result = await db.Customers
+    .FlexQueryAsync(parameters, cancellationToken: cancellationToken);
+
+// From FlexQueryParameters with per-call options
+var result = await db.Customers
+    .FlexQueryAsync(parameters, opt => opt.MaxPageSize = 100, cancellationToken);
+
+// From pre-parsed QueryOptions (adapter scenarios)
+var result = await db.Customers
+    .FlexQueryAsync(queryOptions, opt => { }, cancellationToken);
+```
+
+### Typed DTO results
+
+The two-type-generic overloads materialize directly into your DTOs:
+
+```csharp
+var result = await db.Customers
+    .FlexQueryAsync<Customer, CustomerDto>(parameters, cancellationToken: cancellationToken);
+
+// With a per-query map
+var result = await db.Customers
+    .FlexQueryAsync<Customer, CustomerDto>(parameters, opt =>
+        opt.CreateMap<Customer, CustomerDto>()
+            .ForMember(dto => dto.CustomerName, entity => entity.FirstName),
+        cancellationToken);
+```
+
+See [Typed DTO Projection](/docs/guides/typed-dto-projection) for the full mapping model.
+
+## No-tracking behavior
+
+FlexQuery defaults to no-tracking execution — results serialize without inverse-navigation
+fixup cycles, and read-only endpoints avoid the change-tracker cost. Override per call when
+you need tracked entities:
+
+```csharp
+var result = await db.Customers
+    .FlexQueryAsync(parameters, opt => opt.UseNoTracking = false, cancellationToken);
+```
+
+<Callout variant="note" title="Tracked queries and serialization">
+  With tracked queries, EF populates inverse navigations (Order.Customer) via relationship
+  fixup. Configure <code>ReferenceHandler.IgnoreCycles</code> in the host JSON options so
+  back-references serialize as null instead of throwing. The sample application
+  demonstrates this with a tracked-query endpoint.
+</Callout>
+
+## Includes
+
+`ApplyExpand` translates the expand tree into EF Core `Include`/`ThenInclude` chains, each
+optionally filtered:
+
+```csharp
+var query = db.Customers
+    .ApplyExpand(options)   // include pipeline — call before materialization
+    .ToListAsync();
+```
+
+Behavior details:
+
+- Include hydration uses **split queries** so deep graphs stay efficient.
+- Per-branch filters, sorts, and `take` values translate server-side — a `take=3` branch
+  loads exactly three rows per parent.
+- Navigation-projection selects (`select=Orders.Total`) also drive the include tree
+  automatically; explicit `ApplyExpand` is only needed for standalone composition.
+
+## Grouped queries
+
+`groupBy`/`aggregate`/`having` execute through the grouped-query executor: grouping and
+aggregates translate to SQL, `HAVING` prunes groups, and the executor materializes per-group
+rows with aggregate values into `QueryResult.Aggregates`. Paging on grouped queries pages
+groups after HAVING.
+
+## SQL preview and projection explain
+
+Two inspection methods help during development and debugging:
+
+```csharp
+string sql = query.ToSqlPreview();            // generated SQL without executing
+var plan = query.ExplainProjection(options);  // projection plan explanation
+```
+
+`ToSqlPreview` uses EF Core's `ToQueryString()` under the hood and works after dynamic
+projections are applied. `ExplainProjection` returns a human-readable plan of selected
+fields, navigation usage, and optimization notes.
+
+## Complete worked example
+
+A full-featured endpoint combining the capabilities:
+
+```csharp
+[ApiController]
+[Route("api/ef/customers")]
+public sealed class EfCustomersController(AppDbContext db) : ControllerBase
+{
+    [HttpGet]
+    public async Task<IActionResult> GetCustomers(
+        [FromQuery] FlexQueryParameters parameters,
+        CancellationToken cancellationToken)
+    {
+        var result = await db.Customers
+            .AsNoTracking()
+            .FlexQueryAsync(parameters, opt =>
+            {
+                opt.AllowedFields = ["Id", "FirstName", "LastName", "Email", "Status"];
+                opt.AllowedIncludes = ["Orders", "Orders.OrderItems"];
+                opt.MaxPageSize = 100;
+            }, cancellationToken);
+
+        return Ok(result);
+    }
+
+    [HttpGet("dto")]
+    public async Task<IActionResult> GetCustomersDto(
+        [FromQuery] FlexQueryParameters parameters,
+        CancellationToken cancellationToken)
+    {
+        var result = await db.Customers
+            .AsNoTracking()
+            .FlexQueryAsync<Customer, CustomerDto>(parameters, cancellationToken: cancellationToken);
+
+        return Ok(result);
+    }
+}
+```
+
+```http
+GET /api/ef/customers?filter=Status:eq:Active&expand=Orders(filter=Status:eq:Delivered; take=3)&pageSize=10
+GET /api/ef/customers/dto?select=customerName,orders(id,total)
+```
+
+## Common mistakes
+
+<Callout variant="warning" title="Expecting ApplyExpand inside FlexQueryAsync">
+  <code>FlexQueryAsync</code> already applies the include pipeline from
+  <code>options.Expand</code>. Call <code>ApplyExpand</code> separately only when composing
+  a queryable by hand before materializing yourself.
+</Callout>
+
+<Callout variant="warning" title="Leaving tracking on for read endpoints">
+  Without <code>UseNoTracking</code> (global) or <code>AsNoTracking()</code>, every result
+  entity enters the change tracker — memory and time for data you will only serialize.
+</Callout>

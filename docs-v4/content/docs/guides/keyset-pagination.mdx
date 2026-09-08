@@ -1,0 +1,144 @@
+---
+title: Keyset Pagination
+description: Cursor-based pagination for large datasets.
+section: Guides
+---
+
+import { Callout } from '@/components/callout'
+
+# Keyset Pagination
+
+Offset pagination hides a scaling problem: `OFFSET 100000` forces the database to walk and
+discard 100,000 rows before returning your 50. Page 10 is as cheap as page 1; page 10,000
+is not. Keyset pagination (also called seek or cursor pagination) removes the offset
+entirely — instead of "skip N rows", the next query says "give me the rows *after this
+one*", which turns page lookups into index seeks with constant cost.
+
+## How it works
+
+1. The client enables keyset mode and (optionally) sorts.
+2. FlexQuery orders by the sort key and returns a page plus an opaque `NextCursorToken`
+   describing the position after the last row.
+3. The client sends that token back as `cursor` for the next page.
+4. FlexQuery deserializes the cursor, validates it, and emits `WHERE (key, …) > (last
+   values…)` predicates instead of `OFFSET`.
+
+```http
+GET /api/customers?useKeysetPagination=true&pageSize=50
+GET /api/customers?useKeysetPagination=true&pageSize=50&cursor=<NextCursorToken>
+```
+
+## Reading the cursor
+
+The cursor rides on `QueryResult<T>.NextCursorToken`:
+
+```json
+{
+  "data": [ /* 50 rows */ ],
+  "nextCursorToken": "eyJ2IjoxLCJ2YWx1ZXMiOlsiMjAyNi0wOS0wOCIseyI9IjEwMDAiXX0",
+  "page": 1,
+  "pageSize": 50
+}
+```
+
+The token is versioned and serialized — clients treat it as opaque. On the next request it
+is deserialized and validated (version check, value-shape check) before use; a malformed or
+tampered cursor fails validation instead of producing wrong pages.
+
+## Deterministic ordering is mandatory
+
+The cursor encodes the sorted column values. If two rows share the same key values, the
+seek boundary is ambiguous — rows can be skipped or returned twice across pages.
+
+<Callout variant="warning" title="Always end the sort with a unique column">
+  <code>sort=CreatedAt:desc,Id:desc</code> is correct; <code>sort=CreatedAt:desc</code> alone
+  can lose or duplicate rows that share a timestamp. If the client sends no sort, configure
+  a <code>DefaultSortField</code> that ends in a unique column.
+</Callout>
+
+## Complete worked example
+
+An infinite-scroll feed:
+
+```csharp
+[ApiController]
+[Route("api/feed")]
+public sealed class FeedController(AppDbContext db) : ControllerBase
+{
+    [HttpGet]
+    public async Task<IActionResult> Get(
+        [FromQuery] FlexQueryParameters parameters,
+        CancellationToken cancellationToken)
+    {
+        var result = await db.Orders
+            .AsNoTracking()
+            .FlexQueryAsync(parameters, cancellationToken);
+
+        return Ok(new
+        {
+            items = result.Data,
+            nextCursor = result.NextCursorToken,   // null when exhausted
+        });
+    }
+}
+```
+
+Client flow:
+
+```http
+GET /api/feed?useKeysetPagination=true&pageSize=30&sort=CreatedAt:desc,Id:desc
+→ { "items": [ ... 30 rows ], "nextCursor": "eyJ2..." }
+
+GET /api/feed?useKeysetPagination=true&pageSize=30&sort=CreatedAt:desc,Id:desc&cursor=eyJ2...
+→ next 30 rows, or nextCursor=null at the end
+```
+
+## Requirements and limitations
+
+- **Forward only.** There is no random page access — "go to page 57" is impossible by
+  design. Clients that need page numbers use offset paging.
+- **A sort (or default sort) is required** — the cursor has nothing to seek on without one.
+- **Mode conflict detection**: sending both `page` and a `cursor` fails the
+  pagination-mode validation rule.
+- Cursor values must be type-compatible with the sort columns.
+
+## Choosing between offset and keyset
+
+| Scenario | Mode |
+|---|---|
+| Admin tables, page-number UIs | Offset |
+| Infinite scroll, feeds, mobile "load more" | Keyset |
+| Very large tables with deep navigation | Keyset |
+| Exports | Paging disabled |
+
+## Low-level API: SeekAfter
+
+For hand-built queries outside the FlexQuery pipeline, the same mechanism is available as a
+LINQ extension on `IOrderedQueryable<T>`:
+
+```csharp
+var page = db.Orders
+    .Where(o => o.Status == OrderStatus.Paid)
+    .OrderBy(o => o.CreatedDate)
+    .ThenBy(o => o.Id)
+    .SeekAfter(lastSeenCreatedDate)
+    .Take(50);
+```
+
+`SeekAfter` extracts the preceding `OrderBy`/`ThenBy` chain, requires at least one ordering
+(throws `InvalidOperationException` otherwise), and generates the composite `WHERE`
+predicate for all of them — with `Take(n)` supplying the page size.
+
+## Common mistakes
+
+<Callout variant="warning" title="Reusing expired cursors">
+  Cursors encode *positions*, not page numbers. If rows are deleted between requests, a
+  cursor still points at the same key — the next page continues correctly from there. But
+  cursors are not bookmarks: do not persist them for "resume later" beyond a single
+  navigation session.
+</Callout>
+
+<Callout variant="warning" title="Mixing modes">
+  <code>useKeysetPagination=true&amp;page=3</code> is a conflict. Pick one mode per
+  navigation flow.
+</Callout>

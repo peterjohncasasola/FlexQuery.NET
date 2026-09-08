@@ -1,0 +1,161 @@
+---
+title: Configuration
+description: Global options, provider options, and per-request overrides.
+section: Core Concepts
+---
+
+import { Callout } from '@/components/callout'
+import { ApiTable } from '@/components/api-table'
+
+# Configuration
+
+FlexQuery is configured at three levels, and every level has one job: the more general one
+supplies defaults, the more specific one overrides them. Understanding this layering — and
+the immutability rule that guards it — is the difference between predictable behavior and
+order-of-initialization bugs.
+
+```
+Global (FlexQueryCore)          ← application-wide defaults, set once
+  └─ Provider (EFCore/Dapper)   ← provider behavior (no-tracking, model, timeout)
+       └─ Per request           ← per-call overrides (governance, limits, syntax)
+```
+
+<Callout variant="warning" title="Configuration is immutable after first use">
+  Every <code>Configure</code> method throws <code>InvalidOperationException</code> when
+  called after a query has already executed. This is deliberate: query execution reads
+  configuration concurrently, and a mutable global config is a race condition. Always
+  configure during startup.
+</Callout>
+
+## Global options
+
+`FlexQueryCore.Configure` runs once at startup, before any query:
+
+```csharp
+using FlexQuery.NET;
+
+var builder = WebApplication.CreateBuilder(args);
+
+FlexQueryCore.Configure(options =>
+{
+    options.DefaultQuerySyntax = QuerySyntax.NativeDsl;
+    options.DefaultPageSize = 20;
+    options.MaxPageSize = 1000;
+    options.IncludeTotalCount = true;
+    options.StrictFieldValidation = true;
+    options.MaxFieldDepth = 5;
+});
+```
+
+<ApiTable>
+  <thead>
+    <tr><th>Property</th><th>Type</th><th>Default</th><th>Description</th></tr>
+  </thead>
+  <tbody>
+    <tr><td><code>DefaultQuerySyntax</code></td><td><code>QuerySyntax</code></td><td><code>NativeDsl</code></td><td>Syntax used when no per-request syntax is supplied.</td></tr>
+    <tr><td><code>DefaultPageSize</code></td><td><code>int</code></td><td><code>20</code></td><td>Page size when the client omits one.</td></tr>
+    <tr><td><code>MaxPageSize</code></td><td><code>int</code></td><td><code>1000</code></td><td>Maximum page size a client may request.</td></tr>
+    <tr><td><code>IncludeTotalCount</code></td><td><code>bool</code></td><td><code>true</code></td><td>Compute total counts by default.</td></tr>
+    <tr><td><code>StrictFieldValidation</code></td><td><code>bool</code></td><td><code>true</code></td><td>Throw on unauthorized field access.</td></tr>
+    <tr><td><code>MaxFieldDepth</code></td><td><code>int</code></td><td><code>5</code></td><td>Maximum nested field-path depth.</td></tr>
+  </tbody>
+</ApiTable>
+
+### Global type maps
+
+`FlexQueryOptions.CreateMap` registers application-level entity → DTO maps that every typed
+execution reuses:
+
+```csharp
+FlexQueryCore.Configure(options =>
+{
+    options.CreateMap<Customer, CustomerResponse>()
+        .ForMember(dto => dto.CustomerFullName, entity => entity.CustomerName);
+
+    options.CreateMap<Order, OrderResponse>();
+});
+```
+
+Per-query `CreateMap` registrations take precedence over global maps. See
+[Typed DTO Projection](/docs/guides/typed-dto-projection).
+
+## Provider options
+
+### EF Core
+
+```csharp
+FlexQueryEFCore.Configure(options =>
+{
+    options.UseNoTracking = true;
+});
+```
+
+`FlexQueryEFCore.Setup()` (no delegate) only registers the EF Core-specific operator
+handlers, such as `like`. `UseNoTracking` defaults execution to no-tracking; each call can
+override it (`opt.UseNoTracking = false`).
+
+### Dapper
+
+Dapper needs a model — there is no DbContext to reflect over:
+
+```csharp
+FlexQueryDapper.Configure(options =>
+{
+    options.CommandTimeout = 30;
+
+    options.Model.Entity<Customer>(entity =>
+    {
+        entity.ToTable("Customers");
+        entity.HasKey(c => c.Id);
+        entity.HasMany(c => c.Orders).WithOne().HasForeignKey(o => o.CustomerId);
+    });
+});
+```
+
+The SQL dialect is auto-detected from the `DbConnection` at runtime. The model must cover
+every entity you query — see [Dapper](/docs/providers/dapper) for the full mapping API.
+
+## Per-request overrides
+
+Every execution method accepts an optional `Action<...Options>` delegate that wins over
+global/provider values:
+
+```csharp
+var result = await db.Customers
+    .FlexQueryAsync(parameters, opt =>
+    {
+        opt.MaxPageSize = 50;                              // tighter ceiling
+        opt.AllowedFields = ["Id", "FirstName", "Email"];  // endpoint surface
+        opt.QuerySyntax = QuerySyntax.Fql;                 // force a syntax
+        opt.UseNoTracking = false;                         // opt out of no-tracking (EF)
+    }, cancellationToken);
+```
+
+Typical per-request settings: governance sets (see
+[Security](/docs/security)), paging limits, query syntax, field mappings, per-query type
+maps, and the diagnostics listener.
+
+## Precedence rules
+
+| Setting | Global | Provider | Per request |
+|---|---|---|---|
+| Default query syntax | ✔ | — | ✔ (overrides global) |
+| Page size defaults / limits | ✔ | — | ✔ (overrides global) |
+| Field governance | ✔ (baseline) | — | ✔ (merges/overrides) |
+| No-tracking behavior | — | ✔ (default) | ✔ (per call) |
+| Dapper model / timeout | — | ✔ | — |
+| Type maps | ✔ (registry) | — | ✔ (per-query wins) |
+
+## Common mistakes
+
+<Callout variant="warning" title="Configuring lazily">
+  Calling <code>Configure</code> inside a controller or on first request throws the
+  immutability error as soon as any earlier query ran. Configure in
+  <code>Program.cs</code>/<code>Startup</code> only.
+</Callout>
+
+<Callout variant="warning" title="Relying on defaults for security">
+  The defaults are convenient, not restrictive. Real endpoints set
+  <code>AllowedFields</code>, <code>MaxPageSize</code>, and <code>AllowedIncludes</code> per
+  request — see the [defense-in-depth checklist](/docs/security#defense-in-depth-checklist).
+</Callout>

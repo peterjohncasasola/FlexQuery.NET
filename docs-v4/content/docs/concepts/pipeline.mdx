@@ -1,0 +1,113 @@
+---
+title: Execution Pipeline
+description: How a FlexQuery.NET request flows from query string to executed query.
+section: Core Concepts
+---
+
+import { Callout } from '@/components/callout'
+
+# Execution Pipeline
+
+Every FlexQuery call — whether it started as a query string, a fluent build, or an adapter
+request — flows through the same five-stage pipeline. Knowing the stages, their order, and
+what each one guarantees is what lets you predict result ordering, interpret validation
+errors, and place custom logic at the right point.
+
+## The stages
+
+```
+Query string / request model / fluent build
+        │
+        ▼
+┌──────────────┐   1. Parse      — parameters → QueryOptions (syntax-specific parser)
+│   Parsers    │
+└──────────────┘
+        │
+        ▼
+┌──────────────┐   2. Validate   — field existence, operators, types, field access,
+│  Validation  │                    governance limits, expand paths, aggregates
+└──────────────┘
+        │
+        ▼
+┌──────────────┐   3. Apply      — filter → grouping/aggregates → sort → paging →
+│   Builder    │                    projection, composed as expression trees
+└──────────────┘
+        │
+        ▼
+┌──────────────┐   4. Translate  — provider converts expressions to SQL (EF Core)
+│   Provider   │                    or generates SQL directly (Dapper)
+└──────────────┘
+        │
+        ▼
+┌──────────────┐   5. Execute    — query runs server-side; results materialize
+│  Execution   │                    into QueryResult<T>
+└──────────────┘
+```
+
+### 1. Parse
+
+The syntax selected for the request (global default or per-request override) determines
+which parser runs. All parsers produce the same canonical `QueryOptions` — the rest of the
+pipeline is syntax-agnostic. Parse failures throw `QueryParseException` with the parameter
+name, syntax, raw value, and parser position details.
+
+### 2. Validate
+
+The rule pipeline checks the parsed options against the entity model and governance
+configuration. Validation runs *before* any expression is built, so a rejected request costs
+no database work. See [Validation](/docs/guides/validation).
+
+### 3. Apply
+
+The builder composes LINQ expressions in a fixed order:
+
+1. **Filter** (`WHERE`) — narrows rows first; everything downstream operates on fewer rows.
+2. **GroupBy / Aggregates / Having** — grouping forms after filtering; `HAVING` prunes
+   groups before ordering.
+3. **Sort** (`ORDER BY`) — orders rows (or groups).
+4. **Paging** (`OFFSET/FETCH` or keyset seek predicates) — slices from the ordered set.
+5. **Projection** (`SELECT`) — last, so only requested fields materialize.
+6. **Total count** — computed on the filtered set, independent of paging and projection.
+
+<Callout variant="note" title="Why the order matters">
+  Paging before sorting would produce arbitrary page contents; projecting before filtering
+  would hide filterable columns. The pipeline encodes SQL semantics, which is why result
+  ordering and page boundaries are stable.
+</Callout>
+
+### 4. Translate
+
+- **EF Core**: the composed expression tree hands off to EF's translation — everything
+  becomes SQL, includes hydrate via split queries.
+- **Dapper**: FlexQuery generates the SQL itself — select list (surface-aware, type-map
+  rewritten), joins for includes, WHERE, GROUP BY/HAVING, ORDER BY, paging — and executes
+  via Dapper.
+
+### 5. Execute
+
+The provider executes; results materialize into `QueryResult<T>` with paging metadata,
+optional aggregates, and the optional cursor token. Cancellation is observed across the
+async overloads (see provider notes for scope).
+
+## Events
+
+Each stage emits an event that any `IFlexQueryExecutionListener` can observe:
+
+| Event | Fired when |
+|---|---|
+| `QueryParsedEvent` | Parameters have been parsed into `QueryOptions`. |
+| `QueryTranslatedEvent` | The provider translated the query (SQL is available). |
+| `QueryExecutedEvent` | The database command completed (includes timing). |
+| `QueryMaterializedEvent` | Results materialized into the result shape. |
+
+Attaching a listener is a one-liner (`opt.Listener = ...`), and
+`FlexQueryDiagnosticsCollector` accumulates all four into a report — see
+[Diagnostics](/docs/diagnostics).
+
+## Where client code fits
+
+- **Before parse** — authentication, rate limiting.
+- **Between parse and execute** — governance via the `configure` delegate, tenant scoping
+  by wrapping the `IQueryable` before FlexQuery sees it.
+- **After execute** — serialization (result-shape enforcement), diagnostics, response
+  shaping.

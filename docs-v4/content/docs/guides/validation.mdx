@@ -1,0 +1,144 @@
+---
+title: Validation
+description: How requests are validated, the rule pipeline, and error handling.
+section: Guides
+---
+
+import { Callout } from '@/components/callout'
+
+# Validation
+
+Clients compose queries from untrusted input: field names that may not exist, operators that
+may not be supported, values that may not parse, and fields you never intended to expose.
+Validation is the layer that makes FlexQuery safe by default — every request is checked
+against your data model and governance rules **after parsing and before any query executes**,
+so invalid requests never reach the database.
+
+## How validation fits the pipeline
+
+```
+parse → validate → build expressions → translate → execute
+```
+
+The separation matters: parse errors mean *malformed syntax* (the client wrote something
+unintelligible), while validation errors mean *well-formed but not allowed* (the field
+exists but is blocked, the operator is invalid for the type). Distinguishing them lets you
+return precise 400 responses and lets monitoring distinguish client bugs from probing.
+
+## The rule pipeline
+
+Rules implement `IValidationRule` and each returns a `ValidationResult`:
+
+```csharp
+public sealed record ValidationError(string Message, string Code, string? Field = null);
+```
+
+`ValidationResult` accumulates all errors (`Errors` list, `IsValid` property), and
+`ToErrorMessage()` formats them for humans:
+
+```
+Query validation failed (2 errors).
+
+• Field 'Ssn' is not accessible for the current role.
+• Operator 'contains' is not supported for field 'Age'.
+```
+
+`QueryValidationException` carries the collected errors to your error handler.
+
+## Rule families
+
+| Family | What it checks |
+|---|---|
+| Field existence | Filter, sort, select, having, and expand fields exist on the entity (or the mapped surface). |
+| Operator validity | Filter/having operators are supported for the field type. |
+| Type compatibility | Values are compatible with field types — no `contains` on numbers, no string comparisons on dates. |
+| Field access | Fields respect `AllowedFields` / `BlockedFields`, per-operation sets, and the current role. |
+| Expand governance | Expand paths exist, are allowed, appear at most once, carry valid options, and stay consistent with includes. |
+| Aggregate rules | No wildcard aggregates; aggregates referenced by having/sort are declared; COUNT sort targets are collection-only. |
+| Having rules | Requires `groupBy`, valid operators, type-compatible values, existing fields. |
+| GroupBy rules | Projection, sort, and include conflicts for grouped queries. |
+| Projection rules | Select grammar, alias uniqueness, navigation projection requires include, DTO surface protection. |
+| Pagination rules | Offset/cursor mode conflicts, paging parameter validity. |
+| Governance config | The governance configuration itself is coherent (unknown fields in allow-lists, etc.). |
+
+## Strict vs non-strict mode
+
+`StrictFieldValidation = true` (the default) throws `QueryValidationException` immediately
+on unauthorized field access. In non-strict mode, field-access findings are recorded without
+aborting the pipeline — useful in staged rollouts, where you want to log what *would* be
+rejected before enforcing it.
+
+## Exceptions
+
+| Exception | When | Useful members |
+|---|---|---|
+| `FlexQueryException` | Base of the hierarchy. | — |
+| `QueryParseException` | A parameter failed to parse. | `ParameterName`, syntax, raw value, parser `Position`/`Expected`/`Found`. |
+| `QueryValidationException` | Validation failed. | Collected validation errors. |
+| `ParserNotRegisteredException` | Requested syntax has no registered parser. | — |
+
+## Complete worked example
+
+A hardened endpoint with full error handling:
+
+```csharp
+[HttpGet]
+public async Task<IActionResult> Get(
+    [FromQuery] FlexQueryParameters parameters,
+    CancellationToken cancellationToken)
+{
+    try
+    {
+        var result = await db.Customers
+            .AsNoTracking()
+            .FlexQueryAsync(parameters, opt =>
+            {
+                opt.AllowedFields = ["Id", "FirstName", "Email", "Status"];
+            }, cancellationToken);
+
+        return Ok(result);
+    }
+    catch (QueryParseException ex)
+    {
+        // malformed syntax — tell the client which parameter and where
+        return BadRequest(new
+        {
+            error = "invalid_query",
+            message = ex.Message,
+            parameter = ex.ParameterName,
+        });
+    }
+    catch (QueryValidationException ex)
+    {
+        // well-formed but not allowed
+        return BadRequest(new
+        {
+            error = "query_not_allowed",
+            message = ex.Message,
+        });
+    }
+}
+```
+
+Example rejection:
+
+```http
+GET /api/customers?filter=Ssn:eq:123
+```
+
+```json
+{
+  "error": "query_not_allowed",
+  "message": "Query validation failed (1 error).\n\n• Field 'Ssn' is not accessible."
+}
+```
+
+## Design guidance
+
+- **Fail loud in strict mode.** Silent field dropping hides client bugs and governance
+  drift; exceptions surface both.
+- **Log rejected requests** with their validation errors — they are your best signal for
+  which surfaces clients actually want.
+- **Pair validation with governance**: validation checks what is *possible* (does the field
+  exist, is the operator valid); governance checks what is *permitted* (is it on the
+  allow-list). Both run before execution.

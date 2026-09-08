@@ -1,0 +1,183 @@
+---
+title: First Query
+description: Build your first FlexQuery.NET endpoint with EF Core in a few minutes.
+section: Getting Started
+---
+
+import { Callout } from '@/components/callout'
+
+# First Query
+
+This walkthrough builds a production-shaped ASP.NET Core endpoint that accepts dynamic
+query parameters and executes them against Entity Framework Core. It takes about five
+minutes, and everything you learn here composes with the rest of the documentation.
+
+## What you are building
+
+One endpoint that handles, with no additional code:
+
+```http
+GET /api/customers?filter=Status:eq:Active&sort=LastName:asc&page=1&pageSize=20&select=Id,FirstName,Email
+```
+
+…as a server-side, validated, SQL-translated query — not in-memory LINQ.
+
+## 0. Prerequisites
+
+- .NET 6, 8, or 10 project with EF Core set up and a `Customer` entity on a
+  `DbContext`.
+- The packages installed:
+
+```bash
+dotnet add package FlexQuery.NET
+dotnet add package FlexQuery.NET.EntityFrameworkCore
+```
+
+## 1. Configure global options at startup
+
+Call `FlexQueryCore.Configure` once in `Program.cs`, before any query executes:
+
+```csharp
+using FlexQuery.NET;
+
+var builder = WebApplication.CreateBuilder(args);
+
+FlexQueryCore.Configure(options =>
+{
+    options.DefaultPageSize = 20;
+    options.MaxPageSize = 1000;
+    options.StrictFieldValidation = true;
+});
+
+builder.Services.AddControllers();
+```
+
+These are defaults, not security — endpoints override them per request below.
+
+## 2. Create the endpoint
+
+`FlexQueryParameters` is the model binder for query-string input. Pass it straight to
+`FlexQueryAsync`:
+
+```csharp
+using FlexQuery.NET;
+using FlexQuery.NET.Models;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+
+[ApiController]
+[Route("api/customers")]
+public sealed class CustomersController(AppDbContext db) : ControllerBase
+{
+    [HttpGet]
+    public async Task<IActionResult> GetCustomers(
+        [FromQuery] FlexQueryParameters parameters,
+        CancellationToken cancellationToken)
+    {
+        var result = await db.Customers
+            .AsNoTracking()
+            .FlexQueryAsync(parameters, opt =>
+            {
+                opt.AllowedFields = ["Id", "FirstName", "LastName", "Email", "Status"];
+                opt.MaxPageSize = 100;
+                opt.DefaultSortField = "Id";
+            }, cancellationToken);
+
+        return Ok(result);
+    }
+}
+```
+
+What each line buys you:
+
+- `AsNoTracking()` — read-only queries without change-tracking overhead.
+- `AllowedFields` — the only fields clients can filter, sort, or select on.
+- `MaxPageSize` — an endpoint-level ceiling (clients cannot exceed it).
+- `DefaultSortField` — stable page boundaries even when clients omit `sort`.
+
+## 3. Query it
+
+```http
+GET /api/customers?filter=Status:eq:Active&sort=LastName:asc&page=1&pageSize=20&select=Id,FirstName,Email
+```
+
+Response:
+
+```json
+{
+  "data": [
+    { "id": 3, "firstName": "Ana", "email": "ana@example.com" }
+  ],
+  "totalCount": 42,
+  "resultCount": 1,
+  "page": 1,
+  "pageSize": 20,
+  "totalPages": 3,
+  "hasNextPage": true,
+  "hasPreviousPage": false
+}
+```
+
+## What just happened
+
+1. `FlexQueryParameters` bound the query string (`filter`, `sort`, `page`, `pageSize`,
+   `select`).
+2. `FlexQueryAsync` parsed the parameters with the default syntax (`NativeDsl`), validated
+   every field against `AllowedFields`, and applied the pipeline — filter → sort → paging →
+   projection — as SQL-translated expression trees.
+3. Only selected columns left the database, and only allowed fields could be addressed.
+
+## Variations
+
+### Explicit query options
+
+When the query is composed server-side instead of parsed from the request:
+
+```csharp
+var result = await db.Customers
+    .AsNoTracking()
+    .FlexQueryAsync(new QueryOptions
+    {
+        Sort = [new SortNode { Field = "LastName", Descending = false }],
+        Paging = new PagingOptions { Page = 1, PageSize = 20 },
+    }, cancellationToken);
+```
+
+### Typed DTO result
+
+Project into your own response type — same endpoint shape, documented contract:
+
+```csharp
+public record CustomerDto(int Id, string Name, string Email);
+
+var result = await db.Customers
+    .AsNoTracking()
+    .FlexQueryAsync<Customer, CustomerDto>(parameters, cancellationToken: cancellationToken);
+```
+
+See [Typed DTO Projection](/docs/guides/typed-dto-projection) for the mapping model
+(`CreateMap`, `ForMember`, `ForNavigation`).
+
+### Alternative query syntax
+
+Clients can address the same endpoint with FQL or MiniOData once the parser packages are
+installed and registered:
+
+```csharp
+Fql.Register();          // FlexQuery.NET.Parsers.Fql
+MiniOData.Register();    // FlexQuery.NET.Parsers.MiniOData
+```
+
+```http
+GET /api/customers?filter=Status = 'Active'          (FQL)
+GET /api/customers?$filter=Status eq 'Active'        (MiniOData, per-request opt-in)
+```
+
+See [Query Syntax](/docs/concepts/query-syntax).
+
+## Next steps
+
+- [Configuration](/docs/concepts/configuration) — the three configuration levels.
+- [Filtering](/docs/guides/filtering) — the full operator reference.
+- [Paging](/docs/guides/paging) — offset vs keyset modes.
+- [Security & Governance](/docs/security) — locking endpoints down properly.

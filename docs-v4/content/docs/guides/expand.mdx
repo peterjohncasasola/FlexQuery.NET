@@ -1,0 +1,170 @@
+---
+title: Expand
+description: Deep, filtered, sorted navigation expansion trees.
+section: Guides
+---
+
+import { Callout } from '@/components/callout'
+
+# Expand
+
+`expand` is include with control. Where `include` loads a whole related collection,
+`expand` lets each loaded branch carry its own filter, sort, and take — "give me every
+customer, but only their three most recent delivered orders". This is the pattern behind
+dashboard cards, order-history views, and any screen that shows a bounded slice of related
+data.
+
+Expand replaces the legacy `FilteredIncludes` API of v3.
+
+## What expand does
+
+- Loads navigation properties like `include`, but each branch can specify:
+  - **filter** — which related rows to load,
+  - **sort** — their ordering,
+  - **take** — how many to load.
+- Nesting composes: each child branch gets its own options.
+- Filters, sorts, and takes translate server-side — related rows are not loaded and then
+  trimmed in memory.
+
+## Grammar
+
+```
+expand = path(.path)*( options? ), path(...)*
+options = filter=...; sort=...; take=...
+nested = path(child(...), child2(...))
+```
+
+## Basic expansion
+
+```http
+GET /api/customers?expand=Orders
+```
+
+## Filter, sort, and take per branch
+
+Options are semicolon-separated inside parentheses:
+
+```http
+GET /api/customers?expand=Orders(filter=Status:eq:Delivered)
+GET /api/customers?expand=Orders(sort=OrderDate:desc)
+GET /api/customers?expand=Orders(filter=Status:eq:Delivered; sort=Id:desc; take=3)
+```
+
+The third example is the canonical dashboard query: every customer, each with their three
+most recent delivered orders.
+
+## Deep and nested expansion
+
+Dotted paths and nested blocks express the same tree; nested blocks give per-child control:
+
+```http
+GET /api/customers?expand=Orders.OrderItems(filter=Quantity:gt:5)
+GET /api/customers?expand=Orders(orderItems(filter=Quantity:gt:5),reviews(sort=CreatedDate:desc))
+```
+
+In the second form, `Orders` hydrates with two children — filtered items and sorted reviews
+— independently.
+
+## FQL expand
+
+The FQL parser accepts the same structure with FQL expressions inside the options:
+
+```http
+GET /api/customers?expand=Orders(filter=Status='Active'; sort=OrderDate DESC; take=5)
+```
+
+Quoted values may contain semicolons and commas — tokenization happens before option
+splitting.
+
+## Validation rules
+
+Expand is validated branch by branch, like the root query:
+
+- Each navigation path may be expanded **at most once per query** — merging duplicates
+  would make filter/take/sort ambiguous, so duplicates are rejected.
+- Paths must be navigation properties that exist on the entity.
+- Branch filters and sorts obey the same field-existence, operator-validity, and
+  type-compatibility rules as root filters.
+- An expand block with parentheses must contain at least one option — empty option lists
+  are rejected.
+- All paths must be covered by `AllowedIncludes` when that governance set is configured.
+- Include and expand usage must stay consistent — the same path listed in `include` and
+  separately expanded is a consistency error.
+
+## Complete worked example
+
+A customer-overview endpoint with bounded, filtered graphs:
+
+```csharp
+[HttpGet("api/customers/overview")]
+public async Task<IActionResult> Overview(
+    [FromQuery] FlexQueryParameters parameters,
+    CancellationToken cancellationToken)
+{
+    var result = await db.Customers
+        .AsNoTracking()
+        .FlexQueryAsync(parameters, opt =>
+        {
+            opt.AllowedIncludes = ["Orders", "Orders.OrderItems", "Reviews"];
+        }, cancellationToken);
+
+    return Ok(result);
+}
+```
+
+Request:
+
+```http
+GET /api/customers/overview?expand=Orders(filter=Status:eq:Delivered; sort=OrderDate:desc; take=3)&pageSize=10
+```
+
+Response (shape):
+
+```json
+{
+  "data": [
+    {
+      "id": 4,
+      "firstName": "Jonas",
+      "orders": [
+        { "id": 118, "orderDate": "2026-09-01", "total": 210.00, "status": "Delivered" },
+        { "id": 101, "orderDate": "2026-08-14", "total": 149.90, "status": "Delivered" },
+        { "id": 96,  "orderDate": "2026-07-30", "total": 89.00,  "status": "Delivered" }
+      ]
+    }
+  ],
+  "totalCount": 1,
+  "page": 1,
+  "pageSize": 10
+}
+```
+
+The customer count and total are unaffected by the branch filter — the root query is
+independent of what gets expanded.
+
+## Provider behavior
+
+- **EF Core**: branches hydrate via split queries; per-branch filter/sort/take translate
+  into the split-query SQL, so a `take=3` branch loads exactly three rows per parent.
+- **Dapper**: branches generate joins/subqueries; include-only joins are excluded from the
+  count query; expand-block filter/sort fields are rewritten through nested type maps in
+  typed DTO scenarios.
+
+## Common mistakes
+
+<Callout variant="warning" title="Expanding the same path twice">
+  <code>expand=Orders(filter=Status:eq:Delivered),Orders(take=3)</code> fails. Merge into
+  one branch: <code>expand=Orders(filter=Status:eq:Delivered; take=3)</code>.
+</Callout>
+
+<Callout variant="warning" title="Forgetting that branch filters do not affect the root">
+  Clients sometimes expect "customers with delivered orders" from
+  <code>expand=Orders(filter=Status:eq:Delivered)</code>. It loads delivered orders per
+  customer — customers without any still appear, with an empty array. To filter the root,
+  use a root filter (<code>filter=Orders:any:Status:eq:Delivered</code>).
+</Callout>
+
+<Callout variant="warning" title="Empty parentheses">
+  <code>expand=Orders()</code> is rejected — either expand without options
+  (<code>expand=Orders</code>) or provide at least one option.
+</Callout>

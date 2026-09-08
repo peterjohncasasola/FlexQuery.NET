@@ -1,0 +1,131 @@
+---
+title: API Reference
+description: Curated reference of the public FlexQuery.NET v4 surface per package.
+section: Resources
+---
+
+import { ApiTable } from '@/components/api-table'
+
+# API Reference
+
+A curated reference of the public developer-facing surface. Internal types are omitted.
+
+## FlexQuery.NET (core)
+
+### Entry points
+
+| Member | Description |
+|---|---|
+| `FlexQueryCore.Configure(Action<FlexQueryOptions>?)` | Global options; immutable after first call. |
+| `Query.Create()` | Fluent `FluentQueryBuilder` (implicit → `QueryOptions`). |
+
+### Request models (`FlexQuery.NET.Models`)
+
+| Type | Purpose |
+|---|---|
+| `FlexQueryParameters` | Query-string binding model (`Filter`, `Sort`, `Select`, `Include`, `Expand`, `GroupBy`, `Having`, `Aggregate`, `Page`, `PageSize`, `IncludeCount`, `Distinct`, `Mode`, `Cursor`, `UseKeysetPagination`). |
+| `FlexQueryRequest` | Strongly-typed request model with `ToQueryOptions()`. |
+| `QueryOptions` | Parsed options consumed by the pipeline. |
+| `QueryResult<T>` | Result envelope (`Data`, `TotalCount`, `Page`, `PageSize`, `TotalPages`, `Aggregates`, `NextCursorToken`, `ResultShape`). |
+
+### Sync pipeline (`FlexQuery.NET` extensions)
+
+| Method | Description |
+|---|---|
+| `Apply<T>(query, options)` | Applies the full pipeline. |
+| `ApplyFilter<T>` / `ApplySort<T>` / `ApplyPaging<T>` / `ApplySelect<T>` | Individual stages. |
+| `FlexQuery<T>(query, parameters, configure?)` | Synchronous end-to-end execution. |
+
+### Keyset (`FlexQuery.NET`)
+
+| Method | Description |
+|---|---|
+| `SeekAfter<T,TKey>(query, cursor)` | Keyset predicate on an ordered queryable. |
+
+### Mapping (`FlexQuery.NET.Mapping`)
+
+| Member | Description |
+|---|---|
+| `FlexQueryMapping.Configure(Action<IQueryMappingRegistry>)` | Global type maps. |
+| `ITypeMapExpression<TSource,TDto>.ForMember / ForNavigation` | Member and navigation mapping. |
+
+### Exceptions
+
+`FlexQueryException` (base), `QueryParseException`, `QueryValidationException`,
+`ParserNotRegisteredException`.
+
+## FlexQuery.NET.EntityFrameworkCore
+
+| Member | Description |
+|---|---|
+| `FlexQueryEFCore.Setup()` | Registers EF Core operator handlers. |
+| `FlexQueryEFCore.Configure(Action<FlexQueryEfCoreOptions>?)` | Provider options (`UseNoTracking`). |
+| `FlexQueryAsync<T>(query, parameters, configure?, ct)` | Execute (dynamic results). |
+| `FlexQueryAsync<T>(query, QueryOptions, configure?, ct)` | Execute pre-parsed options. |
+| `FlexQueryAsync<TEntity,TResponse>(query, parameters, configure?, ct)` | Typed DTO execution. |
+| `ApplyExpand<T>(query, options)` | Include pipeline from expand tree. |
+| `ToSqlPreview(query)` / `ExplainProjection(query, options)` | SQL and projection inspection. |
+
+## FlexQuery.NET.Dapper
+
+| Member | Description |
+|---|---|
+| `FlexQueryDapper.Configure(Action<FlexQueryDapperOptions>?)` | Global Dapper config (`Model`, `CommandTimeout`). |
+| `FlexQueryAsync<T>(connection, parameters, configure?, ct)` | Execute (dynamic results). |
+| `FlexQueryAsync<T>(connection, IDictionary<string, StringValues>, configure?, ct)` | Execute from raw query-string values. |
+| `FlexQueryAsync<TEntity,TResponse>(connection, …)` | Typed DTO execution (4 overloads). |
+| `ModelBuilder.Entity<T>()` / `ApplyConfiguration<T>()` / `ApplyConfigurationsFromAssembly()` | Model mapping. |
+| `EntityTypeBuilder<T>.ToTable / HasKey / Property / Ignore / HasMany…` | Per-entity mapping. |
+
+## FlexQuery.NET.AspNetCore
+
+| Member | Description |
+|---|---|
+| `AddFlexQuerySecurity(this IMvcBuilder)` | Registers `FieldAccessFilter` + result-shape JSON converter. |
+| `AddFlexQueryJson(this IMvcBuilder)` | Result-shape JSON converter only. |
+| `AddFlexQuery(services, configure?)` | Combined global config registration. |
+| `[FieldAccess]` | Per-endpoint governance attribute. |
+| `GetFlexQueryExecutionOptions(HttpContext)` | Reads resolved execution options. |
+
+## FlexQuery.NET.OpenApi
+
+| Member | Description |
+|---|---|
+| `AddFlexQueryOpenApi(services)` | Registers schema/operation transformers. |
+| `AddFlexQuery(this OpenApiOptions)` | Attaches transformers to the OpenAPI document pipeline. |
+
+## FlexQuery.NET.Diagnostics
+
+| Member | Description |
+|---|---|
+| `IFlexQueryExecutionListener` | Four async event hooks (parsed/translated/executed/materialized). |
+| `ConsoleExecutionListener` | Console output listener. |
+| `FlexQueryDiagnosticsCollector` | In-memory collector; `BuildReport(provider, translator)`, `Clear()`. |
+
+## Adapters
+
+### AgGrid
+
+`AgGridRequest.ToQueryOptions()`, `JsonElement.ToQueryOptions()`,
+`ApplyAgGridRequest(options)`, `ToAgGridServerSideResponse(...)`.
+
+### Kendo
+
+`KendoRequest.ToQueryOptions()`, `JsonElement.ToQueryOptions()`,
+`ApplyKendoRequest(options)`.
+
+## Parsers
+
+| Member | Description |
+|---|---|
+| `Fql.Register()` | Registers the FQL parser. |
+| `MiniOData.Register()` | Registers the MiniOData parser. |
+| `QuerySyntax` | `NativeDsl` / `Fql` / `MiniOData`. |
+
+## Governance & security
+
+| Member | Description |
+|---|---|
+| `QueryGovernanceOptions` | All governance sets (see [Security](/docs/security)). |
+| `FieldRegistry.Register<T>(fields)` / `IsAllowed(type, path)` | Static per-type field registry. |
+| `FilterOperators` | Canonical operator constants and normalization. |

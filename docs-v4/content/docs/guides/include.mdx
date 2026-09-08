@@ -1,0 +1,141 @@
+---
+title: Include
+description: Load navigation properties with the include parameter.
+section: Guides
+---
+
+import { Callout } from '@/components/callout'
+
+# Include
+
+Most APIs need related data — a customer *and* their orders, an order *and* its line items.
+Without includes, clients would need one request per level of the graph (the N+1 request
+problem at the HTTP level). The `include` parameter loads navigation properties in the same
+request, hydrated by the database, not in memory.
+
+## What include does
+
+- Loads the requested navigation(s) alongside the root rows.
+- Loads **all scalar fields** of each included navigation — include is "give me the whole
+  related record".
+- Uses EF Core `Include`/`ThenInclude` translation (or Dapper joins) so hydration happens
+  server-side.
+
+```http
+GET /api/customers?include=Orders
+GET /api/customers?include=Orders,Address
+```
+
+Response shape:
+
+```json
+{
+  "data": [
+    {
+      "id": 4,
+      "firstName": "Jonas",
+      "address": { "id": 9, "city": "Berlin", "street": "Torstr. 12" },
+      "orders": [
+        { "id": 101, "total": 149.90, "status": "Delivered" },
+        { "id": 102, "total": 32.00, "status": "Pending" }
+      ]
+    }
+  ]
+}
+```
+
+## Rules
+
+- Only **navigation property paths** are valid; scalar fields in the include list are
+  rejected (that is what `select` is for).
+- Dotted paths load nested levels: `include=Orders.OrderItems` loads each customer's orders
+  and each order's items.
+- Unknown paths fail validation — includes can never silently load the wrong thing.
+- Duplicate include paths are rejected.
+
+## Governance
+
+Includes expose data, so they are a governance surface:
+
+- `AllowedIncludes` (or `[FieldAccess(AllowedIncludes = ...)]`) whitelists which navigations
+  clients may load. An empty set disables includes entirely.
+- Validation checks the *whole path* — `AllowedIncludes = ["Orders"]` permits
+  `include=Orders` but rejects `include=Orders.OrderItems` unless `Orders.OrderItems` is
+  also allowed (wildcard patterns can express suffixes).
+
+## Include vs expand
+
+| | `include` | `expand` |
+|---|---|---|
+| Purpose | Load a navigation with all scalars | Load a navigation with per-branch control |
+| Filter / sort / take | Not supported | Supported per branch |
+| Nested paths | Dotted paths | Nested blocks `path(child(...))` |
+| Governance | `AllowedIncludes` | `AllowedIncludes` |
+
+<Callout variant="tip" title="Choosing between them">
+  Use <code>include</code> when the client wants the entire related collection — it is the
+  simplest and cheapest path. Use <code>expand</code> when the client needs only part of it:
+  the last three orders, only delivered orders, a specific sort. Both are validated against
+  <code>AllowedIncludes</code>.
+</Callout>
+
+## Complete worked example
+
+An order-detail endpoint that loads the customer and line items:
+
+```csharp
+[HttpGet("api/orders")]
+public async Task<IActionResult> GetOrders(
+    [FromQuery] FlexQueryParameters parameters,
+    CancellationToken cancellationToken)
+{
+    var result = await db.Orders
+        .AsNoTracking()
+        .FlexQueryAsync(parameters, opt =>
+        {
+            opt.AllowedIncludes = ["Customer", "OrderItems"];
+        }, cancellationToken);
+
+    return Ok(result);
+}
+```
+
+Request:
+
+```http
+GET /api/orders?include=OrderItems&filter=Status:eq:Pending&pageSize=10
+```
+
+The include does not affect the filter or the total count — those apply to the root query.
+The result contains pending orders, each with its full `orderItems` array.
+
+## Interaction with other features
+
+- **`select`**: selecting navigation fields (`select=Id,Orders.Total`) automatically derives
+  the include tree — explicit `include` is only needed when the whole navigation should be
+  loaded.
+- **`groupBy`**: grouping and unrelated includes conflict — validation rejects group-by
+  queries that include navigations not covered by the group keys, because the grouped row
+  shape cannot carry arbitrary collections.
+- **Total count**: includes never change `totalCount`; counts are computed on the root
+  entity set.
+
+## Provider behavior
+
+- **EF Core**: includes translate to `Include`/`ThenInclude`; hydration uses split queries
+  so deep graphs stay efficient.
+- **Dapper**: include joins are generated for hydration and *excluded from the count query*
+  to avoid join-multiplication inflating totals.
+
+## Common mistakes
+
+<Callout variant="warning" title="Including what select already implies">
+  <code>include=Orders&select=Id,Orders.Total</code> is redundant — the select tree already
+  hydrates <code>Orders</code>. Redundant includes are not an error, but they load all
+  scalar fields of <code>Orders</code> instead of only <code>Total</code>.
+</Callout>
+
+<Callout variant="warning" title="Leaving includes ungoverned">
+  An endpoint without <code>AllowedIncludes</code> lets clients traverse any navigation,
+  including ones you did not intend to expose. Whitelist includes on every public endpoint.
+</Callout>

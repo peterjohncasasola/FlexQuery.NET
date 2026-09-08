@@ -1,0 +1,185 @@
+---
+title: Projection
+description: Field selection, aliases, nested selection, projection modes, and result shaping.
+section: Guides
+---
+
+import { Callout } from '@/components/callout'
+
+# Projection
+
+Projection controls *which fields* the API returns. It is the quiet workhorse of API
+performance: selecting five columns instead of twenty-five reduces transferred bytes,
+serialization time, and — because the projection becomes part of the SQL `SELECT` —
+database I/O. Nothing unselected is ever materialized.
+
+## Why it exists
+
+Entities are shaped for storage; responses are shaped for consumers. Returning whole entity
+graphs couples your database schema to every client and wastes bandwidth on fields the
+screen never shows. FlexQuery's `select` parameter lets the *client* pick the shape, while
+validation guarantees only allowed fields can leave the server.
+
+## Flat selection
+
+Comma-separated field paths:
+
+```http
+GET /api/customers?select=Id,FirstName,Email
+```
+
+Response rows contain exactly those fields (JSON naming policy applies on the way out):
+
+```json
+{ "id": 4, "firstName": "Jonas", "email": "jonas@example.com" }
+```
+
+## Navigation paths
+
+Dot paths reach through navigations:
+
+```http
+GET /api/customers?include=Address&select=Id,Address.City
+```
+
+<Callout variant="warning" title="Navigation projection requires include">
+  Selecting a navigation path without loading the navigation fails validation with
+  "navigation projection requires include". Add the path to <code>include</code> (all
+  scalars of the navigation) or <code>expand</code> (scoped, filtered loading). This rule
+  exists because the projection must be backed by a loaded navigation to translate to SQL.
+</Callout>
+
+## Aliases
+
+Rename output fields — useful for DTO-style naming on entity-backed endpoints. Both
+spellings parse to the same output field:
+
+```http
+GET /api/customers?select=CustomerFullName as FirstName
+GET /api/customers?select=CustomerFullName:FirstName
+```
+
+Both produce `"firstName"` (or your configured naming policy) sourced from the entity's
+`CustomerFullName`. Rules:
+
+- Aliases must be valid identifiers.
+- Exactly one alias per field — `a:b:c` is rejected.
+- Duplicate output names are rejected; alias conflicts are detected during tree merge.
+
+## Nested selection
+
+Parentheses select a nested shape, and nesting composes arbitrarily deep:
+
+```http
+GET /api/customers?select=Id,Orders(Id,Total,OrderDate)
+GET /api/customers?select=Id,Orders(Id,OrderItems(Quantity,Price))
+```
+
+Nested and flat syntax mix freely:
+
+```http
+GET /api/customers?select=Id,Name,Orders(Id,Total)
+```
+
+Nested selections imply loading — the referenced navigations hydrate as part of the query
+(the include tree is derived from the selection tree).
+
+## Projection modes
+
+`mode` controls how nested selections are shaped in the output:
+
+| Mode | Behavior | Use when |
+|---|---|---|
+| `Nested` (default) | Nested selections produce nested objects. | Hierarchical responses (customer → orders). |
+| `Flat` | Nested collections flatten with `SelectMany` into a leaf-level rowset. | CSV-style exports, tabular grids. |
+| `FlatMixed` | Root scalars and nested-collection fields share one output row. | Denormalized report rows. |
+
+```http
+GET /api/customers?select=Id,Orders(Id,Total)&mode=Flat
+```
+
+With `Flat`, one customer with three orders becomes three rows; `FlatMixed` yields three
+rows that each also carry the customer's scalar fields.
+
+## Result shape enforcement
+
+When an explicit `select` is present, the response carries `ResultShape` — the effective
+output surface — and serialization enforces it: fields outside the surface are removed from
+the payload, using the selected aliases. Combined with
+`AddFlexQuerySecurity()`/`AddFlexQueryJson()` (which registers the shape converter), the
+serialized JSON matches the requested surface exactly.
+
+## Governance
+
+- `SelectableFields` (or `[FieldAccess(Selectable = ...)]`) whitelists selectable fields.
+- Field-depth limits (`MaxFieldDepth`) cap path nesting.
+- DTO surface protection rejects references to private or unmapped DTO members in typed
+  scenarios (see [Typed DTO Projection](/docs/guides/typed-dto-projection)).
+
+## Complete worked example
+
+A mobile endpoint that minimizes payload:
+
+```csharp
+[HttpGet("api/customers/mobile")]
+public async Task<IActionResult> MobileList(
+    [FromQuery] FlexQueryParameters parameters,
+    CancellationToken cancellationToken)
+{
+    var result = await db.Customers
+        .AsNoTracking()
+        .FlexQueryAsync(parameters, opt =>
+        {
+            opt.SelectableFields = ["Id", "FirstName", "City", "Orders.Total"];
+            opt.MaxFieldDepth = 2;
+        }, cancellationToken);
+
+    return Ok(result);
+}
+```
+
+Request and response:
+
+```http
+GET /api/customers/mobile?select=Id,FirstName,Orders(Total)&mode=Nested
+```
+
+```json
+{
+  "data": [
+    {
+      "id": 4,
+      "firstName": "Jonas",
+      "orders": [ { "total": 149.90 }, { "total": 32.00 } ]
+    }
+  ],
+  "resultShape": [
+    { "name": "id", "path": "Id" },
+    { "name": "firstName", "path": "FirstName" },
+    { "name": "orders", "path": "Orders" }
+  ],
+  "totalCount": 1,
+  "page": 1,
+  "pageSize": 20
+}
+```
+
+## Interaction with other features
+
+- **Aliases + `Flat` mode**: aliases name the flattened output columns.
+- **Grouping**: grouped queries project group keys and aggregate aliases; `select` beyond
+  that shape conflicts with the group-by projection rule.
+- **Typed DTOs**: `select` picks fields within the mapped DTO surface; the type map renames
+  them (see [Typed DTO Projection](/docs/guides/typed-dto-projection)).
+
+## Common mistakes
+
+<Callout variant="warning" title="Alias collisions">
+  <code>select=Name:FullName,LastName:FullName</code> fails — two fields map to one output
+  name. Choose distinct aliases.
+</Callout>
+
+<Callout variant="warning" title="Selecting collections in Flat mode without expecting row multiplication">
+  <code>Flat</code> mode multiplies the root by the nested collection (SQL-join semantics).
+  If you want one row per customer, use <code>Nested</code> mode.
+</Callout>

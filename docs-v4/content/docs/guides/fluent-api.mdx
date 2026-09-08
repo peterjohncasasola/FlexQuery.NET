@@ -1,0 +1,179 @@
+---
+title: Fluent API
+description: Build QueryOptions in code with the Query.Create fluent builders.
+section: Guides
+---
+
+import { Callout } from '@/components/callout'
+
+# Fluent API
+
+Most FlexQuery requests arrive from clients as query strings and flow through
+`FlexQueryParameters`. But some queries are built *by the server*: composite endpoints,
+background jobs, internal reports, or anything where the "client" is your own code. The
+fluent API constructs the same `QueryOptions` the parsers produce — with compile-time
+structure instead of strings.
+
+## Why use it
+
+- **No string grammar** — typos in `filter=sum:Total:gt:100` are runtime parse errors; the
+  fluent equivalent is checked as you write it.
+- **Composable** — builders compose from parts (tenant scope + user sort + saved filter).
+- **Same pipeline** — the output is a regular `QueryOptions`; validation, governance, and
+  providers behave identically.
+
+## Entry point
+
+`Query.Create()` returns a `FluentQueryBuilder`. Every chain ends in `Build()` — though the
+builder also converts implicitly to `QueryOptions`, so `Build()` is optional at call sites
+that accept `QueryOptions`.
+
+```csharp
+using FlexQuery.NET.Builders.Fluent;
+
+var options = Query.Create()
+    .Filter(f => f
+        .Field("Status").Eq("Active")
+        .Or("Age").Gte(18))
+    .Sort(s => s
+        .Ascending("LastName")
+        .Descending("CreatedAt"))
+    .Page(1, 20)
+    .Build();
+```
+
+## Filter builder
+
+`Filter` takes a delegate over `FilterBuilder`. Conditions begin with a field selector and
+end with a value method:
+
+| Start | Purpose |
+|---|---|
+| `Field(name)` | Begin a condition. |
+| `And(name)` / `Or(name)` | Begin a condition with explicit logic. |
+| `AndGroup(...)` / `OrGroup(...)` | Begin a nested group. |
+| `Not()` | Negates the *next* condition. |
+
+Condition terminators on `FilterConditionBuilder<TParent>`:
+
+```csharp
+.Eq(v) .Neq(v) .Contains(v) .StartsWith(v) .EndsWith(v)
+.GreaterThan(v) .GreaterThanOrEqual(v) .LessThan(v) .LessThanOrEqual(v)
+.In(v1, v2, ...) .Between(min, max)
+.IsNull() .NotNull()
+.Any(b => ...) .All(b => ...)      // collection operators on navigations
+```
+
+Each terminator returns control to the parent builder, so chains read linearly:
+
+```csharp
+.Filter(f => f
+    .AndGroup(g => g
+        .Field("Status").Eq("Active")
+        .Field("Region").Eq("EMEA"))
+    .Or("Priority").Gte(3))
+```
+
+This is equivalent to `filter=(Status:eq:Active AND Region:eq:EMEA) OR Priority:gte:3`.
+
+## Sort builder
+
+```csharp
+.Sort(s => s
+    .Ascending("LastName")
+    .Descending("CreatedAt"))
+```
+
+Aggregate sorts (grouped queries) use `SortNode` directly or the string-based sort on
+options.
+
+## Select and include
+
+```csharp
+.Select("Id", "Name", "Email")
+.Include("Orders", "Address")
+```
+
+## Expand
+
+`Expand` takes a delegate over `ExpandBuilder`. Each `Path` can carry a filter delegate
+(over `FilterGroupBuilder`) and nested children:
+
+```csharp
+.Expand(e => e
+    .Path("Orders", filter: fb => fb.Field("Status").Eq("Delivered"))
+    .Path("Reviews", configureChildren: children => children
+        .Path("Author")))
+```
+
+This is the fluent equivalent of
+`expand=Orders(filter=Status:eq:Delivered),Reviews(Author)`.
+
+## Grouping and aggregates
+
+```csharp
+.GroupBy("Status")
+.Aggregate(a => a
+    .Sum("Total", "totalSales")
+    .Count("Id", null))
+.Having("sum", "Total", "gt", "100")
+```
+
+`Aggregate` accepts `Sum`, `Count`, `Avg`, `Min`, `Max`; an alias of `null` uses the
+default PascalCase alias (`SumTotal`). `Having(function, field, operator, value)` builds a
+`HavingConditionNode` — it must reference a declared aggregate.
+
+## Paging
+
+```csharp
+.Page(2, 50)                     // offset paging
+.UseKeysetPagination(50)         // keyset mode
+.UseKeysetPagination(50, cursor: tokenFromPreviousResponse)
+.DisablePaging()                 // return all records
+.Distinct()                      // apply Distinct()
+```
+
+## Complete worked example
+
+A server-composed "customer 360" query — tenant-scoped, filtered, with a bounded order
+graph:
+
+```csharp
+public async Task<QueryResult<object>> GetCustomer360(
+    IQueryable<Customer> customers, int tenantId, string? statusFilter, CancellationToken ct)
+{
+    var options = Query.Create()
+        .Filter(f => f
+            .Field("TenantId").Eq(tenantId)
+            .And("Status").Eq(statusFilter ?? "Active"))
+        .Sort(s => s.Ascending("LastName"))
+        .Select("Id", "FirstName", "Email")
+        .Expand(e => e.Path("Orders",
+            filter: fb => fb.Field("Status").Eq("Delivered")))
+        .Page(1, 50)
+        .Build();
+
+    return await customers.FlexQueryAsync(options, cancellationToken: ct);
+}
+```
+
+The built options flow through the exact same validation and execution pipeline as a
+parsed client request — governance still applies.
+
+<Callout variant="note" title="Fluent + client input">
+  You can mix both worlds: parse the client's query string for filter/sort, then compose
+  additional server-side structure onto the resulting <code>QueryOptions</code> with the
+  extension form <code>options.Filter(b =&gt; ...)</code> before executing.
+</Callout>
+
+## Common mistakes
+
+<Callout variant="warning" title="Having before Aggregate">
+  <code>.Having(...)</code> references declared aggregates. Build
+  <code>.Aggregate(...)</code> first, or validation will reject the undeclared reference.
+</Callout>
+
+<Callout variant="warning" title="Forgetting the sort for keyset paging">
+  <code>.UseKeysetPagination(50)</code> without any <code>.Sort(...)</code> has no seek key.
+  Add a deterministic sort ending in a unique column.
+</Callout>

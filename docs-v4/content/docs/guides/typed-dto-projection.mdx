@@ -1,0 +1,171 @@
+---
+title: Typed DTO Projection
+description: Project entity graphs into your own DTOs with FlexQueryAsync<TEntity, TResponse>.
+section: Guides
+---
+
+import { Callout } from '@/components/callout'
+
+# Typed DTO Projection
+
+The dynamic pipeline returns projected objects shaped at runtime. That is perfect for
+open-ended client-driven queries, but many endpoints have a *known* response contract — a
+`CustomerDto` your OpenAPI document promises, a `CustomerSlimDto` the mobile app consumes.
+`FlexQueryAsync<TEntity, TResponse>` materializes results directly into your DTO types, with
+an AutoMapper-style mapping model that handles renamed members and renamed navigations.
+
+## Why it exists
+
+Dynamic projection plus manual `Adapt`/`Map` code after execution has three problems: you
+lose server-side field selection (the dynamic shape must include everything the map needs),
+serialization of anonymous shapes is hard to document, and mapping code scatters across
+controllers. The typed pipeline solves all three at once:
+
+1. The **query surface** is computed from `TResponse` — only DTO-relevant columns are
+   selected in SQL.
+2. The projection is composed **inside the EF Core expression tree** (or the Dapper SQL
+   select list), so materialization lands directly in your DTO.
+3. `QueryResult<TResponse>` is a strongly-typed, documentable result.
+
+<Callout variant="tip" title="Available on both providers">
+  <code>QueryableEfCoreExtensions.FlexQueryAsync&lt;TEntity, TResponse&gt;</code> and
+  <code>FlexQueryDapperExtensions.FlexQueryAsync&lt;TEntity, TResponse&gt;</code> share the
+  same mapping model.
+</Callout>
+
+## The mapping model
+
+Mapping follows AutoMapper conventions:
+
+- **Convention**: properties with the same name and compatible types map automatically.
+- **`ForMember(dto => dto.X, entity => entity.Y)`**: maps a renamed scalar — DTO member `X`
+  is sourced from entity member `Y`.
+- **`ForNavigation(dto => dto.Orders, entity => entity.Orders)`**: maps a renamed
+  navigation collection — DTO collection `Orders` is hydrated from entity navigation
+  `Orders` even when their element types or names differ.
+
+## Basic usage
+
+```csharp
+public record CustomerDto(int Id, string Name, string Email);
+
+[HttpGet("api/customers/dto")]
+public async Task<IActionResult> GetDtos(
+    [FromQuery] FlexQueryParameters parameters,
+    CancellationToken cancellationToken)
+{
+    var result = await db.Customers
+        .AsNoTracking()
+        .FlexQueryAsync<Customer, CustomerDto>(parameters, cancellationToken: cancellationToken);
+
+    return Ok(result);   // QueryResult<CustomerDto>
+}
+```
+
+Properties that match by name (`Id`, `Email`) map by convention; `Name` maps when a type
+map or member expression supplies its source.
+
+## Per-query maps
+
+The `configure` delegate registers a map for this call only:
+
+```csharp
+var result = await db.Customers
+    .AsNoTracking()
+    .FlexQueryAsync<Customer, CustomerSummaryDto>(parameters, opt =>
+        opt.CreateMap<Customer, CustomerSummaryDto>()
+            .ForMember(dto => dto.CustomerName, entity => entity.FirstName),
+        cancellationToken);
+```
+
+## Global maps
+
+Application-wide maps are registered once at startup; per-query maps take precedence:
+
+```csharp
+FlexQueryCore.Configure(options =>
+{
+    options.CreateMap<Customer, CustomerResponse>()
+        .ForMember(dto => dto.CustomerFullName, entity => entity.CustomerName);
+
+    options.CreateMap<Order, OrderResponse>();
+});
+```
+
+## How select interacts with DTOs
+
+The client's `select` controls **which fields** are queried and returned; the type map
+controls **how fields are named** on the DTO. Clients address DTO surface names — with a
+nested select tree, the response shape follows the requested surface:
+
+```http
+GET /api/customers/dto?select=customerName,orders(id,orderDate,status)
+```
+
+`ResultShape` on the response describes the effective output surface, and the registered
+result-shape JSON converter (via `AddFlexQuerySecurity()` or `AddFlexQueryJson()`) strips
+anything outside it — aliases included.
+
+Combining select and expand gives full control: the select tree shapes the response, expand
+controls which records load:
+
+```http
+GET /api/customers/dto?select=customerName,orders(id,total)&expand=Orders(filter=Status:eq:Delivered; take=3)
+```
+
+## Complete worked example
+
+A nested-select DTO endpoint from the sample application:
+
+```csharp
+[HttpGet("api/customers/order-summaries")]
+public async Task<IActionResult> GetCustomerOrderSummaries(
+    [FromQuery] FlexQueryParameters parameters,
+    CancellationToken cancellationToken)
+{
+    var result = await db.Customers
+        .AsNoTracking()
+        .FlexQueryAsync<Customer, CustomerOrderSummaryDto>(parameters, opt =>
+            opt.CreateMap<Customer, CustomerOrderSummaryDto>()
+                .ForMember(dto => dto.CustomerName, entity => entity.FirstName)
+                .ForNavigation(dto => dto.Orders, entity => entity.Orders),
+        cancellationToken);
+
+    return Ok(result);
+}
+```
+
+With `select=customerName,orders(id,total)`, the response carries only the requested
+surface, renamed through the map, hydrated server-side in one query.
+
+## Validation
+
+- **DTO surface protection**: only public, mapped surface members may be referenced by
+  select/expand — private or unmapped DTO members are rejected.
+- Mapping expressions must reference public members on both source and destination types.
+- Client-addressed field names resolve through nested type maps: `customerName` in a filter
+  or sort rewrites to the entity's `CustomerName` (and onward to the physical column in
+  Dapper SQL), so clients work in DTO vocabulary while the database works in entity
+  vocabulary.
+
+## Provider notes
+
+- **EF Core**: the projection composes into the EF expression tree; navigation graphs
+  hydrate server-side; grouped queries materialize per-group rows through the grouped
+  executor.
+- **Dapper**: SQL generation is surface-aware — projected property names are rewritten
+  through the type map (including JSON naming conventions), and include hydration merges
+  nested DTO children after execution.
+
+## Common mistakes
+
+<Callout variant="warning" title="Selecting members outside the mapped surface">
+  <code>select=someUnmappedField</code> fails DTO surface protection. Add the mapping
+  (<code>ForMember</code>) or extend the surface before clients can address it.
+</Callout>
+
+<Callout variant="warning" title="Using global maps for one-off renames">
+  A rename used by a single endpoint belongs in a per-query <code>CreateMap</code>. Global
+  maps are for contracts reused across the application — otherwise the registry becomes a
+  second source of truth to maintain.
+</Callout>

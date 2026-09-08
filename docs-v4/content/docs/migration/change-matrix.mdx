@@ -1,0 +1,52 @@
+---
+title: v3 → v4 Change Matrix
+description: Verified v3.1.1 → HEAD changes mapped to their documentation.
+section: Resources
+---
+
+import { Callout } from '@/components/callout'
+
+# v3.1.1 → v4 Change Matrix
+
+Every row below was verified against the actual source diff between the `v3.1.1` tag and the
+current implementation (364 commits, 710 changed files, +57,509/−14,348 lines).
+
+| Area | v3.1.1 | v4 / HEAD | Change | Documentation |
+|---|---|---|---|---|
+| Configuration entry | DI-based `FlexQueryConfiguration` | Static immutable `FlexQueryCore.Configure()` | Changed | [Configuration](/docs/concepts/configuration) |
+| EF Core options | `FlexQueryEfCoreConfiguration` | `FlexQueryEfCoreOptions` (`UseNoTracking`) | Renamed | [EF Core](/docs/providers/ef-core) |
+| Dapper options | `FlexQueryDapperConfigurer` | `FlexQueryDapperOptions` (`Model`, `CommandTimeout`) | Renamed / Changed | [Dapper](/docs/providers/dapper) |
+| Dapper dialect | Manual `Dialect` config | Auto-detection from `DbConnection` | Behavior changed | [Dapper](/docs/providers/dapper) |
+| Dapper mapping | Inline/configurer mapping | Convention-first `ModelBuilder` + `IEntityTypeConfiguration<T>` | Replaced | [Dapper](/docs/providers/dapper) |
+| Typed DTO results | Not available | `FlexQueryAsync<TEntity,TResponse>` + `CreateMap`/`ForMember`/`ForNavigation` | Added | [Typed DTO Projection](/docs/guides/typed-dto-projection) |
+| Mapping registry | Not available | `FlexQueryMapping` global registry | Added | [Typed DTO Projection](/docs/guides/typed-dto-projection) |
+| Filtered includes | `FilteredIncludes` API | `expand` trees with filter/sort/take | Replaced | [Expand](/docs/guides/expand) |
+| Include paths | Broad paths accepted | Navigation-property paths only | Behavior changed | [Include](/docs/guides/include) |
+| Keyset pagination | Not available | `useKeysetPagination`, `cursor`, `NextCursorToken`, `SeekAfter` | Added | [Keyset Pagination](/docs/guides/keyset-pagination) |
+| Fluent API | Filter-only builders | Full builders (filter/sort/select/expand/aggregate/having/paging/keyset) | Changed | [Fluent API](/docs/guides/fluent-api) |
+| Sort model | `SortOption` | `SortNode` (colon + space directions) | Renamed / Changed | [Sorting](/docs/guides/sorting) |
+| Select model | `SelectModel` | `SelectNode` canonical AST + aliases (`field:alias`, `field as alias`) | Renamed / Changed | [Projection](/docs/guides/projection) |
+| Aggregates | In `select`, string functions | Dedicated `aggregate` parameter, `AggregateFunction` enum, PascalCase aliases | Changed | [Grouping & Aggregates](/docs/guides/grouping) |
+| HAVING | Alias-integrity validation | Expression tree (`AND`/`OR`/parentheses), declared-aggregate enforcement | Behavior changed | [Grouping & Aggregates](/docs/guides/grouping) |
+| DSL logic operators | Symbolic forms | `AND` / `OR` keywords only | Behavior changed | [Query Syntax](/docs/concepts/query-syntax) |
+| Query syntaxes | DSL, JSON, Indexed, Generic, JQL, MiniOData | DSL, FQL, MiniOData | Removed | [Query Syntax](/docs/concepts/query-syntax) |
+| FQL parser package | `FlexQuery.NET.Parsers.Jql`, `QuerySyntax.Jql` | `FlexQuery.NET.Parsers.Fql`, `QuerySyntax.Fql` | Renamed | [Query Syntax](/docs/concepts/query-syntax) |
+| Parser registration | DI services | Static `Fql.Register()` / `MiniOData.Register()` + `QueryParserRegistry` | Changed | [Query Syntax](/docs/concepts/query-syntax) |
+| Validation | Individual validators | Rule pipeline (`IValidationRule`, `ValidationResult`, `ValidationError`), ~29 rules | Replaced | [Validation](/docs/guides/validation) |
+| Field exceptions | `InvalidFilterFieldException` / `InvalidSortFieldException` | Unified hierarchy under `FlexQueryException` | Replaced | [Validation](/docs/guides/validation) |
+| Case-insensitive filtering | `CaseInsensitive` option | Removed | Removed | [Migration](/docs/migration/v3-to-v4) |
+| Governance | Allowed/Blocked fields, AllowedIncludes, SortableFields, AllowedOperators, role fields | + `FilterableFields`, `SelectableFields`, `GroupableFields`, `AggregatableFields` | Added | [Security](/docs/security) |
+| `[FieldAccess]` | Allowed/Blocked | + Filterable/Sortable/Selectable/Groupable/Aggregatable/AllowedIncludes/DefaultSort/MaxDepth | Changed | [ASP.NET Core](/docs/integrations/aspnetcore) |
+| ASP.NET Core DI | `AddFlexQuery` wrapper | `AddFlexQuerySecurity`, `AddFlexQueryJson`, `AddFlexQuery` (global config) | Changed | [ASP.NET Core](/docs/integrations/aspnetcore) |
+| OpenAPI | Not available | `FlexQuery.NET.OpenApi` (`AddFlexQueryOpenApi`, `AddFlexQuery`) | Added | [OpenAPI](/docs/integrations/openapi) |
+| Diagnostics | Listener interface in Models | `FlexQuery.NET.Execution` events, collectors, shared `SqlFormatting` | Changed | [Diagnostics](/docs/diagnostics) |
+| Result model | `QueryResult<T>` basic | + `ResultShape`, `NextCursorToken`, `ResultCount` | Changed | [Query Result](/docs/concepts/query-result) |
+| Paging validation | Loose | Strict page/pageSize/distinct validation | Behavior changed | [Paging](/docs/guides/paging) |
+| Global options | Mutable | Immutable after first call | Behavior changed | [Configuration](/docs/concepts/configuration) |
+| Cancellation | Not available | `CancellationToken` across async overloads | Added | [EF Core](/docs/providers/ef-core), [Dapper](/docs/providers/dapper) |
+| Target frameworks | net6.0/net7.0/net8.0 era | net6.0/net8.0/net10.0 (OpenApi: net9.0/net10.0) | Changed | [Installation](/docs/getting-started/installation) |
+
+<Callout variant="note" title="Scope">
+  Internal refactors (namespace reorganizations, internalized types, test reorganization) are
+  intentionally excluded — they do not affect the public developer experience.
+</Callout>

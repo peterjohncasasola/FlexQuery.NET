@@ -1,0 +1,154 @@
+---
+title: ASP.NET Core
+description: Controllers, [FieldAccess] security attributes, and JSON options.
+section: Integrations
+---
+
+import { Callout } from '@/components/callout'
+
+# ASP.NET Core
+
+`FlexQuery.NET.AspNetCore` binds FlexQuery to the MVC model-binding and filter pipeline. It
+adds three things: DI registration helpers, the `[FieldAccess]` attribute for per-endpoint
+governance, and the result-shape JSON converter that makes `select` surfaces authoritative
+in serialized output.
+
+## Setup
+
+```csharp
+builder.Services.AddControllers()
+    .AddFlexQuerySecurity()   // [FieldAccess] filter + result-shape JSON converter
+    .AddFlexQueryJson();      // result-shape JSON converter only
+```
+
+`AddFlexQuerySecurity` registers the `FieldAccessFilter` (which reads `[FieldAccess]`
+attributes) and the `QueryResultShapeConverterFactory`. `AddFlexQueryJson` registers only
+the JSON converter — for applications that manage security differently but want
+select-surface enforcement. A combined shortcut exists too:
+
+```csharp
+builder.Services.AddFlexQuery(options =>
+{
+    options.CreateMap<Customer, CustomerResponse>();
+});
+```
+
+This performs `FlexQueryCore.Configure(configure)` (global defaults and global type maps)
+and returns the service collection.
+
+## Endpoint pattern
+
+```csharp
+using FlexQuery.NET;
+using FlexQuery.NET.Models;
+using Microsoft.AspNetCore.Mvc;
+
+[ApiController]
+[Route("api/customers")]
+[FieldAccess(Allowed = ["Id", "FirstName", "Email", "Status"], AllowedIncludes = ["Orders"])]
+public sealed class CustomersController(AppDbContext db) : ControllerBase
+{
+    [HttpGet]
+    public async Task<IActionResult> Get(
+        [FromQuery] FlexQueryParameters parameters,
+        CancellationToken cancellationToken)
+    {
+        var result = await db.Customers
+            .AsNoTracking()
+            .FlexQueryAsync(parameters, cancellationToken: cancellationToken);
+
+        return Ok(result);
+    }
+}
+```
+
+## FieldAccessAttribute
+
+Apply on an action (takes priority) or the controller. All properties merge into the
+request's `QueryExecutionOptions` before validation:
+
+| Property | Purpose |
+|---|---|
+| `Allowed` | Allow-list of field names. |
+| `Blocked` | Blocked field names. |
+| `Filterable` | Fields clients may filter on. |
+| `Sortable` | Fields clients may sort by. |
+| `Selectable` | Fields clients may select. |
+| `Groupable` | Fields clients may group by. |
+| `Aggregatable` | Fields clients may aggregate. |
+| `AllowedIncludes` | Navigation paths clients may include or expand. |
+| `DefaultSortField` / `DefaultSortDirection` | Default ordering when the client does not sort. |
+| `MaxDepth` | Maximum nested field-path depth (`-1` = unset). |
+
+The filter resolves the attribute with **action over controller** priority, merges each
+list with any already-resolved execution options, and stores the result in
+`HttpContext.Items` for the execution methods to pick up.
+
+## Per-request configuration
+
+The `configure` delegate on `FlexQueryAsync` composes with attribute settings — attribute
+lists merge into execution options, and the delegate can tighten them further:
+
+```csharp
+var result = await db.Customers.FlexQueryAsync(parameters, opt =>
+{
+    opt.MaxPageSize = 50;   // endpoint ceiling regardless of attribute/defaults
+}, cancellationToken);
+```
+
+## Reading execution options from HttpContext
+
+Custom middleware or services can inspect the resolved options:
+
+```csharp
+var execOptions = httpContext.GetFlexQueryExecutionOptions();
+```
+
+## Complete worked example
+
+A locked-down public endpoint plus an internal one, side by side:
+
+```csharp
+[ApiController]
+[Route("api/public/customers")]
+[FieldAccess(
+    Allowed = ["Id", "City", "Status"],
+    Sortable = ["Id", "City"],
+    AllowedIncludes = [],
+    DefaultSortField = "Id",
+    MaxDepth = 2)]
+public sealed class PublicCustomersController(AppDbContext db) : ControllerBase
+{
+    [HttpGet]
+    public async Task<IActionResult> Get(
+        [FromQuery] FlexQueryParameters parameters,
+        CancellationToken cancellationToken)
+    {
+        var result = await db.Customers
+            .AsNoTracking()
+            .FlexQueryAsync(parameters, cancellationToken: cancellationToken);
+        return Ok(result);
+    }
+}
+```
+
+Requests against this endpoint: `filter=City:eq:Berlin` works; `filter=Email:contains:@`
+fails validation; `include=Orders` fails (empty allow-list); `pageSize=500` still works but
+the JSON surface only ever contains `Id`, `City`, `Status`.
+
+<Callout variant="tip" title="Combine with OpenAPI">
+  Add <code>FlexQuery.NET.OpenApi</code> so Swagger documents the query parameters of
+  FlexQuery endpoints — see <a href="/docs/integrations/openapi">OpenAPI</a>.
+</Callout>
+
+## Common mistakes
+
+<Callout variant="warning" title="Forgetting AddFlexQuerySecurity">
+  Without it, <code>[FieldAccess]</code> attributes are inert decoration — nothing reads
+  them. The filter registration is what activates per-endpoint governance.
+</Callout>
+
+<Callout variant="warning" title="Relying on the attribute alone for paging limits">
+  <code>[FieldAccess]</code> governs fields, not page sizes. Set
+  <code>MaxPageSize</code> via global config or the per-request delegate.
+</Callout>
