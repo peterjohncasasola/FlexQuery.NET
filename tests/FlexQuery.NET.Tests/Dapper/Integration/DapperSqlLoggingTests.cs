@@ -162,12 +162,12 @@ public class DapperSqlLoggingTests : IDisposable
         sqlEntry.Should().Contain("FROM");
         sqlEntry.Should().Contain("ORDER BY");
 
-        // The final SQL reflects filter/sort/paging: the filter parameter value appears
-        // in the parameter section of the same entry.
-        sqlEntry.Should().Contain("Delivered");
+        // The filter value is embedded in the DECLARE block as a quoted literal.
+        sqlEntry.Should().Contain("'Delivered'");
+        sqlEntry.Should().Contain("DECLARE");
     }
 
-    // Test 2 — logs generated parameters --------------------------------------------
+    // Test 2 — parameters are embedded as a DECLARE block -----------------------------
 
     [Fact]
     public async Task EntityQuery_LogsGeneratedParameters()
@@ -182,11 +182,64 @@ public class DapperSqlLoggingTests : IDisposable
             WithLogging(_loggerFactory));
 
         var sqlEntry = _loggerFactory.Entries.First(e => e.Contains("Executing Dapper query"));
-        sqlEntry.Should().Contain("Parameters:");
+        sqlEntry.Should().Contain("DECLARE");
 
-        // Parameter lines use the "@name = value" representation actually passed to Dapper.
-        var parameterSection = sqlEntry[(sqlEntry.IndexOf("Parameters:", StringComparison.Ordinal))..];
-        parameterSection.Should().MatchRegex("@\\w+ = Delivered");
+        // Parameter declarations use "@name AS TYPE = literal" form; the filter value
+        // arrives as a quoted NVARCHAR literal with its inferred length.
+        sqlEntry.Should().MatchRegex("@\\w+ AS NVARCHAR\\(\\d+\\) = 'Delivered'");
+        sqlEntry.Should().MatchRegex("@PageSize AS INT = 2");
+        sqlEntry.Should().MatchRegex("@Offset AS INT = 0");
+    }
+
+    // Test 2b — the SQL body still references the original parameter names ------------
+
+    [Fact]
+    public async Task Sql_StillReferencesDeclaredParameterNames()
+    {
+        await _connection.FlexQueryAsync<Customer>(
+            new FlexQueryParameters
+            {
+                Filter = "Status=\"Delivered\"",
+                Page = 1,
+                PageSize = 2
+            },
+            WithLogging(_loggerFactory));
+
+        var sqlEntry = _loggerFactory.Entries.First(e => e.Contains("Executing Dapper query"));
+        var declarationEnd = sqlEntry.IndexOf(';', StringComparison.Ordinal);
+        declarationEnd.Should().BeGreaterThan(0);
+
+        var declareSection = sqlEntry[..declarationEnd];
+        var sqlBody = sqlEntry[(declarationEnd + 1)..];
+
+        // Every declared parameter must be referenced in the SQL body — values live in
+        // the DECLARE block only; the query text keeps the @name placeholders.
+        var declaredNames = System.Text.RegularExpressions.Regex.Matches(declareSection, "@\\w+")
+            .Select(m => m.Value)
+            .Distinct()
+            .ToList();
+
+        declaredNames.Should().NotBeEmpty();
+        foreach (var name in declaredNames)
+            sqlBody.Should().Contain(name);
+    }
+
+    // Test 2c — string values are escaped as SQL literals -----------------------------
+
+    [Fact]
+    public async Task StringValues_AreSqlEscaped()
+    {
+        await _connection.FlexQueryAsync<Customer>(
+            new FlexQueryParameters
+            {
+                Filter = "Name=\"O'Brien\"",
+                Page = 1,
+                PageSize = 2
+            },
+            WithLogging(_loggerFactory));
+
+        var sqlEntry = _loggerFactory.Entries.First(e => e.Contains("Executing Dapper query"));
+        sqlEntry.Should().Contain("'O''Brien'");
     }
 
     // Test 3 — DTO query is logged ---------------------------------------------------
