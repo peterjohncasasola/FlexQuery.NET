@@ -1,5 +1,10 @@
-namespace FlexQuery.NET.EntityFrameworkCore.SqlFormatting;
+namespace FlexQuery.NET.SqlFormatting;
 
+/// <summary>
+/// The project's single SQL formatter (clause-per-line, indented readability output).
+/// Shared by the EF Core listener events and the Dapper SQL execution logs; both
+/// providers compile this same source so there is exactly one formatter implementation.
+/// </summary>
 internal static class SqlFormatter
 {
     private const string Indent = "    ";

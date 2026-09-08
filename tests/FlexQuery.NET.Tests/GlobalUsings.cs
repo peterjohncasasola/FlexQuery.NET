@@ -5,3 +5,4 @@ global using FlexQuery.NET.Tests.Shared.Fixtures;
 global using Microsoft.Extensions.Primitives;
 global using FlexQuery.NET.Constants;
 global using FlexQuery.NET.EntityFrameworkCore.SqlFormatting;
+global using FlexQuery.NET.SqlFormatting;
