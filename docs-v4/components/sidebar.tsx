@@ -18,6 +18,9 @@ export function Sidebar() {
         current.includes(activeGroup.title) ? current : [...current, activeGroup.title],
       )
     }
+    // Keep the current page visible in the scrollable sidebar after navigation.
+    const activeLink = document.querySelector<HTMLElement>('[data-sidebar-active="true"]')
+    activeLink?.scrollIntoView({ block: 'nearest' })
   }, [activeSlug])
 
   return (
@@ -54,6 +57,7 @@ export function Sidebar() {
                         <Link
                           href={`/docs/${item.slug}`}
                           aria-current={active ? 'page' : undefined}
+                          data-sidebar-active={active ? 'true' : undefined}
                           className={`-ml-3.5 block rounded-r-md border-l-2 py-1.5 pr-2 pl-3 text-[13px] leading-5 transition-colors ${
                             active
                               ? 'border-brand-500 bg-brand-50/70 font-medium text-brand-700 dark:bg-brand-950/40 dark:text-brand-300'

@@ -209,7 +209,7 @@ export function SearchDialog() {
               }
             }}
             placeholder="Search guides, APIs, and concepts…"
-            className="h-14 w-full bg-transparent text-[15px] text-zinc-900 outline-none placeholder:text-zinc-400 dark:text-white dark:placeholder:text-zinc-500"
+            className="h-14 w-full bg-transparent text-[15px] text-zinc-900 outline-none focus-visible:outline-none placeholder:text-zinc-400 dark:text-white dark:placeholder:text-zinc-500"
           />
           <button
             type="button"

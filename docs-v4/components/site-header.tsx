@@ -11,7 +11,7 @@ const links = [
   { href: '/docs', label: 'Docs' },
   { href: '/docs/guides/filtering', label: 'Guides' },
   { href: '/docs/api-reference', label: 'API Reference' },
-  { href: '/docs/migration/v3-to-v4', label: 'v3 → v4' },
+  { href: '/docs/migration/v3-to-v4', label: 'Migration' },
 ]
 
 export function SiteHeader() {

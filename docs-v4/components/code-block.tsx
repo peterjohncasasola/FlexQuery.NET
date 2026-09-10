@@ -82,7 +82,7 @@ export function CodeBlock(props: {
       </div>
       <pre
         ref={preRef}
-        className={`${className ?? ''} max-h-[40rem] overflow-auto p-4 text-[13px] leading-6 [&_code]:bg-transparent [&_code]:p-0 [&_code]:font-mono`}
+        className={`${className ?? ''} max-h-[40rem] overflow-auto p-4 text-[13.5px] leading-6 [&_code]:bg-transparent [&_code]:p-0 [&_code]:font-mono`}
         style={style}
         data-language={dataLanguage}
       >

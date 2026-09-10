@@ -42,9 +42,11 @@ body {
   @apply bg-brand-100 text-brand-950 dark:bg-brand-900 dark:text-brand-50;
 }
 
-:focus-visible {
-  outline: 2px solid var(--color-brand-500);
-  outline-offset: 2px;
+@layer base {
+  :focus-visible {
+    outline: 2px solid var(--color-brand-500);
+    outline-offset: 2px;
+  }
 }
 
 button:not(:disabled),
@@ -150,8 +152,16 @@ html.dark .shiki span {
   @apply text-zinc-400 dark:text-zinc-600;
 }
 
+/* Numbered steps (e.g. "How it works") read as a pipeline: mono, accent-colored. */
+.prose-doc ol > li::marker {
+  @apply font-mono text-[13px] font-medium text-brand-600 dark:text-brand-400;
+}
+
 .prose-doc code:not(pre code) {
   @apply rounded-md border border-zinc-200 bg-zinc-100 px-1.5 py-0.5 font-mono text-[13px] font-medium text-brand-700 dark:border-zinc-800 dark:bg-zinc-800/60 dark:text-brand-300;
+  /* Long query strings inside inline code (e.g. in callouts) must wrap on small
+     screens instead of widening the page. */
+  overflow-wrap: anywhere;
 }
 
 /* Table frame: contained scroll only - width comes from the shared [data-doc-wide] system. */
