@@ -1,0 +1,115 @@
+---
+title: Fluent API
+description: Build QueryOptions in code — typed, composable, and validated like any request.
+---
+
+# Fluent API
+
+The fluent builder gives you the full `QueryOptions` model without ever touching query
+strings. It is the programmatic twin of the wire grammar: same options, same validation,
+same execution methods. Use it for saved queries, server-composed policies, tests, and
+data-export jobs — anywhere a client should not be in control.
+
+```csharp
+using FlexQuery.NET.Builders.Fluent;
+using FlexQuery.NET.Models;      // QueryOptions lives here
+
+var options = Query.Create()
+    .Filter(f => f
+        .Equal("Status", "Active")
+        .And(g => g.GreaterThan("Salary", 50000).Or(s => s.Contains("City", "ville"))))
+    .Sort(s => s.Ascending("LastName").Descending("CreatedAt"))
+    .Select("Id", "FirstName", "LastName")
+    .Page(1, 20)
+    .Build();
+
+var result = await db.Customers.FlexQueryAsync(options, cancellationToken: ct);
+```
+
+`Build()` returns `QueryOptions`; `FluentQueryBuilder` also converts implicitly, so you
+can drop `Build()` at call sites. Execution is provider code (`FlexQueryAsync` overloads
+accept `QueryOptions` directly).
+
+## Two styles, one filter model
+
+- `FilterGroupBuilder` (shown above) — method-per-operator:
+  `Equal / NotEqual / GreaterThan / GreaterThanOrEqual / LessThan / LessThanOrEqual /
+  Contains / StartsWith / EndsWith / In / NotIn / IsNull / IsNotNull / Between`,
+  combined with `And(...)` / `Or(...)` groups.
+- `FilterBuilder` — field-first chained style:
+
+```csharp
+var filter = new FilterBuilder()
+    .Field("Status").Eq("Active")
+    .And("Age").GreaterThan(18)
+    .Field("Orders").Any(o => o.Field("Total").GreaterThan(100))
+    .Build();
+```
+
+`Any`/`All` mirror the collection operators, and `Field(...).Not().Eq(...)` negates a
+single condition.
+
+## All builder methods
+
+Starting from `Query.Create()`:
+
+| Method | Meaning | Options field |
+|---|---|---|
+| `.Filter(f => …)` | filter tree | `Filter` |
+| `.Sort(s => s.Ascending("X").Descending("Y"))` | ordering (list order = priority) | `Sort` |
+| `.Select(params string[])` | projection paths / syntax accepted by the wire select grammar | `Select` |
+| `.Include(params string[])` | navigation paths | `Includes` |
+| `.Expand(e => e.Path("Orders", f => f.Equal("Status","Delivered"), children => …))` | filtered relation loading | `Expand` |
+| `.Mode(ProjectionMode.Flat)` | projection shape (Nested/Flat/FlatMixed) | `ProjectionMode` |
+| `.GroupBy(params string[])` | group keys | `GroupBy` |
+| `.Aggregate(a => a.Sum("Total").Count("Id", "orders"))` | aggregates (`Sum/Count/Avg/Min/Max`, optional alias) | `Aggregates` |
+| `.Having("sum", "Total", "gt", "100")` | one HAVING comparison over a declared aggregate | `Having` |
+| `.Distinct(true)` | DISTINCT | `Distinct` |
+| `.Page(page, pageSize)` | offset paging | `Paging` |
+| `.UseKeysetPagination(pageSize, cursor?)` | keyset paging (sort required downstream) | `IsKeysetMode`/cursor |
+| `.DisablePaging()` | return the full result set | `Paging.Disabled` |
+| `.Build()` | produce `QueryOptions` | — |
+
+HAVING can also be composed as a tree (AND/OR groups, FQL-style functions) via the
+`HavingNode` types in `FlexQuery.NET.Models.Aggregates` when the single-condition
+overload gets too cramped.
+
+## Composition example: saved queries + policy
+
+```csharp
+public static class Reports
+{
+    public static QueryOptions RegionalCustomers(
+        string status, int page) => Query.Create()
+        .Filter(f => f.Equal("Region", "EMEA").And().Equal("Status", status))
+        .Sort(s => s.Ascending("CompanyName").Ascending("Id"))
+        .Page(page, 50)
+        .Build();
+}
+
+// the controller stays thin — wire parameters never enter the picture
+var options = Reports.RegionalCustomers("Active", page: 2);
+var result = await db.Customers.FlexQueryAsync(options, cancellationToken: ct);
+```
+
+Because the output is a plain `QueryOptions`, the query composes further: merge
+adapter-parsed options (`ApplyAgGridRequest` / `ApplyKendoRequest`), or keep server-side
+constraints separate from client-provided ones and combine filters manually.
+
+## What the builder does *not* bypass
+
+Validation and governance are properties of execution, not of parsing:
+
+- A hand-built `QueryOptions` still goes through the full validator against your
+  `QueryGovernanceOptions` — an unknown field or disallowed operator fails exactly like
+  a bad query string would.
+- Field values are formatted as the DSL formats them (dates as invariant strings, etc.),
+  so the same type-constraints apply.
+- Building options does not register the request as legitimate for a model — you own
+  what you put inside.
+
+## Related
+
+- [Query Options](/docs/concepts/query-options)
+- [Query Composition](/docs/guides/query-composition) — the underlying model
+- [Filtering](/docs/guides/filtering) · [Paging](/docs/guides/paging)

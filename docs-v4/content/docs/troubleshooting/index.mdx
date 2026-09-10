@@ -1,0 +1,141 @@
+---
+title: Troubleshooting
+description: Common errors and how to resolve them.
+section: Resources
+---
+
+import { Callout } from '@/components/callout'
+
+# Troubleshooting
+
+Symptoms, causes, and fixes — ordered by how often they occur.
+
+## InvalidOperationException: "already been configured and is now immutable"
+
+`Configure` was called twice, or after a query already ran. Global configuration is
+immutable by design — concurrent query execution reads it.
+
+**Fix**: configure once during startup (`Program.cs`), before any execution.
+
+## ParserNotRegisteredException
+
+A request asked for `QuerySyntax.Fql` or `QuerySyntax.MiniOData` but the parser package was
+not registered (or the package was not installed at all).
+
+**Fix**: reference the parser package and register once at startup:
+
+```csharp
+Fql.Register();         // FlexQuery.NET.Parsers.Fql
+MiniOData.Register();   // FlexQuery.NET.Parsers.MiniOData
+```
+
+## QueryValidationException: field not allowed
+
+The field is not in `AllowedFields`, is in `BlockedFields`, fails a per-operation set
+(`FilterableFields`, `SortableFields`, `SelectableFields`, `GroupableFields`,
+`AggregatableFields`), or is unreachable under the current `CurrentRole`.
+
+**Fix**: either extend the governance set or correct the client request. Log rejected
+requests during rollout — they show which surfaces clients actually need.
+
+## "Navigation projection requires include"
+
+A `select` references a navigation path (`Address.City`) without loading the navigation.
+
+**Fix**: add the navigation to `include` (scoped loading via `expand` is then also
+possible, but the rule's error message names the missing `include=` value):
+
+```http
+GET /api/customers?include=Address&select=Id,Address.City
+```
+
+## Duplicate expand path
+
+Each navigation path may be expanded at most once per query — merging duplicates would make
+filter/take/sort ambiguous.
+
+**Fix**: merge the branch options into a single expand block:
+
+```http
+expand=Orders(filter=Status:eq:Delivered; take=3)
+```
+
+## HAVING references an undeclared aggregate
+
+Every aggregate referenced in `having` must be declared in `aggregate`.
+
+**Fix**:
+
+```http
+aggregate=sum:Total&having=sum:Total:gt:100
+```
+
+## Sort validation errors on grouped queries
+
+Grouped queries may only sort by group keys or declared aggregates — the grouped shape has
+no per-row value for anything else.
+
+**Fix**: sort by a key (`sort=Status:asc`) or a declared aggregate (`sort=sum:Total:desc`).
+
+## Dapper: wrong dialect SQL
+
+Dialect is auto-detected from the `DbConnection`. A wrapper connection or a mismatched
+provider produces wrong quoting/paging syntax.
+
+**Fix**: pass the actual connection of the target provider. Manual `Dialect` configuration
+no longer exists in v4.
+
+## No SQL logs from Dapper
+
+SQL logging requires an `ILogger` where `LogLevel.Information` is enabled for category
+`FlexQuery.NET.Dapper`. A null logger or disabled level short-circuits to a no-op.
+
+**Fix**: configure logging with Information level (or higher) enabled for the category.
+
+## Keyset pagination skips or duplicates rows
+
+Ordering is not deterministic — the cursor seek boundary is ambiguous when rows share key
+values.
+
+**Fix**: always end the sort with a unique column:
+
+```http
+sort=CreatedAt:desc,Id:desc
+```
+
+## Filter syntax errors with quoted values
+
+In the native DSL, values containing spaces or reserved keywords must be quoted.
+
+**Fix**:
+
+```http
+filter=City:eq:'New York'
+```
+
+## "'AND' cannot be used as an unquoted value"
+
+The DSL reserves the logical keywords `AND`/`OR`. A filter value that starts with one —
+e.g. `filter=Name:eq:ANDREW` — is rejected with a suggestion to quote.
+
+**Fix**: quote the value: `filter=Name:eq:'ANDREW'` (single or double quotes both work).
+
+## QueryParseException on page/pageSize/distinct
+
+Malformed values are rejected at parse time rather than silently defaulted:
+
+```http
+page=abc     → 'abc' is not a valid page number. Page must be a positive integer.
+pageSize=-5  → '-5' is not a valid page size. PageSize must be a positive integer.
+distinct=x   → 'x' is not a valid distinct value. Distinct must be 'true' or 'false'.
+```
+
+**Fix**: send well-formed values. Merely out-of-range values (e.g. `pageSize=99999`) are
+clamped to the configured maximum instead of erroring.
+
+<Callout variant="note" title="Reading validation errors">
+  <code>QueryValidationException</code> messages list every error with field context; parse
+  errors report the parameter name and parser position. When in doubt, reproduce the
+  request against a debug endpoint with a diagnostics collector — see
+  <a href="/docs/diagnostics">Diagnostics</a>.
+</Callout>

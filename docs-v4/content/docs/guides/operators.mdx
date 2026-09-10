@@ -1,0 +1,164 @@
+---
+title: Operators
+description: The complete operator reference - canonical names, aliases, type rules, and provider behavior.
+---
+
+# Operators
+
+Every filter, HAVING condition, and expanded-branch filter in FlexQuery is built from one
+fixed set of operators. This page is the authoritative reference: the canonical names, the
+aliases that normalize into them, which .NET types each operator works with, how
+governance restricts them per field, and how each provider executes them.
+
+## Canonical operators
+
+The parser normalizes every recognized operator to one of these canonical strings --
+`Status:EQ:Active` and `Status:eq:Active` are the same query:
+
+### Comparison
+
+| Operator | Meaning | Works with |
+|---|---|---|
+| `eq` | equals | scalars, strings, enums, dates, numbers, bools |
+| `neq` | not equals | as above |
+| `gt` | greater than | numbers, dates, comparable values |
+| `gte` | greater than or equal | as above |
+| `lt` | less than | as above |
+| `lte` | less than or equal | as above |
+
+### Text
+
+| Operator | Meaning | Notes |
+|---|---|---|
+| `contains` | substring search | case-sensitive in memory; collation-sensitive in SQL |
+| `startswith` | prefix match | string properties only |
+| `endswith` | suffix match | string properties only |
+| `like` | SQL-style pattern | `%` = any run, `_` = one char; executed through provider `LIKE` support |
+
+### Sets and ranges
+
+| Operator | Value format | Example |
+|---|---|---|
+| `in` | comma-separated list | `Status:in:Active,Pending` |
+| `notin` | comma-separated list | `Status:notin:Cancelled,Refunded` |
+| `between` | two comma-separated bounds, inclusive | `CreatedDate:between:2024-01-01,2024-02-01` |
+
+### Null checks
+
+| Operator | Value | Example |
+|---|---|---|
+| `isnull` | none | `DeletedAt:isnull` |
+| `isnotnull` | none | `Email:isnotnull` |
+
+### Collection operators
+
+These target **collection navigation** paths; validation rejects them on scalar fields
+(`NOT_A_COLLECTION` / `TYPE_MISMATCH`):
+
+| Operator | Meaning | Example |
+|---|---|---|
+| `any` | at least one related row matches | `Orders:any:TotalAmount:gt:100` |
+| `all` | every related row matches | `Orders.all:Status:eq:Delivered` |
+| `count` | count of related rows, compared to a value | `Orders:count:gt:3`, `Orders.count(Status:eq:Pending):gte:2` |
+
+`any`/`all` take their operand as a filter expression on the related type -- one nesting
+level down the same `field:op:value` grammar applies. The `count` form appends its
+comparison (`:op:value`) after the collection path.
+
+## Aliases
+
+Every operator also accepts word aliases (and, where the operator arrives as its own
+string, symbolic ones):
+
+| Canonical | Aliases |
+|---|---|
+| `eq` | `equal`, `equals`; `=`, `==` |
+| `neq` | `ne`, `notequal`; `!=`, `<>` |
+| `gt` | `greaterthan`; `>` |
+| `gte` | `ge`, `greaterthanorequal`; `>=` |
+| `lt` | `lessthan`; `<` |
+| `lte` | `le`, `lessthanorequal`; `<=` |
+| `contains` | `cn` |
+| `startswith` | `starts`, `sw` |
+| `endswith` | `ends`, `ew` |
+| `isnull` | `null` |
+| `isnotnull` | `notnull`, `isnotempty` |
+| `notin` | `not in` |
+
+The symbolic aliases apply wherever an operator is parsed as a standalone string -- the
+JSON `filters` request model and governance sets. In the colon-separated DSL stick to
+the word forms (a bare `Status=x` is not a DSL filter at all -- the operator segment
+lives between colons).
+
+Operator names are normalized to the canonical string **before** governance checks and
+before execution, so an `AllowedOperators` entry written as `gte` also admits `ge`.
+
+## Type rules
+
+The validator enforces operator/property-type compatibility before the query runs:
+
+- `contains`, `startswith`, `endswith`, `like` require `string` properties.
+- `gt`, `gte`, `lt`, `lte`, `between` require comparable types; values must convert to
+  the property type (`TYPE_MISMATCH` otherwise -- a `gt` on a `decimal` never falls back
+  to string ordering).
+- `in` / `notin` items each convert to the property type.
+- `isnull` / `isnotnull` take no value.
+- `any`, `all`, `count` address collection navigations; dotted paths through them apply
+  to the nested type's members.
+
+Unknown operators fail with `INVALID_OPERATOR`; disallowed-by-governance operators with
+`OPERATOR_NOT_ALLOWED` -- both before SQL is produced.
+
+## Execution by provider
+
+| Operator | EF Core | Dapper | In memory |
+|---|---|---|---|
+| comparisons | SQL predicates, parameterized | parameterized SQL | expression-tree comparisons |
+| `contains` / `startswith` / `endswith` | provider `LIKE`/string translation | dialect `LIKE` with pattern construction | ordinal `string.Contains` etc. |
+| `like` | `EF.Functions.Like` | dialect `LIKE` | pattern translation applied by the engine |
+| `in` / `notin` | list parameterization | parameterized list / `NOT IN` | `Contains` closures |
+| `between` | `>= AND <=` | `>= AND <=` | two comparisons |
+| `isnull` / `isnotnull` | `IS [NOT] NULL` | `IS [NOT] NULL` | null checks |
+| `any` | correlated `EXISTS` | `EXISTS` subquery | `.Any(...)` |
+| `all` | `NOT EXISTS(NOT ...)` | `NOT EXISTS` subquery | `.All(...)` |
+| `count` | scalar count subquery | `SELECT COUNT(...)` predicate | `.Count()` compared |
+
+Two semantics worth knowing:
+
+- `all` compiles to a double-negated `NOT EXISTS`, so an entity with **no** related rows
+  passes an `all` check (vacuous truth, matching SQL).
+- Text comparisons are ordinal in memory and **collation-dependent** in
+  EF Core/Dapper -- case behavior follows the database.
+
+## Operator governance
+
+Per-field allow-lists are keyed by field (case-insensitive) and hold the canonical
+operator strings:
+
+```csharp
+opt.AllowedOperators = new(StringComparer.OrdinalIgnoreCase)
+{
+    ["Status"] = ["eq", "in", "notin"],
+    ["Age"]    = ["gt", "gte", "lt", "lte", "between"],
+    ["City"]   = ["eq"],
+};
+```
+
+Clients on `City` then get `OPERATOR_NOT_ALLOWED` for `City:contains:ber`; the request
+never reaches the database.
+
+## Where operators appear
+
+1. The root `filter` parameter ([Filtering](/docs/guides/filtering)).
+2. `expand` branch filters (`Orders(all:Status:eq:Shipped; take=5)` -- see
+   [Expand](/docs/guides/expand)).
+3. HAVING conditions, restricted to `eq ne gt gte lt lte` comparisons over declared
+   aggregate values ([Grouping & Aggregates](/docs/guides/grouping)).
+4. The flat `filters` condition list on `FlexQueryRequest`
+   (`{ "field": ..., "operator": ..., "value": ... }`).
+
+## Related
+
+- [Filtering](/docs/guides/filtering) - expression grammar and composition
+- [Security & Governance](/docs/security) - field and operator allow-lists
+- [Validation](/docs/guides/validation) - the full error-code catalog

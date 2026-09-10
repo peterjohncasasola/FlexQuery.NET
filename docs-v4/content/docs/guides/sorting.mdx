@@ -1,0 +1,113 @@
+﻿---
+title: Sorting
+description: Single- and multi-field sorts, aggregate sorts, and default sort behavior.
+---
+
+# Sorting
+
+The `sort` parameter controls result order. Sorts compose — a second field breaks ties
+in the first — and are applied **before paging**, so page boundaries are stable as long
+as the ordering is deterministic.
+
+## Basic sorts
+
+```http
+/api/customers?sort=LastName:asc
+/api/customers?sort=LastName:desc
+/api/customers?sort=LastName                       (ascending — the default)
+/api/customers?sort=LastName asc                   (space form, for FQL-style clients)
+```
+
+Direction is case-insensitive (`asc`/`ASC`/`Asc`); any other value is a parse error with
+the offending item reported.
+
+## Multi-field sorts
+
+Separate fields with commas. Priority is purely list order — there is no numeric
+priority suffix:
+
+```http
+/api/orders?sort=Status:asc,OrderDate:desc,Id:asc
+/api/customers?sort=City:asc,CreatedDate:desc,LastName:asc,FirstName:asc
+```
+
+For real-world grids, end every sort list with a unique or near-unique column (usually
+the key). Without a final tiebreaker, rows with equal sort keys can move between pages.
+
+## Sorting by aggregates
+
+When the query aggregates collections, the sort can target the aggregate instead of a
+scalar field:
+
+```http
+/api/customers?sort=count:Orders:desc
+/api/customers?groupBy=City&aggregate=sum:Salary:SalaryTotal&sort=SalaryTotal:desc
+```
+
+The aggregate form is `function:target[:direction]`. For `count` the target is a
+collection navigation; for `sum`/`avg`/`min`/`max` the target is a numeric property
+(dotted paths allowed). Aggregate sorts are the only way to order by computed values,
+and they translate server-side: EF Core orders by `COUNT(...)`/`SUM(...)` in SQL, Dapper
+generates the matching clause (with `NULLS LAST` on Oracle for grouped sorts).
+
+## Default sorting and governance
+
+Endpoints can define a stable default:
+
+```csharp
+opt.DefaultSortField = "Id";
+opt.DefaultSortDescending = true;
+```
+
+Clients that omit `sort` get the default injected automatically. When `SortableFields`
+governance is configured, client sort fields outside the whitelist are rejected in
+strict mode (which is the default) before anything reaches the database. With
+`StrictFieldValidation = false`, unauthorized sort fields are stripped — the injected
+default remains if the client sent nothing else.
+
+### Why an explicit sort is not optional for paging
+
+Paging without any sorting (default or client-supplied) is non-deterministic: the same
+page number can return different rows between requests, and SQL Server / Oracle require
+an `ORDER BY` before `OFFSET/FETCH`. Dapper-backed queries automatically emit an
+ORDER BY on the mapped key columns when paging is requested with no sort, and fail with
+a clear error if the entity has no resolvable keys; EF Core surfaces the provider's own
+determinism limits. Configure `DefaultSortField` on every paged endpoint so clients
+never have to remember.
+
+## Worked example
+
+```http
+GET /api/customers?filter=Status:eq:Active&sort=LastName:asc,CreatedDate:desc&pageSize=10&page=2
+```
+
+```json
+{
+  "data": [ { "id": 12, "lastName": "Adams", "createdDate": "2024-02-11T09:30:00Z" },
+            { "id": 31, "lastName": "Baker", "createdDate": "2024-03-02T14:00:00Z" } ],
+  "totalCount": 137,
+  "page": 2,
+  "pageSize": 10,
+  "totalPages": 14,
+  "hasNextPage": true,
+  "hasPreviousPage": true
+}
+```
+
+The sort applies to the filtered set, `totalCount` counts that set, and page 2 shows
+items 11–20 of that ordering.
+
+## Common mistakes
+
+- A `sort` field that does not exist on the model (or is not in `Selectable`/governance
+  scopes for the DTO in play) → `QueryValidationException` (`FIELD_NOT_FOUND`) / strip
+  in lenient mode; a typo'd field never silently falls back.
+- Sorting a nullable property puts nulls first/last depending on the database;
+  don't rely on cross-database null ordering for stable pagination.
+- Aggregate sort spelling — a function must be one of `sum`, `avg`, `count`, `min`,
+  `max` — and for grouped queries, only fields in `groupBy` or declared aggregate
+  aliases may be sorted; other fields fail with `GROUPBY_SORT_INVALID`.
+
+## Related
+
+- [Paging](/docs/guides/paging) · [Grouping & Aggregates](/docs/guides/grouping)

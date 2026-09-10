@@ -1,0 +1,170 @@
+﻿---
+title: Validation
+description: How invalid queries fail — the pipeline, strict mode, and the error model.
+---
+
+# Validation
+
+FlexQuery treats every incoming query as untrusted input. Before anything reaches the
+database, the parsed options pass a fixed rule pipeline that checks fields, operators,
+types, governance lists, expansion paths, and paging-mode conflicts. This page explains
+what you get back when something fails — as an exception, as a result object, or as a
+stripped query.
+
+## Where validation runs
+
+Every execution path validates the same way — query-string, `FlexQueryRequest`, fluent
+options, adapter output:
+
+```
+parse (QueryParseException on bad syntax)
+        → validate (QueryValidationException on bad semantics)
+              → translate / execute
+```
+
+- Parse problems throw **`QueryParseException`** (with `ParameterName`, `Syntax`,
+  `ReceivedValue`, and position info).
+- Semantic problems throw **`QueryValidationException`**, which carries a full
+  `ValidationResult` in its `Result` property.
+- Both derive from `FlexQueryException`, so one catch-all at the ASP.NET layer maps
+  them to 400-class responses — see [Error Handling](/docs/troubleshooting).
+
+`GovernanceValidator.ValidateConfiguration` also checks contradictory allow/block list
+combinations up-front, and `QueryGovernanceOptions` startup checks surface overlapping
+`AllowedFields`/`BlockedFields` style mistakes early.
+
+## Strict vs lenient
+
+`StrictFieldValidation` (default **true**) decides what "invalid" means:
+
+| Mode | Unknown/unauthorized field or operator | Unauthorized include/expand | No client sort supplied |
+|---|---|---|---|
+| Strict (default) | throws `QueryValidationException` | throws / validation error | inject `DefaultSortField` |
+| Lenient (`false`) | silently **stripped from the query** | dropped | inject `DefaultSortField` |
+
+Lenient mode is a compatibility hatch, not a feature: clients never learn which
+predicates were removed, and result sets quietly grow. Default to strict and set
+`StrictFieldValidation = false` per request only where you need backwards compatibility.
+
+## The error model
+
+```csharp
+try
+{
+    var result = await db.Customers.FlexQueryAsync(parameters, cancellationToken: ct);
+}
+catch (QueryValidationException ex)
+{
+    // ex.Result.Errors -> List<ValidationError>
+    var codes = ex.Result.Errors.Select(e => e.Code);
+}
+```
+
+`ValidationResult` exposes `IsValid`, `ToErrorMessage()`, and the `Errors` list. Each
+`ValidationError` record has:
+
+| Member | Meaning |
+|---|---|
+| `Message` | human-readable explanation (safe to surface to clients) |
+| `Code` | machine-readable code from the table below |
+| `Field` | offending property path when applicable |
+
+`QueryValidationException` can be constructed from a single message (code
+`VALIDATION_ERROR`) or from a full `ValidationResult` — the provider pipeline always
+attaches the full result, so clients can branch on `Code`.
+
+## What the pipeline checks
+
+The registered rule set covers — in categories, not one-by-one:
+
+- **fields exist & are authorized** — filter/sort/select/group/aggregate/having/expansion
+  fields resolve against the query surface, including navigation-aware checks when the
+  request runs against a DTO; governance allow/block/role lists are enforced
+  (`FIELD_NOT_FOUND`, `FIELD_ACCESS_DENIED`, `INCLUDE_ACCESS_DENIED`,
+  `GOVERNANCE_FIELD_NOT_FOUND`, `NAVIGATION_PROJECTION_REQUIRES_INCLUDE`).
+- **operators and types match** — only supported operators per field type, values
+  convertible (`INVALID_OPERATOR`, `OPERATOR_NOT_ALLOWED`, `TYPE_MISMATCH`).
+- **selects are well-formed** — alias validity, duplicate/colliding selections
+  (`INVALID_ALIAS`, `RESERVED_ALIAS`, `DUPLICATE_ALIAS`, `DUPLICATE_WILDCARD`); nested
+  select syntax errors surface as `QueryParseException` on the `select` parameter.
+- **include/expand discipline** — paths exist, are navigations or collection-typed
+  (`INCLUDE_PATH_NOT_FOUND`, `EXPAND_PATH_NOT_FOUND`, `NAVIGATION_PROPERTY_REQUIRED`,
+  `NOT_A_COLLECTION`), no duplicates (`EXPAND_DUPLICATE_PATH`), each expand path has a
+  matching include (`EXPAND_PATH_NOT_IN_INCLUDE`), no root-prefixed nesting
+  (`EXPAND_ROOT_PREFIXED_PATH`), sort/take only on collections
+  (`EXPAND_SORT_ON_REFERENCE`, `EXPAND_TAKE_ON_REFERENCE`), and include/expand are blocked
+  on grouped queries (`GROUPBY_INCLUDE_CONFLICT`).
+- **aggregate/having coherence** — HAVING needs GROUP BY and declared aggregates
+  (`HAVING_WITHOUT_GROUPBY`, `HAVING_REQUIRES_GROUPBY`, `HAVING_ALIAS_MISMATCH`,
+  `AGGREGATE_NOT_DECLARED`), grouping/sorting rules hold (`GROUPBY_SORT_INVALID`,
+  `GROUPBY_PROJECTION_MISMATCH`, `GROUPBY_WILDCARD_NOT_ALLOWED`), aggregate targets are
+  valid (`INVALID_AGGREGATE_TARGET`, `INVALID_COUNT_TARGET`,
+  `AGGREGATE_SELECT_WITHOUT_GROUPBY`).
+- **keyset integrity** — cursor/sort agreement (`CURSOR_MISMATCH`, `CURSOR_NULL_VALUE`)
+  and offset-vs-keyset conflicts (`PAGINATION_MODE_CONFLICT`).
+- **DTO surface protection** — entity-only members can't be reached through the wire
+  when a projection type is in play (`DtoSurfaceProtectionRule`).
+
+## Validating without executing
+
+For test suites, query-linting, and admin tooling:
+
+```csharp
+using FlexQuery.NET;             // validation extension methods
+
+var options = parameters.ToQueryOptions();
+
+ValidationResult result = options.Validate(
+    typeof(Customer),
+    new QueryExecutionOptions { AllowedFields = ["Id", "Name", "Status"] });
+
+if (!result.IsValid)
+    return BadRequest(result.Errors);   // e.g. report what the client sent wrong
+```
+
+There is also a `Validate<T>(this IQueryable<T>, QueryOptions)` overload that checks
+against a concrete queryable's model, and a `ValidateOrThrow` used internally by the
+providers.
+
+## Handling errors at the HTTP edge
+
+The library throws; it does **not** invent a wire format. A small action filter (or
+middleware) keeps responses consistent:
+
+```csharp
+public sealed class FlexQueryErrorFilter : IExceptionFilter
+{
+    public void OnException(ExceptionContext context)
+    {
+        switch (context.Exception)
+        {
+            case QueryParseException parse:
+                context.Result = new BadRequestObjectResult(
+                    new { error = "invalid_query", parameter = parse.ParameterName });
+                break;
+            case QueryValidationException validation:
+                context.Result = new BadRequestObjectResult(
+                    new { error = "rejected_query", details = validation.Result.Errors });
+                break;
+            case FlexQueryException flex:
+                context.Result = new BadRequestObjectResult(new { error = flex.Message });
+                break;
+        }
+    }
+}
+```
+
+Remember that unhandled provider/EF translation failures surface as provider exceptions,
+not `FlexQueryException`s.
+
+## What validation guarantees
+
+A query that passes validation is not guaranteed to produce sensible business results —
+it is guaranteed to contain only fields, operators, paths, and paging modes the server
+declared acceptable, and to fail before the database sees anything it might have to
+guess about.
+
+## Related
+
+- [Security & Governance](/docs/security) — the options the rules enforce
+- [Troubleshooting](/docs/troubleshooting) — decoding every rejection

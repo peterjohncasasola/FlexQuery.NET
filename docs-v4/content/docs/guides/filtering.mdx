@@ -1,0 +1,149 @@
+---
+title: Filtering
+description: Constrain results with the filter DSL — operators, collections, nested paths, and safety.
+---
+
+# Filtering
+
+The `filter` parameter narrows which rows are returned. Expressions are parsed into a
+validated model and executed server-side — EF Core translates them to SQL, Dapper
+generates parameterized SQL, and with LINQ-to-objects they evaluate as expression trees.
+The database only ever returns rows that already match.
+
+## Anatomy of a filter expression
+
+A single condition is `field:operator:value`:
+
+```http
+/api/customers?filter=Status:eq:Active
+```
+
+Combine conditions with **`&`** (AND) and **`|`** (OR) — or the equivalent `AND` / `OR`
+keywords (case-insensitive). Parentheses group sub-expressions, `!` or `not(...)`
+negates, and `AND` binds tighter than `OR`:
+
+```http
+/api/customers?filter=City:eq:Berlin AND (Status:eq:Active OR Status:eq:Premium)
+/api/customers?filter=Age:gte:18&not(City:eq:Ankara)
+/api/customers?filter=Status:eq:Active AND Salary:gte:50000 AND (City:eq:Berlin OR City:eq:Munich)
+```
+
+> **Commas are values, not combinators.** Inside a filter, everything from the value
+> position until the next operator is taken as one raw value — so a comma ends up inside
+> the value. `filter=Status:eq:Active,City:eq:Berlin` matches a status literally equal to
+> `"Active,City:eq:Berlin"`, not two conditions. Always combine with `&` / `|`.
+
+Values containing spaces must be quoted:
+
+```http
+/api/customers?filter=City:eq:'New York'
+```
+
+Values may otherwise contain colons freely (URLs, `key:value` pairs), and dates parse
+from ISO 8601 / invariant formats:
+
+```http
+/api/customers?filter=CreatedDate:gte:2024-01-15
+/api/orders?filter=OrderDate:between:2024-01-01,2024-02-01
+```
+
+## Operators
+
+| Operator | Meaning | Example |
+|---|---|---|
+| `eq` | equals | `Status:eq:Active` |
+| `neq` | not equals | `Status:neq:Cancelled` |
+| `gt` / `gte` | greater than (or equal) | `Salary:gte:50000` |
+| `lt` / `lte` | less than (or equal) | `Age:lt:30` |
+| `contains` | substring | `Email:contains:@example.com` |
+| `startswith` | prefix match | `LastName:startswith:Ann` |
+| `endswith` | suffix match | `LastName:endswith:son` |
+| `like` | SQL wildcard pattern (`%` = zero or more, `_` = one char) | `Name:like:J%h` |
+| `in` | value in list (list items separated by `,`) | `Status:in:Active,Pending` |
+| `notin` | value not in list | `Status:notin:Cancelled` |
+| `between` | inclusive numeric/date range (two values, `,`) | `Salary:between:40000,60000` |
+| `isnull` | property is null (no value part) | `DeletedAt:isnull` |
+| `isnotnull` | property is not null (no value part) | `Email:isnotnull` |
+| `any` | at least one related item matches | see Collections |
+| `all` | every related item matches | see Collections |
+| `count` | count of related items | see Collections |
+
+Operator names are case-insensitive (`Status:IN:Active`). Comparison semantics are
+type-aware: dates, numbers, GUIDs, and enums are converted to the property type before
+comparison — values that cannot convert to the field's type fail validation with a
+`TYPE_MISMATCH` / conversion description.
+
+Exact operator semantics, aliases, type rules, and per-provider behavior: [Operators](/docs/guides/operators).
+
+## Filtering on collections
+
+There are two equivalent shapes for collection checks — a flat colon form and a
+parenthesized form:
+
+```http
+/api/customers?filter=Orders:any:TotalAmount:gt:100
+/api/customers?filter=Orders.any(TotalAmount:gt:100)
+/api/customers?filter=Orders.all(Status:eq:Delivered)
+/api/customers?filter=Orders:count:gt:3
+/api/customers?filter=Orders.count(Status:eq:Delivered):gte:2
+```
+
+`any`/`all` take an inner condition on the related type; `count` takes (optionally) an
+inner condition and a numeric comparison (`:gt:3` etc.). Collection segments inside a
+dotted path are checked existence-style (`Any`), so:
+
+```http
+/api/orders?filter=Items.Product.Name:eq:Widget
+```
+
+matches orders that have at least one item whose product is *Widget*. Direct reference
+navigations work the same way (`Address.City:eq:Berlin`).
+
+> Expanding into navigation properties in a filter lets clients probe for the existence
+> of related rows. Treat navigation roots like any other protected field: either
+> authorize them through `AllowedIncludes`/`SelectableFields` governance, or keep
+> endpoints without such fields and rely on the default governance rejection. A
+> governance denial raises the same `QueryValidationException` with code
+> `FIELD_ACCESS_DENIED` regardless of the requested value.
+
+## Provider behavior
+
+- **EF Core** translates the filter into SQL — all comparisons, wildcards, and
+  collection checks (`EXISTS`/subqueries) are database-side; values are parameterized.
+  `in`/`notin` become list parameters, `between` becomes `>=`/`<=`, and `like` maps to
+  the provider's `LIKE`/`Contains` semantics.
+- **Dapper** builds the same SQL server-side (quoted identifiers per dialect,
+  `p0…` parameters). Unsupported/unknown fields fail before SQL is generated.
+- Both providers run the same validation pipeline first, so a bad filter never reaches
+  the database.
+
+## FQL and MiniOData spellings
+
+The same filter tree can be expressed in SQL-like or OData-like syntaxes once the parser
+packages are registered by the client's syntax selection (see [Query
+Syntax](/docs/concepts/query-syntax) and the examples there). Filter *values* are quoted
+literal strings in FQL (`Status = 'Active' AND Age >= 18`), and MiniOData uses its OData
+form (`Status eq 'Active' and Age ge 18`, `Orders/TotalAmount gt 100`,
+`contains(Email,'@acme')`).
+
+## Case sensitivity
+
+`contains`, `startswith`, `endswith`, `eq`, and `in` compare strings case-sensitively in
+memory and are collation-sensitive when pushed to SQL (EF Core / Dapper). If you need
+portable case-insensitive text search, normalize on the data side — FlexQuery has no
+per-request case-insensitivity switch.
+
+## When a filter is wrong
+
+- Unknown or unauthorized field → `QueryValidationException` (`FIELD_NOT_FOUND`,
+  `FIELD_ACCESS_DENIED`) — thrown unless `StrictFieldValidation` has been relaxed for
+  that endpoint (stripped rather than thrown; see [Security](/docs/security)).
+- Unsupported operator for a field (e.g. `gt` on a bool) → `TYPE_MISMATCH` /
+  `INVALID_OPERATOR`.
+- Malformed expression → `QueryParseException` naming the failing parameter
+  (`filter`), the syntax, what was expected, and the position in the string.
+
+## Related
+
+- [Sorting](/docs/guides/sorting) · [Paging](/docs/guides/paging) ·
+  [Query Syntax](/docs/concepts/query-syntax) (FQL / MiniOData equivalents)

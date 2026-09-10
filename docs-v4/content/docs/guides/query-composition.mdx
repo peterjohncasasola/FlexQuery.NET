@@ -1,0 +1,168 @@
+---
+title: Query Composition
+description: Combine, merge, and hand-build QueryOptions - the programmable heart of FlexQuery.
+---
+
+# Query Composition
+
+Everything FlexQuery accepts from the wire converges on one object: `QueryOptions`.
+Parsing, building in code, converting an adapter payload, or merging server-side rules
+onto a client query are all the same operation -- producing a `QueryOptions` instance
+the providers then execute. Understanding that hub is what lets you layer user input,
+tenant policy, and saved report definitions without special-purpose code.
+
+## The four ways to get options
+
+```csharp
+// 1. Bound query string (the normal endpoint path)
+var options = parameters.ToQueryOptions();
+var fqlOptions = parameters.ToQueryOptions(QuerySyntax.Fql);   // explicit syntax
+
+// 2. Fluent builder (returns QueryOptions from Build(); also implicitly convertible)
+var built = Query.Create()
+    .Filter(f => f.In("Status", "Active", "Pending"))
+    .Sort(s => s.Descending("CreatedDate"))
+    .Page(1, 20)
+    .Build();
+
+// 3. Typed request model (POST bodies, adapters)
+var fromRequest = request.ToQueryOptions();
+
+// 4. Hand-built
+var manual = new QueryOptions
+{
+    Filter = new FilterGroup
+    {
+        Logic = LogicOperator.And,
+        Filters =
+        [
+            new FilterCondition { Field = "Status", Operator = "eq", Value = "Active" },
+            new FilterCondition { Field = "City", Operator = "in", Value = "Berlin,Munich" },
+        ],
+    },
+    Sort = [new SortNode { Field = "CreatedDate", Descending = true }],
+    Paging = { Page = 1, PageSize = 50 },
+};
+```
+
+All four execute identically -- same validation pipeline, same governance, same result
+shape:
+
+```csharp
+var result = await db.Customers
+    .FlexQueryAsync(options, opt => { /* per-request governance */ }, cancellationToken: ct);
+```
+
+## Merging client input with server policy
+
+The composition pattern for multi-tenant or role-scoped APIs: parse what the client
+sent, then add what they must not control.
+
+```csharp
+var options = parameters.ToQueryOptions();
+
+options.GroupBy = ["Region"];
+options.Aggregates.Add(new Aggregate
+{
+    Function = AggregateFunction.Sum,
+    Field = "Amount",
+    Alias = "RegionRevenue",
+});
+options.Paging.PageSize = Math.Min(options.Paging.PageSize, 100);
+```
+
+Prefer the provider call for the rest of the policy -- governance applied through the
+`configure` delegate cannot be overridden by the client later, whereas anything baked
+into `QueryOptions` is data the rest of the pipeline consumes as given.
+
+The model classes are plain .NET types under `FlexQuery.NET.Models` (filters,
+projection, paging):
+
+| Model | Key members |
+|---|---|
+| `FilterGroup` | `Logic` (`And`/`Or`), `Filters`, `Groups`, `IsNegated` |
+| `FilterCondition` | `Field`, `Operator` (canonical name), `Value`, `ScopedFilter` |
+| `SortNode` | `Field`, `Descending`, (`Aggregate`/`AggregateField` on grouped sorts) |
+| `SelectNode` | `Field`, `Alias`, `Children` |
+| `IncludeNode` | `Path`, `Filter`, `Sort`, `Take`, `Children` (the expand tree) |
+| `Aggregate` | `Function` (`AggregateFunction` enum), `Field`, `Alias` |
+| `PagingOptions` | `Page`, `PageSize`, `Disabled` |
+
+## Stage-by-stage application
+
+When you need the pieces yourself -- applying a parsed query to a queryable you already
+built -- the individual stages are public on `IQueryable<T>`:
+
+```csharp
+using FlexQuery.NET;   // extension methods namespace
+
+var queryable = db.Orders
+    .Where(o => o.CreatedDate > since)     // your own predicates first
+    .ApplyFilter(options)                  // client filter
+    .ApplySort(options)                    // order by client sort (no keyset seek:
+    .ApplyPaging(options);                  //   use the provider call for keysets)
+```
+
+| Method | Result |
+|---|---|
+| `Apply(options)` | full pipeline at once |
+| `ApplyFilter(options)` | adds the validated `WHERE` |
+| `ApplySort(options)` | adds ordering |
+| `ApplyPaging(options)` | keyset seek or offset paging, per `options` |
+| `ApplySelect(options)` | projection -- returns `IQueryable<object>` |
+
+Two rules:
+
+- `ApplyFilter` throws `InvalidOperationException("Filter options are required.")` when
+  called with no filter -- call it only when `options.Filter` is set, or use `Apply`.
+- `ApplySelect` changes the element type to `object` (dynamic projections), so anything
+  after it is no longer `IQueryable<Order>`.
+
+EF Core adds one more stage for graphs: `ApplyExpand(options)` composes the
+include/expand trees (and the executor calls it for you inside `FlexQueryAsync`; you
+only reach for it in hand-built pipelines).
+
+## Plain in-memory execution
+
+No EF, no Dapper: the core package runs the exact same options over any
+`IQueryable<T>` -- LINQ to Objects, Collections, an in-memory list:
+
+```csharp
+QueryResult<object> result = parsedProducts
+    .AsQueryable()
+    .FlexQuery(parameters);              // sync; configure? delegate applies
+```
+
+This is the recommended unit-test seam: build a `List<T>.AsQueryable()`, run a request
+through it, and assert on the `QueryResult` -- same parser, validators, and operators
+as production.
+
+## Keyset composition
+
+For manual cursor-driven paging over an ordered queryable, `SeekAfter` applies the
+cursor boundary predicate directly:
+
+```csharp
+var next = db.Customers
+    .OrderBy(c => c.LastName)
+    .SeekAfter(lastSeenLastNameOfPreviousPage);
+```
+
+For multi-field cursors and token plumbing, use the provider path instead -- keyset mode
+on `QueryOptions` carries the cursor and the result carries the next token (see
+[Keyset Pagination](/docs/guides/keyset-pagination)).
+
+## What composition does not bypass
+
+Whatever route a `QueryOptions` took to exist, execution still runs the full validation
+pipeline against it: hand-built filters referencing unknown fields fail with the same
+`QueryValidationException`, governance allow-lists apply, and paging still clamps. A
+`QueryOptions` is a request, not a privilege -- only the provider call with a
+`configure` delegate adds server-controlled policy.
+
+## Related
+
+- [Query Options](/docs/concepts/query-options) - the model in detail
+- [Fluent API](/docs/guides/fluent-api) - the typed builder
+- [Filtering](/docs/guides/filtering) / [Operators](/docs/guides/operators) - expression vocabulary
+- [Providers](/docs/providers/ef-core) - execution endpoints

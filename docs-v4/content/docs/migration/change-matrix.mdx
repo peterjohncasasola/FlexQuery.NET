@@ -1,0 +1,53 @@
+﻿---
+title: v3 → v4 Change Matrix
+description: Verified v3.1.1 → v4 changes mapped to their documentation.
+section: Resources
+---
+
+import { Callout } from '@/components/callout'
+
+# v3.1.1 → v4 Change Matrix
+
+Every row below was verified against the source diff between the `v3.1.1` release and
+the current v4 implementation.
+
+| Area | v3.1.1 | v4 | Change | Documentation |
+|---|---|---|---|---|
+| Configuration entry | DI-era registration | Static immutable `FlexQueryCore.Configure()` | Changed | [Configuration](/docs/concepts/configuration) |
+| EF Core options | `QueryExecutionOptions.UseNoTracking/UseSplitQuery` | `FlexQueryEfCoreOptions` + `EfCoreQueryOptions` (`bool? UseNoTracking`); `UseSplitQuery` removed | Renamed / Changed | [EF Core](/docs/providers/ef-core) |
+| Dapper options | `DapperQueryOptions : BaseQueryOptions` (`Dialect`, `MappingRegistry` public) | `DapperQueryOptions : QueryGovernanceOptions` (`CommandTimeout`, `LoggerFactory`); model config moves to `FlexQueryDapper.Configure` + `ModelBuilder` | Changed | [Dapper](/docs/providers/dapper) |
+| Dapper dialect | Manual `ISqlDialectResolver` | Auto-detection from `DbConnection` | Behavior changed | [Dapper](/docs/providers/dapper) |
+| Dapper mapping | `MappingRegistry` + public conventions | Convention-first `ModelBuilder` + `IEntityTypeConfiguration<T>` (conventions internal) | Replaced | [Dapper](/docs/providers/dapper) |
+| Typed DTO results | Not available | `FlexQueryAsync<TEntity,TResponse>` (4 overloads per provider) + `CreateMap`/`ForMember`/`ForNavigation` | Added | [Typed DTO Projection](/docs/guides/typed-dto-projection) |
+| Filtered includes | `FilteredIncludes` / `ApplyFilteredIncludes` | `expand` trees with filter/sort/take (`QueryOptions.Expand` / `ApplyExpand`) | Replaced | [Expand](/docs/guides/expand) |
+| Keyset pagination | Not available | `useKeysetPagination`, `cursor`, `NextCursorToken`, `SeekAfter` | Added | [Keyset Pagination](/docs/guides/keyset-pagination) |
+| Fluent API | `FilterBuilder` only | `Query.Create()` + `FilterGroupBuilder` grammar + sort/expand/aggregate builders | Changed | [Fluent API](/docs/guides/fluent-api) |
+| Sort model | `SortNode` (in `SortOption.cs`) | `SortNode` (in `Paging/SortNode.cs`) — type name unchanged | No API change | — |
+| Select model | `List<string> Select` | `List<SelectNode>` (aliases + nested trees) | Changed | [Projection](/docs/guides/projection) |
+| Aggregates | `AggregateModel` in `select`, string functions | Dedicated `aggregate` parameter, `AggregateFunction` enum, PascalCase aliases | Changed | [Grouping & Aggregates](/docs/guides/grouping) |
+| HAVING | Alias-integrity validation | `HavingNode` expression tree, declared-aggregate enforcement | Behavior changed | [Grouping & Aggregates](/docs/guides/grouping) |
+| DSL logic operators | Conditions joined with `,`; symbolic `&` / `\|` accepted | Conditions joined with `&` / `\|` / `AND` / `OR`; a comma is now part of the value; `;` in a filter is rejected | **Behavior changed** | [Filtering](/docs/guides/filtering) |
+| Query syntaxes | DSL, JSON, Indexed, Generic, JQL, MiniOData, AutoDetect | DSL, FQL, MiniOData | Removed | [Query Syntax](/docs/concepts/query-syntax) |
+| FQL parser package | `FlexQuery.NET.Parsers.Jql`, `QuerySyntax.Jql` | `FlexQuery.NET.Parsers.Fql`, `QuerySyntax.Fql` | Renamed | [Query Syntax](/docs/concepts/query-syntax) |
+| Parser registration | DI services (`ServiceCollectionExtensions`, `MiniODataFeature`) | Static `Fql.Register()` / `MiniOData.Register()` | Changed | [Query Syntax](/docs/concepts/query-syntax) |
+| Validation | Rule pipeline (`QueryValidator` rules) | Same pipeline extended — expand/HAVING/grouping/keyset rules + `ValidationResult`/`ValidationError` model | Extended | [Validation](/docs/guides/validation) |
+| Field exceptions | `InvalidFilterFieldException` / `InvalidSortFieldException` | Unified hierarchy under `FlexQueryException` | Replaced | [Validation](/docs/guides/validation) |
+| Case-insensitive filtering | `CaseInsensitive` / `CaseInsensitiveFields = true` | Removed | Removed | [Migration](/docs/migration/v3-to-v4) |
+| Governance sets | On monolithic `BaseQueryOptions` | Same members on `QueryGovernanceOptions` (class split) | Changed | [Security](/docs/security) |
+| `[FieldAccess]` | Allowed/Blocked/Filterable/Sortable/Selectable/Groupable/Aggregatable | + `AllowedIncludes`; class sealed | Changed | [ASP.NET Core](/docs/integrations/aspnetcore) |
+| ASP.NET Core DI | v3-era `ServiceCollectionExtensions` + `QueryableAspNetCoreExtensions` | `AddFlexQuerySecurity`, `AddFlexQueryJson`, `AddFlexQuery` (global config) | Changed | [ASP.NET Core](/docs/integrations/aspnetcore) |
+| OpenAPI | Not available | `FlexQuery.NET.OpenApi` (`AddFlexQueryOpenApi`, `AddFlexQuery`) | Added | [OpenAPI](/docs/integrations/openapi) |
+| Diagnostics listener | `Models.IFlexQueryExecutionListener` (ValueTask ×4) | `Execution.IFlexQueryExecutionListener` — members unchanged | Namespace move | [Diagnostics](/docs/diagnostics) |
+| Debug output | `DebugResult` | `QueryDebugInfo` via `ToFlexQueryDebug` | Replaced | [Diagnostics](/docs/diagnostics) |
+| Result model | `QueryResult<T>` base members | + `NextCursorToken`, `ResultShape` | Added | [Query Result](/docs/concepts/query-result) |
+| Paging validation | Loose | Malformed `page`/`pageSize`/`distinct` throw; out-of-range clamps 1–1000 | Behavior changed | [Paging](/docs/guides/paging) |
+| Global options | Mutable | Immutable after first call | Behavior changed | [Configuration](/docs/concepts/configuration) |
+| Cancellation | Not available | `CancellationToken` across async overloads | Added | [EF Core](/docs/providers/ef-core), [Dapper](/docs/providers/dapper) |
+| Adapter JSON entry | `FromAgGridJson(string)` / `FromKendoJson(string)` | `JsonElement.ToQueryOptions()`; parser/converter classes removed | Changed | [AG Grid](/docs/integrations/ag-grid), [Kendo](/docs/integrations/kendo) |
+| Target frameworks | net6.0/net7.0/net8.0 era | net6.0/net8.0/net10.0 (OpenApi: net9.0/net10.0) | Changed | [Installation](/docs/getting-started/installation) |
+
+<Callout variant="note" title="Scope">
+  Internal refactors (namespace reorganizations, internalized types, test reorganization) are
+  intentionally excluded — they do not affect the public developer experience. Public types
+  that became internal are listed in the <a href="/docs/migration/v3-to-v4">migration guide</a>.
+</Callout>

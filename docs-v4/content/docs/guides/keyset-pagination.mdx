@@ -1,0 +1,121 @@
+﻿---
+title: Keyset Pagination
+description: Cursor-based paging that stays fast at any scroll depth.
+---
+
+# Keyset Pagination
+
+Offset paging asks the database to count and discard rows before yours; deep
+`page` values get slower the further you scroll. Keyset (cursor) paging instead
+remembers **where the last page ended** and asks for whatever comes after that point —
+cost stays flat whether you are on page 1 or page 10,000, which makes it the right mode
+for infinite scrolling, mobile feeds, and large exports.
+
+## The three parameters
+
+| Wire parameter | Meaning |
+|---|---|
+| `useKeysetPagination=true` | Requests keyset mode. Sort is mandatory. |
+| `sort=<fields>` | The seek ordering — at least one field, ideally ending in a unique column |
+| `cursor=<token>` | Opaque token from the previous response's `nextCursorToken` |
+
+The token is an opaque, versioned Base64 string carrying the sort-key values of the
+last row. Treat it as a black box: never build, decode, or edit it client-side; pass
+back exactly what came from the server.
+
+## First page, next pages, done
+
+First request — no cursor yet:
+
+```http
+GET /api/customers?useKeysetPagination=true&sort=LastName:asc,Id:asc&pageSize=20
+```
+
+```json
+{
+  "data": [ /* 20 rows */ ],
+  "page": 1,
+  "pageSize": 20,
+  "nextCursorToken": "eyJ2IjoxLCJ2YWx1ZXMiOlsiTWlsbGVyIiw4N119"
+}
+```
+
+Subsequent requests feed the token back:
+
+```http
+GET /api/customers?useKeysetPagination=true&sort=LastName:asc,Id:asc&pageSize=20&cursor=eyJ2IjoxLCJ2YWx1ZXMiOlsiTWlsbGVyIiw4N119
+```
+
+When a page comes back empty (`data: []`), you have reached the end — the token stops
+being produced. Because keyset mode's purpose is forward scrolling, the server does not
+return a "previous page" token.
+
+Keyset responses also skip the `totalCount` query by default (that is the
+point: no counting at all) — `totalCount` is null. Ask for a count on the
+first page only if the UI needs one: `&includeCount=true`.
+
+## Rules that will bite you
+
+- **A sort is required.** Keyset without `sort` fails — the provider throws
+  "Keyset pagination requires at least one sort field". Order by a column, then a
+  tiebreaker (usually the key): `sort=OrderDate:desc,Id:desc`.
+- **Offset and cursor cannot mix.** Sending `page` together with keyset mode is a
+  validation error (`PAGINATION_MODE_CONFLICT`) — choose one style per request.
+- **The cursor must match the current sort.** The token encodes one value per sort
+  field; if a client replays a token against a different `sort`, the shape check fails
+  with `CURSOR_MISMATCH`. Changing the ordering mid-scroll resets the position.
+- **Nulls limit seekability.** A cursor value that is `null` over a non-nullable key
+  errors with `CURSOR_NULL_VALUE`; sort a non-nullable column (or a nullable one you
+  can tolerate losing across) as the final tiebreaker.
+- Malformed or tampered tokens fail to deserialize and are treated as
+  "no cursor" — the first page is returned rather than an error, so always keep tokens
+  server-supplied end to end.
+- Data written between page fetches shows up (or disappears) naturally — keyset gives
+  you *stable ordering*, not a snapshot. If you need both, version the underlying query
+  yourself (a tag column or `CreatedDate < X` filter pair).
+
+## How it executes
+
+- **Dapper** generates a seek predicate for the ordering columns (`(A > @p0) OR (A = @p0
+  AND B > @p1)` with the correct direction per field) and `LIMIT`-style paging — a single
+  command per page, no offset counting at all.
+- **EF Core** composes the same seek predicate into the expression tree and lets the
+  provider translate it server-side.
+
+## Server-side usage (optional)
+
+Keyset mode can be configured directly on options instead of via the wire — e.g. a
+"load more" endpoint that always pages forward:
+
+```csharp
+var options = clientParams.ToQueryOptions();   // carries cursor + useKeysetPagination
+var result = await db.Customers.AsNoTracking()
+    .FlexQueryAsync(options,
+        opt => { opt.MaxPageSize = 500; },    // ceiling stays server-defined
+        cancellationToken: cancellationToken);
+```
+
+With `QueryResult.NextCursorToken` the loop becomes trivial:
+
+```csharp
+string? cursor = null;
+do
+{
+    var page = await connection.FlexQueryAsync<Customer>(parameters,
+        cfg => { cfg.MaxPageSize = 500; },
+        cancellationToken: ct);
+    // … process page.Data …
+    cursor = page.NextCursorToken;
+}
+while (cursor is not null);
+```
+
+## When to stick with offset paging
+
+Random access ("jump to page 23"), stable page numbers in admin grids, and the ability
+to show "1,234 results" cheaply all favor [offset paging](/docs/guides/paging). The two modes
+share the same envelope, so UIs can grow into keyset without reworking the result shape.
+
+## Related
+
+- [Paging](/docs/guides/paging) · [Query Result](/docs/concepts/query-result)

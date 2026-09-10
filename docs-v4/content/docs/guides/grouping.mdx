@@ -1,0 +1,128 @@
+﻿---
+title: Grouping & Aggregates
+description: Grouped queries, HAVING filters, and grand totals — SQL aggregation without writing SQL.
+---
+
+# Grouping & Aggregates
+
+Reports like revenue per status, average salary per city, or order counts per customer
+are aggregation work that FlexQuery can do server-side. Three parameters describe the
+shape: `groupBy` defines the grouping, `aggregate` declares the aggregate functions,
+and `having` filters the groups. Grand totals come free as a bonus on ungrouped
+aggregate queries.
+
+> Grouped queries are a different row model — no root entity, and therefore **no
+> include/expand** in the same request (`GROUPBY_INCLUDE_CONFLICT`), and `select`
+> restrictions. Everything on this page holds for both EF Core and Dapper providers.
+
+## Group by one or more fields
+
+```http
+/api/orders?groupBy=Status
+/api/orders?groupBy=Status,Customer.City
+```
+
+Each `Data` row is one group. Without any `aggregate`, the result is the distinct set of
+group keys. Single-key grouping yields `{ status: "Active" }` rows; dotted keys group by
+the related value (e.g. `Customer.City`) and surface under the request's projection
+naming.
+
+## Aggregates
+
+`aggregate` is a comma-separated list of `function:field[:alias]` items. Supported
+functions: `sum`, `avg` (`average` is accepted), `min`, `max`, `count` (case-insensitive
+function names). `count` works on properties or collection navigations; `*` as a target
+is not part of the DSL.
+
+```http
+/api/orders?groupBy=Status&aggregate=count:Id,sum:TotalAmount,avg:TotalAmount&sort=TotalAmountSum:desc
+/api/orders?groupBy=Status&aggregate=sum:TotalAmount:revenue,count:Id:orders&sort=revenue:desc
+```
+
+- With no alias, the output name follows the field+function convention
+  (`sum:TotalAmount` → `TotalAmountSum`, `count:Id` → `IdCount`); aliases are validated
+  as identifiers, must be unique within the request, and replace the generated default.
+- Group rows carry the keys and every declared aggregate under the alias/default name.
+
+## HAVING — filtering groups
+
+`having` conditions pair an aggregate with a comparison. The canonical DSL spelling is
+`function:field:operator:value` (e.g. `sum:Total:gt:100`), combined with `AND`, `OR`, and
+parentheses; FQL uses the SQL-like `SUM(Total) > 100` form:
+
+```http
+/api/orders?groupBy=Status&aggregate=count:Id,sum:Total:Revenue&having=count:Id:gte:5 AND sum:Total:gt:100
+/api/orders?groupBy=Customer.City&aggregate=avg:Salary:avgSalary&having=avg:Salary:gt:50000&sort=avgSalary:desc
+```
+
+The rules that keep aggregates meaningful:
+
+- `having` requires both `groupBy` and at least one matching declared aggregate —
+  otherwise `HAVING_WITHOUT_GROUPBY` / `HAVING_REQUIRES_GROUPBY`.
+- every condition must match a declared aggregate by function **and** field
+  (case-insensitive); an unknown pairing fails with `AGGREGATE_NOT_DECLARED`.
+- operators are comparison-only (`eq ne gt gte lt lte`) with numeric type checks
+  (`sum`/`avg` targets must be numeric), and `count` conditions compare against a value.
+- in grouped queries, `sort` may only order by group keys or aggregate names.
+
+## Grand totals (ungrouped aggregates)
+
+Declare aggregates **without** `groupBy` to get single-row totals across the whole
+filtered set — alongside the normal paged data, in a separate envelope field:
+
+```http
+/api/orders?aggregate=sum:TotalAmount,count:Id&pageSize=20
+```
+
+```json
+{
+  "data": [ /* the requested 20 orders, normal paging ... */ ],
+  "totalCount": 612,
+  "page": 1,
+  "pageSize": 20,
+  "totalPages": 31,
+  "aggregates": {
+    "TotalAmount": { "sum": 1250.00 },
+    "Id":          { "count": 612 }
+  }
+}
+```
+
+The aggregate sub-dictionary keys are the aggregate's alias (or its auto-generated
+name); the outer key is the aggregate's source field. Grand-total queries only compute
+over the **filtered** rows — the same `filter` applies to data and totals.
+
+## Complete worked example
+
+"Active customers who own at least 5 orders priced over 100, shown with order count
+and average order value":
+
+```http
+GET /api/customers?filter=Status:eq:Active
+  &groupBy=Id,FirstName,LastName
+  &aggregate=count:Orders:orderCount,avg:Orders.Total:avgOrderValue
+  &having=count:Orders:gte:5
+  &sort=orderCount:desc
+```
+
+What each piece does: the filter narrows customers before grouping; three keys define
+group identity (`Id,FirstName,LastName`); each group computes two aggregates under
+explicit aliases; `having` drops groups with fewer than 5 matching orders (the count is
+over the full navigation, not the filtered page); and the groups themselves are sorted
+by the alias. The response `Data` is the group-row list, with normal paging on top —
+paging metadata counts **groups**, and `totalCount` reflects the underlying source rows.
+
+## Provider notes
+
+- **EF Core**: grouping/aggregation translates to SQL `GROUP BY`/`HAVING`/aggregates —
+  all computation is done by the database.
+- **Dapper**: `GROUP BY`, `HAVING`, key-set paging and ordered aggregate aliases are
+  generated directly into SQL (with dialect-correct `ORDER BY … NULLS LAST` behavior on
+  Oracle for grouped sorts).
+- Nested aggregates over paths (`max:Orders.Total`) work as long as the property path is
+  resolvable from the root entity type through the provider's translation.
+
+## Related
+
+- [Sorting](/docs/guides/sorting) · [Paging](/docs/guides/paging) ·
+  [Query Result](/docs/concepts/query-result)

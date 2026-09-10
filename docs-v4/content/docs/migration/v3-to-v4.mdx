@@ -1,0 +1,247 @@
+﻿---
+title: Migrate from v3
+description: Meaningful changes between v3.1.1 and v4, and how to migrate.
+section: Resources
+---
+
+import { Callout } from '@/components/callout'
+
+# Migrate from v3.1.1 to v4
+
+This document is based on a code-level comparison of the `v3.1.1` release against
+the current v4 implementation. It lists only verified, developer-affecting
+changes. For a compact mapping of areas to documentation, see the
+[Change Matrix](/docs/migration/change-matrix).
+
+<Callout variant="warning" title="v4 is a breaking release">
+  Package renames, restructured option classes, and removed legacy syntaxes require code
+  changes. Most are mechanical; behavioral changes are listed separately below.
+</Callout>
+
+## What changed at a glance
+
+- **Configuration model rebuilt** — DI registration replaced by immutable static facades.
+- **Typed DTO projection added** — `FlexQueryAsync<TEntity, TResponse>` with mapping.
+- **Expand added** — replaces `FilteredIncludes` with deep, filtered, sorted trees.
+- **Keyset pagination added** — `cursor` + `NextCursorToken` + `SeekAfter`.
+- **Aggregates reworked** — dedicated `aggregate` parameter, typed enum, HAVING tree.
+- **FQL parser replaces JQL** — package, enum, and exception renames.
+- **Validation extended** — the v3 rule pipeline gains expand/having/sort coverage.
+- **OpenAPI package added.**
+- **Legacy syntaxes removed** — JSON, Indexed, and Generic query syntaxes are gone.
+
+## New features
+
+| Feature | v3.1.1 equivalent | Where to read |
+|---|---|---|
+| Typed DTO `FlexQueryAsync<TEntity, TResponse>` (4 EF + 4 Dapper overloads) | none | [Typed DTO Projection](/docs/guides/typed-dto-projection) |
+| Mapping (`CreateMap`, `ForMember`, `ForNavigation`, `FlexQueryMapping` registry) | `MapField` only | [Typed DTO Projection](/docs/guides/typed-dto-projection) |
+| `expand` trees (filter/sort/take per branch) | `FilteredIncludes` | [Expand](/docs/guides/expand) |
+| Keyset pagination (`useKeysetPagination`, `cursor`, `NextCursorToken`, `SeekAfter`) | none | [Keyset Pagination](/docs/guides/keyset-pagination) |
+| `Query.Create()` fluent builder (with `FilterGroupBuilder`) | `FilterBuilder` only | [Fluent API](/docs/guides/fluent-api) |
+| `ResultShape` output surface + JSON converter | none | [Query Result](/docs/concepts/query-result) |
+| Governance extensions (`[FieldAccess(AllowedIncludes)]`, options class split) | governance sets on `BaseQueryOptions` | [Security](/docs/security) |
+| `CancellationToken` on all async overloads | none | [EF Core](/docs/providers/ef-core) |
+| `FlexQuery.NET.OpenApi` package | none | [OpenAPI](/docs/integrations/openapi) |
+| Dapper `ModelBuilder` + `IEntityTypeConfiguration<T>` | `MappingRegistry` | [Dapper](/docs/providers/dapper) |
+| Dapper SQL execution logging with DECLARE scripts | none | [Dapper](/docs/providers/dapper) |
+| DSL `AND`/`OR` keywords | symbolic `&` / `\|` only | [Query Syntax](/docs/concepts/query-syntax) |
+| `select` aliases (`field:alias`, `field as alias`) | none | [Projection](/docs/guides/projection) |
+
+## Renamed
+
+| v3.1.1 | v4 | Migration |
+|---|---|---|
+| Package `FlexQuery.NET.Parsers.Jql` | `FlexQuery.NET.Parsers.Fql` | Update package reference. |
+| `QuerySyntax.Jql` | `QuerySyntax.Fql` | Find/replace. |
+| `JqlParseException : Exception` | `FqlParseException : FlexQueryException` | Update catch blocks. |
+| `QueryOptions.FilteredIncludes` | `QueryOptions.Expand` | Find/replace; see Expand page for new syntax. |
+| `ApplyFilteredIncludes<T>()` | `ApplyExpand<T>()` | Find/replace. |
+| `AggregateModel` (string function) | `Aggregate` (typed `AggregateFunction`) | Update construction sites. |
+| `HavingCondition` | `HavingNode` tree (`HavingLogicalNode`/`HavingConditionNode`/`HavingGroupNode`) | Update construction sites. |
+| `DebugResult` | `QueryDebugInfo` | Find/replace. |
+| `Models.IFlexQueryExecutionListener` | `Execution.IFlexQueryExecutionListener` | Update using directives (members unchanged). |
+| `Models.QueryContext` | `Execution.QueryContext` (now sealed) | Update using directives. |
+| `Models.BaseQueryOptions` | split into `Options.BaseQueryOptions` + `Options.QueryGovernanceOptions` | Adjust base-class references. |
+
+**Note**: `SortOption.cs` → `SortNode` was a *file* rename only — the type was already named
+`SortNode` at v3.1.1. No code change is required for it.
+
+## Removed
+
+| Removed | Replacement |
+|---|---|
+| JSON / Indexed / Generic query syntaxes (`JsonQueryParser`, `AutoDetect`) | Native DSL, FQL, or MiniOData |
+| `CaseInsensitive` / `CaseInsensitiveFields` options | — (comparisons follow provider semantics) |
+| Parser DI registration (`ServiceCollectionExtensions` in parser packages, `MiniODataFeature`) | Static `Fql.Register()` / `MiniOData.Register()` |
+| Deprecated `QueryOptions` members: `Skip`, `Top`, `EnableCache`, `Items`, `Ast` | `PagingOptions`, per-call options |
+| `InvalidFilterFieldException` / `InvalidSortFieldException` | `QueryValidationException` with structured errors |
+| Manual Dapper `Dialect` config (`ISqlDialectResolver`, `DefaultSqlDialectResolver`) | Auto-detection from the `DbConnection` |
+| Dapper `MappingRegistry`/`IMappingRegistry`/`IEntityMapping`/`JoinInfo` | `ModelBuilder` + `IEntityTypeConfiguration<T>` |
+| Dapper conventions (`IEntityConvention`, `IForeignKeyConvention`, `IRelationshipConvention`, `Default*`) | Convention-first defaults (now internal) |
+| `QueryableAspNetCoreExtensions.FlexQueryAsync` | Provider `FlexQueryAsync` + `[FieldAccess]` filter |
+| `FromAgGridJson(string)` / `FromKendoJson(string)` | `JsonElement.ToQueryOptions()` |
+| `AgGridQueryOptionsParser` / `AgGridResponseConverter` / `KendoQueryOptionsParser` | `ToQueryOptions()` / `ToAgGridServerSideResponse()` extensions |
+| `UseSplitQuery` option | Split-query include hydration is now internal behavior |
+| Public caches (`ExpressionCache`, `ParserCache`, `ProjectionExpressionCache`) | Internal caching (`FlexQueryCacheSettings` remains public) |
+| Public helpers (`ExpressionBuilder`, `QueryBuilder`, `ProjectionOptimizer`, `GovernanceValidator`, `DynamicTypeBuilder`, `SelectTreeBuilder`, `ExpressionPrinter`, `ExpressionTreeVisualizer`, `ProjectionMetadata*`) | Not replaced — internal implementation detail |
+| `FlexQueryParameters.RawParameters` (public) | Internal — use model binding |
+
+## Changed
+
+### Configuration and registration
+
+```csharp
+// v3.1.1 - DI-era registration
+services.AddFlexQueryDapper(...);
+services.AddFlexQueryMiniOData(...);
+
+// v4 - static facades, immutable after first use
+FlexQueryCore.Configure(options => { ... });
+FlexQueryDapper.Configure(options => { ... });
+FlexQueryEFCore.Configure(options => options.UseNoTracking = true);
+MiniOData.Register();
+```
+
+Calling any `Configure` after a query has executed throws `InvalidOperationException`.
+
+### No-tracking
+
+```csharp
+// v3.1.1 - QueryExecutionOptions.UseNoTracking = true (default), UseSplitQuery
+// v4 - provider facade or per-call:
+FlexQueryEFCore.Configure(options => options.UseNoTracking = true);   // global
+opt.UseNoTracking = false;                                            // per call (EfCoreQueryOptions)
+```
+
+### DSL logical operators
+
+```http
+# v3.1.1 - symbolic only
+filter=Status:eq:Active & Age:gte:18
+
+# v4 - keywords AND symbolic both accepted
+filter=Status:eq:Active AND Age:gte:18
+filter=Status:eq:Active & Age:gte:18
+```
+
+The symbolic forms still work — this is an additive change. New in v4: `AND`/`OR` are
+reserved and cannot appear as unquoted values (`name:eq:"AND"` is required).
+
+<Callout variant="warning" title="Comma-separated conditions became single values">
+  v3 split combined filter conditions on <code>,</code>. In v4 a comma after the value is
+  <strong>part of the value</strong>: <code>Name:eq:Ann,Salary:gt:1000</code> now matches a
+  <em>Name</em> literally equal to <code>"Ann,Salary:gt:1000"</code>, not two conditions
+  (and <code>;</code> is rejected outright). Rewrite multi-condition filters to join with
+  <code>&amp;</code> / <code>|</code> / <code>AND</code> / <code>OR</code>. This is the one
+  silent grammar change in the migration — grep stored/shared filter strings.
+</Callout>
+
+### Aggregate syntax
+
+```http
+# v3.1.1 - aggregates inside select
+select=Status,sum(Total),count(Id)
+
+# v4 - dedicated aggregate parameter
+select=Status&aggregate=sum:Total,count:Id
+```
+
+Aliases are PascalCase by default (`SumTotal`); explicit aliasing:
+`aggregate=sum:Total:totalSales`.
+
+### HAVING
+
+Every aggregate referenced in `having` must be declared in `aggregate` (v3.1.1's
+alias-integrity rule is replaced by declared-aggregate enforcement). `having` without
+`groupBy` is rejected.
+
+### Paging validation
+
+```http
+# v3.1.1 - malformed page values were loosely handled
+# v4 - parse throws:
+page=abc      → QueryParseException: '...' is not a valid page number. Page must be a positive integer.
+pageSize=-5   → QueryParseException: '...' is not a valid page size. PageSize must be a positive integer.
+distinct=x    → QueryParseException: '...' is not a valid distinct value. Distinct must be 'true' or 'false'.
+```
+
+Out-of-range values (e.g. `pageSize=99999`) are clamped to `MaxPageSize` instead of erroring.
+
+### Exceptions
+
+```csharp
+// v3.1.1
+catch (InvalidFilterFieldException ex) { ... }
+catch (InvalidSortFieldException ex) { ... }
+
+// v4 - unified hierarchy rooted at FlexQueryException
+catch (QueryValidationException ex) { ... }   // field access violations
+catch (QueryParseException ex) { ... }        // malformed parameters
+catch (FlexQueryException ex) { ... }         // safety net for all FlexQuery errors
+```
+
+### Dapper model definition
+
+```csharp
+// v3.1.1 - MappingRegistry
+var registry = new MappingRegistry();
+registry.Register<Customer>(...);
+
+// v4 - ModelBuilder with EF-style configuration
+FlexQueryDapper.Configure(options =>
+{
+    options.Model.Entity<Customer>()
+        .ToTable("Customers")
+        .HasKey(c => c.Id)
+        .HasMany(c => c.Orders)
+        .HasForeignKey("CustomerId");
+});
+```
+
+The dialect is auto-detected from the connection; `DapperQueryOptions` now derives from
+`QueryGovernanceOptions`.
+
+### Provider overload shapes
+
+- EF Core: `FlexQueryAsync<T>` signatures now end with `CancellationToken`; four typed
+  `FlexQueryAsync<TEntity, TResponse>` overloads were added.
+- Dapper: the five dynamic overloads became three (`FlexQueryParameters`,
+  `IDictionary<string, StringValues>`, `QueryOptions`) plus four typed overloads.
+
+## Provider behavior changes
+
+- **EF Core**: include hydration is composed as EF Core filtered includes (the
+  `UseSplitQuery` toggle is gone; the provider decides the SQL shape); expand branches
+  support per-branch filter/sort/take; grouped queries execute through a dedicated
+  grouped executor.
+- **Dapper**: dialect auto-detection; DTO-aware SQL generation with type-map field
+  rewrites; include-only joins excluded from the count query; SQL execution logging.
+
+## Security / governance changes
+
+- All governance members keep their names but move to `QueryGovernanceOptions`.
+- `[FieldAccess]` gains `AllowedIncludes` (and the class/filter become sealed).
+- Expand paths are governed by `AllowedIncludes`.
+
+## Integration changes
+
+- **AG Grid / Kendo**: `From*Json(string)` replaced by `JsonElement.ToQueryOptions()`;
+  standalone parser/converter classes removed in favor of extension methods.
+- **OpenAPI**: new package for `Microsoft.AspNetCore.OpenApi` (.NET 9/10) — Swashbuckle-era
+  guidance is obsolete.
+
+## Migration steps
+
+1. Update package references (rename `Parsers.Jql` → `Parsers.Fql`; add `OpenApi` if used).
+2. Replace DI registration of parsers/providers with `Fql.Register()`,
+   `MiniOData.Register()`, `FlexQueryEFCore.Configure()`, `FlexQueryDapper.Configure()`.
+3. Replace `FilteredIncludes` usage with `expand` syntax.
+4. For Dapper: define the entity model via `options.Model` (tables, keys, relationships).
+5. Move aggregates out of `select` into `aggregate`; verify `having` references declared
+   aggregates.
+6. Replace removed exception types with `QueryValidationException` handling.
+7. Remove `CaseInsensitive` configuration and JSON/Indexed/Generic syntax usage.
+8. Replace `FromAgGridJson`/`FromKendoJson` with the `JsonElement` overloads.
+9. Re-run test suites — paging parameter validation is stricter (malformed values now
+   throw) and HAVING enforcement is stricter.

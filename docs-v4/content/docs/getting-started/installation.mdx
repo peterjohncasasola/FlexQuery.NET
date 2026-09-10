@@ -1,0 +1,82 @@
+---
+title: Installation
+description: Add FlexQuery.NET packages to your project.
+section: Getting Started
+---
+
+# Installation
+
+FlexQuery.NET is distributed as a set of NuGet packages. Install the core package plus the
+provider package for your data access technology; optional packages add integrations and
+alternative syntaxes.
+
+## Core package
+
+```bash
+dotnet add package FlexQuery.NET
+```
+
+Always required. Contains the query engine: parsers, filtering, sorting, paging,
+projection, grouping, validation, and the fluent API.
+
+## Provider package
+
+Pick exactly one provider package:
+
+```bash
+# Entity Framework Core
+dotnet add package FlexQuery.NET.EntityFrameworkCore
+
+# Dapper
+dotnet add package FlexQuery.NET.Dapper
+```
+
+The provider package supplies the execution pipeline — EF Core translates FlexQuery's
+expression trees through the EF stack; Dapper generates and executes SQL directly. See
+[EF Core](/docs/providers/ef-core) and [Dapper](/docs/providers/dapper) for provider
+specifics.
+
+## Optional packages
+
+```bash
+# ASP.NET Core security filter ([FieldAccess] attributes) + result-shape JSON
+dotnet add package FlexQuery.NET.AspNetCore
+
+# Execution diagnostics and observability
+dotnet add package FlexQuery.NET.Diagnostics
+
+# OpenAPI/Swagger documentation for FlexQuery endpoints
+dotnet add package FlexQuery.NET.OpenApi
+
+# AG Grid Server-Side Row Model adapter
+dotnet add package FlexQuery.NET.Adapters.AgGrid
+
+# Kendo UI DataSource adapter
+dotnet add package FlexQuery.NET.Adapters.Kendo
+
+# FQL syntax parser (SQL-inspired language)
+dotnet add package FlexQuery.NET.Parsers.Fql
+
+# MiniOData syntax parser (OData-compatible)
+dotnet add package FlexQuery.NET.Parsers.MiniOData
+```
+
+Which optional packages for which scenario:
+
+| Scenario | Packages |
+|---|---|
+| Standard ASP.NET Core + EF Core API | Core, EF Core, AspNetCore |
+| Swagger-documented API | + OpenApi |
+| Grid-driven dashboards | + Adapters.AgGrid or Adapters.Kendo |
+| OData/FQL clients | + Parsers.MiniOData / Parsers.Fql |
+| Debug/diagnostic tooling | + Diagnostics |
+
+## Supported frameworks
+
+All packages target **.NET 6, .NET 8, and .NET 10**, except `FlexQuery.NET.OpenApi`, which
+targets **.NET 9 and .NET 10** (it builds on `Microsoft.AspNetCore.OpenApi`).
+
+## Next steps
+
+Continue with [First Query](/docs/getting-started/first-query) to wire up your first
+FlexQuery endpoint.

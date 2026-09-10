@@ -1,0 +1,96 @@
+---
+title: OpenAPI
+description: Automatic OpenAPI/Swagger documentation for FlexQuery endpoints.
+section: Integrations
+---
+
+import { Callout } from '@/components/callout'
+
+# OpenAPI
+
+A dynamic query API is hard to document by hand: every endpoint accepts a shifting set of
+query parameters, and the request/response models are FlexQuery types your consumers have
+never seen. `FlexQuery.NET.OpenApi` fills the gap — it enriches your OpenAPI document with
+descriptions and canonical examples for FlexQuery models and query parameters, so Swagger UI
+shows a complete, usable contract without manual annotation. It targets .NET 9 and .NET 10.
+
+## Setup
+
+```csharp
+builder.Services.AddFlexQueryOpenApi();
+
+builder.Services.AddOpenApi(options =>
+{
+    options.AddFlexQuery();
+});
+```
+
+Two calls with distinct jobs:
+
+- **`AddFlexQueryOpenApi()`** registers the schema and operation transformers with the
+  service collection.
+- **`AddFlexQuery()`** on `OpenApiOptions` attaches those transformers to the OpenAPI
+  document pipeline (`Microsoft.AspNetCore.OpenApi`).
+
+Then expose the document as usual:
+
+```csharp
+app.MapOpenApi();
+```
+
+## What you get
+
+- **Schema descriptions** for all FlexQuery model types — `FlexQueryRequest`,
+  `FlexQueryParameters`, `QueryResult<T>`, `FilterGroup`, `FilterCondition`, `SortNode`,
+  `PagingOptions`, `Aggregate`, `HavingCondition`, `IncludeNode`, `ProjectionMode`,
+  `LogicOperator`, `AggregateFunction`.
+- **Parameter documentation** for `filter`, `select`, `sort`, `page`, `pageSize`,
+  `includeCount` — with format hints so consumers know what a valid value looks like.
+- **Canonical examples** — production-quality, strongly typed examples for
+  `FlexQueryRequest`, `FlexQueryParameters`, and `QueryResult<T>`.
+
+Zero further configuration — one registration per service collection and document.
+
+## Complete worked example
+
+A documented FlexQuery endpoint:
+
+```csharp
+var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddControllers();
+builder.Services.AddFlexQueryOpenApi();
+builder.Services.AddOpenApi(options => options.AddFlexQuery());
+
+var app = builder.Build();
+app.MapOpenApi();
+app.MapControllers();
+app.Run();
+```
+
+With controllers like:
+
+```csharp
+[HttpGet]
+[ProducesResponseType(typeof(QueryResult<Customer>), 200)]
+public async Task<IActionResult> Get(
+    [FromQuery] FlexQueryParameters parameters,
+    CancellationToken cancellationToken)
+{
+    var result = await db.Customers
+        .AsNoTracking()
+        .FlexQueryAsync(parameters, cancellationToken: cancellationToken);
+    return Ok(result);
+}
+```
+
+The generated document describes `FlexQueryParameters`' properties with usage text and
+embeds a complete example request/response — a consumer can call the endpoint correctly from
+Swagger UI alone.
+
+<Callout variant="note" title="SwaggerGen users">
+  The package targets <code>Microsoft.AspNetCore.OpenApi</code> (the built-in .NET 9+
+  document pipeline). Swashbuckle-based setups migrate to <code>AddOpenApi</code>/
+  <code>MapOpenApi</code> to use it — see the
+  <a href="/docs/migration/v3-to-v4">migration guide</a>.
+</Callout>
