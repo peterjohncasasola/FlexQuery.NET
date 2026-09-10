@@ -1,0 +1,170 @@
+﻿---
+title: Projection
+description: Select exactly the fields clients need — paths, aliases, wildcards, nested selection, and projection modes.
+---
+
+# Projection
+
+`select` decides which fields the response contains — trimming payloads, hiding
+internal properties, and keeping SQL on the columns actually needed. Projection is
+orthogonal to filtering, sorting, and paging: it runs last, on the rows and counts those
+stages already produced.
+
+## Basic field selection
+
+```http
+GET /api/customers?select=Id,FirstName,Email
+```
+
+Only the listed fields appear in `data`. Field paths use dots to reach into
+navigations, and the result keeps the natural object shape:
+
+```http
+GET /api/customers?select=Id,Orders.Id,Orders.TotalAmount
+```
+
+Selecting through a navigation requires that navigation to be **loaded** too — add it to
+`include` (see [Include](/docs/guides/include)). Otherwise validation rejects the request:
+
+> The navigation path 'Orders' is referenced in the select clause but is not included.
+> Add `include=Orders` or remove the path from `select`.
+
+## Aliases
+
+Clients rename output fields without touching your model — two spellings are accepted:
+
+```http
+GET /api/customers?select=Id,FirstName:firstName2
+GET /api/customers?select=Id,FirstName as firstName2
+```
+
+Aliases apply only to the response; filters and sorts keep addressing the real property
+names. Under the default camelCase JSON settings, aliases are emitted as written.
+
+## Wildcards
+
+`select=*` returns every scalar field of the root type:
+
+```http
+GET /api/customers?select=*
+```
+
+Restrictions enforced by validation:
+
+- the wildcard is valid only at the top level (`Orders.*` is not supported — list the
+  child fields explicitly inside a nested select instead)
+- `*` cannot be combined with other selections in the same list
+- `*` selects scalar properties only — navigations never come along unless asked for
+  via `include`/`expand`
+- a duplicate wildcard (`select=*,*`) is ignored with a validation warning
+
+## Nested selection
+
+Parenthesized groups project children as nested objects — with their own inner
+selection, wildcards, and aggregate-style children:
+
+```http
+GET /api/customers?include=Orders&select=Id,Orders(TotalAmount,OrderDate)
+```
+
+```json
+{
+  "data": [
+    {
+      "id": 7,
+      "orders": [ { "totalAmount": 129.90, "orderDate": "2024-02-01T00:00:00Z" } ]
+    }
+  ]
+}
+```
+
+Rules enforced server-side:
+
+- navigation path aliases go on the **parent** field, not on the nested children.
+  `Customer(custOrders)` on a child collection inside a select is rejected.
+- a nested navigation can be selected under **one alias only** — two aliases for the
+  same path (`Orders(a),Orders(b)`) raise `DUPLICATE_ALIAS`.
+- the nested parent must also be included (`include=Orders`) — same rule as dotted
+  paths above.
+
+## Interaction with paging and counting
+
+Selection changes what rows look like, not which rows exist:
+
+- `totalCount` counts the pre-paging source set, independent of `select`.
+- `distinct` + `select` de-duplicates on the projected shape — `select=City` +
+  `distinct=true` is the "list of cities" pattern.
+- with `groupBy`, every non-aggregate field in `select` must appear in `groupBy`
+  (`GROUPBY_PROJECTION_MISMATCH`), and `select=*` is not allowed in grouped queries.
+
+## Nested projections that branch
+
+When a select references a deeper graph with multiple branches
+(`Orders.OrderItems.Product`), FlexQuery keeps the hierarchy nested by default. The
+query-string `mode` parameter reshapes that output:
+
+```http
+GET /api/orders?include=OrderItems&select=Id,OrderItems(Product)&mode=flat
+```
+
+| `mode` | Shape | Notes |
+|---|---|---|
+| `nested` (default) | `data[].orderItems[].product.name` | the plain hierarchy |
+| `flat` | collections flatten into leaf rows (SQL-join semantics via `SelectMany`); a query with `Id` **and** a leaf path collapses root values onto leaf rows | single linear path branching only — multiple branches throw |
+| `flat-mixed` | like `flat`, but root scalar fields repeat on every leaf row | preferred for grid exports |
+
+Mode is a property of the whole request (also available programmatically as
+`ProjectionMode.Flat` / `FlatMixed` / `Nested` on `QueryOptions`). Dapper rejects
+multiple branching navigation paths in `Flat` mode; EF Core falls back to its
+correlated-query machinery, which the provider handles server-side.
+
+## Complete worked example
+
+```http
+GET /api/customers?filter=Status:eq:Active&include=Orders&select=Id,Email,Orders(Id,OrderNumber:ref,TotalAmount:amount)&sort=Id:asc&pageSize=2
+```
+
+```json
+{
+  "data": [
+    {
+      "id": 12,
+      "email": "ada@example.com",
+      "orders": [
+        { "id": 441, "ref": "ORD-441", "amount": 210.00 },
+        { "id": 489, "ref": "ORD-489", "amount": 89.00 }
+      ]
+    },
+    {
+      "id": 37,
+      "email": "grace@example.com",
+      "orders": [ { "id": 573, "ref": "ORD-573", "amount": 129.90 } ]
+    }
+  ],
+  "totalCount": 42,
+  "page": 1,
+  "pageSize": 2,
+  "totalPages": 21,
+  "hasNextPage": true,
+  "hasPreviousPage": false
+}
+```
+
+Reading the pieces: `filter` and `sort` operate on real property names; `include=Orders`
+authorizes the relationship; the nested `Orders(...)` list projects only three child
+fields, two of them under client aliases (`ref`, `amount`); paging metadata reflects the
+filtered customer count; and a client that never asked for `Email` couldn't see it —
+`select` is the response contract.
+
+## Common mistakes
+
+- Listing a field twice (`select=Id,FirstName,Id`) collapses silently — later
+  duplicates are ignored (except wildcards, which validate).
+- Expecting `select` to restrict what clients can *filter*: it doesn't. Governance
+  (`AllowedFields`/`SelectableFields`) controls reachability on the wire; `select`
+  controls the output shape for authorized fields only.
+
+## Related
+
+- [Include](/docs/guides/include) · [Expand](/docs/guides/expand) ·
+  [Typed DTO Projection](/docs/guides/typed-dto-projection)

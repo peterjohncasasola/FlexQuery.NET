@@ -1,0 +1,155 @@
+﻿---
+title: Typed DTO Projection
+description: Return stable DTO contracts from dynamic queries — type maps, surface protection, and field mapping.
+---
+
+# Typed DTO Projection
+
+Dynamic queries and stable public contracts usually disagree. Entities carry internal
+columns, change with migrations, and are awkward to document. Typed DTO projection lets
+an endpoint accept dynamic FlexQuery input while returning a fixed response type:
+
+```http
+GET /api/customers/dto?filter=CustomerName:eq:Ada Lovelace&select=Email&sort=Email:asc
+```
+
+```csharp
+public record CustomerResponse
+{
+    public int Id { get; init; }
+
+    // maps to Customer.FirstName — clients never learn the entity property name
+    public string CustomerName { get; init; } = string.Empty;
+
+    public string Email { get; init; } = string.Empty;
+}
+```
+
+```csharp
+var result = await db.Customers
+    .FlexQueryAsync<Customer, CustomerResponse>(parameters, cancellationToken: ct);
+```
+
+`FlexQueryAsync<TEntity, TResponse>` returns `QueryResult<TResponse>`: every pipeline
+stage — filter, sort, select, grouping, expansion, paging — runs against the entity
+model, and each matching row is materialized through the entity→DTO map.
+
+## Registering a map
+
+Maps live in the application-level `FlexQueryMapping` registry. Register them once at
+startup through `FlexQueryCore.Configure` (they are automatically consulted by every
+later typed execution):
+
+```csharp
+using FlexQuery.NET;
+
+FlexQueryCore.Configure(options =>
+{
+    options.CreateMap<Customer, CustomerResponse>()
+        .ForMember(d => d.CustomerName, e => e.FirstName);
+});
+```
+
+Members with no configured mapping map by convention (same name on both sides).
+Navigation members map through `ForNavigation`:
+
+```csharp
+// CreateMap<TSource, TDestination> — entity first, DTO second
+options.CreateMap<Customer, CustomerWithOrdersDto>()
+    .ForNavigation(d => d.Orders, e => e.Orders);
+```
+
+`ForMember` accepts constant expressions (`e => "Enterprise"`), member access, and
+string-returning computed calls such as `e => e.FullName()` — useful for derived output
+fields. A scalar expression that cannot be reduced to a single column must be exposed
+as a mapped property or a computed string member; Dapper additionally refuses computed
+scalars and tells you to use the EF Core provider in that case.
+
+Global maps are registered once (startup). Per-request alternatives exist on the
+execution options (`CreateMap`/`MapField`) when a DTO is endpoint-specific.
+
+## The public surface is the wire format
+
+When a DTO is in play, its type *replaces* the entity as the query surface:
+
+- `filter`/`sort`/`select`/`groupBy`/`aggregate` fields are resolved against **DTO
+  members** (`CustomerName`, not `FirstName`) and emitted under DTO names.
+- Members with no entity backing — internal flags, EF shadows, `[NotMapped]` helpers —
+  cannot be referenced by clients at all: they fail with `FIELD_NOT_FOUND` like any
+  unknown field, even though the underlying entity has them.
+- Aliased selection (`select=Email:contact`, `select=Email as contact`) applies on top,
+  and the response-shape converter emits exactly the selected/aliased fields for rows.
+- For navigation-backed DTO members, include/expansion paths must refer to the *DTO*
+  name as well; the provider rewrites them to the entity navigation
+  (`TranslateIncludePathsToEntity`).
+
+This is a security property as much as a convenience: entity internals (SSN-like columns,
+flags, audit fields) are invisible to the API contract unless you map them deliberately.
+
+## Composition example
+
+A public orders endpoint with an internal model — `include`, expanded branch, projection
+all expressed in DTO names:
+
+```csharp
+[HttpGet("dto")]
+public async Task<IActionResult> Get(
+    [FromQuery] FlexQueryParameters parameters,
+    CancellationToken cancellationToken)
+{
+    var result = await db.Customers
+        .AsNoTracking()
+        .FlexQueryAsync<Customer, CustomerWithOrdersDto>(parameters,
+            opt => opt.AllowedFields =
+            [
+                nameof(CustomerWithOrdersDto.Id),
+                nameof(CustomerWithOrdersDto.CustomerName),
+                nameof(CustomerWithOrdersDto.Email),
+            ],
+            cancellationToken: cancellationToken);
+
+    return Ok(result);
+}
+```
+
+```http
+GET /api/customers/dto?filter=Email:contains:@example.com
+  &include=Orders&select=Id,CustomerName,Orders(OrderNumber:ref,TotalAmount:amount)
+```
+
+```json
+{
+  "data": [
+    {
+      "id": 7,
+      "customerName": "Ada Lovelace",
+      "email": "ada@example.com",
+      "orders": [ { "id": 441, "ref": "ORD-441", "amount": 210.00 } ]
+    }
+  ],
+  "totalCount": 42
+}
+```
+
+## Grouped queries with DTOs
+
+A typed response can also receive group rows: as with entity queries, the group keys
+and declared aggregate aliases are the addressable fields; the DTO's writable members
+must cover the projected fields, otherwise FlexQuery falls back to dynamic grouped rows
+rather than failing (Dapper throws a clear `FlexQueryException` naming the field that
+the response type cannot represent).
+
+## Rules of thumb
+
+- Map names to the **public** language, not the entity language; the DTO *is* the API.
+- Keep governance (`AllowedFields`/`SortableFields`) aligned with the DTO surface — the
+  rules validate the same names clients use.
+- Computed `ForMember` expressions execute per row after projection on EF; they are not
+  filterable, sortable, or groupable.
+- One response type per endpoint contract; if two endpoints need different fields of the
+  same entity, they are two DTOs — the type maps make that cheap.
+
+## Related
+
+- [Projection](/docs/guides/projection) · [EF Core provider](/docs/providers/ef-core) ·
+  [Dapper provider](/docs/providers/dapper)

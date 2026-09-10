@@ -1,0 +1,134 @@
+﻿---
+title: Include
+description: Load related entities through navigation paths — server-side, bounded, governed.
+---
+
+import { Callout } from '@/components/callout'
+
+# Include
+
+`include` attaches related records to each row: customers **with their orders**,
+orders **with their order items and product**. The loading happens server-side (SQL
+joins / follow-up queries — never a change-tracking fixup), and the set of navigations a
+client may name is entirely up to your governance configuration.
+
+## Syntax
+
+One or more comma-separated navigation paths, using dots for depth:
+
+```http
+GET /api/customers?include=Orders
+GET /api/customers?include=Orders,Orders.OrderItems
+GET /api/orders?include=Customer.Address
+```
+
+- Duplicates collapse silently — `include=Orders,Orders` loads `Orders` once.
+- Every path must resolve to **navigation properties** end to end. A path that walks
+  into a scalar property is rejected.
+- The wire parameter is `include` in the native DSL and FQL; MiniOData clients spell the
+  same thing as `$expand=Orders` (see [Query Syntax](/docs/concepts/query-syntax)).
+
+## What the response looks like
+
+```http
+GET /api/customers?include=Orders&pageSize=2
+```
+
+```json
+{
+  "data": [
+    {
+      "id": 12,
+      "firstName": "Ada",
+      "lastName": "Lovelace",
+      "email": "ada@example.com",
+      "city": "London",
+      "status": "Active",
+      "salary": 90000,
+      "createdDate": "2023-05-17T00:00:00Z",
+      "orders": [
+        { "id": 441, "customerId": 12, "orderNumber": "ORD-441",
+          "totalAmount": 210.00, "orderDate": "2024-02-01T00:00:00Z", "status": "Delivered" }
+      ]
+    }
+  ],
+  "totalCount": 42,
+  "page": 1,
+  "pageSize": 2,
+  "totalPages": 21,
+  "hasNextPage": true,
+  "hasPreviousPage": false
+}
+```
+
+Each included navigation appears as a property on the parent row. Two shape rules are
+worth knowing:
+
+- **Only requested branches are sent.** Children of `Orders` (like `OrderItems`) stay
+  out of the response until you ask for them — including a navigation loads its scalar
+  fields, not its own children.
+- **Parents are never dropped.** A customer with zero orders gets an empty array, and
+  the root page/row count is unaffected by what you include.
+
+## Combining with select
+
+`include` decides *what gets loaded*; `select` decides *what gets returned*:
+
+```http
+GET /api/customers?include=Orders&select=Id,Orders(Id,TotalAmount)
+```
+
+This is the bandwidth-friendly pair — children load with only the listed fields. The
+rule connecting them: selecting *through* a navigation path requires that path in
+`include` (otherwise `QueryValidationException`, `NAVIGATION_PROJECTION_REQUIRES_INCLUDE`
+— the message even tells you which `include=` value to add).
+
+## Governance: which paths are includable
+
+```csharp
+opt.AllowedIncludes = ["Orders", "Orders.OrderItems"];
+```
+
+- With `AllowedIncludes` set, anything outside the list is rejected with
+  `INCLUDE_ACCESS_DENIED` (or, in lenient mode, the unauthorized branch is dropped from
+  the response — a security property, not a convenience).
+- With it unset, any valid navigation of the entity type may be included. For
+  public endpoints, set it explicitly — unbounded `include` trees are the classic
+  data-exfiltration and cartesian-blow-up vector.
+- Governance paths are enforced for includes and expansions alike (see
+  [Expand](/docs/guides/expand) and [Security](/docs/security)).
+
+## Provider behavior
+
+- **EF Core**: includes are composed into the query as filtered `Include`/`ThenInclude`
+  expressions; EF's own query pipeline emits the SQL (join or follow-up query per
+  provider behavior) and materializes the graph. Tracked queries would additionally fix
+  up inverses — FlexQuery runs no-tracking by default.
+- **Dapper**: FlexQuery issues one root query plus **batched child queries** per include
+  level (`SELECT … WHERE CustomerId IN (page keys)`), so the server work stays bounded by
+  what is on the current page — a single `include=Orders` even collapses to one
+  streamed join command behind the scenes.
+- Grouping queries reject include/expand outright (`GROUPBY_INCLUDE_CONFLICT`) — the
+  row model has no parent entity to hang a graph on. Pair `groupBy` with `aggregate`
+  instead.
+
+## Common mistakes
+
+<Callout variant="warning" title="Include is not a filter">
+  <code>include=Orders</code> loads <em>every</em> related row. A customer with 800
+  orders returns 800 child objects. If you need "top 5 recent orders", use
+  <a href="/docs/guides/expand">expand</a> with <code>take</code> and <code>sort</code> — or
+  shape the relation with <a href="/docs/guides/projection">select</a>.
+</Callout>
+
+<Callout variant="warning" title="Forgotten [JsonIgnore] cycles">
+  Bidirectional navigations (<code>Order.Customer</code> with back-reference to
+  <code>Customer.Orders</code>) will serialize in circles unless the inverse is
+  <code>[JsonIgnore]</code> — the sample domain does exactly that.
+</Callout>
+
+## Related
+
+- [Expand](/docs/guides/expand) — filtered, sorted, size-bounded includes
+- [Projection](/docs/guides/projection) — shape what loads into what returns
+- [Security & Governance](/docs/security)

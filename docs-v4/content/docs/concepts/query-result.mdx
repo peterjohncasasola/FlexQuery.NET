@@ -1,0 +1,150 @@
+---
+title: Query Result
+description: The QueryResult<T> shape returned by every execution method.
+section: Core Concepts
+---
+
+import { ApiTable } from '@/components/api-table'
+import { Callout } from '@/components/callout'
+
+# Query Result
+
+Every execution method returns `QueryResult<T>` — a uniform envelope that pairs the page of
+data with the metadata clients need for pagination UIs, aggregate displays, and cursor-based
+navigation. Because the envelope is the same for EF Core and Dapper, dynamic and typed
+results, your response contract never changes when the query does.
+
+## Properties
+
+<ApiTable>
+  <thead>
+    <tr><th>Property</th><th>Type</th><th>Description</th></tr>
+  </thead>
+  <tbody>
+    <tr><td><code>Data</code></td><td><code>IReadOnlyList&lt;T&gt;</code></td><td>The page of results (entities, projected objects, or DTOs).</td></tr>
+    <tr><td><code>TotalCount</code></td><td><code>int?</code></td><td><strong>Source</strong> rows matching the query before paging — independent of what is returned in <code>Data</code>. Null when counting is disabled. On grouped queries it is the number of underlying rows, not the number of groups.</td></tr>
+    <tr><td><code>ResultCount</code></td><td><code>int?</code></td><td>The <strong>post-shaping</strong> row total (groups for grouped queries, distinct rows for <code>distinct</code>) and what <code>TotalPages</code> is computed from. Null on plain queries unless the provider computes it.</td></tr>
+    <tr><td><code>Page</code></td><td><code>int</code></td><td>Current 1-based page number.</td></tr>
+    <tr><td><code>PageSize</code></td><td><code>int</code></td><td>Effective page size (after clamping).</td></tr>
+    <tr><td><code>TotalPages</code></td><td><code>int</code></td><td>Computed from total count and page size.</td></tr>
+    <tr><td><code>HasNextPage</code></td><td><code>bool</code></td><td>A next page exists.</td></tr>
+    <tr><td><code>HasPreviousPage</code></td><td><code>bool</code></td><td>A previous page exists.</td></tr>
+    <tr><td><code>Aggregates</code></td><td><code>Dictionary&lt;string, Dictionary&lt;string, object&gt;&gt;?</code></td><td>Grand totals for <em>ungrouped</em> aggregate queries: field → aggregate key → value. Null otherwise.</td></tr>
+    <tr><td><code>NextCursorToken</code></td><td><code>string?</code></td><td>Cursor for the next keyset page (keyset mode only).</td></tr>
+    <tr><td><code>ResultShape</code></td><td><code>IReadOnlyList&lt;SelectOutputField&gt;?</code></td><td>The effective output surface when an explicit <code>select</code> is present.</td></tr>
+  </tbody>
+</ApiTable>
+
+## ResultShape fields
+
+Each `SelectOutputField` describes one output column:
+
+| Field | Meaning |
+|---|---|
+| `SourceName` | The public/source field the client requested (e.g. `CustomerFullName`). |
+| `SourcePropertyName` | The entity property it resolves to. |
+| `OutputName` | The response field name — the alias when present, otherwise the source name. |
+
+When the result-shape JSON converter is registered (`AddFlexQuerySecurity()` /
+`AddFlexQueryJson()`), serialization enforces exactly this surface: anything outside it is
+stripped from the payload, with aliases applied.
+
+## Serialization example
+
+```json
+{
+  "data": [ /* 20 rows */ ],
+  "totalCount": 137,
+  "page": 3,
+  "pageSize": 20,
+  "totalPages": 7,
+  "hasNextPage": true,
+  "hasPreviousPage": true
+}
+```
+
+(The `resultCount` key is only present when a result-shape count was computed — grouped
+or distinct queries.)
+
+Clients can build complete pagination UIs from this envelope alone: page numbers
+(`totalPages`), next/previous buttons (`hasNextPage`/`hasPreviousPage`), and row counts
+(`totalCount`).
+
+## Grouped queries
+
+Grouped queries produce **one `Data` entry per group**. Each row carries the group key(s)
+plus every aggregate under its alias, and the paging metadata is computed over groups:
+`totalCount` remains the underlying source-row count, `resultCount` is the number of
+groups, and `totalPages`/`hasNextPage` follow from the group count.
+
+```json
+{
+  "data": [
+    { "status": "Active", "sumTotal": 1250.00, "countOrders": 14 }
+  ],
+  "totalCount": 417,
+  "resultCount": 1,
+  "page": 1,
+  "pageSize": 20,
+  "totalPages": 1,
+  "hasNextPage": false,
+  "hasPreviousPage": false
+}
+```
+
+Ungrouped aggregate queries (`?aggregate=...` without `groupBy`) do not produce group rows;
+their single-row totals appear in a separate `aggregates` object keyed by the aggregate's
+source field (or `"all"`), with inner entries keyed by alias:
+
+```json
+{
+  "data": [ ...paged matching records... ],
+  "aggregates": { "TotalAmount": { "sumRevenue": 1250.00 } },
+  "totalCount": 417,
+  "page": 1,
+  "pageSize": 20
+}
+```
+
+See [Grouping & Aggregates](/docs/guides/grouping) for the full semantics.
+
+## Keyset pagination
+
+When keyset mode is active, `NextCursorToken` carries the opaque, versioned cursor built
+from the sort-key values of the last row on the page. When a page comes back empty, the
+token is `null` — the standard end-of-scroll signal. Pass it back as the `cursor`
+parameter — see [Keyset Pagination](/docs/guides/keyset-pagination).
+
+## Complete worked example
+
+Shaping a stable public response from the envelope:
+
+```csharp
+var result = await db.Customers
+    .FlexQueryAsync(parameters, cancellationToken: cancellationToken);
+
+return Ok(new
+{
+    items = result.Data,
+    pagination = new
+    {
+        page = result.Page,
+        pageSize = result.PageSize,
+        total = result.TotalCount,
+        totalPages = result.TotalPages,
+    },
+    nextCursor = result.NextCursorToken,
+});
+```
+
+## Common mistakes
+
+<Callout variant="warning" title="Reading TotalCount when counting is disabled">
+  With <code>includeCount=false</code>, <code>TotalCount</code> is null — clients using it
+  for "N results" UIs must handle that. Only rely on it when counting is enabled.
+</Callout>
+
+<Callout variant="warning" title="Assuming Aggregates is populated">
+  <code>Aggregates</code> is populated only for grouped queries. On plain queries it is
+  null — guard before reading.
+</Callout>

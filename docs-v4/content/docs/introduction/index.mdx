@@ -1,0 +1,103 @@
+---
+title: Overview
+description: What FlexQuery.NET is, why it exists, and how the pieces fit together.
+section: Introduction
+---
+
+import { Callout } from '@/components/callout'
+
+# FlexQuery.NET
+
+Every dynamic API eventually reimplements the same query engine: optional filters that
+compose, sortable columns, paging metadata, field selection, related-data loading — each
+one hand-built, each one a potential injection surface. FlexQuery.NET is that engine, done
+once: it transforms query parameters sent by clients into secure, server-side expression
+trees that translate to SQL.
+
+<Callout variant="tip" title="One line of code">
+  <code>GET /api/customers?filter=Status:eq:Active&amp;sort=LastName:asc&amp;page=1&amp;pageSize=20&amp;select=Id,FirstName,Email</code>
+  is handled by a single <code>FlexQueryAsync</code> call.
+</Callout>
+
+## Why FlexQuery.NET
+
+- **No OData dependency** — powerful querying without OData's complexity, setup, and tight
+  coupling.
+- **100% server-side** — all operations translate to SQL via expression trees. Nothing is
+  fetched and filtered in memory; there is zero client evaluation.
+- **Security first** — declare allowed and blocked fields per endpoint; every request is
+  validated against your model and governance rules before any query runs.
+- **Multi-format** — the native DSL, FQL (SQL-inspired), and MiniOData syntaxes on the same
+  endpoint, all parsing to one internal model.
+- **Multiple providers** — Entity Framework Core, Dapper, or any `IQueryable` source.
+- **Observable** — pipeline events, timing reports, and SQL previews built in.
+
+## How it works
+
+1. A client sends query parameters (`filter`, `sort`, `page`, `select`, …) or a JSON
+   request model.
+2. FlexQuery parses them into a `QueryOptions` model using the selected query syntax.
+3. Validation checks every field and operator against your entity model and governance
+   rules — rejected requests never reach the database.
+4. The provider (EF Core or Dapper) applies the options as expressions or generated SQL.
+5. A `QueryResult<T>` returns data plus paging metadata, aggregates, and cursor tokens.
+
+The full pipeline is described in [Execution Pipeline](/docs/concepts/pipeline).
+
+## Package ecosystem
+
+| Package | Purpose |
+|---|---|
+| `FlexQuery.NET` | Core query engine — parsing, filtering, sorting, paging, projection, validation |
+| `FlexQuery.NET.EntityFrameworkCore` | Async execution, includes, and typed DTO queries for EF Core |
+| `FlexQuery.NET.Dapper` | SQL generation and execution for Dapper |
+| `FlexQuery.NET.AspNetCore` | ASP.NET Core integration with `[FieldAccess]` security attributes |
+| `FlexQuery.NET.Diagnostics` | Execution diagnostics, timing, and observability |
+| `FlexQuery.NET.OpenApi` | OpenAPI/Swagger documentation for FlexQuery endpoints |
+| `FlexQuery.NET.Adapters.AgGrid` | AG Grid Server-Side Row Model request/response adapter |
+| `FlexQuery.NET.Adapters.Kendo` | Kendo UI DataSource request adapter |
+| `FlexQuery.NET.Parsers.Fql` | FQL (FlexQuery Language) syntax parser |
+| `FlexQuery.NET.Parsers.MiniOData` | Lightweight OData-compatible syntax parser |
+
+All packages target .NET 6, .NET 8, and .NET 10 (`FlexQuery.NET.OpenApi` targets .NET 9
+and .NET 10).
+
+## The shape of an endpoint
+
+Everything below is a complete ASP.NET Core controller — this is genuinely all it takes:
+
+```csharp
+using FlexQuery.NET;
+using FlexQuery.NET.Models;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+
+[ApiController]
+[Route("api/customers")]
+public sealed class CustomersController(AppDbContext db) : ControllerBase
+{
+    [HttpGet]
+    public async Task<IActionResult> Get(
+        [FromQuery] FlexQueryParameters parameters,
+        CancellationToken cancellationToken)
+    {
+        var result = await db.Customers
+            .AsNoTracking()
+            .FlexQueryAsync(parameters, cancellationToken: cancellationToken);
+
+        return Ok(result);
+    }
+}
+```
+
+From there, capability grows by configuration — governance sets, expand, aggregates,
+keyset paging — not by writing new endpoint code.
+
+## Where to next
+
+- [Installation](/docs/getting-started/installation) — add the packages to your project.
+- [First Query](/docs/getting-started/first-query) — build a working endpoint in minutes.
+- [Configuration](/docs/concepts/configuration) — global defaults and per-request
+  overrides.
+- [Query Syntax](/docs/concepts/query-syntax) — the three supported query languages.
+- [Security & Governance](/docs/security) — locking endpoints down.

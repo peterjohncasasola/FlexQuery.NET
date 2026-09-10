@@ -1,0 +1,165 @@
+---
+title: API Reference
+description: Curated reference of the public FlexQuery.NET v4 surface per package.
+section: Resources
+---
+
+import { ApiTable } from '@/components/api-table'
+
+# API Reference
+
+A curated reference of the public developer-facing surface. Internal types are omitted; only
+APIs necessary or useful for building on FlexQuery.NET are listed.
+
+## FlexQuery.NET (core)
+
+### Entry points
+
+| Member | Description |
+|---|---|
+| `FlexQueryCore.Configure(Action<FlexQueryOptions>?)` | Global options; immutable after first call. |
+| `Query.Create()` | Fluent `FluentQueryBuilder` (implicit -> `QueryOptions`). |
+| `FlexQueryMapping.Configure(Action<IQueryMappingRegistry>)` | Global type-map registry. |
+
+### Request models (`FlexQuery.NET.Models`)
+
+| Type | Purpose |
+|---|---|
+| `FlexQueryParameters` | Query-string binding model (`Filter`, `Sort`, `Select`, `Include`, `Expand`, `GroupBy`, `Having`, `Aggregate`, `Page`, `PageSize`, `IncludeCount`, `Distinct`, `Mode`, `Cursor`, `UseKeysetPagination`). |
+| `FlexQueryRequest` | Strongly-typed request model with `ToQueryOptions()`. |
+| `QueryOptions` | Parsed options consumed by the pipeline. |
+| `QueryResult<T>` | Result envelope (`Data`, `TotalCount`, `ResultCount`, `Page`, `PageSize`, `TotalPages`, `HasNextPage`, `HasPreviousPage`, `Aggregates`, `NextCursorToken`, `ResultShape`). |
+
+### Sync pipeline (`FlexQuery.NET` extensions)
+
+| Method | Description |
+|---|---|
+| `Apply<T>(query, options)` | Applies the full pipeline. |
+| `ApplyFilter<T>` / `ApplySort<T>` / `ApplyPaging<T>` / `ApplySelect<T>` | Individual stages. |
+| `FlexQuery<T>(query, parameters / options, configure?)` | Synchronous end-to-end execution. |
+
+### Request conversion
+
+| Method | Description |
+|---|---|
+| `FlexQueryParametersExtensions.ToQueryOptions()` / `.ToQueryOptions(QuerySyntax?)` | Convert bound parameters. |
+| `FlexQueryRequestExtensions.ToQueryOptions()` | Convert a typed request. |
+
+### Result helpers (`QueryResultExtensions`)
+
+| Method | Description |
+|---|---|
+| `ToProjectedQueryResult<TSource, TProjected>(...)` | Re-projects a result into another element type. |
+| `ToObjectResult(Async)<T>` | Erases `T` to `object` for polymorphic endpoints. |
+| `ToDynamicResult(Async)<T>` | Erases `T` to `dynamic`. |
+
+### Validation helpers
+
+| Method | Description |
+|---|---|
+| `ValidationExtensions.Validate(options, entityType[, execOptions])` | Runs the rule pipeline, returns `ValidationResult`. |
+| `ValidationExtensions.ValidateOrThrow(...)` | Runs the pipeline, throws `QueryValidationException`. |
+| `options.ValidateSafe<T>(...)` | Non-throwing validation for staged rollouts. |
+
+### Fluent builders (`FlexQuery.NET.Builders.Fluent`)
+
+| Type | Members |
+|---|---|
+| `FluentQueryBuilder` | `Filter(Action<FilterGroupBuilder>)`, `Sort(Action<SortBuilder>)`, `Select(params string[])`, `Include(params string[])`, `Expand(Action<ExpandBuilder>)`, `Mode`, `GroupBy`, `Aggregate(Action<AggregateBuilder>)`, `Having(function, field, op, value)`, `Distinct`, `Page`, `UseKeysetPagination`, `DisablePaging`, `Build()`, implicit `QueryOptions` conversion. |
+| `FilterGroupBuilder` | `Equal`, `NotEqual`, `GreaterThan`, `GreaterThanOrEqual`, `LessThan`, `LessThanOrEqual`, `Contains`, `StartsWith`, `EndsWith`, `In`, `NotIn`, `IsNull`, `IsNotNull`, `Between`, `And(g => ...)`, `Or(g => ...)`. |
+| `FilterBuilder` / `FilterConditionBuilder<TParent>` | `Field/And/Or(name)`, terminators `Eq`, `Neq`, `Contains`, `StartsWith`, `EndsWith`, `GreaterThan`, `GreaterThanOrEqual`, `LessThan`, `LessThanOrEqual`, `In`, `Between`, `IsNull`, `NotNull`, `Any(b => ...)`, `All(b => ...)`, `Not()`, `AndGroup`, `OrGroup`. |
+| `SortBuilder` | `Ascending(field)`, `Descending(field)`. |
+| `AggregateBuilder` | `Sum`, `Count`, `Avg`, `Min`, `Max` (field, alias). |
+| `ExpandBuilder` | `Path(path, filter?, configureChildren?)`. |
+
+### Keyset (`FlexQuery.NET`)
+
+| Method | Description |
+|---|---|
+| `SeekAfter<T, TKey>(query, cursor)` | Keyset predicate on an ordered queryable. |
+
+### Exceptions (`FlexQuery.NET.Exceptions`)
+
+`FlexQueryException` (base), `QueryParseException`, `FlexQueryParseException`,
+`DslParseException`, `FqlParseException`, `MiniODataParseException`,
+`QueryValidationException`, `ParserNotRegisteredException`.
+
+## FlexQuery.NET.EntityFrameworkCore
+
+| Member | Description |
+|---|---|
+| `FlexQueryEFCore.Setup()` | Registers EF Core operator handlers. |
+| `FlexQueryEFCore.Configure(Action<FlexQueryEfCoreOptions>?)` | Provider options (`UseNoTracking`). |
+| `FlexQueryAsync<T>(query, parameters, configure?, ct)` | Execute (dynamic results). |
+| `FlexQueryAsync<T>(query, QueryOptions, configure?, ct)` | Execute pre-parsed options. |
+| `FlexQueryAsync<TEntity, TResponse>(query, ...)` | Typed DTO execution (4 overloads). |
+| `ApplyExpand<T>(query, options)` | Include pipeline from expand tree. |
+| `ToSqlPreview(query)` / `ExplainProjection(query, options)` | SQL and projection inspection. |
+| `UseEfCoreOperators(options)` | Registers the `like` handler on a hand-built options object. |
+
+## FlexQuery.NET.Dapper
+
+| Member | Description |
+|---|---|
+| `FlexQueryDapper.Configure(Action<FlexQueryDapperOptions>?)` | Global Dapper config (`Model`, `CommandTimeout`). |
+| `FlexQueryAsync<T>(connection, parameters, configure?, ct)` | Execute (dynamic results). |
+| `FlexQueryAsync<T>(connection, IDictionary<string, StringValues>, configure?, ct)` | Execute from raw query-string values. |
+| `FlexQueryAsync<T>(connection, QueryOptions, configure?, ct)` | Execute pre-parsed options. |
+| `FlexQueryAsync<TEntity, TResponse>(connection, ...)` | Typed DTO execution (4 overloads). |
+| `ModelBuilder.Entity<T>()` / `ApplyConfiguration<T>()` / `ApplyConfigurationsFromAssembly()` | Model mapping. |
+| `EntityTypeBuilder<T>.ToTable / HasKey / Property / Ignore / HasMany...` | Per-entity mapping. |
+
+## FlexQuery.NET.AspNetCore
+
+| Member | Description |
+|---|---|
+| `AddFlexQuerySecurity(this IMvcBuilder)` | Registers `FieldAccessFilter` + result-shape JSON converter. |
+| `AddFlexQueryJson(this IMvcBuilder)` | Result-shape JSON converter only. |
+| `AddFlexQuery(services, configure?)` | Combined global config registration. |
+| `[FieldAccess]` | Per-endpoint governance attribute (11 properties incl. `AllowedIncludes`). |
+| `GetFlexQueryExecutionOptions(HttpContext)` | Reads resolved execution options. |
+
+## FlexQuery.NET.OpenApi
+
+| Member | Description |
+|---|---|
+| `AddFlexQueryOpenApi(services)` | Registers schema/operation transformers. |
+| `AddFlexQuery(this OpenApiOptions)` | Attaches transformers to the OpenAPI document pipeline. |
+
+## FlexQuery.NET.Diagnostics
+
+| Member | Description |
+|---|---|
+| `IFlexQueryExecutionListener` | Four ValueTask hooks: `QueryParsedAsync`, `QueryTranslatedAsync`, `QueryExecutedAsync`, `QueryMaterializedAsync`. |
+| `ConsoleExecutionListener` | Console output listener. |
+| `FlexQueryDiagnosticsCollector` | In-memory collector; `BuildReport(provider, translator)`, `Clear()`. |
+
+## Adapters
+
+### AgGrid (`FlexQuery.NET.Adapters.AgGrid`)
+
+`AgGridRequest.ToQueryOptions()`, `JsonElement.ToQueryOptions()`,
+`ApplyAgGridRequest(options)`, `ToAgGridServerSideResponse(...)`.
+
+### Kendo (`FlexQuery.NET.Adapters.Kendo`)
+
+`KendoRequest.ToQueryOptions()`, `JsonElement.ToQueryOptions()`,
+`ApplyKendoRequest(options)`.
+
+## Parsers
+
+| Member | Description |
+|---|---|
+| `Fql.Register()` | Registers the FQL parser (`FlexQuery.NET.Parsers.Fql`). |
+| `MiniOData.Register()` | Registers the MiniOData parser (`FlexQuery.NET.Parsers.MiniOData`). |
+| `QuerySyntax` | `NativeDsl` / `Fql` / `MiniOData`. |
+| `MiniODataRequest` | Typed MiniOData request (`Filter`, `OrderBy`, `Select`, `Expand`, `Top`, `Skip`, `Count`) with `ToQueryOptions()`. |
+
+## Governance & security
+
+| Member | Description |
+|---|---|
+| `QueryGovernanceOptions` | All governance sets (see [Security](/docs/security)). |
+| `BaseQueryOptions` | Mapping (`MapField`, `CreateMap`), paging defaults, `QuerySyntax`, `DisablePaging`, `Listener`. |
+| `FlexQueryOptions` | Global defaults: `MaxPageSize` (1000), `DefaultPageSize` (20), `IncludeTotalCount`, `StrictFieldValidation`, `MaxFieldDepth` (5), `DefaultQuerySyntax` (NativeDsl), `CreateMap`. |
+| `FilterOperators` | Canonical operator constants and normalization. |

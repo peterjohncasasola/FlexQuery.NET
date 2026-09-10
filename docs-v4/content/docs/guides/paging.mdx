@@ -1,0 +1,134 @@
+﻿---
+title: Paging
+description: Offset paging with page/pageSize, count control, distinct, and deterministic ordering.
+---
+
+# Paging
+
+Every query is paged by default. The offset pair — `page` plus `pageSize` — slices one
+window out of the sorted, complete result set, and the response carries the totals clients
+need to drive pagination controls.
+
+## Parameters
+
+| Wire parameter | Meaning | Default | Behavior |
+|---|---|---|---|
+| `page` | 1-based page number | `1` | Out-of-range and non-positive values clamp to the first page |
+| `pageSize` | rows returned per page | server default `20` | Clamped to `1` … the configured ceiling (default `1000`) |
+
+```http
+GET /api/customers?page=2&pageSize=20
+```
+
+```json
+{
+  "data": [ /* up to 20 rows */ ],
+  "totalCount": 137,
+  "page": 2,
+  "pageSize": 20,
+  "totalPages": 7,
+  "hasNextPage": true,
+  "hasPreviousPage": true
+}
+```
+
+- `totalCount` — rows matching the filters **before** paging (and before grouping, when
+  relevant; see [Grouping](/docs/guides/grouping) for the grouped-count nuance). Null if
+  counting is switched off.
+- `totalPages`, `hasNextPage`, `hasPreviousPage` are computed from the counts — never
+  trust them when `totalCount` is null.
+- Asking past the end gives an empty `data` and `hasNextPage: false` — it is not an
+  error; clients can probe total length safely.
+
+## Sizing limits
+
+The ceiling is configuration, not wire input — clients can never widen it:
+
+```csharp
+FlexQueryCore.Configure(options =>
+{
+    options.DefaultPageSize = 20;   // used when the client omits pageSize
+    options.MaxPageSize = 1000;     // clamps any requested pageSize down
+});
+```
+
+A per-request override (`opt.MaxPageSize = 50` in the `configure` delegate of a provider
+call) tightens it for one endpoint; looser values are still clamped. Page size is
+clamped down at parse time with no error — a client asking `pageSize=5000` simply gets
+the maximum.
+
+## Turning counts off
+
+```http
+GET /api/customers?page=1&pageSize=20&includeCount=false
+```
+
+The count query is skipped (one less round-trip per page), `totalCount`/`totalPages`
+are null. The same applies globally: `options.IncludeTotalCount = false` in startup
+configuration makes counting opt-in, while `includeCount=true` on the wire asks for it
+per request. Use `includeCount=false` for infinite-scroll UIs where only the first page
+(or none at all) needs the total.
+
+## Sorting is not optional
+
+Paged results must be sorted to be stable. Add a deterministic sort on every paged
+query — ideally ending in a unique column and enforced endpoint-side with
+`DefaultSortField`:
+
+```http
+GET /api/customers?sort=LastName:asc,Id:asc&page=2&pageSize=20
+```
+
+Without a total order, rows whose sort keys tie can shift positions between OFFSET
+calculations, and duplicates or gaps appear across pages.
+
+## Distinct
+
+```http
+GET /api/customers?distinct=true&select=City
+```
+
+`distinct` applies before projection so that only matching columns are compared (EF
+uses the provider's `DISTINCT`; Dapper emits `SELECT DISTINCT`). It composes with
+paging and counting — with `groupBy` present, DISTINCT acts on the grouped rows.
+
+## Full round-trip example
+
+```csharp
+[HttpGet]
+public async Task<IActionResult> Get(
+    [FromQuery] FlexQueryParameters parameters,
+    CancellationToken cancellationToken)
+{
+    var result = await db.Customers
+        .AsNoTracking()
+        .FlexQueryAsync(parameters, opt =>
+        {
+            opt.DefaultPageSize = 20;
+            opt.MaxPageSize = 200;
+            opt.AllowedFields = ["Id", "FirstName", "LastName", "Email", "City", "Status"];
+            opt.DefaultSortField = "Id";
+        }, cancellationToken: cancellationToken);
+
+    // QueryResult<object> — Data, TotalCount, Page, PageSize, TotalPages, HasNextPage, HasPreviousPage
+    return Ok(result);
+}
+```
+
+Clients that only need a "next page" button can ignore `totalCount` entirely and poll
+`hasNextPage` — the pattern that pairs naturally with
+[keyset pagination](/docs/guides/keyset-pagination) below.
+
+## Offset vs keyset
+
+Offset paging with deep `page` values forces the database to count and discard skipping
+rows; `page=10000` is never fast. When a UI only scrolls forward (or renders an
+endless list), prefer the cursor-based mode — see
+[Keyset Pagination](/docs/guides/keyset-pagination), which documents the same
+`data`/`totalCount` envelope with `nextCursorToken` plus the validation rules that mix
+offset and cursor parameters (an explicit `page` and a `cursor` together are rejected as
+a `PAGINATION_MODE_CONFLICT`).
+
+## Related
+
+- [Keyset Pagination](/docs/guides/keyset-pagination) · [Query Result](/docs/concepts/query-result)

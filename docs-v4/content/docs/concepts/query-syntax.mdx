@@ -1,0 +1,212 @@
+---
+title: Query Syntax
+description: The three query languages - DSL, FQL, and MiniOData - and how to select them.
+section: Core Concepts
+---
+
+import { Callout } from '@/components/callout'
+
+# Query Syntax
+
+FlexQuery accepts three query languages on the same endpoint. All three parse into the same
+internal `QueryOptions` model, and DSL and FQL expose the full feature set — filtering,
+sorting, projection, include/expand, grouping, aggregates, paging — interchangeably.
+MiniOData is intentionally a lighter compatibility layer: it covers filter, sort, select,
+and relationship loading (its `$expand` maps to plain `include`), while grouping,
+aggregates, filtered expansion, and keyset paging remain DSL/FQL features. The syntax is a
+client-facing choice, not a server-side fork.
+
+| Syntax | Enum value | Style | Extra package |
+|---|---|---|---|
+| Native DSL | `QuerySyntax.NativeDsl` | `filter=Status:eq:Active` | built-in |
+| FQL | `QuerySyntax.Fql` | `filter=Status = 'Active'` | `FlexQuery.NET.Parsers.Fql` |
+| MiniOData | `QuerySyntax.MiniOData` | `$filter=Status eq 'Active'` | `FlexQuery.NET.Parsers.MiniOData` |
+
+**Choosing a syntax**: DSL is compact and URL-friendly — the default. FQL reads like SQL and
+suits developer-facing tools. MiniOData eases migration from OData consumers.
+
+## Selecting the syntax
+
+### Globally
+
+```csharp
+FlexQueryCore.Configure(options =>
+{
+    options.DefaultQuerySyntax = QuerySyntax.Fql;
+});
+```
+
+### Per request
+
+```csharp
+var result = await db.Customers.FlexQueryAsync(
+    parameters,
+    opt => opt.QuerySyntax = QuerySyntax.MiniOData,
+    cancellationToken: cancellationToken);
+```
+
+## Registering parsers
+
+The DSL parser is built in. FQL and MiniOData live in separate packages and must be
+registered once at startup:
+
+```csharp
+using FlexQuery.NET.Parsers.Fql;
+using FlexQuery.NET.Parsers.MiniOData;
+
+Fql.Register();
+MiniOData.Register();
+```
+
+Registration must happen before any execution; requesting an unregistered syntax throws
+`ParserNotRegisteredException`.
+
+## Parameter map
+
+DSL and FQL share the same parameter keys; MiniOData uses its `$`-prefixed spellings for
+the expressions it supports.
+
+| Parameter | DSL example | FQL example | MiniOData |
+|---|---|---|---|
+| Filter | `filter=Status:eq:Active` | `filter=Status = 'Active'` | `$filter=Status eq 'Active'` |
+| Sort | `sort=Name:asc,Age:desc` | `sort=Name ASC, Age DESC` | `$orderby=Name asc, Age desc` |
+| Select | `select=Id,Name,Orders.Total` | `select=Id,Name` | `$select=Id,Name` |
+| Include | `include=Orders` | `include=Orders` | `$expand=Orders` |
+| GroupBy | `groupBy=Status` | `groupBy=Status` | — |
+| Aggregate | `aggregate=sum:Total:TotalRevenue` | `aggregate=SUM(Total) AS TotalRevenue` | — |
+| Having | `having=sum:Total:gt:100` | `having=SUM(Total) > 100` | — |
+| Expand (filtered) | `expand=Orders(filter=Status:eq:'Active'; sort=OrderDate:desc; take=5)` | same options shape, FQL expressions inside (`filter`/`sort`/`take`) | — |
+| Page / PageSize | `page=1&pageSize=20` | same | `$top` / `$skip` (translated to page/size) |
+| Distinct | `distinct=true` | same | — |
+| Mode | `mode=flat` | same | — |
+| Cursor / keyset | `useKeysetPagination=true&cursor=...` | same | — |
+
+<Callout variant="note" title="MiniOData scope">
+  The MiniOData parser supports <code>$filter</code>, <code>$orderby</code>,
+  <code>$select</code>, <code>$top</code>, <code>$skip</code>, <code>$count</code>, and
+  <code>$expand</code> (flat navigation paths — nested expand options are not supported).
+  Grouping, aggregates, having, and filtered expansion are DSL/FQL features. A typed
+  <code>MiniODataRequest</code> model (Filter, OrderBy, Select, Expand, Top, Skip, Count)
+  with <code>ToQueryOptions()</code> is available for strongly-typed consumers.
+</Callout>
+
+## DSL filter grammar
+
+```
+filter    = condition ((AND|OR) condition)*
+condition = field:operator:value
+field     = property.path (dot-separated navigation)
+value     = literal (unquoted single token or 'quoted string')
+```
+
+- Logical operators: the `AND` / `OR` keywords **and** the symbolic `&` / `|` forms are both
+  accepted; `AND` has higher precedence than `OR` (the parser builds AND-groups inside
+  OR-groups).
+- Collection operators (`any`, `all`, `count`) target collection navigations:
+  `Orders:any:Total:gt:100`.
+- Values containing spaces or reserved keywords must be quoted: `City:eq:'New York'`.
+- The keywords `AND`/`OR` are reserved — an unquoted value that starts with one is rejected
+  with a hint to quote it (`name:eq:"AND"`).
+- Null-check operators take no value: `DeletedAt:isnull`.
+
+## FQL filter grammar
+
+```
+filter     = condition ((AND|OR) condition)*
+condition  = field op value | field [NOT] IN (...) | field [NOT] BETWEEN a AND b
+             | field IS [NOT] NULL | field [NOT] LIKE '%pattern%'
+op         = = | != | > | >= | < | <= | CONTAINS | STARTSWITH | ENDSWITH
+collection = field ANY (…) | field ALL (…)
+```
+
+FQL is SQL-inspired: values are quoted strings (or numbers/booleans), operators are words or
+symbols, and parentheses group expressions:
+
+```
+filter=Status = 'Active' AND (Age >= 18 OR City = 'Berlin')
+```
+
+## MiniOData filter grammar
+
+```
+filter    = comparison ((and|or) comparison)* | not (filter)
+comparison = field op value
+            | field [not] in (v1, v2, ...)
+            | field is null | field is not null
+op        = eq | ne | gt | ge | lt | le
+functions = contains(field,'x') | startswith(field,'x') | endswith(field,'x')
+paths     = slash-separated: Orders/TotalAmount gt 100
+```
+
+```
+$filter=Status eq 'Active' and Age ge 18
+```
+
+The parser is deliberately small: flat paths and the operators above. It does not implement
+the full OData vocabulary (`$apply`, nested `$expand` options, etc.).
+
+## Aggregate syntax
+
+DSL aggregates use the `aggregate` parameter with `function:field[:alias]` triples; FQL uses
+`FUNCTION(field) [AS alias]`:
+
+```
+aggregate=sum:Total:TotalRevenue,count:Id          (DSL)
+aggregate=SUM(Total) AS TotalRevenue, COUNT(Id)    (FQL)
+```
+
+- Functions: `sum`, `count`, `avg` (or `average`), `min`, `max`.
+- Without an explicit alias, the output field is the PascalCase field + function
+  (`sum:Total` → `TotalSum`).
+- Aggregates combine with `groupBy`; `having` references declared aggregates:
+  `having=sum:Total:gt:100` (DSL) or `having=SUM(Total) > 100` (FQL).
+
+## Sort syntax
+
+Both direction spellings are accepted:
+
+```
+sort=Name:asc,Age:desc      (colon form)
+sort=Name ASC, Age DESC     (space form)
+```
+
+Aggregate sorts use `function:target:direction` (DSL) or `SUM(Field) DESC` (FQL) — see
+[Sorting](/docs/guides/sorting).
+
+## Complete worked example
+
+One endpoint, three syntaxes, same result:
+
+```csharp
+[HttpGet("api/customers")]
+public async Task<IActionResult> Get(
+    [FromQuery] FlexQueryParameters parameters,
+    CancellationToken cancellationToken)
+{
+    var result = await db.Customers
+        .AsNoTracking()
+        .FlexQueryAsync(parameters, cancellationToken);
+    return Ok(result);
+}
+```
+
+```http
+GET /api/customers?filter=Status:eq:Active AND Age:gte:18        (DSL)
+GET /api/customers?filter=Status:eq:Active & Age:gte:18          (DSL, symbolic)
+GET /api/customers?filter=Status = 'Active' AND Age >= 18        (FQL)
+GET /api/customers?$filter=Status eq 'Active' and Age ge 18      (MiniOData)
+```
+
+All four produce identical results.
+
+## Common mistakes
+
+<Callout variant="warning" title="Mixing syntaxes in one request">
+  <code>filter=Status = 'Active'&amp;sort=Name:asc</code> mixes FQL filter syntax with DSL
+  sort syntax. The whole request parses with one syntax — use one language per request.
+</Callout>
+
+<Callout variant="warning" title="Forgetting parser registration">
+  A global <code>DefaultQuerySyntax = QuerySyntax.Fql</code> without
+  <code>Fql.Register()</code> throws <code>ParserNotRegisteredException</code> on first use.
+</Callout>

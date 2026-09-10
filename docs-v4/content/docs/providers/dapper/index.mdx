@@ -1,0 +1,187 @@
+﻿---
+title: Dapper Provider
+description: Direct SQL generation and split-query hydration for Dapper-backed APIs.
+---
+
+import { Callout } from '@/components/callout'
+
+# Dapper Provider
+
+`FlexQuery.NET.Dapper` is the SQL-first provider: FlexQuery generates the SQL itself
+(dialect-aware, fully parameterized) and executes it through Dapper on a `DbConnection`.
+The same wire grammar and options model from the other pages apply; the differences are
+in what you must configure — the mapping metadata and, implicitly, the dialect you get.
+
+## Setup
+
+```bash
+dotnet add package FlexQuery.NET.Dapper
+```
+
+`using FlexQuery.NET.Dapper;`
+
+Because there is no DbContext to inspect, Dapper needs a model describing your tables,
+columns, and relationships. Conventions cover the common case (table = class name with an
+optional pluralized variant if it resolves, `{Entity}Id` foreign keys); attributes and the
+builder model cover the rest.
+
+```csharp
+using FlexQuery.NET.Dapper;
+
+// app startup — configure the model and defaults once
+FlexQueryDapper.Configure(cfg =>
+{
+    cfg.Model.Entity<Customer>()
+        .ToTable("Customers")
+        .HasKey(c => c.Id)
+        .HasMany(c => c.Orders)
+        .HasForeignKey("CustomerId");
+
+    cfg.Model.Entity<Order>()
+        .ToTable("Orders")
+        .HasKey(o => o.Id)
+        .HasMany(o => o.OrderItems)
+        .HasForeignKey("OrderId");
+
+    cfg.Model.Entity<Product>()
+        .ToTable("Products")
+        .HasKey(p => p.Id)
+        .Property(p => p.SKU).HasColumnName("product_sku");
+});
+```
+
+Equivalent attribute style on the entities themselves (no configure call required):
+`[Table("Customers")]` and `[Column("product_sku")]` (the annotations Dapper conventions
+understand) — plus the convention heuristics (`Id`-style keys, `{Principal}Id` foreign
+keys) covering the rest.
+
+## The endpoint
+
+`FlexQueryAsync` extends any `DbConnection`:
+
+```csharp
+using Dapper;            // you add it yourself — required
+using FlexQuery.NET.Dapper;
+
+[HttpGet]
+public async Task<IActionResult> Get(
+    [FromQuery] FlexQueryParameters parameters,
+    [FromServices] IDbConnectionProvider connections,
+    CancellationToken cancellationToken)
+{
+    await using var connection = connections.Open();
+
+    var result = await connection.FlexQueryAsync<Customer>(
+        parameters,
+        opt =>
+        {
+            opt.AllowedFields = ["Id", "FirstName", "LastName", "Email", "City", "Status"];
+            opt.MaxPageSize = 200;
+            opt.DefaultSortField = "Id";
+        },
+        cancellationToken: cancellationToken);
+
+    return Ok(result);
+}
+```
+
+Notes on the execution behavior visible from here:
+
+**Connections:** FlexQuery opens a closed `DbConnection` for you (it will not close it
+again, so `await using` scoping as shown above is the clean pattern). Command text,
+parameters, and results are plain Dapper — the result shape mirrors EF Core's with
+dynamic rows.
+
+**The receiver is only `DbConnection`** — that's what dialect detection needs (a concrete
+provider type).
+
+## Supported providers
+
+The dialect is resolved from the connection type at runtime — there is no manual dialect
+switch:
+
+| Connection | Paging | Quoting |
+|---|---|---|
+| SQL Server | `OFFSET n ROWS FETCH NEXT m ROWS ONLY`, `TOP` | `[name]` |
+| PostgreSQL | `LIMIT m OFFSET n` | `"name"` |
+| SQLite | `LIMIT m OFFSET n` | `"name"` |
+| MySQL / MariaDB | `LIMIT m OFFSET n` | backticks |
+| Oracle | `OFFSET n ROWS FETCH NEXT m ROWS ONLY` | `"NAME"` |
+
+Text comparisons (`contains`, `startswith`, `endswith`, `like`) are emitted as the
+dialect's `LIKE` with parameterized `%` patterns; effective case-sensitivity follows the
+database collation.
+
+An unsupported connection type throws `NotSupportedException` at execution.
+
+## Query execution model
+
+- **Single entity queries** are generated as one joined select: projection columns from
+  your `select`/type-map surface, `WHERE` from `filter` (case-insensitive contains/
+  `IN`/`BETWEEN`/collection checks via `EXISTS`), `GROUP BY`/`HAVING`/ORDER BY from the
+  respective parameters, and dialect-correct paging.
+- **Includes/expand** run as additional (split, not joined) queries per level —
+  `SELECT ... WHERE CustomerId IN (p0…)` for the keys on the current page — so a page of
+  20 customers costs exactly 21 queries no matter how many orders exist, instead of one
+  giant cartesian join. `take=…` on an expand branch is implemented with
+  `ROW_NUMBER() OVER PARTITION` in the child query, and the per-branch `filter`/sort
+  fold into the child `WHERE`/`ORDER BY`.
+- **Counting**: `totalCount` is a separate `SELECT COUNT...` on the un-paged filtered
+  query when `includeCount` requests it; grouped/distinct queries get their post-shaping
+  count via the same mechanism.
+
+## Mapping dynamic rows to your model
+
+`FlexQueryAsync<T>(...)` yields `QueryResult<object>`: each row is a dynamic object whose
+fields are the requested columns — filter on `Status` but `select=Id,Email`, and rows
+just expose `id`/`email`, under the alias if one was given. With no explicit `select`
+the full entity surface is projected.
+
+Typed responses take a registered destination type — same pattern as EF:
+
+```csharp
+var result = await connection.FlexQueryAsync<Customer, CustomerSummaryDto>(
+    parameters, cancellationToken: cancellationToken);
+```
+
+Column-to-DTO property names follow the registered map (`ForMember`, `ForNavigation`) or
+exact-name convention; `ResultShape` (the effective output field list described by an
+explicit `select`) drives the JSON envelope, and DTO property types coerce values
+leniently (e.g. `int` ↔ `long`, `bool` from `0`/`1`, dates from strings). Keep the model
+configuration covering every entity reachable by `include`, since column mapping and
+child-key placement derive from it.
+
+## Governance, security, keyset
+
+All execution options (`AllowedFields`, `BlockedFields`, `AllowedIncludes`,
+`SortableFields`, role-based field access, `StrictFieldValidation`, `MaxPageSize`,
+`DefaultSortField`) work exactly as documented for the EF Core provider — validation
+happens before SQL generation, and rejection never produces a partially built command.
+
+Keyset cursors are built server-side; with Dapper the seek predicate merges into the root
+query itself — no offset counting at all.
+
+## Observability
+
+```csharp
+var result = await connection.FlexQueryAsync<Customer>(
+    parameters,
+    cfg => { cfg.LoggerFactory = loggerFactory; },
+    cancellationToken: cancellationToken);
+```
+
+Setting `LoggerFactory` logs every executed command (`Executing Dapper query` at
+Information level, category `"FlexQuery.NET.Dapper"`) with dialect-formatted SQL,
+parameter types and values — including split include/expand children, counts, and
+grand totals. The `Listener` (`IFlexQueryExecutionListener` on the options) exposes them
+programmatically.
+
+<Callout variant="warning" title="No synchronous FlexQuery">
+  All provider overloads are async. Synchronous <code>Dapper.Query</code>-style execution
+  is not part of this package.
+</Callout>
+
+## Related
+
+- [EF Core Provider](/docs/providers/ef-core) — the expression-tree engine
+- [Include](/docs/guides/include) · [Expand](/docs/guides/expand)

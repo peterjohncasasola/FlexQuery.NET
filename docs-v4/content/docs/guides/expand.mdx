@@ -1,0 +1,134 @@
+﻿---
+title: Expand
+description: Filtered, ordered, size-bounded related data — related rows that carry their own filter, sort, and take.
+---
+
+# Expand
+
+`include` loads a whole related collection. `expand` loads a **defined slice** of it:
+each branch of the graph can carry its own `filter`, `sort`, and `take` — "every
+customer, but only their three most recent delivered orders". This is the pattern behind
+dashboard cards, order-history previews, and any UI that shows a bounded slice of
+related data without dragging thousands of child rows across the wire.
+
+Expand replaces the old v3 filtered-includes approach — see
+[Migrating from v3](/docs/migration/v3-to-v4).
+
+## Grammar
+
+```http
+GET /api/customers?include=Orders&expand=Orders(filter=Status:eq:Delivered; sort=OrderDate:desc; take=3)
+```
+
+An expand entry is a dotted navigation path — at the top level or nested inside another
+entry's parentheses — optionally followed by an option block:
+
+```
+expand-entry: path [ "(" option *( ";"|"," option ) ")" ]
+option:       "filter=" <filter expression>
+            | "sort="   <sort expression>
+            | "take="   <integer>
+            | <child-path> "(" ... ")"        (nested expansion)
+```
+
+- Options inside a block are separated by `;` **or** `,` (they are trimmed — either
+  `take=3;sort=Id:desc` and `take=3; sort=Id:desc` parse fine; pick one style and stay
+  consistent).
+- `filter=` holds a filter expression in the request's syntax (a plain
+  `status:eq:Delivered` for DSL; URL-encode spaces inside expressions).
+- `sort=` holds a sort expression (`OrderDate:desc` or `OrderDate DESC`).
+- `take=` accepts any integer ≥ 0; `take=0` loads no children at all.
+- Paths are validated like every other navigation: they must be navigation properties,
+  every expand path must also appear in `include`, and a navigation may be expanded
+  **at most once** per query.
+
+## Worked example: bounded order history
+
+Model — `Customer` → `Orders` → (per-branch, filtered and capped) latest delivered
+orders:
+
+```http
+GET /api/customers?include=Orders&expand=Orders(filter=Status:eq:Delivered;sort=OrderDate:desc;take=3)
+```
+
+Response (shape):
+
+```json
+{
+  "data": [
+    {
+      "id": 4,
+      "firstName": "Ada",
+      "lastName": "Lovelace",
+      "email": "ada@example.com",
+      "city": "London",
+      "status": "Active",
+      "salary": 90000,
+      "createdDate": "2023-05-17T00:00:00Z",
+      "orders": [
+        { "id": 101, "orderNumber": "ORD-101", "totalAmount": 129.90, "orderDate": "2024-05-01T00:00:00Z", "status": "Delivered" },
+        { "id": 118, "orderNumber": "ORD-118", "totalAmount": 89.00,  "orderDate": "2024-04-12T00:00:00Z", "status": "Delivered" }
+      ]
+    }
+  ],
+  "totalCount": 42
+}
+```
+
+Customers without qualifying orders still appear (they just carry `"orders": []`).
+Filter/sort/take on the expanded branch never changes the root result set or the root
+sort order — the root query and each expansion are separate SQL operations.
+
+### Deeper nesting
+
+Expand grandchildren inside the branch — here each customer's three latest delivered
+orders, and for those orders the six biggest items:
+
+```http
+GET /api/customers?include=Orders,Orders.OrderItems
+  &expand=Orders(filter=Status:eq:Delivered;sort=OrderDate:desc;take=3;
+                 OrderItems(take=6;sort=UnitPrice:desc))
+```
+
+Child paths inside parentheses are relative to their parent. A deep tree produces one
+batched level per depth that has expansion options.
+
+## Governance
+
+Expanded branches go through the **same** governance gates as root queries, evaluated
+against the related entity type (`type.member` rules like `Orders.Total:gt:100` remain
+available to the server):
+
+- Every expand path (and every nested child path) must satisfy `AllowedIncludes`.
+- Branch filter/sort fields must be valid for the related entity's public surface —
+  DTO-typed surface checks apply exactly like at the root.
+
+## What expansion cannot do
+
+- Duplicate expansion of the same path (`Orders(take=1),Orders(take=2)`) — rejected with
+  `EXPAND_DUPLICATE_PATH`; merge the options into one block.
+- Sort/take branches are collection-only; applying them to a single-valued reference
+  navigation is rejected (`EXPAND_SORT_ON_REFERENCE`).
+- Expanding a scalar property or non-navigation member is rejected
+  (`EXPAND_PATH_NOT_FOUND` / `NAVIGATION_PROPERTY_REQUIRED`).
+- Grouped queries cannot combine with include/expand at all
+  (`GROUPBY_INCLUDE_CONFLICT`).
+- Option keys are only `filter`, `sort`, `take`, and nested paths — anything else fails
+  parse (`Unexpected expand option`).
+
+## Provider behavior
+
+- **EF Core**: options are applied inside EF's own filtered-include machinery — the
+  database trims the children before rows reach memory, so a `take=3` branch loads three
+  rows per parent, not the whole collection.
+- **Dapper**: each expanded level runs as its own batched query restricted to the keys
+  on the current parent page. `take` becomes a dialect-correct ranked subquery
+  (`ROW_NUMBER() OVER (PARTITION BY ...)`) so the trimming is also server-side, while a
+  filter-only branch is folded straight into the child `WHERE`.
+- On both providers, expand blocks never trim parent rows: root paging and `totalCount`
+  describe the full, unexpanded result set.
+
+## Related
+
+- [Include](/docs/guides/include) — full, unbounded relation loading
+- [Projection](/docs/guides/projection) — shape the expanded output
