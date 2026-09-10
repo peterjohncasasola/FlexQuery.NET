@@ -2,11 +2,11 @@
 
 [![NuGet Version](https://img.shields.io/nuget/v/FlexQuery.NET.OpenApi.svg)](https://www.nuget.org/packages/FlexQuery.NET.OpenApi)
 
-OpenAPI/Swagger documentation and examples for FlexQuery.NET endpoints.
+OpenAPI documentation and examples for FlexQuery.NET endpoints.
 
 ## When to Use This Package
 
-Install this package when you expose FlexQuery-enabled endpoints and want automatic OpenAPI schema descriptions, parameter documentation, and canonical request/response examples in your Swagger UI or OpenAPI document.
+Install this package when you expose FlexQuery-enabled endpoints and want automatic OpenAPI schema descriptions, parameter documentation, and canonical request/response examples in your OpenAPI document.
 
 ## Installation
 
@@ -14,10 +14,23 @@ Install this package when you expose FlexQuery-enabled endpoints and want automa
 dotnet add package FlexQuery.NET.OpenApi
 ```
 
+This package builds on `Microsoft.AspNetCore.OpenApi` and targets .NET 9 and .NET 10.
+
 ## Registration
+
+Either call the one-line registration:
 
 ```csharp
 builder.Services.AddFlexQueryOpenApi();
+```
+
+Or configure `AddOpenApi` directly:
+
+```csharp
+builder.Services.AddOpenApi(options =>
+{
+    options.AddFlexQuery();
+});
 ```
 
 This registers schema and operation transformers that enrich your OpenAPI document with:
@@ -33,11 +46,6 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddControllers();
 builder.Services.AddFlexQueryOpenApi();
 
-builder.Services.AddOpenApi(options =>
-{
-    options.AddFlexQuery();
-});
-
 var app = builder.Build();
 
 app.MapOpenApi();
@@ -46,11 +54,10 @@ app.Run();
 
 ## Features
 
-- **Schema Descriptions** — Human-readable descriptions for all FlexQuery model types (`FlexQueryRequest`, `FlexQueryParameters`, `QueryResult<T>`, `FilterGroup`, `FilterCondition`, `SortNode`, `PagingOptions`, `AggregateModel`, `HavingCondition`, `IncludeNode`, `ProjectionMode`, `LogicOperator`, `AggregateFunction`)
+- **Schema Descriptions** — Human-readable descriptions for FlexQuery model types (`FlexQueryRequest`, `FlexQueryParameters`, `QueryResult<T>`, `FilterGroup`, `FilterCondition`, `SortNode`, `PagingOptions`, `Aggregate`, `HavingNode`, `IncludeNode`, `ProjectionMode`, `LogicOperator`, `AggregateFunction`)
 - **Parameter Documentation** — Descriptions for query parameters (`filter`, `select`, `sort`, `page`, `pageSize`, `includeCount`)
 - **Canonical Examples** — Production-quality, strongly typed examples for `FlexQueryRequest`, `FlexQueryParameters`, and `QueryResult<T>` that immediately demonstrate FlexQuery capabilities
 - **Zero Configuration** — Single registration call, no options, no builders
-- **Minimal Public API** — Two extension methods, everything else internal
 
 ## Related Packages
 
@@ -61,5 +68,4 @@ app.Run();
 
 ## Documentation
 
-- [OpenAPI Integration](https://flexquery.vercel.app/guide/openapi-integration)
-- [Swagger Integration](https://flexquery.vercel.app/guide/swagger-integration)
+- [OpenAPI Integration](https://flexquery.vercel.app/docs/integrations/openapi)

@@ -2,7 +2,7 @@
 
 [![NuGet Version](https://img.shields.io/nuget/v/FlexQuery.NET.EntityFrameworkCore.svg)](https://www.nuget.org/packages/FlexQuery.NET.EntityFrameworkCore)
 
-Async execution, filtered includes, and projection for EF Core.
+Async execution, filtered includes, and typed DTO projection for EF Core.
 
 ## When to Use This Package
 
@@ -14,20 +14,37 @@ Install this package when your data access layer uses Entity Framework Core's `D
 dotnet add package FlexQuery.NET.EntityFrameworkCore
 ```
 
+## Registration
 
-## Quick Start
+Call once at startup, before any query executes:
 
 ```csharp
 using FlexQuery.NET.EntityFrameworkCore;
 
+FlexQueryEFCore.Setup();   // registers EF Core-specific operators
+
+// Optional: global EF Core defaults (immutable after the first call)
+FlexQueryEFCore.Configure(options =>
+{
+    options.UseNoTracking = true;
+});
+```
+
+## Quick Start
+
+```csharp
+using FlexQuery.NET.Models;
+
 [HttpGet("users")]
-public async Task<IActionResult> GetUsers([FromQuery] FlexQueryParameters parameters)
+public async Task<IActionResult> GetUsers(
+    [FromQuery] FlexQueryParameters parameters,
+    CancellationToken cancellationToken)
 {
     var result = await _context.Users.FlexQueryAsync(parameters, options =>
     {
         options.AllowedFields = new HashSet<string> { "Id", "Name", "Email", "Status" };
         options.StrictFieldValidation = true;
-    });
+    }, cancellationToken: cancellationToken);
 
     return Ok(result);
 }
@@ -35,14 +52,14 @@ public async Task<IActionResult> GetUsers([FromQuery] FlexQueryParameters parame
 
 ## Features
 
-- **FlexQueryAsync** — Unified parse-validate-execute pipeline with configurable `QueryExecutionOptions`
-- **Filtered Includes** — Include related collections with inline WHERE filters via `ApplyFilteredIncludes<T>()`
+- **`FlexQueryAsync`** — Unified parse-validate-execute pipeline with configurable `EfCoreQueryOptions`
+- **Typed DTO Projection** — `FlexQueryAsync<TEntity, TResponse>` returns strongly-typed results, with convention-based mapping (`CreateMap`, `ForMember`, `ForNavigation`)
+- **Expand** — Translate `QueryOptions.Expand` into EF Core `Include`/`ThenInclude` chains, each optionally filtered by an inline `Where` clause, via `ApplyExpand<T>()`
 - **Projection** — Nested, Flat, and FlatMixed projection modes
-- **Execution Options** — `UseSplitQuery` to avoid cartesian explosion, `UseNoTracking` for read-only queries
+- **Execution Options** — `UseNoTracking` for read-only queries (enabled by default)
 - **SQL Preview** — `ToSqlPreview()` to inspect the generated SQL without executing
-- **Diagnostics** — Pass `Action<FlexQueryExecutionConfig>` to observe pipeline stages
-- **EF Core Operators** — `UseEfCoreOperators()` to register `LIKE` operator handler for EF Core translation
-
+- **Diagnostics** — Pass an `IFlexQueryExecutionListener` via the options to observe pipeline stages
+- **EF Core Operators** — `UseEfCoreOperators()` to register the `LIKE` operator handler for EF Core translation
 
 ## Related Packages
 
@@ -52,6 +69,6 @@ public async Task<IActionResult> GetUsers([FromQuery] FlexQueryParameters parame
 
 ## Documentation
 
-- [EF Core Provider Guide](https://flexquery.vercel.app/providers/ef-core)
-- [Filtered Includes](https://flexquery.vercel.app/guide/include-filtering)
-- [Projection](https://flexquery.vercel.app/guide/projection)
+- [EF Core Provider](https://flexquery.vercel.app/docs/providers/ef-core)
+- [Include](https://flexquery.vercel.app/docs/guides/include)
+- [Projection](https://flexquery.vercel.app/docs/guides/projection)

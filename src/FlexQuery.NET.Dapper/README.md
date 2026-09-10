@@ -16,28 +16,31 @@ dotnet add package FlexQuery.NET.Dapper
 
 ## Registration
 
-```csharp
-using FlexQuery.NET.Dapper;
-using FlexQuery.NET.Dapper.Dialects;
+The SQL dialect is auto-detected from the `DbConnection` at runtime — no manual dialect configuration is required. Register your entity mapping model once at startup:
 
-builder.Services.AddFlexQueryDapper(options =>
+```csharp
+using FlexQuery.NET.Dapper.Configuration;
+
+FlexQueryDapper.Configure(options =>
 {
-    options.UseSqlServer();
+    options.Model.Entity<User>(entity =>
+    {
+        entity.ToTable("Users");
+    });
+    options.CommandTimeout = 60;
 });
 ```
 
-Or configure options per-query:
+Or configure options per query:
 
 ```csharp
-options.Dialect = new PostgreSqlDialect();
-options.CommandTimeoutSeconds = 60;
+options.CommandTimeout = 60;
 ```
 
 ## Quick Start
 
 ```csharp
-using FlexQuery.NET.Dapper;
-using FlexQuery.NET.Dapper.Dialects;
+using FlexQuery.NET.Models;
 
 [HttpGet("users")]
 public async Task<IActionResult> GetUsers([FromQuery] FlexQueryParameters parameters)
@@ -46,11 +49,8 @@ public async Task<IActionResult> GetUsers([FromQuery] FlexQueryParameters parame
 
     var result = await connection.FlexQueryAsync<User>(parameters, options =>
     {
-        // Or register the dialect globally using AddFlexQueryDapper()
-        options.Dialect = new SqlServerDialect(); 
-        
         options.AllowedFields = new HashSet<string> { "Id", "Name", "Email" };
-    });
+    }, cancellationToken: cancellationToken);
 
     return Ok(result);
 }
@@ -59,16 +59,16 @@ public async Task<IActionResult> GetUsers([FromQuery] FlexQueryParameters parame
 ## Features
 
 - **SQL Generation** — `SqlTranslator` produces parameterized, injection-safe SQL
-- **Dialect Support** — SQL Server, PostgreSQL, MySQL, SQLite via `ISqlDialect`
+- **Dialect Support** — SQL Server, PostgreSQL, MySQL, MariaDB, SQLite, and Oracle, auto-detected from the connection
 - **Flat Projection** — Deep select paths (e.g., `Orders.Total`) become `LEFT JOIN` with flattened aliases
-- **Optional Auto-Dialect Detection** — `ISqlDialectResolver` can detect dialect from the `DbConnection`
-- **Entity Mapping** — Fluent entity-to-table mapping via `DapperQueryOptions.Entity<T>()`
-- **Diagnostics** — Pass `Action<FlexQueryExecutionConfig>` to observe pipeline stages
+- **Entity Mapping** — Fluent entity-to-table mapping via `ModelBuilder` and `IEntityTypeConfiguration<T>`
+- **Filtered Includes** — Related collections hydrated from the include tree
+- **SQL Execution Logging** — Execution logs include copy-paste-ready `DECLARE` scripts
+- **Typed DTO Results** — `FlexQueryAsync<TEntity, TResponse>` overloads for strongly-typed responses
+- **Diagnostics** — Pass a listener via the options to observe pipeline stages
 
 ## Known Limitations
 
-- Filtered includes (EF Core navigation property expansion) are not supported
-- Navigation property projection requires flat projection mode
 - Some aggregate functions may vary by dialect
 
 ## Related Packages
@@ -79,7 +79,4 @@ public async Task<IActionResult> GetUsers([FromQuery] FlexQueryParameters parame
 
 ## Documentation
 
-- [Dapper Provider Guide](https://flexquery.vercel.app/providers/dapper/getting-started)
-- [SQL Generation](https://flexquery.vercel.app/providers/dapper/sql-generation)
-- [Dialects](https://flexquery.vercel.app/providers/dapper/dialects)
-- [Relationship Queries](https://flexquery.vercel.app/providers/dapper/relationship-queries)
+- [Dapper Provider Guide](https://flexquery.vercel.app/docs/providers/dapper)

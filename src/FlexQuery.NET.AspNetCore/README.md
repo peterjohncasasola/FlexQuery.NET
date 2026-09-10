@@ -6,7 +6,7 @@ ASP.NET Core integration with declarative field-access security.
 
 ## When to Use This Package
 
-Install this package when you want to use `[FieldAccess]` attributes on your API controllers to declare per-endpoint security rules, or when you need automatic model binding for `FlexQueryParameters`.
+Install this package when you want to use `[FieldAccess]` attributes on your API controllers to declare per-endpoint security rules, and to shape `QueryResult<T>` JSON serialization so an explicit `select` exposes only the selected fields.
 
 ## Installation
 
@@ -17,39 +17,56 @@ dotnet add package FlexQuery.NET.AspNetCore
 ## Registration
 
 ```csharp
-builder.Services.AddFlexQuery();
-builder.Services.AddFlexQuerySecurity();
+// Global FlexQuery configuration (defaults, entity → DTO maps)
+builder.Services.AddFlexQuery(options =>
+{
+    options.MaxPageSize = 100;
+    options.StrictFieldValidation = true;
+});
 
-// Or combine with MVC:
+// [FieldAccess] attributes + result-shape JSON converter
 builder.Services.AddControllers()
     .AddFlexQuerySecurity();
 ```
 
+Use `AddFlexQueryJson()` instead of `AddFlexQuerySecurity()` if you only want the result-shape JSON converter without the security filter.
+
 ## Quick Start
 
 ```csharp
+using FlexQuery.NET.AspNetCore.Attributes;
+
 [ApiController]
 [Route("api/[controller]")]
 public class UsersController : ControllerBase
 {
     [HttpGet]
-    [FieldAccess(AllowedFields = new[] { "Id", "Name", "Email", "Status" },
-                 MaxFieldDepth = 2)]
-    public async Task<IActionResult> GetUsers([FromQuery] FlexQueryParameters parameters)
+    [FieldAccess(Allowed = new[] { "Id", "Name", "Email", "Status" },
+                 MaxDepth = 2)]
+    public async Task<IActionResult> GetUsers(
+        [FromQuery] FlexQueryParameters parameters,
+        CancellationToken cancellationToken)
     {
-        // FieldAccess settings are automatically resolved from HttpContext.
-        var result = await _context.Users.FlexQueryAsync(parameters, HttpContext);
+        var result = await _context.Users
+            .FlexQueryAsync(parameters, cancellationToken: cancellationToken);
+
         return Ok(result);
     }
 }
 ```
 
+The `FieldAccessFilter` action filter applies the attribute's settings to the request's execution options automatically. The effective options can be retrieved inside the action when needed:
+
+```csharp
+var options = HttpContext.GetFlexQueryExecutionOptions();
+```
+
 ## Features
 
-- **`[FieldAccess]` Attribute** — Declare Allowed, Blocked, Filterable, Sortable, Selectable, Groupable, Aggregatable fields per-endpoint
-- **`FieldAccessFilter`** — Action filter that applies attribute settings to `QueryExecutionOptions`
-- **`Automatic Security Resolution** — Extension method accepting `HttpContext` for automatic options resolution
-- **Swagger Integration** — Works with Swagger/Swashbuckle for API documentation
+- **`[FieldAccess]` Attribute** — Declare Allowed, Blocked, Filterable, Sortable, Selectable, Groupable, Aggregatable fields, AllowedIncludes, DefaultSortField/Direction, and MaxDepth per controller or action
+- **`FieldAccessFilter`** — Action filter that applies attribute settings and stores them in `HttpContext.Items`
+- **Result-Shape JSON** — With an explicit `select`, the response contains exactly the selected output fields (under their aliases)
+- **Automatic Security Resolution** — `GetFlexQueryExecutionOptions()` extension for reading the effective per-request options
 
 ## Related Packages
 
@@ -59,6 +76,5 @@ public class UsersController : ControllerBase
 
 ## Documentation
 
-- [ASP.NET Integration Guide](https://flexquery.vercel.app/guide/aspnet-integration)
-- [Security & Governance](https://flexquery.vercel.app/guide/security-governance)
-- [Swagger Integration](https://flexquery.vercel.app/guide/swagger-integration)
+- [ASP.NET Core Integration](https://flexquery.vercel.app/docs/integrations/aspnetcore)
+- [Security & Governance](https://flexquery.vercel.app/docs/security)

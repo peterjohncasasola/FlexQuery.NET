@@ -26,10 +26,10 @@ public async Task<IActionResult> GetGridData([FromBody] AgGridRequest request)
 {
     var options = request.ToQueryOptions();
 
-    var result = await _context.Products.FlexQueryAsync<Product>(options, opts =>
+    var result = await _context.Products.FlexQueryAsync(options, opts =>
     {
         opts.AllowedFields = new HashSet<string> { "Id", "Name", "Price", "Category" };
-    });
+    }, cancellationToken: cancellationToken);
 
     var response = result.ToAgGridServerSideResponse(request);
 
@@ -45,14 +45,13 @@ public async Task<IActionResult> GetGridData([FromBody] AgGridRequest request)
 - **Aggregations**
 - **Projection**
 
-
 ## Features
 
-- **Request Parsing** — `AgGridQueryOptionsParser.Parse()` converts AG Grid JSON to `QueryOptions`
+- **Request Parsing** — `ToQueryOptions()` (backed by `AgGridQueryOptionsParser`) converts AG Grid requests to `QueryOptions`
 - **Response Conversion** — `ToAgGridServerSideResponse()` returns data in AG Grid's expected format with group metadata (key, level, childCount)
 - **Server-Side Row Model Support** — Pagination, filtering, sorting, row grouping, and aggregations
 - **Aggregate Alias Mapping** — Single-aggregate columns map back to the original field name
-- **camelCase Option** — PascalCase-to-camelCase conversion for row data dictionaries
+- **camelCase Option** — `ToAgGridServerSideResponse(request, camelCase: true)` converts PascalCase row-data property names to camelCase for camelCase column definitions
 - **No Database Calls** — The adapter only transforms JSON — zero overhead
 
 ## Filter Mapping
@@ -62,9 +61,17 @@ public async Task<IActionResult> GetGridData([FromBody] AgGridRequest request)
 | `equals` | `eq` |
 | `notEqual` | `neq` |
 | `contains` | `contains` |
+| `startsWith` | `startswith` |
+| `endsWith` | `endswith` |
 | `lessThan` | `lt` |
-| `greaterThan` | `gte` |
+| `greaterThan` | `gt` |
+| `lessThanOrEqual` | `lte` |
+| `greaterThanOrEqual` | `gte` |
 | `inRange` | `between` |
+| `blank` | `isnull` |
+| `notBlank` | `isnotnull` |
+
+Filter mappings are applied per filter type (text, number, date); date filters additionally map `after`/`before` to `gt`/`lt`.
 
 ## Related Packages
 
@@ -75,4 +82,4 @@ public async Task<IActionResult> GetGridData([FromBody] AgGridRequest request)
 
 ## Documentation
 
-- [AG Grid Integration Guide](https://flexquery.vercel.app/adapters/ag-grid)
+- [AG Grid Integration](https://flexquery.vercel.app/docs/integrations/ag-grid)

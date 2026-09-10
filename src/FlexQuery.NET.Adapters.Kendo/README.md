@@ -6,7 +6,7 @@ Kendo UI DataSource adapter for FlexQuery.NET.
 
 ## When to Use This Package
 
-Install this package if your application uses Kendo UI DataSource for server-side filtering, sorting, and paging. It translates Kendo's DataSource request parameters — `filter`, `sort`, `take`, `skip` — into FlexQuery's canonical `QueryOptions`.
+Install this package if your application uses Kendo UI DataSource for server-side filtering, sorting, paging, grouping, and aggregation. It translates Kendo's DataSource request parameters — `filter`, `sort`, `take`/`skip` or `page`/`pageSize`, `group`, and `aggregate` — into FlexQuery's canonical `QueryOptions`.
 
 ## Installation
 
@@ -24,10 +24,10 @@ public async Task<IActionResult> GetGridData([FromBody] KendoRequest request)
 {
     var options = request.ToQueryOptions();
 
-    var result = await _context.Products.FlexQueryAsync<Product>(options, opts =>
+    var result = await _context.Products.FlexQueryAsync(options, opts =>
     {
         opts.AllowedFields = new HashSet<string> { "Id", "Name", "Price", "Category" };
-    });
+    }, cancellationToken: cancellationToken);
 
     return Ok(result);
 }
@@ -35,10 +35,12 @@ public async Task<IActionResult> GetGridData([FromBody] KendoRequest request)
 
 ## Features
 
-- **Request Parsing** — `KendoQueryOptionsParser.Parse()` converts Kendo DataSource JSON to `QueryOptions`
-- **Filter Support** — Supports nested filter groups with `AND/OR` logic.
+- **Request Parsing** — `ToQueryOptions()` (backed by `KendoQueryOptionsParser`) converts Kendo DataSource JSON to `QueryOptions`
+- **Filter Support** — Nested filter groups with `AND`/`OR` logic
 - **Sort Support** — `sort` array with `field` and `dir` (asc/desc)
-- **Paging** — `take`/`skip` converted to FlexQuery's `Page`/`PageSize`
+- **Paging** — `take`/`skip` (or `page`/`pageSize`) converted to FlexQuery's `Page`/`PageSize`
+- **Grouping** — `group` descriptors converted to FlexQuery `GroupBy`, including group-level aggregates
+- **Aggregates** — `aggregate` descriptors converted to typed FlexQuery aggregates (Sum, Count, Avg, Min, Max)
 - **No Database Calls** — The adapter only transforms JSON — zero overhead
 
 ## Related Packages
@@ -49,5 +51,5 @@ public async Task<IActionResult> GetGridData([FromBody] KendoRequest request)
 - [FlexQuery.NET.Adapters.AgGrid](https://github.com/peterjohncasasola/FlexQuery.NET/blob/main/src/FlexQuery.NET.Adapters.AgGrid/README.md) — Alternative adapter for AG Grid
 
 ## Documentation
-Full guide:
-- [Kendo Integration Guide](https://flexquery.vercel.app/adapters/kendo)
+
+- [Kendo Integration](https://flexquery.vercel.app/docs/integrations/kendo)

@@ -4,13 +4,11 @@
 
 Execution diagnostics, observability, and timeline reporting for FlexQuery.NET queries.
 
-
 ## When to Use This Package
 
 Install this package when you need to inspect, measure, or monitor FlexQuery.NET execution.
 
 It provides execution listeners, timing reports, and pipeline diagnostics for debugging, performance analysis, and observability.
-
 
 ## Installation
 
@@ -18,8 +16,9 @@ It provides execution listeners, timing reports, and pipeline diagnostics for de
 dotnet add package FlexQuery.NET.Diagnostics
 ```
 
-
 ## Quick Start
+
+Attach a listener through the per-execution options of your provider:
 
 ```csharp
 using FlexQuery.NET.Diagnostics;
@@ -29,27 +28,31 @@ var collector = new FlexQueryDiagnosticsCollector();
 var result = await _context.Users.FlexQueryAsync(parameters, options =>
 {
     options.AllowedFields = new HashSet<string> { "Id", "Name" };
-}, execution =>
-{
-    execution.Listener = collector;
+    options.Listener = collector;   // receives pipeline lifecycle events
 });
 
 var report = collector.BuildReport();
 Console.WriteLine($"Total: {report.Duration.TotalMs}ms");
-Console.WriteLine($"  Parse:    {report.Duration.ParseMs}ms");
-Console.WriteLine($"  Translate: {report.Duration.TranslateMs}ms");
-Console.WriteLine($"  Database:  {report.Duration.DatabaseMs}ms");
+Console.WriteLine($"  Parse:       {report.Duration.ParseMs}ms");
+Console.WriteLine($"  Translate:   {report.Duration.TranslateMs}ms");
+Console.WriteLine($"  Database:    {report.Duration.DatabaseMs}ms");
 Console.WriteLine($"  Materialize: {report.Duration.MaterializeMs}ms");
 
 foreach (var entry in report.Timeline)
     Console.WriteLine($"{entry.Stage}: {entry.DurationMs}ms");
 ```
 
+For quick debugging, swap in the console listener:
+
+```csharp
+options.Listener = new ConsoleExecutionListener();
+```
+
 ## Features
 
 - **`FlexQueryDiagnosticsCollector`** — Thread-safe collector capturing all pipeline stage events
-- **`ConsoleExecutionListener`** — Writes pipeline stage timing to `Console` for quick debugging
-- **Diagnostics Report** — `BuildReport()` returns `FlexQueryDiagnosticsReport` with per-stage duration breakdown and timeline
+- **`ConsoleExecutionListener`** — Writes parsed queries, generated SQL with parameters, and stage timing to `Console`
+- **Diagnostics Report** — `BuildReport()` returns `FlexQueryDiagnosticsReport` with provider/translator metadata, row counts, generated SQL, exceptions, per-stage duration breakdown, and timeline
 - **4 Lifecycle Events** — `QueryParsed`, `QueryTranslated`, `QueryExecuted`, `QueryMaterialized`
 - **Custom Listeners** — Implement `IFlexQueryExecutionListener` for custom logging, metrics, or OpenTelemetry integration
 
@@ -59,4 +62,4 @@ foreach (var entry in report.Timeline)
 
 ## Documentation
 
-- [Debugging & Diagnostics Guide](https://flexquery.vercel.app/guide/debugging)
+- [Diagnostics](https://flexquery.vercel.app/docs/diagnostics)

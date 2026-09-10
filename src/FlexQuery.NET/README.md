@@ -10,8 +10,7 @@ FlexQuery.NET is the core package. It provides the query parsing engine, express
 ## When to Use This Package
 
 Install this package if you want to parse, validate, and compose dynamic queries independently of any specific data provider.
-Use this package directly when building custom integrations or when implementing your own query execution pipeline.
-
+Use this package directly when building custom integrations or when implementing your own query execution pipeline. Most applications pair it with a provider package — Entity Framework Core or Dapper — that executes the parsed query.
 
 ## Installation
 
@@ -19,11 +18,11 @@ Use this package directly when building custom integrations or when implementing
 dotnet add package FlexQuery.NET
 ```
 
-
 ## Quick Start
 
 ```csharp
 using FlexQuery.NET;
+using FlexQuery.NET.Models;
 
 var parameters = new FlexQueryParameters
 {
@@ -33,8 +32,10 @@ var parameters = new FlexQueryParameters
     PageSize = 20
 };
 
+// Parse into QueryOptions (uses the globally configured syntax)
 var options = parameters.ToQueryOptions();
 
+// Apply filter, sort, and paging to any IQueryable
 var query = _context.Users.Apply(options);
 
 // Execute using your preferred provider
@@ -42,46 +43,45 @@ var query = _context.Users.Apply(options);
 
 ## Features
 
-- **Query Parsing** — Auto-detects DSL, JSON, and Indexed query formats via `QueryOptionsParser.Parse()`
-- **Filtering** — 20+ operators (eq, contains, gt, between, in, etc.), nested AND/OR logic
+- **Query Parsing** — Native DSL syntax with the parser registry ready for FQL and MiniOData parser packages
+- **Filtering** — 20+ operators (eq, neq, gt, gte, lt, lte, contains, startswith, endswith, like, in, notin, between, isnull, isnotnull, any, all, count) with nested AND/OR logic
 - **Sorting** — Multi-field sorting with direction and aggregate sort support
-- **Paging** — 1-based page indexing with configurable page size limits
-- **Security** — Declare allowed/blocked fields per-endpoint via `BaseQueryOptions`
-- **Validation** — Built-in field path, operator, and type validation with `ValidateOrThrow<T>()`
+- **Paging** — 1-based page indexing with configurable page size limits, plus keyset (cursor) pagination support
+- **Security** — Declare allowed/blocked fields, per-operation whitelists, and role-based access via `QueryGovernanceOptions`
+- **Validation** — Built-in field path, operator, and type validation with structured errors (`ValidateOrThrow`)
 - **Diagnostics** — Optional `IFlexQueryExecutionListener` for observability
 - **Query Parsing Cache** — Thread-safe parser cache for low-latency repeated queries
 
 ## Supported Query Formats
 
-All formats are auto-detected — no configuration needed.
+The default syntax is the native DSL:
 
 ```http
-DSL
 GET /api/users?filter=age:gte:18&sort=name:asc
-
-JSON
-GET /api/users?filter={"logic":"and","filters":[{"field":"age","operator":"gte","value":18}]}
-
-Indexed
-GET /api/users?filter[0].field=age&filter[0].operator=gte&filter[0].value=18
 ```
+
+Alternative syntaxes are available as separate parser packages:
+
+- **FQL** (SQL-inspired: `filter=age >= 18 AND status = 'Active'`) — `FlexQuery.NET.Parsers.Fql`
+- **MiniOData** (OData-compatible: `$filter=age ge 18`) — `FlexQuery.NET.Parsers.MiniOData`
 
 ## Related Packages
 
 - [FlexQuery.NET.EntityFrameworkCore](https://github.com/peterjohncasasola/FlexQuery.NET/blob/main/src/FlexQuery.NET.EntityFrameworkCore/README.md) — Async execution for EF Core
 - [FlexQuery.NET.Dapper](https://github.com/peterjohncasasola/FlexQuery.NET/blob/main/src/FlexQuery.NET.Dapper/README.md) — SQL generation for Dapper
 - [FlexQuery.NET.AspNetCore](https://github.com/peterjohncasasola/FlexQuery.NET/blob/main/src/FlexQuery.NET.AspNetCore/README.md) — ASP.NET Core `[FieldAccess]` security
+- [FlexQuery.NET.OpenApi](https://github.com/peterjohncasasola/FlexQuery.NET/blob/main/src/FlexQuery.NET.OpenApi/README.md) — OpenAPI documentation
 - [FlexQuery.NET.Diagnostics](https://github.com/peterjohncasasola/FlexQuery.NET/blob/main/src/FlexQuery.NET.Diagnostics/README.md) — Execution diagnostics
 - [FlexQuery.NET.Adapters.AgGrid](https://github.com/peterjohncasasola/FlexQuery.NET/blob/main/src/FlexQuery.NET.Adapters.AgGrid/README.md) — AG Grid SSRM adapter
 - [FlexQuery.NET.Adapters.Kendo](https://github.com/peterjohncasasola/FlexQuery.NET/blob/main/src/FlexQuery.NET.Adapters.Kendo/README.md) — Kendo UI adapter
-- [FlexQuery.NET.Parsers.Jql](https://github.com/peterjohncasasola/FlexQuery.NET/blob/main/src/FlexQuery.NET.Parsers.Jql/README.md) — JQL parser
+- [FlexQuery.NET.Parsers.Fql](https://github.com/peterjohncasasola/FlexQuery.NET/blob/main/src/FlexQuery.NET.Parsers.Fql/README.md) — FQL parser
 - [FlexQuery.NET.Parsers.MiniOData](https://github.com/peterjohncasasola/FlexQuery.NET/blob/main/src/FlexQuery.NET.Parsers.MiniOData/README.md) — OData-compatible parser
 
-## Full Documentation:
+## Full Documentation
 
 https://flexquery.vercel.app
 
-- [Getting Started](https://flexquery.vercel.app/guide/getting-started)
-- [Query Syntax Reference](https://flexquery.vercel.app/shared/query-language)
-- [Security & Governance](https://flexquery.vercel.app/guide/security-governance)
-- [API Reference](https://flexquery.vercel.app/shared/operators)
+- [Getting Started](https://flexquery.vercel.app/docs/getting-started/first-query)
+- [Query Syntax Reference](https://flexquery.vercel.app/docs/concepts/query-syntax)
+- [Security & Governance](https://flexquery.vercel.app/docs/security)
+- [API Reference](https://flexquery.vercel.app/docs/api-reference)
