@@ -95,7 +95,7 @@ public sealed class EfCustomersController(AppDbContext db) : ControllerBase
 
     /// <summary>
     /// Nested-select DTO endpoint: the root select tree controls the nested response
-    /// shape (select=customerName,orders(id,orderDate,status)) while expand controls
+    /// shape (select=customerName,orders(id,orderDate,status)) while include blocks control
     /// which records load (filter/sort/take). Both combine into one server-side query.
     /// </summary>
     [HttpGet("order-summaries")]

@@ -3,573 +3,319 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>FlexQuery.NET — Query Inspector</title>
+    <title>FlexQuery.NET — Playground</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
         :root {
             --bg-primary: #0b0f19; --bg-secondary: #111827; --bg-card: #1f2937;
             --accent: #6366f1; --accent-gradient: linear-gradient(135deg, #6366f1 0%, #a855f7 100%);
             --text-main: #f3f4f6; --text-muted: #9ca3af; --text-dim: #6b7280;
             --border: #374151; --green: #22c55e; --orange: #f59e0b; --amber: #fbbf24;
-            --accent-blue: #60a5fa; --accent-green: #22c55e; --accent-amber: #f59e0b;
-            --accent-purple: #c084fc; --accent-red: #ef4444; --card-bg: #1a1f30; --card-border: #2a2f3f;
+            --accent-red: #ef4444;
         }
         * { box-sizing: border-box; margin: 0; padding: 0; }
         html, body { height: 100%; }
         body { font-family: 'Plus Jakarta Sans', sans-serif; background: var(--bg-primary); color: var(--text-main); display: flex; flex-direction: column; }
-        header { background: var(--bg-secondary); border-bottom: 1px solid var(--border); padding: 1rem 2rem; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 100; }
-        .logo-section h1 { font-family: 'Outfit', sans-serif; font-size: 1.35rem; font-weight: 700; background: var(--accent-gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
-        .logo-section p { font-size: 0.75rem; color: var(--text-muted); }
-        nav { display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap; }
-        nav a { color: var(--text-muted); text-decoration: none; font-weight: 500; font-size: 0.875rem; padding: 0.45rem 0.9rem; border-radius: 6px; transition: all 0.2s; }
-        nav a:hover { color: var(--text-main); background: rgba(255,255,255,0.05); }
-        nav a.active { color: #fff; background: var(--accent-gradient); }
-
-        .page-layout { display: flex; flex: 1; min-height: 0; gap: 0; overflow: hidden; }
-        .left-panel { width: 360px; min-width: 300px; background: var(--bg-secondary); border-right: 1px solid var(--border); display: flex; flex-direction: column; overflow-y: auto; padding: 1rem; }
-        .right-panel { flex: 1; display: flex; flex-direction: column; overflow: hidden; padding: 1.25rem 1.25rem 0.75rem; gap: 0.75rem; min-height: 0; min-width: 0; }
-
-        .section-label { font-size: 0.68rem; font-weight: 600; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.4rem; }
-        .example-chips { display: flex; flex-wrap: wrap; gap: 0.3rem; margin-bottom: 1rem; }
-        .example-chip { padding: 0.3rem 0.55rem; border-radius: 6px; font-size: 0.72rem; font-weight: 500; cursor: pointer; border: 1px solid var(--border); background: var(--bg-card); color: var(--text-muted); white-space: nowrap; transition: all 0.15s; }
-        .example-chip:hover { border-color: var(--accent); color: var(--text-main); background: rgba(99,102,241,0.1); }
-        .example-chip.projection { border-color: var(--amber); color: #fde68a; }
-        .example-chip.projection:hover { border-color: #f59e0b; background: rgba(245,158,11,0.12); }
-        .example-chip.group { border-color: #8b5cf6; color: #c4b5fd; }
-        .example-chip.group:hover { border-color: #a78bfa; background: rgba(139,92,246,0.12); }
-        .example-chip.aggregate { border-color: #06b6d4; color: #67e8f9; }
-        .example-chip.aggregate:hover { border-color: #22d3ee; background: rgba(6,182,212,0.12); }
-        .example-chip.having { border-color: var(--orange); color: #fde68a; }
-        .example-chip.having:hover { border-color: #f59e0b; background: rgba(245,158,11,0.12); }
-        .chip-divider { font-size: 0.62rem; font-weight: 600; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.08em; padding: 0.3rem 0 0.15rem; border-top: 1px solid var(--border); margin-top: 0.15rem; }
-
-        .input-group { margin-bottom: 0.6rem; }
-        .input-group label { display: block; font-size: 0.68rem; font-weight: 600; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.2rem; }
-        .input-group input, .input-group select {
-            width: 100%; background: var(--bg-card); border: 1px solid var(--border); color: var(--text-main);
-            padding: 0.4rem 0.6rem; border-radius: 5px; font-family: 'Outfit', monospace; font-size: 0.78rem;
-        }
-        .input-group input:focus, .input-group select:focus { outline: none; border-color: var(--accent); }
-        .input-row { display: flex; gap: 0.6rem; }
-        .input-row .input-group { flex: 1; }
-
-        .provider-row { display: flex; gap: 0.35rem; margin-bottom: 0.6rem; }
-        .provider-option { flex: 1; padding: 0.4rem; text-align: center; border-radius: 5px; cursor: pointer; font-size: 0.75rem; font-weight: 500; border: 1px solid var(--border); background: var(--bg-card); color: var(--text-muted); transition: all 0.15s; }
-        .provider-option:hover { border-color: var(--accent); }
-        .provider-option.active { background: rgba(99,102,241,0.2); border-color: var(--accent); color: #fff; font-weight: 600; }
-        .provider-option input { display: none; }
-
-        .execute-btn { width: 100%; background: var(--accent-gradient); color: #fff; border: none; padding: 0.5rem; border-radius: 7px; font-weight: 600; font-size: 0.85rem; cursor: pointer; transition: all 0.2s; }
-        .execute-btn:hover { transform: translateY(-1px); box-shadow: 0 4px 15px rgba(99,102,241,0.4); }
-        .execute-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; box-shadow: none; }
-
-        /* Pipeline Banner */
-        .pipeline-banner {
-            background: var(--bg-card); border: 1px solid var(--border); border-radius: 7px;
-            padding: 0.45rem 0.85rem; font-size: 0.75rem; color: var(--text-dim); text-align: center;
-            font-family: 'Outfit', sans-serif; letter-spacing: 0.02em; display: flex;
-            align-items: center; justify-content: center; gap: 0.5rem; flex-wrap: wrap;
-        }
-        .pipeline-banner .step { color: var(--text-muted); }
-        .pipeline-banner .arrow { color: var(--accent); }
-        .pipeline-banner .active-step { color: #fff; font-weight: 700; background: var(--accent-gradient); padding: 0.15rem 0.5rem; border-radius: 4px; font-size: 0.7rem; }
-
-        /* Meta Row */
-        .output-meta { display: flex; gap: 0.45rem; flex-wrap: wrap; align-items: center; }
-        .output-meta-item { background: var(--bg-card); border: 1px solid var(--border); border-radius: 5px; padding: 0.2rem 0.55rem; font-size: 0.72rem; }
-        .output-meta-item .label { color: var(--text-dim); }
-        .output-meta-item .value { font-weight: 600; }
-
-        .status-dot { width: 7px; height: 7px; border-radius: 50%; display: inline-block; margin-right: 0.3rem; vertical-align: middle; }
-        .status-dot.ready { background: var(--text-dim); }
-        .status-dot.live { background: var(--green); }
-        .status-dot.error { background: var(--accent-red); }
-
-        /* Section Tabs — Inspector | Results */
-        .section-tabs { display: flex; gap: 0; background: #1a1f2e; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
-        .section-tab { padding: 0.55rem 1.25rem; font-size: 0.8125rem; font-weight: 600; cursor: pointer; color: var(--text-dim); transition: all 0.15s; user-select: none; display: flex; align-items: center; gap: 0.4rem; flex: 1; justify-content: center; border-right: 1px solid var(--border); }
-        .section-tab:last-child { border-right: none; }
-        .section-tab:hover { color: var(--text-main); background: rgba(255,255,255,0.03); }
-        .section-tab.active { color: #fff; background: var(--accent-gradient); }
-        .section-panel { display: none; }
-        .section-panel.active { display: flex; flex-direction: column; gap: 0.75rem; flex: 1; min-height: 0; overflow: hidden; }
-
-        /* Output Card Base */
-        .output-card { background: var(--bg-secondary); border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
-        .output-card-header { display: flex; justify-content: space-between; align-items: center; padding: 0.55rem 1rem; background: #1a1f2e; border-bottom: 1px solid var(--border); }
-        .output-card-header h3 { font-family: 'Outfit', sans-serif; font-size: 0.875rem; font-weight: 600; }
-        .output-card-body { padding: 1rem 1.125rem; }
-
-        /* Diagnostics Card */
-        .diag-card { display: flex; flex-direction: column; flex: 1; min-height: 0; }
-
-        .diag-card > .output-card-body { display: flex; flex-direction: column; flex: 1; overflow: auto; min-height: 0; }
-
-        /* Tab Bar */
-        .diag-tabs { display: flex; gap: 0; background: #1a1f2e; border-bottom: 1px solid var(--border); overflow-x: auto; z-index: 10; flex-shrink: 0; }
-        .diag-tab { padding: 0.55rem 1rem; font-size: 0.8125rem; font-weight: 600; cursor: pointer; color: var(--text-dim); border-bottom: 2px solid transparent; transition: all 0.15s; white-space: nowrap; display: flex; align-items: center; gap: 0.4rem; user-select: none; }
-        .diag-tab:hover { color: var(--text-main); background: rgba(255,255,255,0.03); }
-        .diag-tab.active { color: #fff; border-bottom-color: var(--accent); background: rgba(99,102,241,0.08); }
-        .diag-panel { display: none; }
-        .diag-panel.active { display: block; }
-        .diag-panel.active.flex-panel { display: flex; flex-direction: column; flex: 1; min-height: 0; }
-
-        /* Output JSON */
-        .output-json { background: #0d1117; border: 1px solid var(--border); border-radius: 5px; padding: 0.75rem 1rem; font-family: 'Outfit', monospace; font-size: 0.8125rem; line-height: 1.6; color: #e2e8f0; overflow: auto; white-space: pre-wrap; word-break: break-all; }
-        .output-json .key { color: #60a5fa; } .output-json .str { color: #34d399; } .output-json .num { color: #f59e0b; } .output-json .bool { color: #c084fc; } .output-json .null { color: #6b7280; }
-
-        /* Summary Section */
-        .summary-section { margin-bottom: 0.75rem; }
-        .summary-section:last-child { margin-bottom: 0; }
-        .summary-section-header { font-size: 0.6875rem; font-weight: 700; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 0.4rem; opacity: 0.7; }
-
-        /* Summary Grid */
-        .summary-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.5rem; }
-        .summary-card { background: var(--bg-card); border: 1px solid var(--card-border); border-radius: 6px; padding: 0.75rem 0.85rem 0.6rem; border-left: 4px solid var(--accent); display: flex; flex-direction: column; gap: 0.15rem; }
-        .summary-card .label { font-size: 0.6875rem; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.05em; font-weight: 500; }
-        .summary-card .value { font-size: 1.25rem; font-weight: 600; color: var(--text-main); font-family: 'Outfit', sans-serif; line-height: 1.25; }
-        .summary-card .sub { font-size: 0.65rem; color: var(--text-dim); margin-top: 0.1rem; }
-
-        .summary-card.provider { border-left-color: var(--accent-blue); }
-        .summary-card.execution { border-left-color: var(--accent-amber); }
-        .summary-card.query { border-left-color: var(--accent-purple); }
-        .summary-card.data { border-left-color: var(--accent-green); }
-
-        .summary-footer { display: flex; justify-content: space-between; align-items: center; margin-top: 0.5rem; padding: 0.35rem 0.65rem; background: var(--bg-card); border: 1px solid var(--card-border); border-radius: 5px; font-size: 0.75rem; }
-        .summary-footer .slowest { color: var(--accent-amber); display: flex; align-items: center; gap: 0.25rem; }
-        .summary-footer .status { display: flex; align-items: center; gap: 0.3rem; }
-        .summary-footer .status.success { color: var(--accent-green); }
-        .summary-footer .status.error { color: var(--accent-red); }
-
-        /* Complexity Badge + Bar */
-        .complexity-badge { display: inline-block; padding: 0.1rem 0.45rem; border-radius: 4px; font-size: 0.6875rem; font-weight: 700; text-transform: uppercase; vertical-align: middle; }
-        .complexity-badge.low { background: rgba(34,197,94,0.2); color: var(--accent-green); }
-        .complexity-badge.medium { background: rgba(245,158,11,0.2); color: var(--accent-amber); }
-        .complexity-badge.high { background: rgba(239,68,68,0.2); color: var(--accent-red); }
-        .complexity-score { font-size: 0.6875rem; color: var(--text-muted); font-weight: 400; }
-        .complexity-bar { margin-top: 0.25rem; height: 4px; background: var(--border); border-radius: 2px; overflow: hidden; }
-        .complexity-bar-fill { height: 100%; border-radius: 2px; }
-        .complexity-bar-fill.low { background: var(--accent-green); }
-        .complexity-bar-fill.medium { background: var(--accent-amber); }
-        .complexity-bar-fill.high { background: var(--accent-red); }
-        .complexity-factors { margin-top: 0.3rem; display: flex; gap: 0.5rem; flex-wrap: wrap; }
-        .complexity-factor { font-size: 0.65rem; color: var(--text-dim); display: flex; align-items: center; gap: 0.25rem; }
-        .complexity-factor-factor { color: var(--text-muted); }
-
-        /* Timeline */
-        .timeline-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem; }
-        .timeline-header h4 { font-size: 0.75rem; color: var(--text-muted); font-weight: 600; }
-        .timeline-chart { margin-bottom: 0.75rem; padding: 0.6rem 0.75rem; background: #0d1117; border: 1px solid var(--border); border-radius: 6px; }
-        .timeline-bar-row { display: flex; align-items: center; gap: 0.6rem; padding: 0.35rem 0; }
-        .bar-label { width: 90px; font-size: 0.75rem; color: var(--text-muted); text-align: right; flex-shrink: 0; font-weight: 500; }
-        .bar-track { flex: 1; height: 22px; background: rgba(255,255,255,0.06); border-radius: 4px; overflow: hidden; }
-        .bar-fill { height: 100%; border-radius: 4px; background: var(--accent); transition: width 0.3s ease; min-width: 2px; }
-        .bar-fill.slowest { background: linear-gradient(90deg, var(--accent-amber), #f97316); box-shadow: 0 0 10px rgba(245,158,11,0.35); }
-        .bar-duration { width: 72px; font-size: 0.75rem; font-family: 'Outfit', monospace; color: var(--text-main); text-align: right; flex-shrink: 0; }
-        .bar-percent { width: 44px; font-size: 0.6875rem; color: var(--text-dim); text-align: right; flex-shrink: 0; }
-        .bar-slowest-icon { color: var(--accent-amber); font-size: 0.85rem; width: 16px; text-align: center; }
-        .timeline-table-wrapper { margin-top: 0.4rem; }
-        .timeline-table { width: 100%; border-collapse: collapse; font-size: 0.75rem; }
-        .timeline-table th { text-align: left; padding: 0.35rem 0.5rem; color: var(--text-dim); font-weight: 600; border-bottom: 1px solid var(--border); text-transform: uppercase; letter-spacing: 0.04em; font-size: 0.6875rem; }
-        .timeline-table td { padding: 0.3rem 0.5rem; border-bottom: 1px solid var(--border); color: var(--text-main); }
-        .timeline-table .total-row td { font-weight: 700; border-top: 2px solid var(--text-dim); color: var(--text-main); padding: 0.4rem 0.5rem; }
-
-        /* SQL */
-        .sql-toolbar { display: flex; gap: 0.5rem; margin-bottom: 0.5rem; flex-wrap: wrap; align-items: center; flex-shrink: 0; }
-        .sql-dialect { margin-left: auto; font-size: 0.75rem; color: var(--text-dim); display: flex; align-items: center; flex-shrink: 0; }
-        .toolbar-btn { background: var(--bg-card); border: 1px solid var(--border); color: var(--text-muted); padding: 0.3rem 0.65rem; border-radius: 5px; font-size: 0.75rem; cursor: pointer; font-family: 'Plus Jakarta Sans', sans-serif; transition: all 0.15s; line-height: 1.4; }
-        .toolbar-btn:hover { border-color: var(--accent); color: #fff; }
-        .toolbar-btn.copied { border-color: var(--accent-green); color: var(--accent-green); }
-        .sql-editor { display: flex; background: #0d1117; border: 1px solid var(--border); border-radius: 6px; overflow: auto; flex: 1; min-height: 0; }
-        .sql-line-numbers { min-width: 36px; padding: 0.75rem 0.4rem; text-align: right; color: var(--text-dim); font-family: 'Outfit', monospace; font-size: 0.8125rem; line-height: 1.6; user-select: none; border-right: 1px solid var(--border); background: #0a0e14; }
-        .sql-code { padding: 0.75rem 1rem; font-family: 'Outfit', monospace; font-size: 0.8125rem; line-height: 1.6; color: #e2e8f0; white-space: pre-wrap; overflow-x: auto; flex: 1; }
-        .sql-kw { color: #c084fc; font-weight: 600; }
-        .sql-str { color: #34d399; }
-        .sql-num { color: #f59e0b; }
-        .sql-op { color: #60a5fa; }
-        .sql-cmt { color: #6b7280; font-style: italic; }
-        .sql-params-table { width: 100%; border-collapse: collapse; font-size: 0.75rem; margin-top: 0.5rem; }
-        .sql-params-table th { text-align: left; padding: 0.3rem 0.5rem; color: var(--text-dim); font-weight: 600; border-bottom: 1px solid var(--border); }
-        .sql-params-table td { padding: 0.3rem 0.5rem; border-bottom: 1px solid var(--border); color: var(--text-main); font-family: 'Outfit', monospace; font-size: 0.75rem; }
-
-        /* Parsed Query Options */
-        .options-sections { display: flex; flex-direction: column; gap: 0.75rem; }
-        .option-section { border-left: 3px solid var(--accent); padding-left: 0.85rem; }
-        .option-section.filter { border-left-color: var(--accent-blue); }
-        .option-section.sort { border-left-color: var(--accent-purple); }
-        .option-section.select { border-left-color: var(--accent-green); }
-        .option-section.group { border-left-color: var(--accent-amber); }
-        .option-section.aggregate { border-left-color: #06b6d4; }
-        .option-section.paging { border-left-color: var(--accent); }
-        .option-section.settings { border-left-color: var(--text-dim); }
-        .option-section-header { font-size: 0.75rem; font-weight: 600; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.25rem; }
-        .option-section-body { font-size: 0.8125rem; color: var(--text-muted); line-height: 1.7; }
-        .option-item { padding: 0.1rem 0; }
-        .option-field { color: #93c5fd; }
-        .option-op { color: var(--accent-amber); }
-        .option-value { color: #34d399; }
-        .option-toggle-on { color: var(--accent-green); }
-        .option-toggle-off { color: var(--accent-red); }
-
-        /* Pipeline */
-        .pipeline-stages { display: flex; flex-direction: column; }
-        .pipeline-stage-row { display: flex; align-items: stretch; gap: 0; }
-        .pipeline-connector { display: flex; flex-direction: column; align-items: center; width: 22px; flex-shrink: 0; }
-        .connector-dot { width: 10px; height: 10px; border-radius: 50%; margin-top: 7px; flex-shrink: 0; position: relative; z-index: 1; }
-        .connector-dot.passed { background: var(--accent-green); box-shadow: 0 0 6px rgba(34,197,94,0.5); }
-        .connector-dot.failed { background: var(--accent-red); }
-        .connector-line { width: 2px; flex: 1; background: var(--border); min-height: 16px; margin: 3px 0; }
-        .pipeline-stage-row:last-child .connector-line { display: none; }
-        .connector-arrow { font-size: 0.65rem; color: var(--text-dim); line-height: 1; margin: 2px 0; }
-        .stage-content { display: flex; align-items: center; gap: 0.6rem; padding: 0.3rem 0 0.3rem 0.5rem; flex: 1; }
-        .stage-status-icon { font-size: 0.8125rem; width: 16px; text-align: center; }
-        .stage-status-icon.passed { color: var(--accent-green); }
-        .stage-status-icon.failed { color: var(--accent-red); }
-        .stage-name { font-size: 0.8125rem; color: var(--text-main); flex: 1; font-weight: 500; }
-        .stage-duration { font-size: 0.75rem; font-family: 'Outfit', monospace; color: var(--text-muted); min-width: 70px; text-align: right; }
-        .stage-slowest-badge { font-size: 0.65rem; background: rgba(245,158,11,0.2); color: var(--accent-amber); padding: 0.1rem 0.4rem; border-radius: 4px; font-weight: 700; }
-        .pipeline-footer { display: flex; justify-content: space-between; align-items: center; margin-top: 0.5rem; padding: 0.35rem 0.65rem; background: var(--bg-card); border: 1px solid var(--card-border); border-radius: 5px; font-size: 0.75rem; }
-
-        /* Warnings & Suggestions */
-        .banner { border-radius: 6px; padding: 0.45rem 0.85rem; font-size: 0.75rem; cursor: pointer; transition: all 0.15s; }
-        .banner-header { display: flex; justify-content: space-between; align-items: center; font-weight: 600; }
-        .banner-body { margin-top: 0.4rem; padding-left: 1.25rem; display: none; }
-        .banner.expanded .banner-body { display: block; }
-        .banner-item { padding: 0.15rem 0; color: var(--text-muted); }
-        .banner-item::before { content: '● '; }
-        .banner-warnings { background: rgba(245,158,11,0.08); border: 1px solid rgba(245,158,11,0.25); color: var(--accent-amber); }
-        .banner-suggestions { background: rgba(99,102,241,0.08); border: 1px solid rgba(99,102,241,0.25); color: var(--accent-blue); }
-        .banner-chevron { font-size: 0.65rem; color: var(--text-dim); transition: transform 0.15s; }
-        .banner.expanded .banner-chevron { transform: rotate(180deg); }
-
-        /* Raw JSON */
-        .raw-toolbar { display: flex; gap: 0.5rem; margin-bottom: 0.5rem; flex-wrap: wrap; align-items: center; flex-shrink: 0; }
-        .raw-toggle-group { display: flex; gap: 0; background: var(--bg-card); border: 1px solid var(--border); border-radius: 5px; margin-left: auto; overflow: hidden; }
-        .raw-toggle-opt { padding: 0.25rem 0.5rem; font-size: 0.75rem; cursor: pointer; color: var(--text-dim); border-right: 1px solid var(--border); transition: all 0.15s; }
-        .raw-toggle-opt:last-child { border-right: none; }
-        .raw-toggle-opt:hover { color: var(--text-main); }
-        .raw-toggle-opt.active { background: var(--accent); color: #fff; }
-        .raw-json-viewer { flex: 1; overflow: auto; min-height: 0; }
-        .raw-json-viewer .output-json { overflow: visible; max-height: none; }
-        .raw-payload-size { font-size: 0.75rem; color: var(--text-dim); margin-top: 0.4rem; flex-shrink: 0; }
-
-        /* Badges */
-        .badge { font-size: 0.6875rem; padding: 0.15rem 0.5rem; border-radius: 4px; font-weight: 600; }
-        .badge-ef { background: rgba(99,102,241,0.2); color: var(--accent); }
-        .badge-dapper { background: rgba(245,158,11,0.2); color: var(--orange); }
-
-        /* Query Type Badge */
-        .query-type-badge { display: inline-block; padding: 0.15rem 0.55rem; border-radius: 5px; font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; }
-        .query-type-badge.aggregate { background: rgba(6,182,212,0.2); color: #67e8f9; }
-        .query-type-badge.projection { background: rgba(251,191,36,0.2); color: #fde68a; }
-        .query-type-badge.filter { background: rgba(99,102,241,0.2); color: #a5b4fc; }
-        .query-type-badge.grouped { background: rgba(139,92,246,0.2); color: #c4b5fd; }
-        .query-type-badge.paged { background: rgba(34,197,94,0.2); color: #86efac; }
-        .query-type-badge.simple { background: rgba(107,114,128,0.2); color: var(--text-muted); }
-
-        /* Results Card */
-        .results-card { flex: 1; display: flex; flex-direction: column; min-height: 0; }
-        .results-card .output-card-body { flex: 1; overflow: auto; min-height: 0; }
-        .results-toolbar { display: flex; align-items: center; gap: 0.5rem; }
-        .results-toolbar .sep { width: 1px; height: 18px; background: var(--border); margin: 0 0.25rem; }
-        .results-table { width: 100%; border-collapse: collapse; font-size: 0.8125rem; }
-        .results-table th { text-align: left; padding: 0.45rem 0.55rem; color: var(--text-dim); font-size: 0.72rem; font-weight: 600; text-transform: uppercase; border-bottom: 1px solid var(--border); position: sticky; top: 0; background: var(--bg-secondary); }
-        .results-table td { padding: 0.4rem 0.55rem; border-bottom: 1px solid var(--border); color: var(--text-main); }
-        .results-table tr:hover td { background: rgba(255,255,255,0.02); }
-
-        .view-toggle { display: flex; gap: 3px; background: rgba(255,255,255,0.05); border-radius: 4px; padding: 2px; }
-        .toggle-option { padding: 0.2rem 0.55rem; font-size: 0.72rem; font-weight: 600; cursor: pointer; border-radius: 3px; color: var(--text-dim); transition: all 0.15s; white-space: nowrap; }
-        .toggle-option:hover { color: var(--text-main); }
-        .toggle-option.active { background: var(--accent-gradient); color: #fff; }
-
-        .results-json { display: none; }
-        .results-json.visible { display: block; max-height: unset; }
-
-        .results-empty-hero { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 2.5rem 1rem; color: var(--text-dim); gap: 1rem; min-height: 200px; }
-        .results-empty-hero .hero-icon { font-size: 2rem; opacity: 0.3; }
-        .results-empty-hero p { font-size: 0.8125rem; font-weight: 500; }
-        .results-empty-hero .empty-chips { display: flex; gap: 0.4rem; flex-wrap: wrap; justify-content: center; }
-        .results-empty-hero .empty-chips span { padding: 0.35rem 0.65rem; background: var(--bg-card); border: 1px solid var(--border); border-radius: 6px; cursor: pointer; font-size: 0.72rem; color: var(--text-muted); transition: all 0.15s; }
-        .results-empty-hero .empty-chips span:hover { border-color: var(--accent); color: var(--text-main); background: rgba(99,102,241,0.08); }
-
-        footer { text-align: center; padding: 0.75rem 2rem; font-size: 0.75rem; color: var(--text-dim); border-top: 1px solid var(--border); background: var(--bg-secondary); display: flex; justify-content: center; align-items: center; gap: 0.85rem; flex-wrap: wrap; margin-top: auto; }
-        footer a { color: var(--text-muted); text-decoration: none; }
-        footer a:hover { color: var(--accent); }
-        footer .sep { color: var(--border); }
-
-        @media (max-width: 900px) {
-            .page-layout { flex-direction: column; }
-            .left-panel { width: 100%; min-width: unset; border-right: none; border-bottom: 1px solid var(--border); max-height: 45vh; }
-            header { flex-direction: column; gap: 0.5rem; padding: 0.65rem 1rem; }
-            nav { flex-wrap: wrap; justify-content: center; }
-            .summary-grid { grid-template-columns: repeat(2, 1fr); }
-        }
+        header { background: var(--bg-secondary); border-bottom: 1px solid var(--border); padding: 1rem 2rem; display: flex; justify-content: space-between; align-items: center; }
+        header h1 { font-family: 'Outfit', sans-serif; font-size: 1.3rem; font-weight: 700; background: var(--accent-gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        header p { font-size: .75rem; color: var(--text-muted); }
+        .page { display: flex; flex: 1; min-height: 0; }
+        .left { width: 380px; min-width: 320px; background: var(--bg-secondary); border-right: 1px solid var(--border); overflow-y: auto; padding: 1rem; }
+        .right { flex: 1; overflow: auto; padding: 1.25rem; min-width: 0; }
+        .section-label { font-size: .68rem; font-weight: 600; color: var(--text-dim); text-transform: uppercase; letter-spacing: .05em; margin: .9rem 0 .4rem; }
+        .chips { display: flex; flex-wrap: wrap; gap: .3rem; }
+        .chip { padding: .3rem .55rem; border-radius: 6px; font-size: .72rem; cursor: pointer; border: 1px solid var(--border); background: var(--bg-card); color: var(--text-muted); transition: all .15s; }
+        .chip:hover { border-color: var(--accent); color: var(--text-main); }
+        .chip.danger { border-color: #7f1d1d; color: #fca5a5; }
+        .field { margin-bottom: .8rem; }
+        .field label { display: block; font-size: .72rem; color: var(--text-muted); margin-bottom: .25rem; }
+        .field input { width: 100%; background: var(--bg-primary); border: 1px solid var(--border); border-radius: 6px; color: var(--text-main); padding: .45rem .6rem; font-family: monospace; font-size: .8rem; }
+        .field input:focus { outline: none; border-color: var(--accent); }
+        .hint { font-size: .68rem; color: var(--text-dim); margin-top: .25rem; font-family: monospace; }
+        .banner { border-radius: 8px; padding: .6rem .8rem; font-size: .78rem; margin-bottom: .75rem; display: none; }
+        .banner.show { display: block; }
+        .banner.error { background: rgba(239,68,68,.12); border: 1px solid rgba(239,68,68,.5); color: #fecaca; }
+        .banner.warn { background: rgba(245,158,11,.1); border: 1px solid rgba(245,158,11,.45); color: #fde68a; }
+        .banner ul { margin: .3rem 0 0 1.1rem; }
+        button.execute { width: 100%; margin-top: .8rem; background: var(--accent-gradient); color: #fff; border: none; border-radius: 8px; padding: .65rem; font-weight: 600; font-size: .9rem; cursor: pointer; }
+        button.execute:hover { filter: brightness(1.1); }
+        .url-preview { background: var(--bg-primary); border: 1px solid var(--border); border-radius: 8px; padding: .6rem .8rem; font-family: monospace; font-size: .75rem; color: var(--green); word-break: break-all; margin-bottom: 1rem; }
+        .meta { display: flex; gap: 1rem; font-size: .75rem; color: var(--text-muted); margin-bottom: .75rem; }
+        table { width: 100%; border-collapse: collapse; font-size: .78rem; }
+        th, td { border: 1px solid var(--border); padding: .35rem .5rem; text-align: left; vertical-align: top; }
+        th { background: var(--bg-secondary); color: var(--text-muted); font-weight: 600; }
+        td .child { color: var(--text-dim); font-size: .72rem; }
+        details { margin-top: 1rem; }
+        summary { cursor: pointer; color: var(--text-muted); font-size: .78rem; }
+        pre { background: var(--bg-primary); border: 1px solid var(--border); border-radius: 8px; padding: .8rem; font-size: .72rem; overflow: auto; max-height: 420px; margin-top: .5rem; }
+        .provider-row { display: flex; gap: .4rem; }
+        .provider-row .chip.on { border-color: var(--accent); color: #fff; background: rgba(99,102,241,.18); }
     </style>
 </head>
 <body>
-    <header>
-        <div class="logo-section">
-            <h1>&#9889; FlexQuery.NET</h1>
-            <p>Query Inspector</p>
-        </div>
-        <nav>
-            <a href="/">Home</a>
-            <a href="/aggrid.html">AG Grid</a>
-            <a href="/kendo.html">Kendo UI</a>
-            <a href="/comparison.html">Comparison</a>
-            <a href="/playground.html" class="active">Inspector</a>
-            <a href="/swagger">API Docs</a>
-        </nav>
-    </header>
+<header>
+    <div>
+        <h1>FlexQuery Playground</h1>
+        <p>Build a query, run it against the sample API — includes carry their own query blocks</p>
+    </div>
+    <div class="provider-row">
+        <div class="chip on" id="prov-ef" onclick="setProvider('ef')">EF Core</div>
+        <div class="chip" id="prov-dapper" onclick="setProvider('dapper')">Dapper</div>
+    </div>
+</header>
 
-    <div class="page-layout">
-        <div class="left-panel">
-            <div class="section-label">Example Queries</div>
-            <div class="example-chips">
-                <div class="example-chip" onclick="loadPreset('active')">&#128293; Active</div>
-                <div class="example-chip" onclick="loadPreset('houston')">&#127961; Houston</div>
-                <div class="example-chip" onclick="loadPreset('email-smith')">&#128231; Email filter</div>
-                <div class="example-chip" onclick="loadPreset('newest')">&#128197; Newest</div>
-                <div class="example-chip projection" onclick="loadPreset('projection')">&#127919; Projection</div>
-                <div class="example-chip" onclick="loadPreset('include-orders')">&#128230; +Orders</div>
-                <div class="example-chip" onclick="loadPreset('multi-sort')">&#128257; Multi Sort</div>
-                <div class="chip-divider">Advanced Query Features</div>
-                <div class="example-chip group" onclick="loadPreset('group-status')">&#128101; Group By Status</div>
-                <div class="example-chip group" onclick="loadPreset('group-city')">&#127961; Group By City</div>
-                <div class="example-chip aggregate" onclick="loadPreset('aggregates')">&#128202; Aggregates Demo</div>
-                <div class="example-chip having" onclick="loadPreset('having')">&#128293; Having Demo</div>
-            </div>
-
-            <div class="section-label">Query Parameters</div>
-
-            <div class="input-group">
-                <label>Filter (DSL)</label>
-                <input type="text" id="pgFilter" placeholder="status:eq:active" oninput="updateUrlPreview()">
-            </div>
-            <div class="input-group">
-                <label>Sort</label>
-                <input type="text" id="pgSort" placeholder="createdDate:desc" oninput="updateUrlPreview()">
-            </div>
-            <div class="input-row">
-                <div class="input-group">
-                    <label>Page</label>
-                    <input type="number" id="pgPage" value="1" min="1" oninput="updateUrlPreview()">
-                </div>
-                <div class="input-group">
-                    <label>Page Size</label>
-                    <input type="number" id="pgPageSize" value="20" min="1" max="50" oninput="updateUrlPreview()">
-                </div>
-            </div>
-            <div class="input-group">
-                <label>Select (projection)</label>
-                <input type="text" id="pgSelect" placeholder="id,firstName,email" oninput="updateUrlPreview()">
-            </div>
-            <div class="input-group">
-                <label>Include (navigation)</label>
-                <input type="text" id="pgInclude" placeholder="orders" oninput="updateUrlPreview()">
-            </div>
-            <div class="input-group">
-                <label>GroupBy</label>
-                <input type="text" id="pgGroupByInput" placeholder="status" oninput="updateUrlPreview()">
-            </div>
-            <div class="input-group">
-                <label>Having (DSL)</label>
-                <input type="text" id="pgHavingInput" placeholder="count:gt:20" oninput="updateUrlPreview()">
-            </div>
-
-            <div class="section-label">Provider</div>
-            <div class="provider-row" id="providerSwitch">
-                <div class="provider-option active" data-provider="ef" onclick="setProvider('ef')">
-                    <input type="radio" name="provider" value="ef" checked>EF Core
-                </div>
-                <div class="provider-option" data-provider="dapper" onclick="setProvider('dapper')">
-                    <input type="radio" name="provider" value="dapper">Dapper
-                </div>
-            </div>
-
-            <button class="execute-btn" id="pgExecuteBtn" onclick="runPlayground()">&#9654; Execute</button>
+<div class="page">
+    <div class="left">
+        <div class="section-label">Presets</div>
+        <div class="chips">
+            <div class="chip" onclick="loadPreset('active')">&#128293; Active</div>
+            <div class="chip" onclick="loadPreset('projection')">&#127919; Projection</div>
+            <div class="chip" onclick="loadPreset('include')">&#128230; Simple include</div>
+            <div class="chip" onclick="loadPreset('bounded')">&#128202; Bounded include</div>
+            <div class="chip" onclick="loadPreset('nested')">&#128230; Nested include</div>
+            <div class="chip danger" onclick="loadPreset('bad-skip')">&#9888; skip in include</div>
+            <div class="chip danger" onclick="loadPreset('bad-single')">&#9888; options on single</div>
+            <div class="chip danger" onclick="loadPreset('bad-expand')">&#9888; removed expand=</div>
         </div>
 
-        <div class="right-panel" id="rightPanel">
-            <!-- Pipeline Banner -->
-            <div class="pipeline-banner">
-                <span class="step">DSL</span>
-                <span class="arrow">&#8594;</span>
-                <span class="step">Parse</span>
-                <span class="arrow">&#8594;</span>
-                <span class="step">Translate</span>
-                <span class="arrow">&#8594;</span>
-                <span class="step">SQL</span>
-                <span class="arrow">&#8594;</span>
-                <span class="step">Execute</span>
-                <span class="arrow">&#8594;</span>
-                <span class="active-step">Results</span>
-            </div>
-
-            <!-- Meta Row -->
-            <div class="output-meta">
-                <div class="output-meta-item"><span class="status-dot ready" id="pgStatusDot"></span><span class="label">Status:</span> <span class="value" id="pgStatus">Ready</span></div>
-                <div class="output-meta-item"><span class="label">Provider:</span> <span class="value" id="pgMetaProvider">EF Core</span></div>
-                <div class="output-meta-item"><span class="label">Response:</span> <span class="value" id="pgTime">—</span></div>
-                <div class="output-meta-item"><span class="label">Rows:</span> <span class="value" id="pgRows">—</span></div>
-                <div class="output-meta-item"><span class="label">Total:</span> <span class="value" id="pgTotal">—</span></div>
-                <div class="output-meta-item"><span class="label">Cols:</span> <span class="value" id="pgColumns">—</span></div>
-                <div class="output-meta-item"><span class="label">Payload:</span> <span class="value" id="pgPayloadSize">—</span></div>
-            </div>
-
-            <!-- Warnings Banner -->
-            <div id="warningsBanner" class="banner banner-warnings" style="display:none;" onclick="this.classList.toggle('expanded')">
-                <div class="banner-header">
-                    <span>&#9888; Warnings (<span id="warningsCount">0</span>)</span>
-                    <span class="banner-chevron">&#9660;</span>
-                </div>
-                <div class="banner-body" id="warningsBody"></div>
-            </div>
-
-            <!-- Suggestions Banner -->
-            <div id="suggestionsBanner" class="banner banner-suggestions" style="display:none;" onclick="this.classList.toggle('expanded')">
-                <div class="banner-header">
-                    <span>&#128161; Optimization Suggestions (<span id="suggestionsCount">0</span>)</span>
-                    <span class="banner-chevron">&#9660;</span>
-                </div>
-                <div class="banner-body" id="suggestionsBody"></div>
-            </div>
-
-            <!-- Section Tabs: Inspector | Results -->
-            <div class="section-tabs">
-                <span class="section-tab active" data-section="inspector" onclick="switchSection('inspector')">&#128269; Inspector</span>
-                <span class="section-tab" data-section="results" onclick="switchSection('results')">&#128202; Results</span>
-            </div>
-
-            <!-- Inspector Panel -->
-            <div class="section-panel active" id="inspectorPanel">
-                <div class="output-card diag-card" id="diagCard">
-                    <div class="diag-tabs">
-                        <span class="diag-tab active" data-tab="summary" onclick="switchDiagTab('summary')">&#8851; Summary</span>
-                        <span class="diag-tab" data-tab="timeline" onclick="switchDiagTab('timeline')">&#9201; Timeline</span>
-                        <span class="diag-tab" data-tab="sql" onclick="switchDiagTab('sql')">&#9002; SQL</span>
-                        <span class="diag-tab" data-tab="options" onclick="switchDiagTab('options')">&#9881; Parsed Query</span>
-                        <span class="diag-tab" data-tab="pipeline" onclick="switchDiagTab('pipeline')">&#9679; Pipeline</span>
-                        <span class="diag-tab" data-tab="raw" onclick="switchDiagTab('raw')">{} Diagnostics JSON</span>
-                    </div>
-                    <div class="output-card-body">
-                        <div class="diag-panel active" id="diagSummary">
-                            <div id="summarySections"></div>
-                            <div id="summaryFooter" class="summary-footer"></div>
-                        </div>
-                        <div class="diag-panel" id="diagTimeline">
-                            <div class="timeline-header">
-                                <h4>Execution Stages</h4>
-                                <span style="font-size:0.6rem;color:var(--text-dim);" id="timelineTotal"></span>
-                            </div>
-                            <div id="timelineChart" class="timeline-chart"></div>
-                            <div class="timeline-table-wrapper"><table class="timeline-table"><thead><tr><th>Stage</th><th>Duration</th><th>%</th><th></th></tr></thead><tbody id="timelineBody"></tbody></table></div>
-                        </div>
-                        <div class="diag-panel flex-panel" id="diagSql">
-                            <div class="sql-toolbar">
-                                <button class="toolbar-btn" onclick="copySql()">&#128203; Copy SQL</button>
-                                <button class="toolbar-btn" onclick="copySqlParams()">&#128203; Copy Parameters</button>
-                                <span class="sql-dialect" id="sqlDialect"></span>
-                            </div>
-                            <div class="sql-editor">
-                                <div class="sql-line-numbers" id="sqlLineNumbers"></div>
-                                <pre class="sql-code" id="sqlCode"><span style="color:var(--text-dim);font-style:italic;">Execute a query to see generated SQL...</span></pre>
-                            </div>
-                            <div id="sqlParamsArea" style="display:none;">
-                                <table class="sql-params-table"><thead><tr><th>Name</th><th>Value</th></tr></thead><tbody id="sqlParamsBody"></tbody></table>
-                            </div>
-                        </div>
-                        <div class="diag-panel" id="diagOptions">
-                            <div style="text-align:right;margin-bottom:0.3rem;"><button class="toolbar-btn" onclick="copyQueryOptions()">&#128203; Copy as JSON</button></div>
-                            <div id="optionsSections" class="options-sections"></div>
-                        </div>
-                        <div class="diag-panel" id="diagPipeline">
-                            <div id="pipelineStages" class="pipeline-stages"></div>
-                            <div id="pipelineFooter" class="pipeline-footer"></div>
-                        </div>
-                        <div class="diag-panel flex-panel" id="diagRaw">
-                            <div class="raw-toolbar">
-                                <button class="toolbar-btn" onclick="copyDiagnosticsJson()">&#128203; Copy JSON</button>
-                                <button class="toolbar-btn" onclick="downloadDiagnosticsJson()">&#11015; Download</button>
-                                <div class="raw-toggle-group">
-                                    <span class="raw-toggle-opt active" data-raw="diag" onclick="setRawView('diag')">Diagnostics</span>
-                                    <span class="raw-toggle-opt" data-raw="full" onclick="setRawView('full')">Full Response</span>
-                                </div>
-                            </div>
-                            <div class="raw-json-viewer"><pre class="output-json" id="rawJsonOutput"><span class="null">Execute a query to see diagnostics JSON...</span></pre></div>
-                            <div class="raw-payload-size" id="rawPayloadSize"></div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Results Panel -->
-            <div class="section-panel" id="resultsPanel">
-                <div class="output-card results-card">
-                    <div class="output-card-header">
-                        <h3>&#128202; Results Preview</h3>
-                        <div class="results-toolbar">
-                            <button class="toolbar-btn" onclick="copyResultsJson()">Copy JSON</button>
-                            <button class="toolbar-btn" onclick="exportCsv()">Export CSV</button>
-                            <span class="sep"></span>
-                            <div class="view-toggle" id="pgViewToggle">
-                                <span class="toggle-option active" data-view="table" onclick="setResultView('table')">Table</span>
-                                <span class="toggle-option" data-view="json" onclick="setResultView('json')">JSON</span>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="output-card-body">
-                        <div id="pgResults">
-                            <div class="results-empty-hero">
-                                <div class="hero-icon">&#9889;</div>
-                                <p>Try one of the example queries</p>
-                                <div class="empty-chips">
-                                    <span onclick="loadPreset('active')">&#128293; Active Customers</span>
-                                    <span onclick="loadPreset('houston')">&#127961; Houston Customers</span>
-                                    <span onclick="loadPreset('projection')">&#127919; Projection Demo</span>
-                                    <span onclick="loadPreset('include-orders')">&#128230; Include Orders</span>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="output-json results-json" id="pgResultsJson"><span class="null">Execute a query to see results</span></div>
-                    </div>
-                </div>
-            </div>
+        <div class="section-label">Query</div>
+        <div class="field"><label>Filter</label><input id="pgFilter" placeholder="status:eq:Active" oninput="refresh()"></div>
+        <div class="field"><label>Sort</label><input id="pgSort" placeholder="createdDate:desc" oninput="refresh()"></div>
+        <div class="field"><label>Select</label><input id="pgSelect" placeholder="id,firstName,email" oninput="refresh()"></div>
+        <div class="field">
+            <label>Include</label>
+            <input id="pgInclude" placeholder="orders(take=5;filter=status:eq:Active;sort=orderDate:desc)" oninput="refresh()">
+            <div class="hint">include=orders &nbsp;·&nbsp; include=orders(take=5;filter=…;sort=…) &nbsp;·&nbsp; include=orders(include=customer)</div>
         </div>
+        <div class="field" style="display:flex;gap:.5rem;">
+            <div style="flex:1"><label>Page</label><input id="pgPage" type="number" value="1" min="1" oninput="refresh()"></div>
+            <div style="flex:1"><label>Page size</label><input id="pgPageSize" type="number" value="20" min="1" max="50" oninput="refresh()"></div>
+        </div>
+
+        <button class="execute" onclick="runQuery()">&#9654; Execute</button>
     </div>
 
-    <footer>
-        <span>&#9889; FlexQuery.NET v3.0.7</span>
-        <span class="sep">|</span>
-        <a href="https://nuget.org/packages/FlexQuery.NET" target="_blank">dotnet add package FlexQuery.NET</a>
-        <span class="sep">|</span>
-        <a href="https://github.com/peterjohncasasola/FlexQuery.NET" target="_blank">View on GitHub</a>
-        <span class="sep">|</span>
-        <a href="https://github.com/peterjohncasasola/FlexQuery.NET/stargazers" target="_blank">
-            <img src="https://img.shields.io/github/stars/peterjohncasasola/FlexQuery.NET?style=flat&amp;label=Stars&amp;color=6366f1" alt="Stars">
-        </a>
-        <a href="https://nuget.org/packages/FlexQuery.NET" target="_blank">
-            <img src="https://img.shields.io/nuget/v/FlexQuery.NET?style=flat&amp;label=NuGet&amp;color=6366f1" alt="NuGet">
-        </a>    <script type="module" src="/js/pages/playground/index.js"></script>= '<td>' + String(val).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').substring(0, 60) + '</td>';
-                });
-                html += '</tr>';
-            });
-            html += '</tbody></table>';
-            container.innerHTML = html;
+    <div class="right">
+        <div id="bannerError" class="banner error"></div>
+        <div id="bannerWarn" class="banner warn"></div>
+        <div class="url-preview" id="urlPreview">—</div>
+        <div class="meta" id="meta"></div>
+        <div id="result"></div>
+        <details id="diagWrap" style="display:none"><summary>Diagnostics</summary><pre id="diag"></pre></details>
+    </div>
+</div>
+
+<script>
+    'use strict';
+
+    // Schema metadata for the sample model — relationship cardinality as declared in
+    // the entity classes (Customer.Orders is a collection; Order.Customer is a single
+    // reference). Anything else is an unknown relationship and gets flagged; the server
+    // always remains the authority. Same rule the API enforces: `filter`/`sort`/`take`
+    // apply only to collection-valued relationships.
+    const RELATIONSHIPS = {
+        'orders':    'collection',   // Customer.Orders : List<Order>
+        'purchases': 'collection',   // renamed view of the same collection
+        'customer':  'single'        // Order.Customer : Customer?
+    };
+    const KNOWN_OPTIONS = ['filter', 'sort', 'take', 'include'];
+
+    let provider = 'ef';
+    function setProvider(p) {
+        provider = p;
+        document.getElementById('prov-ef').classList.toggle('on', p === 'ef');
+        document.getElementById('prov-dapper').classList.toggle('on', p === 'dapper');
+        refresh();
+    }
+
+    const PRESETS = {
+        active:    { filter: 'status:eq:Active', sort: 'lastName:asc', pageSize: 10 },
+        projection:{ select: 'id,firstName,email,orders(id,orderDate,status)', include: 'orders', pageSize: 5 },
+        include:   { include: 'orders', pageSize: 5 },
+        bounded:   { include: 'orders(take=5;filter=status:eq:Delivered;sort=orderDate:desc)', pageSize: 5 },
+        nested:    { include: 'orders(filter=status:eq:Shipped;include=customer)', pageSize: 5 },
+        'bad-skip':   { include: 'orders(skip=10)', pageSize: 5 },
+        'bad-single': { select: 'id,firstName', include: 'orders(take=2;include=customer(take=5))', pageSize: 5 },
+        'bad-expand': { include: 'expand=orders', filter: 'status:eq:Active', pageSize: 5 }
+    };
+
+    function loadPreset(key) {
+        const p = PRESETS[key];
+        pgFilter.value = p.filter || '';
+        pgSort.value = p.sort || '';
+        pgSelect.value = p.select || '';
+        pgInclude.value = p.include || '';
+        pgPage.value = p.page || 1;
+        pgPageSize.value = p.pageSize || 20;
+        refresh();
+    }
+
+    function splitTop(value, sep) {
+        const parts = []; let depth = 0, start = 0;
+        for (let i = 0; i < value.length; i++) {
+            const c = value[i];
+            if (c === '(') depth++;
+            else if (c === ')') depth--;
+            else if (c === sep && depth === 0) { parts.push(value.slice(start, i)); start = i + 1; }
+        }
+        parts.push(value.slice(start));
+        return parts;
+    }
+
+    // Walk the include expression, validating each relationship against RELATIONSHIPS.
+    function validateInclude(raw) {
+        const issues = [];
+        if (!raw) return issues;
+        for (const entry of splitTop(raw, ',')) {
+            const e = entry.trim();
+            if (!e) { issues.push({ level: 'error', text: 'Empty include entry (check for stray commas).' }); continue; }
+            walkEntry(e, '', issues);
+        }
+        return issues;
+    }
+
+    function walkEntry(entry, prefix, issues) {
+        const open = entry.indexOf('(');
+        let path = open >= 0 ? entry.slice(0, open).trim() : entry;
+        let body = '';
+        if (open >= 0) {
+            let depth = 0, close = -1;
+            for (let i = open; i < entry.length; i++) {
+                if (entry[i] === '(') depth++;
+                else if (entry[i] === ')' && --depth === 0) { close = i; break; }
+            }
+            if (close < 0) { issues.push({ level: 'error', text: `Unbalanced parentheses in "${entry}".` }); return; }
+            body = entry.slice(open + 1, close);
+            if (entry.slice(close + 1).trim()) { issues.push({ level: 'error', text: `Unexpected text after ")" in "${entry}".` }); return; }
         }
 
-        function syntaxHighlight(json) {
-            return json.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-                .replace(/"([^"]+)"\s*:/g, '<span class="key">"$1"</span>:')
-                .replace(/: "([^"]*)"/g, ': <span class="str">"$1"</span>')
-                .replace(/: (\d+(?:\.\d+)?)/g, ': <span class="num">$1</span>')
-                .replace(/: (true|false)/g, ': <span class="bool">$1</span>')
-                .replace(/: (null)/g, ': <span class="null">$1</span>');
+        const head = path.split('.').pop();
+        const fullPath = prefix ? `${prefix}.${path}` : path;
+        const kind = RELATIONSHIPS[head.toLowerCase()];
+        if (!kind) {
+            issues.push({ level: 'error', text: `Unknown relationship "${path}" — validation must use the real model metadata.` });
         }
 
-        updateUrlPreview();
-    </script>
+        if (body) {
+            for (const segRaw of splitTop(body, ';')) {
+                const seg = segRaw.trim();
+                if (!seg) continue;
+                const eq = seg.indexOf('=');
+                if (eq < 0) {
+                    if (/^[A-Za-z_][\w.]*\(/.test(seg)) { walkEntry(seg, fullPath, issues); continue; }
+                    issues.push({ level: 'error', text: `Unexpected include option "${seg}". Supported options: ${KNOWN_OPTIONS.join(', ')}.` });
+                    continue;
+                }
+                const key = seg.slice(0, eq).trim().toLowerCase();
+                const value = seg.slice(eq + 1).trim();
+                if (key === 'skip') {
+                    issues.push({ level: 'error', text: `"skip" is not supported inside include(...). Use "take=N" to bound the included collection.` });
+                    continue;
+                }
+                if (key === 'expand') {
+                    issues.push({ level: 'error', text: `The "expand" keyword no longer exists — put "${value}" options directly in the include block.` });
+                    continue;
+                }
+                if (key === 'include') { walkEntry(value, fullPath, issues); continue; }
+                if (!KNOWN_OPTIONS.includes(key)) {
+                    issues.push({ level: 'error', text: `Unexpected include option "${key}". Supported options: ${KNOWN_OPTIONS.join(', ')}.` });
+                    continue;
+                }
+                if (kind === 'single' && ['filter', 'sort', 'take'].includes(key)) {
+                    issues.push({ level: 'error', text: `The '${key}' option can only be used with collection relationships. '${fullPath}' is a single-valued relationship.` });
+                }
+            }
+        }
+    }
+
+    function buildQuery() {
+        const params = new URLSearchParams();
+        const add = (k, v) => { if (v && v.trim()) params.set(k, v.trim()); };
+        add('filter', pgFilter.value);
+        add('sort', pgSort.value);
+        add('select', pgSelect.value);
+        add('include', pgInclude.value);
+        if (pgPage.value && pgPage.value !== '1') params.set('page', pgPage.value);
+        if (pgPageSize.value && pgPageSize.value !== '20') params.set('pageSize', pgPageSize.value);
+        return params.toString();
+    }
+
+    function endpoint() {
+        return provider === 'ef' ? '/api/ef/customers' : '/api/dapper/customers';
+    }
+
+    function refresh() {
+        const q = buildQuery();
+        document.getElementById('urlPreview').textContent = endpoint() + (q ? '?' + q : '');
+
+        const issues = validateInclude(pgInclude.value);
+
+        const err = document.getElementById('bannerError');
+        const warn = document.getElementById('bannerWarn');
+        const errors = issues.filter(i => i.level === 'error');
+        err.className = 'banner error' + (errors.length ? ' show' : '');
+        err.innerHTML = errors.length
+            ? '<strong>Include block validation failed</strong><ul>' + errors.map(i => '<li>' + i.text + '</li>').join('') + '</ul>'
+            : '';
+        warn.className = 'banner';
+    }
+
+    async function runQuery() {
+        refresh();
+        const q = buildQuery();
+        const url = endpoint() + (q ? '?' + q : '');
+        const resultDiv = document.getElementById('result');
+        const meta = document.getElementById('meta');
+        resultDiv.innerHTML = '<p style="color:var(--text-dim)">Running…</p>';
+        meta.textContent = '';
+        try {
+            const res = await fetch(url);
+            const body = await res.json().catch(() => null);
+            if (!res.ok) {
+                const msg = body && (body.title || body.message) ? (body.title || body.message) : `HTTP ${res.status}`;
+                const detail = body && body.errors ? '<ul>' + body.errors.map(e => `<li>${e.message || e}</li>`).join('') + '</ul>'
+                    : (body && body.detail ? `<div>${body.detail}</div>` : '');
+                document.getElementById('bannerError').className = 'banner error show';
+                document.getElementById('bannerError').innerHTML = "<strong>Server rejected the query</strong><div>" + msg + "</div>" + detail;
+                resultDiv.innerHTML = '';
+                return;
+            }
+            const rows = body.data || [];
+            meta.innerHTML = `<span>${rows.length} rows on page ${body.page || 1}</span><span>totalCount ${body.totalCount ?? '—'}</span>`;
+            renderTable(rows, resultDiv);
+            const diag = body.__diagnostics;
+            const wrap = document.getElementById('diagWrap');
+            if (diag) { wrap.style.display = ''; document.getElementById('diag').textContent = JSON.stringify(diag, null, 2); }
+            else wrap.style.display = 'none';
+        } catch (ex) {
+            resultDiv.innerHTML = '<p style="color:var(--accent-red)">Request failed: ' + ex + '</p>';
+        }
+    }
+
+    function renderTable(rows, host) {
+        if (!rows.length) { host.innerHTML = '<p style="color:var(--text-dim)">No rows.</p>'; return; }
+        const cols = [...new Set(rows.flatMap(r => Object.keys(r)))];
+        let html = '<table><thead><tr>' + cols.map(c => `<th>${c}</th>`).join('') + '</tr></thead><tbody>';
+        for (const row of rows) {
+            html += '<tr>' + cols.map(c => {
+                const v = row[c];
+                if (Array.isArray(v)) {
+                    return `<td>${v.length}<div class="child">${v.slice(0, 3).map(childBox).join('')}</div>${v.length > 3 ? '<div class="child">…</div>' : ''}</td>`;
+                }
+                if (v && typeof v === 'object') return `<td><div class="child">${childBox(v)}</div></td>`;
+                return `<td>${v === null || v === undefined ? '' : String(v)}</td>`;
+            }).join('') + '</tr>';
+        }
+        host.innerHTML = html + '</tbody></table>';
+    }
+
+    function childBox(obj) {
+        return '<span class="child">{' + Object.entries(obj).slice(0, 4).map(([k, v]) => `${k}: ${v && typeof v === 'object' ? '…' : v}`).join(', ') + '}</span>';
+    }
+
+    refresh();
+</script>
 </body>
 </html>
