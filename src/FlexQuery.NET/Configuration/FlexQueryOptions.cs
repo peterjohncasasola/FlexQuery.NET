@@ -7,13 +7,19 @@ namespace FlexQuery.NET.Configuration;
 public sealed class FlexQueryOptions
 {
     private bool _frozen;
+    private int _maxPageSize = 1000;
+    private int _defaultPageSize = 20;
+    private bool _includeTotalCount = true;
+    private bool _strictFieldValidation = true;
+    private int _maxFieldDepth = 5;
+    private QuerySyntax _defaultQuerySyntax = QuerySyntax.NativeDsl;
 
-    public int MaxPageSize { get; set; } = 1000;
-    public int DefaultPageSize { get; set; } = 20;
-    public bool IncludeTotalCount { get; set; } = true;
-    public bool StrictFieldValidation { get; set; } = true;
-    public int MaxFieldDepth { get; set; } = 5;
-    public QuerySyntax DefaultQuerySyntax { get; set; } = QuerySyntax.NativeDsl;
+    public int MaxPageSize { get => _maxPageSize; set { ThrowIfFrozen(); _maxPageSize = value; } }
+    public int DefaultPageSize { get => _defaultPageSize; set { ThrowIfFrozen(); _defaultPageSize = value; } }
+    public bool IncludeTotalCount { get => _includeTotalCount; set { ThrowIfFrozen(); _includeTotalCount = value; } }
+    public bool StrictFieldValidation { get => _strictFieldValidation; set { ThrowIfFrozen(); _strictFieldValidation = value; } }
+    public int MaxFieldDepth { get => _maxFieldDepth; set { ThrowIfFrozen(); _maxFieldDepth = value; } }
+    public QuerySyntax DefaultQuerySyntax { get => _defaultQuerySyntax; set { ThrowIfFrozen(); _defaultQuerySyntax = value; } }
     public IQueryMappingRegistry Registry { get; } = new QueryMappingRegistry();
 
     public ITypeMapExpression<TEntity, TDestination> CreateMap<TEntity, TDestination>()
@@ -34,8 +40,7 @@ public sealed class FlexQueryOptions
 
     internal void Freeze()
     {
-        if (_frozen)
-            return;
+        if (_frozen) return;
         Registry.Freeze();
         _frozen = true;
     }
