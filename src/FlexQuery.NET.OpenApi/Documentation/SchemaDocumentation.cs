@@ -29,6 +29,9 @@ internal static class SchemaDocumentation
     internal static readonly string Aggregate =
         "An aggregate projection expression with function, field, and alias.";
 
+    /// <summary>Alias for the aggregate model schema documentation.</summary>
+    internal static readonly string AggregateModel = Aggregate;
+
     internal static readonly string HavingConditionNode =
         "A HAVING condition against an aggregate projection.";
 
@@ -36,7 +39,7 @@ internal static class SchemaDocumentation
         "A HAVING expression tree supporting logical combinations of aggregate conditions.";
 
     internal static readonly string IncludeNode =
-        "A filtered navigation include path with optional child expansions.";
+        "An included relationship, optionally carrying relationship query options (filter, sort, take) and nested includes.";
 
     internal static readonly string ProjectionMode =
         "Defines how projected data is shaped: Nested, Flat, or FlatMixed.";

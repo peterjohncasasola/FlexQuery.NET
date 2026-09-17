@@ -37,8 +37,7 @@ internal static class ExampleProvider
             new SortNode { Field = "FirstName", Descending = false }
         ],
         Select = ["Id", "FirstName", "LastName", "Email", "Profile.AvatarUrl"],
-        Include = ["Orders", "Profile"],
-        Expand =
+        Include =
         [
             new IncludeNode
             {
@@ -51,7 +50,8 @@ internal static class ExampleProvider
                 [
                     new IncludeNode { Path = "OrderItems" }
                 ]
-            }
+            },
+            new IncludeNode { Path = "Profile" }
         ],
         Aggregate =
         [

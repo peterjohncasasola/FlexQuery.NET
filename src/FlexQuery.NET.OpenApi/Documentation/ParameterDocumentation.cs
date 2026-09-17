@@ -18,5 +18,5 @@ internal static class ParameterDocumentation
         "Comma-separated field paths to include in the result (e.g., Id,FirstName,Email).";
 
     internal static readonly string Include =
-        "Comma-separated navigation property paths to include (e.g., Orders,Profile).";
+        "Comma-separated navigation relationships to include; collection relationships may carry an options block — e.g. Orders or Orders(take=5;filter=Status:eq:'Active';sort=OrderDate:desc). Dotted paths and nested include= blocks are supported.";
 }
