@@ -101,8 +101,7 @@ public class DapperDtoIncludeGraphBoundaryTests : IDisposable
         var result = await _connection.FlexQueryAsync<Customer, CustomerResponse>(
             new FlexQueryParameters
             {
-                Include = "Orders",
-                Expand = "Orders(take=1)",
+                Include = "Orders(take=1)",
                 Page = 1,
                 PageSize = 100
             },

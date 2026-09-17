@@ -15,7 +15,7 @@ namespace FlexQuery.NET.Tests.Integration;
 /// EF Core LogTo and asserts that expand options (filter, sort, take) and root paging
 /// are translated to the database instead of being applied in memory.
 /// </summary>
-public class IncludeExpandSqlShapeTests
+public class IncludeSqlShapeTests
 {
     private static (SharedTestDbContext Db, List<string> Sql) CreateCaptureContext()
     {
@@ -51,8 +51,7 @@ public class IncludeExpandSqlShapeTests
             var parameters = new FlexQueryParameters
             {
                 Filter = "Id:eq:1",
-                Include = "Orders",
-                Expand = "Orders(filter=Status:eq:Shipped;sort=Id:desc;take=2)",
+                Include = "Orders(filter=Status:eq:Shipped;sort=Id:desc;take=2)",
                 PageSize = 1
             };
 
@@ -148,8 +147,7 @@ public class IncludeExpandSqlShapeTests
             {
                 Filter = "Salary:gt:0",
                 Select = "CustomerFullName",
-                Include = "Orders",
-                Expand = "Orders(filter=Status:eq:Delivered;sort=Id:desc;take=3)",
+                Include = "Orders(filter=Status:eq:Delivered;sort=Id:desc;take=3)",
                 PageSize = 10
             };
 
@@ -195,8 +193,7 @@ public class IncludeExpandSqlShapeTests
             {
                 Filter = "Id:eq:1",
                 Select = "CustomerFullName,Orders(Id,Status)",
-                Include = "Orders",
-                Expand = "Orders(filter=Status:eq:Shipped;sort=Id:desc;take=3)",
+                Include = "Orders(filter=Status:eq:Shipped;sort=Id:desc;take=3)",
                 PageSize = 10
             };
 
@@ -294,8 +291,7 @@ public class IncludeExpandSqlShapeTests
             {
                 Filter = "Id:eq:1",
                 Select = "CustomerFullName,Orders(Id,Status,OrderDate)",
-                Include = "Orders",
-                Expand = "Orders(take=3; filter=Status:eq:Shipped; sort=Id:desc)",
+                Include = "Orders(take=3; filter=Status:eq:Shipped; sort=Id:desc)",
                 PageSize = 10
             };
 
@@ -335,7 +331,7 @@ public class IncludeExpandSqlShapeTests
     {
         // The exact user reproduction:
         //   include=orders
-        //   expand=Orders(take=3;Filter=status="delivered";sort=OrderId DESC)
+        //   include=Orders(take=3;Filter=status="delivered";sort=OrderId DESC)
         //   pageSize=10
         //   select=CustomerFullName,Orders(OrderId,OrderDate,Status)
         //   orderBy=CustomerFullName ASC
@@ -349,8 +345,7 @@ public class IncludeExpandSqlShapeTests
             {
                 Filter = "Id:eq:1",
                 Select = "CustomerFullName,Orders(Id,Status)",
-                Include = "Orders",
-                Expand = "Orders(take=3;filter=Status:eq:Shipped;sort=Id:desc)",
+                Include = "Orders(take=3;filter=Status:eq:Shipped;sort=Id:desc)",
                 PageSize = 10,
                 Sort = "CustomerFullName ASC"
             };
@@ -538,8 +533,7 @@ public class IncludeExpandSqlShapeTests
             var parameters = new FlexQueryParameters
             {
                 Filter = "Id:eq:1",
-                Include = "Orders",
-                Expand = "Orders(take=2)",
+                Include = "Orders(take=2)",
                 PageSize = 1
             };
 
@@ -578,8 +572,7 @@ public class IncludeExpandSqlShapeTests
             var parameters = new FlexQueryParameters
             {
                 Filter = "Id:eq:1",
-                Include = "Orders",
-                Expand = "Orders(filter=Status:eq:Shipped;sort=Id:desc;take=2)",
+                Include = "Orders(filter=Status:eq:Shipped;sort=Id:desc;take=2)",
                 PageSize = 1
             };
 

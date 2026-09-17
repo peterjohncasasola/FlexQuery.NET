@@ -12,7 +12,7 @@ public class QueryOptionsNormalizeTests
     {
         var options = new QueryOptions
         {
-            Expand =
+            Includes =
             [
                 new IncludeNode
                 {
@@ -34,13 +34,13 @@ public class QueryOptionsNormalizeTests
 
         var normalized = options.Normalize();
 
-        normalized.Expand.Should().ContainSingle();
-        normalized.Expand![0].Sort.Should().ContainSingle()
+        normalized.Includes.Should().ContainSingle();
+        normalized.Includes![0].Sort.Should().ContainSingle()
             .Which.Should().BeEquivalentTo(new SortNode { Field = "OrderDate", Descending = true });
-        normalized.Expand[0].Take.Should().Be(3);
-        normalized.Expand[0].Children.Should().ContainSingle();
-        normalized.Expand[0].Children[0].Sort.Should().ContainSingle()
+        normalized.Includes[0].Take.Should().Be(3);
+        normalized.Includes[0].Children.Should().ContainSingle();
+        normalized.Includes[0].Children[0].Sort.Should().ContainSingle()
             .Which.Should().BeEquivalentTo(new SortNode { Field = "Id", Descending = true });
-        normalized.Expand[0].Children[0].Take.Should().Be(2);
+        normalized.Includes[0].Children[0].Take.Should().Be(2);
     }
 }

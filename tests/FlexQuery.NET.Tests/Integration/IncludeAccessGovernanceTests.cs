@@ -13,7 +13,7 @@ namespace FlexQuery.NET.Tests.Integration;
 
 /// <summary>
 /// End-to-end regression for the nested include access contract on the entity endpoint:
-/// <c>include=Orders,Orders.OrderItems</c> + <c>expand=Orders(...),Orders.OrderItems(...)</c>
+/// <c>include=Orders,Orders.OrderItems</c> + <c>include=Orders(...),Orders.OrderItems(...)</c>
 /// with <c>AllowedIncludes</c> governance whitelisting both exact paths.
 ///
 /// The reproduction request is FQL syntax (matching the reporter's trace through
@@ -33,12 +33,11 @@ public class IncludeAccessGovernanceTests : IDisposable
     public void Dispose() => _db.Dispose();
 
     private const string Include = "Orders,Orders.OrderItems";
-    private const string Expand = "Orders(take=1;filter=Status=\"Delivered\";sort=Id DESC),Orders.OrderItems(take=5)";
+    private const string ExpandExpr = "Orders(take=1;filter=Status=\"Delivered\";sort=Id DESC),Orders.OrderItems(take=5)";
 
     private static QueryOptions ExactRequest() => new FlexQueryParameters
     {
-        Include = Include,
-        Expand = Expand
+            Include = ExpandExpr,
     }.ToQueryOptions(QuerySyntax.Fql);
 
     private static EfCoreQueryOptions Governance() => new()
@@ -102,8 +101,7 @@ public class IncludeAccessGovernanceTests : IDisposable
         var queryOptions = new FlexQueryParameters
         {
             Filter = "Id = 1",
-            Include = Include,
-            Expand = "Orders(take=1;filter=Status=\"Shipped\";sort=Id DESC),Orders.OrderItems(take=5)"
+            Include = "Orders(take=1;filter=Status=\"Shipped\";sort=Id DESC),Orders.OrderItems(take=5)"
         }.ToQueryOptions(QuerySyntax.Fql);
 
         var result = await _db.Customers.FlexQueryAsync(queryOptions, Governance());
@@ -124,8 +122,7 @@ public class IncludeAccessGovernanceTests : IDisposable
         var queryOptions = new FlexQueryParameters
         {
             Filter = "Id = 1",
-            Include = "Orders,Orders.OrderItems,Orders.OrderItems.Discounts",
-            Expand = "Orders(take=1;sort=Id DESC),Orders.OrderItems(take=5),Orders.OrderItems.Discounts(take=5)"
+            Include = "Orders(take=1;sort=Id DESC),Orders.OrderItems(take=5),Orders.OrderItems.Discounts(take=5)"
         }.ToQueryOptions(QuerySyntax.Fql);
         var execOptions = new EfCoreQueryOptions
         {

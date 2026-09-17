@@ -299,7 +299,7 @@ public class SqlInjectionTests
     {
         var options = new QueryOptions
         {
-            Includes = ["Orders"],
+            Includes = IncludeTestFactory.Paths("Orders"),
             Paging = { Disabled = true }
         };
         options.Items[ContextKeys.EntityType] = typeof(Customer);
@@ -314,7 +314,7 @@ public class SqlInjectionTests
     {
         var options = new QueryOptions
         {
-            Includes = ["Orders; DROP TABLE Users;--"],
+            Includes = IncludeTestFactory.Paths("Orders; DROP TABLE Users;--"),
             Paging = { Disabled = true }
         };
         options.Items[ContextKeys.EntityType] = typeof(Customer);

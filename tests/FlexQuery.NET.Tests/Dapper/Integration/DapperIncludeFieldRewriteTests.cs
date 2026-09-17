@@ -13,7 +13,7 @@ namespace FlexQuery.NET.Tests.Dapper.Integration;
 
 /// <summary>
 /// Expand-block field rewriting: filter and sort fields inside
-/// <c>expand=Orders(...),Orders.OrderItems(...)</c> blocks resolve against the
+/// <c>include=Orders(...),Orders.OrderItems(...)</c> blocks resolve against the
 /// navigation element's registered TypeMap — ForMember renames such as
 /// <c>OrderResponse.DeliveryDate ← Order.ExpectedDeliveryDate</c> translate to
 /// entity column names before SQL generation, and a field that exists on neither
@@ -21,12 +21,12 @@ namespace FlexQuery.NET.Tests.Dapper.Integration;
 /// instead of an "Invalid column name" database error.
 /// </summary>
 [Collection("GlobalMapping")]
-public class DapperExpandFieldRewriteTests : IDisposable
+public class DapperIncludeFieldRewriteTests : IDisposable
 {
     private readonly SqliteConnection _connection;
     private readonly CapturingLoggerFactory _loggerFactory = new();
 
-    public DapperExpandFieldRewriteTests()
+    public DapperIncludeFieldRewriteTests()
     {
         global::FlexQuery.NET.Parsers.Fql.Fql.Register();
 
@@ -90,8 +90,7 @@ public class DapperExpandFieldRewriteTests : IDisposable
         var result = await _connection.FlexQueryAsync<Customer, CustomerResponse>(
             new FlexQueryParameters
             {
-                Include = "Orders",
-                Expand = "Orders(take=1;filter=Status=\"Delivered\";sort=DeliveryDate DESC)",
+                Include = "Orders(take=1;filter=Status=\"Delivered\";sort=DeliveryDate DESC)",
                 Page = 1,
                 PageSize = 10
             },
@@ -119,8 +118,7 @@ public class DapperExpandFieldRewriteTests : IDisposable
         var result = await _connection.FlexQueryAsync<Customer, CustomerResponse>(
             new FlexQueryParameters
             {
-                Include = "Orders",
-                Expand = "Orders(filter=Amount=\"60\")",
+                Include = "Orders(filter=Amount=\"60\")",
                 Page = 1,
                 PageSize = 10
             },
@@ -137,8 +135,7 @@ public class DapperExpandFieldRewriteTests : IDisposable
         var result = await _connection.FlexQueryAsync<Customer, CustomerResponse>(
             new FlexQueryParameters
             {
-                Include = "Orders",
-                Expand = "Orders(take=1;filter=Status=\"Delivered\";sort=ExpectedDeliveryDate DESC)",
+                Include = "Orders(take=1;filter=Status=\"Delivered\";sort=ExpectedDeliveryDate DESC)",
                 Page = 1,
                 PageSize = 10
             },
@@ -159,8 +156,7 @@ public class DapperExpandFieldRewriteTests : IDisposable
             await _connection.FlexQueryAsync<Customer, CustomerResponse>(
                 new FlexQueryParameters
                 {
-                    Include = "Orders,Orders.OrderItems",
-                    Expand = "Orders,Orders.OrderItems(take=5;sort=DeliveryDate DESC)",
+                    Include = "Orders,Orders.OrderItems(take=5;sort=DeliveryDate DESC)",
                     Page = 1,
                     PageSize = 10
                 },
@@ -177,8 +173,7 @@ public class DapperExpandFieldRewriteTests : IDisposable
             await _connection.FlexQueryAsync<Customer, CustomerResponse>(
                 new FlexQueryParameters
                 {
-                    Include = "Orders",
-                    Expand = "Orders(take=1;sort=NotARealColumn DESC)",
+                    Include = "Orders(take=1;sort=NotARealColumn DESC)",
                     Page = 1,
                     PageSize = 10
                 },

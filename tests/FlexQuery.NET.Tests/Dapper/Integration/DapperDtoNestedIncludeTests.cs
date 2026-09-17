@@ -13,12 +13,12 @@ namespace FlexQuery.NET.Tests.Dapper.Integration;
 
 /// <summary>
 /// Regression tests for Dapper DTO nested collection expansion
-/// (<c>expand=Orders(...),Orders.OrderItems(...)</c> with flat dotted paths).
+/// (<c>include=Orders(...),Orders.OrderItems(...)</c> with flat dotted paths).
 ///
 /// The failing request was:
 /// <code>
 /// GET /customers-dto/dapper?include=Orders,Orders.OrderItems
-///     &amp;expand=Orders(take=1;filter=Status="delivered";sort=OrderId DESC),Orders.OrderItems(take=1)
+///     &amp;include=Orders(take=1;filter=Status="delivered";sort=OrderId DESC),Orders.OrderItems(take=1)
 ///     &amp;page=1&amp;pageSize=5
 /// </code>
 /// Orders hydrated but every <c>orderItems</c> was <c>[]</c>. These tests pin the
@@ -27,11 +27,11 @@ namespace FlexQuery.NET.Tests.Dapper.Integration;
 /// deeper nesting through the public (unchanged) syntax.
 /// </summary>
 [Collection("GlobalMapping")]
-public class DapperDtoNestedExpansionTests : IDisposable
+public class DapperDtoNestedIncludeTests : IDisposable
 {
     private readonly SqliteConnection _connection;
 
-    public DapperDtoNestedExpansionTests()
+    public DapperDtoNestedIncludeTests()
     {
         global::FlexQuery.NET.Parsers.Fql.Fql.Register();
 
@@ -180,8 +180,7 @@ public class DapperDtoNestedExpansionTests : IDisposable
         var result = await _connection.FlexQueryAsync<Customer, CustomerResponse>(
             new FlexQueryParameters
             {
-                Include = "Orders,Orders.OrderItems",
-                Expand = "Orders(take=1;filter=Status=\"Delivered\";sort=Id DESC),Orders.OrderItems(take=5)",
+                Include = "Orders.OrderItems,Orders(take=1;filter=Status=\"Delivered\";sort=Id DESC),Orders.OrderItems(take=5)",
                 Page = 1,
                 PageSize = 5
             },
@@ -232,8 +231,7 @@ public class DapperDtoNestedExpansionTests : IDisposable
     {
         var parameters = new FlexQueryParameters
         {
-            Include = "Orders,Orders.OrderItems",
-            Expand = "Orders(take=1;filter=Status=\"Delivered\";sort=Id DESC),Orders.OrderItems(take=5)",
+            Include = "Orders.OrderItems,Orders(take=1;filter=Status=\"Delivered\";sort=Id DESC),Orders.OrderItems(take=5)",
             Page = 1,
             PageSize = 5
         };
@@ -282,8 +280,7 @@ public class DapperDtoNestedExpansionTests : IDisposable
             new FlexQueryParameters
             {
                 Filter = "Id = 1",
-                Include = "Orders,Orders.OrderItems",
-                Expand = "Orders(take=2;sort=Id ASC),Orders.OrderItems(take=1)",
+                Include = "Orders(take=2;sort=Id ASC),Orders.OrderItems(take=1)",
                 PageSize = 5
             },
             Fql);
@@ -306,8 +303,7 @@ public class DapperDtoNestedExpansionTests : IDisposable
             new FlexQueryParameters
             {
                 Filter = "Id = 11",
-                Include = "Orders,Orders.OrderItems",
-                Expand = "Orders(take=2;sort=Id ASC),Orders.OrderItems(take=5)",
+                Include = "Orders(take=2;sort=Id ASC),Orders.OrderItems(take=5)",
                 PageSize = 5
             },
             Fql);
@@ -329,8 +325,7 @@ public class DapperDtoNestedExpansionTests : IDisposable
             new FlexQueryParameters
             {
                 Filter = "Id = 1",
-                Include = "Orders,Orders.OrderItems",
-                Expand = "Orders(take=2;sort=Id ASC),Orders.OrderItems(take=1;sort=Id DESC)",
+                Include = "Orders(take=2;sort=Id ASC),Orders.OrderItems(take=1;sort=Id DESC)",
                 PageSize = 5
             },
             Fql);
@@ -345,8 +340,7 @@ public class DapperDtoNestedExpansionTests : IDisposable
             new FlexQueryParameters
             {
                 Filter = "Id = 2",
-                Include = "Orders,Orders.OrderItems",
-                Expand = "Orders(take=1;sort=Id DESC),Orders.OrderItems(take=1;sort=Id DESC)",
+                Include = "Orders(take=1;sort=Id DESC),Orders.OrderItems(take=1;sort=Id DESC)",
                 PageSize = 5
             },
             Fql);
@@ -363,8 +357,7 @@ public class DapperDtoNestedExpansionTests : IDisposable
             new FlexQueryParameters
             {
                 Filter = "Id = 1",
-                Include = "Orders,Orders.OrderItems",
-                Expand = "Orders(filter=Status=\"Shipped\";take=3),Orders.OrderItems(take=5)",
+                Include = "Orders.OrderItems,Orders(filter=Status=\"Shipped\";take=3),Orders.OrderItems(take=5)",
                 PageSize = 5
             },
             Fql);
@@ -386,8 +379,7 @@ public class DapperDtoNestedExpansionTests : IDisposable
             new FlexQueryParameters
             {
                 Filter = "Id = 2",
-                Include = "Orders,Orders.OrderItems",
-                Expand = "Orders(take=5;sort=Id ASC),Orders.OrderItems(take=5)",
+                Include = "Orders(take=5;sort=Id ASC),Orders.OrderItems(take=5)",
                 PageSize = 5
             },
             Fql);
@@ -398,23 +390,24 @@ public class DapperDtoNestedExpansionTests : IDisposable
         orders.First(o => o.Id == 10005).OrderItems.Should().NotBeEmpty("order 10005 has matching rows — must not be []");
     }
 
-    // Test 6 — deep expansion without the exact deep include fails validation -------------
+    // Test 6 — deep include carries its own parent chain; validation passes -----------
 
     [Fact]
-    public async Task DeepExpand_WithoutDeepInclude_FailsValidation()
+    public async Task DeepInclude_AutoLoadsParentChain()
     {
-        var ex = await Assert.ThrowsAnyAsync<FlexQueryException>(async () =>
-            await _connection.FlexQueryAsync<Customer, CustomerResponse>(
-                new FlexQueryParameters
-                {
-                    Filter = "Id = 1",
-                    Include = "Orders",
-                    Expand = "Orders.OrderItems(take=1)",
-                    PageSize = 5
-                },
-                Fql));
+        var result = await _connection.FlexQueryAsync<Customer, CustomerResponse>(
+            new FlexQueryParameters
+            {
+                Filter = "Id = 1",
+                Include = "Orders,Orders.OrderItems(take=1)",
+                PageSize = 5
+            },
+            Fql);
 
-        ex.Message.Should().Contain("Orders.OrderItems");
+        var orders = result.Data[0].Orders;
+        orders.Should().NotBeEmpty();
+        foreach (var order in orders)
+            order.OrderItems.Should().HaveCountLessOrEqualTo(1);
     }
 
     // Test 7 — nested DTO graph materialization (renamed-style surface preserved) ---------
@@ -426,8 +419,7 @@ public class DapperDtoNestedExpansionTests : IDisposable
             new FlexQueryParameters
             {
                 Filter = "Id = 2",
-                Include = "Orders,Orders.OrderItems",
-                Expand = "Orders(take=1;sort=Id DESC;filter=Status=\"Delivered\"),Orders.OrderItems(take=1;sort=Id DESC)",
+                Include = "Orders.OrderItems,Orders(take=1;sort=Id DESC;filter=Status=\"Delivered\"),Orders.OrderItems(take=1;sort=Id DESC)",
                 PageSize = 5
             },
             Fql);
@@ -475,8 +467,7 @@ public class DapperDtoNestedExpansionTests : IDisposable
         var result = await _connection.FlexQueryAsync<Customer, HostCustomerResponse>(
             new FlexQueryParameters
             {
-                Include = "Orders,Orders.OrderItems",
-                Expand = "Orders(take=1;filter=Status=\"Delivered\";sort=Id DESC),Orders.OrderItems(take=5)",
+                Include = "Orders.OrderItems,Orders(take=1;filter=Status=\"Delivered\";sort=Id DESC),Orders.OrderItems(take=5)",
                 Page = 1,
                 PageSize = 5
             },
@@ -497,8 +488,7 @@ public class DapperDtoNestedExpansionTests : IDisposable
         var result = await _connection.FlexQueryAsync<Customer, HostCustomerResponse>(
             new FlexQueryParameters
             {
-                Include = "Orders, Orders.OrderItems",
-                Expand = "Orders(take = 1; Filter = status = \"Delivered\"; sort = Id DESC), Orders.OrderItems(take=5)",
+                Include = "Orders.OrderItems,Orders(take = 1; Filter = status = \"Delivered\"; sort = Id DESC), Orders.OrderItems(take=5)",
                 Page = 1,
                 PageSize = 5
             },
@@ -519,9 +509,8 @@ public class DapperDtoNestedExpansionTests : IDisposable
             new FlexQueryParameters
             {
                 Filter = "Id = 1",
-                Include = "Orders,Orders.OrderItems",
                 Select = "Name,Orders(Id,Status,OrderItems(Id,Quantity))",
-                Expand = "Orders(take=2;sort=Id ASC),Orders.OrderItems(take=2;sort=Id ASC)",
+                Include = "Orders(take=2;sort=Id ASC),Orders.OrderItems(take=2;sort=Id ASC)",
                 PageSize = 5
             },
             Fql);
@@ -546,8 +535,7 @@ public class DapperDtoNestedExpansionTests : IDisposable
             new FlexQueryParameters
             {
                 Filter = "Id = 2",
-                Include = "Orders,Orders.OrderItems,Orders.OrderItems.Discounts",
-                Expand = "Orders(take=1;sort=Id DESC),Orders.OrderItems(take=5;sort=Id ASC),Orders.OrderItems.Discounts(take=5;sort=Id ASC)",
+                Include = "Orders(take=1;sort=Id DESC),Orders.OrderItems(take=5;sort=Id ASC),Orders.OrderItems.Discounts(take=5;sort=Id ASC)",
                 PageSize = 5
             },
             Fql);
@@ -570,8 +558,7 @@ public class DapperDtoNestedExpansionTests : IDisposable
             new FlexQueryParameters
             {
                 Filter = "Id = 2",
-                Include = "Orders,Orders.OrderItems,Orders.OrderItems.Discounts",
-                Expand = "Orders(take=1;sort=Id DESC),Orders.OrderItems(take=5;sort=Id ASC),Orders.OrderItems.Discounts(take=1;sort=Id DESC)",
+                Include = "Orders(take=1;sort=Id DESC),Orders.OrderItems(take=5;sort=Id ASC),Orders.OrderItems.Discounts(take=1;sort=Id DESC)",
                 PageSize = 5
             },
             Fql);

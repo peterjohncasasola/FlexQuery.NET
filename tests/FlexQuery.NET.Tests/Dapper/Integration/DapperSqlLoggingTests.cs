@@ -126,8 +126,7 @@ public class DapperSqlLoggingTests : IDisposable
 
     private static FlexQueryParameters RegressionParameters() => new()
     {
-        Include = "Orders,Orders.OrderItems",
-        Expand = "Orders(take=1;filter=Status=\"Delivered\";sort=Id DESC),Orders.OrderItems(take=5)",
+        Include = "Orders.OrderItems,Orders(take=1;filter=Status=\"Delivered\";sort=Id DESC),Orders.OrderItems(take=5)",
         Page = 1,
         PageSize = 5
     };

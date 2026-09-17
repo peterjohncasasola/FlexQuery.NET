@@ -231,7 +231,7 @@ public class ResultCountTests
         await using var db = SqlProjectionDbContext.CreateSeeded();
         var result = await ExecuteDapperCustomersAsync(db, new QueryOptions
         {
-            Includes = ["Orders"],
+            Includes = IncludeTestFactory.Paths("Orders"),
             IncludeCount = true,
             Paging = { Page = 1, PageSize = 10 }
         });

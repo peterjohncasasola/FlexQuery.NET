@@ -13,18 +13,18 @@ namespace FlexQuery.NET.Tests.Mapping;
 
 /// <summary>
 /// Deep collection expansion regression tests (Dapper provider, typed DTO path):
-/// <c>include=Orders,Orders.OrderItems</c> + <c>expand=Orders(...),Orders.OrderItems(...)</c>
+/// <c>include=Orders,Orders.OrderItems</c> + <c>include=Orders(...),Orders.OrderItems(...)</c>
 /// must hydrate the nested DTO graph (Customer → Orders → OrderItems) with per-parent
 /// takes, filters, and ordering applied at the database level.
 /// Mappings are registered globally (FlexQueryMapping), matching the documented
 /// AddFlexQuery startup pattern.
 /// </summary>
 [Collection("GlobalMapping")]
-public class DapperDeepExpansionDtoTests : IDisposable
+public class DapperDeepIncludeDtoTests : IDisposable
 {
     private readonly SqliteConnection _connection;
 
-    public DapperDeepExpansionDtoTests()
+    public DapperDeepIncludeDtoTests()
     {
         FlexQueryMapping.Reset();
         FlexQueryMapping.Configure(registry =>
@@ -137,8 +137,7 @@ public class DapperDeepExpansionDtoTests : IDisposable
             new FlexQueryParameters
             {
                 Filter = "CustomerId:eq:2",
-                Include = "Orders,Orders.OrderItems",
-                Expand = "Orders(take=1; filter=Status:eq:Delivered; sort=Id:desc),Orders.OrderItems(take=1)",
+                Include = "Orders(take=1; filter=Status:eq:Delivered; sort=Id:desc),Orders.OrderItems(take=1)",
                 PageSize = 5
             });
 
@@ -159,8 +158,7 @@ public class DapperDeepExpansionDtoTests : IDisposable
             new FlexQueryParameters
             {
                 Filter = "CustomerId:eq:1",
-                Include = "Orders,Orders.OrderItems",
-                Expand = "Orders(take=1; filter=Status:eq:Shipped; sort=Id:desc),Orders.OrderItems(take=1)",
+                Include = "Orders(take=1; filter=Status:eq:Shipped; sort=Id:desc),Orders.OrderItems(take=1)",
                 PageSize = 5
             });
 
@@ -183,8 +181,7 @@ public class DapperDeepExpansionDtoTests : IDisposable
             new FlexQueryParameters
             {
                 Filter = "CustomerId:eq:1",
-                Include = "Orders,Orders.OrderItems",
-                Expand = "Orders(take=2),Orders.OrderItems(take=1)",
+                Include = "Orders(take=2),Orders.OrderItems(take=1)",
                 PageSize = 5
             });
 
@@ -207,8 +204,7 @@ public class DapperDeepExpansionDtoTests : IDisposable
             new FlexQueryParameters
             {
                 Filter = "CustomerId:eq:1",
-                Include = "Orders,Orders.OrderItems",
-                Expand = "Orders(take=2),Orders.OrderItems(take=1; sort=Id:desc)",
+                Include = "Orders(take=2),Orders.OrderItems(take=1; sort=Id:desc)",
                 PageSize = 5
             });
 
@@ -228,8 +224,7 @@ public class DapperDeepExpansionDtoTests : IDisposable
             new FlexQueryParameters
             {
                 Filter = "CustomerId:eq:1",
-                Include = "Orders,Orders.OrderItems",
-                Expand = "Orders(filter=Status:eq:Shipped;take=3),Orders.OrderItems(take=1)",
+                Include = "Orders(filter=Status:eq:Shipped;take=3),Orders.OrderItems(take=1)",
                 PageSize = 5
             });
 
@@ -249,8 +244,7 @@ public class DapperDeepExpansionDtoTests : IDisposable
             new FlexQueryParameters
             {
                 Filter = "CustomerId:eq:2",
-                Include = "Orders,Orders.OrderItems",
-                Expand = "Orders(take=3),Orders.OrderItems(take=5)",
+                Include = "Orders(take=3),Orders.OrderItems(take=5)",
                 PageSize = 5
             });
 
@@ -259,22 +253,23 @@ public class DapperDeepExpansionDtoTests : IDisposable
         orders[0].OrderItems.Should().BeEmpty("order 10003 has no OrderItems in the database");
     }
 
-    // Test 6 — missing deep include fails validation ---------------------------------------
+    // Test 6 — deep include carries its parent chain (no separate include required) ----
 
     [Fact]
-    public async Task MissingDeepInclude_FailsValidation()
+    public async Task MissingDeepInclude_IsNoLongerRequired()
     {
-        var ex = await Assert.ThrowsAnyAsync<FlexQueryException>(async () =>
-            await _connection.FlexQueryAsync<Customer, CustomerResponse>(
-                new FlexQueryParameters
-                {
-                    Filter = "CustomerId:eq:1",
-                    Include = "Orders",
-                    Expand = "Orders.OrderItems(take=1)",
-                    PageSize = 5
-                }));
+        var result = await _connection.FlexQueryAsync<Customer, CustomerResponse>(
+            new FlexQueryParameters
+            {
+                Filter = "CustomerId:eq:1",
+                Include = "Orders,Orders.OrderItems(take=1)",
+                PageSize = 5
+            });
 
-        ex.Message.Should().Contain("Orders.OrderItems");
+        var orders = result.Data[0].Orders;
+        orders.Should().NotBeEmpty();
+        foreach (var order in orders)
+            order.OrderItems.Should().HaveCountLessOrEqualTo(1);
     }
 
     // Test 7 — nested DTO graph materialization with renamed members -----------------------
@@ -286,8 +281,7 @@ public class DapperDeepExpansionDtoTests : IDisposable
             new FlexQueryParameters
             {
                 Filter = "CustomerId:eq:1",
-                Include = "Orders,Orders.OrderItems",
-                Expand = "Orders(take=2; sort=Id:desc),Orders.OrderItems(take=5)",
+                Include = "Orders(take=2; sort=Id:desc),Orders.OrderItems(take=5)",
                 PageSize = 5
             });
 

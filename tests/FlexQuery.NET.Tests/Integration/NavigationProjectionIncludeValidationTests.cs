@@ -252,11 +252,12 @@ public class NavigationProjectionIncludeValidationTests : IDisposable
     }
 
     [Fact]
-    public async Task NestedLevels_IncludeLoaderSemantics_ParentChainAuthorized()
+    public async Task NestedLevels_DeepInclude_AuthorizesParentChain()
     {
-        // Exact-match contract: include=Orders.OrderItems authorizes only the exact
-        // path Orders.OrderItems — it does NOT implicitly authorize selecting the
-        // parent navigation Orders(...) with its own nested projection.
+        // Deep-include semantics: include=Orders.OrderItems is self-contained — the
+        // parent navigation Orders is part of the same include chain (the provider
+        // materializes the parent to reach the child), so a select over
+        // Orders(OrderItems(...)) resolves through the include and executes.
         var parameters = new FlexQueryParameters
         {
             Select = "Id,Orders(Id,OrderItems(Id))",
@@ -264,17 +265,15 @@ public class NavigationProjectionIncludeValidationTests : IDisposable
             Filter = "Id:eq:1"
         };
 
-        var ex = await Assert.ThrowsAnyAsync<FlexQueryException>(async () =>
-            await _db.Customers.FlexQueryAsync<Customer, CustomerNestedDto>(parameters, opt =>
-            {
-                opt.CreateMap<Customer, CustomerNestedDto>()
-                    .ForNavigation(d => d.Orders, e => e.Orders);
-                opt.CreateMap<Order, OrderNestedDto>();
-                opt.CreateMap<OrderItem, OrderItemNestedDto>();
-            }));
+        var result = await _db.Customers.FlexQueryAsync<Customer, CustomerNestedDto>(parameters, opt =>
+        {
+            opt.CreateMap<Customer, CustomerNestedDto>()
+                .ForNavigation(d => d.Orders, e => e.Orders);
+            opt.CreateMap<Order, OrderNestedDto>();
+            opt.CreateMap<OrderItem, OrderItemNestedDto>();
+        });
 
-        ex.Message.Should().Contain("not included");
-        ex.Message.Should().Contain("Orders");
+        result.Data.Should().ContainSingle();
     }
 
     public class CustomerNestedDto

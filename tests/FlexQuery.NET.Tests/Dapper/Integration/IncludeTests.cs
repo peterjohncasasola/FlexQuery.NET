@@ -23,11 +23,11 @@ public class IncludeTests : DapperApiTestBase
         orders.EnumerateArray().Should().NotBeEmpty();
     }
 
-    [Fact(Skip = "Filtered includes will be supported by the future expand feature")]
+    [Fact]
     public async Task Should_Apply_Filtered_Include()
     {
-        // Act - Only include orders with total > 100
-        var response = await Client.GetAsync("/api/users?include=orders(total:gt:100)");
+        // Act - Only include orders with total > 100 (relationship filter inside the include block)
+        var response = await Client.GetAsync("/api/users?include=orders(filter=total:gt:100)");
 
         // Assert
         response.EnsureSuccessStatusCode();

@@ -217,7 +217,7 @@ public class DtoQuerySurfaceHttpTests : IClassFixture<DtoQuerySurfaceHttpTests.F
     {
         // Regression: expand sort previously rebound the root surface expression onto the
         // Order element parameter and threw ArgumentException.
-        var response = await _client.GetAsync("/api/ef/customers/dto?filter=Id:eq:1&include=Orders&expand=Orders(sort=Id:desc;take=2)&pageSize=1");
+        var response = await _client.GetAsync("/api/ef/customers/dto?filter=Id:eq:1&include=Orders(sort=Id:desc;take=2)&pageSize=1");
         response.StatusCode.Should().Be(HttpStatusCode.OK);
 
         var orders = GetData(await response.Content.ReadAsStringAsync())[0]!["orders"]!.AsArray();
@@ -229,7 +229,7 @@ public class DtoQuerySurfaceHttpTests : IClassFixture<DtoQuerySurfaceHttpTests.F
     [Fact]
     public async Task Expand_WithFilter_OnDtoNavigation_FiltersElementCollection()
     {
-        var response = await _client.GetAsync("/api/ef/customers/dto?filter=Id:eq:1&include=Orders&expand=Orders(filter=Id:eq:93)&pageSize=1");
+        var response = await _client.GetAsync("/api/ef/customers/dto?filter=Id:eq:1&include=Orders(filter=Id:eq:93)&pageSize=1");
         response.StatusCode.Should().Be(HttpStatusCode.OK);
 
         var orders = GetData(await response.Content.ReadAsStringAsync())[0]!["orders"]!.AsArray();
@@ -255,7 +255,7 @@ public class DtoQuerySurfaceHttpTests : IClassFixture<DtoQuerySurfaceHttpTests.F
     [Fact]
     public async Task Expand_WithSortAndTake_OnRenamedNavigation_AppliesElementOptions()
     {
-        var response = await _client.GetAsync("/api/ef/customers/purchases?filter=Id:eq:1&include=Purchases&expand=Purchases(take=2%3B%20sort=Id:desc)&pageSize=1");
+        var response = await _client.GetAsync("/api/ef/customers/purchases?filter=Id:eq:1&include=Purchases(take=2%3B%20sort=Id:desc)&pageSize=1");
         response.StatusCode.Should().Be(HttpStatusCode.OK);
 
         var purchases = GetData(await response.Content.ReadAsStringAsync())[0]!["purchases"]!.AsArray();
@@ -319,7 +319,7 @@ public class DtoQuerySurfaceHttpTests : IClassFixture<DtoQuerySurfaceHttpTests.F
         // expand. The expand window must apply (filter + take), root paging must limit the
         // customer set first, and the response must not contain nested navigation graphs.
         var response = await _client.GetAsync(
-            "/api/ef/customers/dto?filter=Id:eq:1&include=Orders&expand=Orders(filter=Status:eq:Pending%3B%20sort=Id:desc%3B%20take=2)&pageSize=1");
+            "/api/ef/customers/dto?filter=Id:eq:1&include=Orders(filter=Status:eq:Pending%3B%20sort=Id:desc%3B%20take=2)&pageSize=1");
         response.StatusCode.Should().Be(HttpStatusCode.OK);
 
         var body = await response.Content.ReadAsStringAsync();
@@ -342,7 +342,7 @@ public class DtoQuerySurfaceHttpTests : IClassFixture<DtoQuerySurfaceHttpTests.F
     public async Task Include_Expand_TakeOnly_LimitsCollectionSize()
     {
         var response = await _client.GetAsync(
-            "/api/ef/customers/dto?filter=Id:eq:1&include=Orders&expand=Orders(take=3; sort=Id:desc)&pageSize=1");
+            "/api/ef/customers/dto?filter=Id:eq:1&include=Orders(take=3; sort=Id:desc)&pageSize=1");
         response.StatusCode.Should().Be(HttpStatusCode.OK);
 
         var orders = JsonNode.Parse(await response.Content.ReadAsStringAsync())!["data"]![0]!["orders"]!.AsArray();
@@ -359,7 +359,7 @@ public class DtoQuerySurfaceHttpTests : IClassFixture<DtoQuerySurfaceHttpTests.F
         // Filter-only fields (LastName) participate in the WHERE clause but must not
         // appear in the public output.
         var response = await _client.GetAsync(
-            "/api/ef/customers/dto?select=firstName&filter=lastName:eq:Williams&include=Orders&expand=Orders(take=2; sort=Id:desc)&pageSize=10");
+            "/api/ef/customers/dto?select=firstName&filter=lastName:eq:Williams&include=Orders(take=2; sort=Id:desc)&pageSize=10");
         response.StatusCode.Should().Be(HttpStatusCode.OK);
 
         var body = await response.Content.ReadAsStringAsync();
@@ -394,7 +394,7 @@ public class DtoQuerySurfaceHttpTests : IClassFixture<DtoQuerySurfaceHttpTests.F
         // inside expand) + expand window. Nested objects must expose only the selected
         // fields; expand constraints (filter/sort/take) still apply.
         var response = await _client.GetAsync(
-            "/api/ef/customers/order-summaries?include=orders&expand=orders(take=3; filter=status:eq:Pending; sort=id:desc)&pageSize=10&select=customerName,orders(id,orderDate,status)");
+            "/api/ef/customers/order-summaries?include=orders(take=3; filter=status:eq:Pending; sort=id:desc)&pageSize=10&select=customerName,orders(id,orderDate,status)");
         response.StatusCode.Should().Be(HttpStatusCode.OK);
 
         var body = await response.Content.ReadAsStringAsync();

@@ -181,8 +181,7 @@ public class CollectionIncludeParentPreservingTests
         {
             var parameters = new FlexQueryParameters
             {
-                Include = "Orders",
-                Expand = "Orders(take=1)",
+                Include = "Orders(take=1)",
                 PageSize = 100
             };
 
@@ -227,8 +226,7 @@ public class CollectionIncludeParentPreservingTests
         {
             var parameters = new FlexQueryParameters
             {
-                Include = "Orders",
-                Expand = "Orders(take=1;filter=Status:eq:Delivered;sort=Id:desc)",
+                Include = "Orders(take=1;filter=Status:eq:Delivered;sort=Id:desc)",
                 PageSize = 100
             };
 
@@ -326,8 +324,7 @@ public class CollectionIncludeParentPreservingTests
 
         var parameters = new FlexQueryParameters
         {
-            Include = "Orders,Orders.OrderItems",
-            Expand = "Orders(take=1;filter=Status:eq:Delivered;sort=Id:desc),Orders.OrderItems(take=5)",
+            Include = "Orders(take=1;filter=Status:eq:Delivered;sort=Id:desc),Orders.OrderItems(take=5)",
             PageSize = 100
         };
 

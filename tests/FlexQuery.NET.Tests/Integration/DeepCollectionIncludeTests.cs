@@ -8,12 +8,12 @@ namespace FlexQuery.NET.Tests.Integration;
 
 /// <summary>
 /// Deep collection expansion using flat dotted navigation paths:
-/// <c>expand=Orders(take=3),Orders.OrderItems(take=5)</c>. The public syntax is flat;
+/// <c>include=Orders(take=3),Orders.OrderItems(take=5)</c>. The public syntax is flat;
 /// each expansion path is independent; options are scoped to their own path; include
 /// must explicitly declare every deep path (exact-match); the terminal navigation must
 /// be collection-valued; duplicate paths are rejected deterministically.
 /// </summary>
-public class DeepCollectionExpansionTests : IDisposable
+public class DeepCollectionIncludeTests : IDisposable
 {
     private readonly SharedTestDbContext _db = SharedTestDbContext.CreateInMemorySeeded();
 
@@ -49,8 +49,7 @@ public class DeepCollectionExpansionTests : IDisposable
             new FlexQueryParameters
             {
                 Filter = "Id:eq:1",
-                Include = "Orders",
-                Expand = "Orders(take=1)"
+                Include = "Orders(take=1)"
             },
             opt =>
             {
@@ -72,8 +71,7 @@ public class DeepCollectionExpansionTests : IDisposable
             new FlexQueryParameters
             {
                 Filter = "Id:eq:1",
-                Include = "Orders,Orders.OrderItems",
-                Expand = "Orders(take=1),Orders.OrderItems(take=2)"
+                Include = "Orders(take=1),Orders.OrderItems(take=2)"
             },
             opt =>
             {
@@ -96,8 +94,7 @@ public class DeepCollectionExpansionTests : IDisposable
             new FlexQueryParameters
             {
                 Filter = "Id:eq:2",
-                Include = "Orders,Orders.OrderItems",
-                Expand = "Orders(filter=Status:eq:Delivered;sort=Id:desc;take=3),Orders.OrderItems(take=5)"
+                Include = "Orders(filter=Status:eq:Delivered;sort=Id:desc;take=3),Orders.OrderItems(take=5)"
             },
             opt =>
             {
@@ -113,42 +110,43 @@ public class DeepCollectionExpansionTests : IDisposable
         orders.All(o => o.Status == "Delivered").Should().BeTrue();
     }
 
-    // Invalid: missing deep include ---------------------------------------------------
+    // Deep dotted includes carry their own parent chain — no separate inclusion is
+    // required any more than it used to be (the old include+expand pairing rule went
+    // away with the unified include model).
+    // ---------------------------------------------------------------------------
 
     [Fact]
-    public async Task MissingDeepInclude_FailsValidation()
+    public async Task DeepInclude_AutoLoadsParentChain()
     {
-        var ex = await Assert.ThrowsAnyAsync<FlexQueryException>(async () =>
-            await _db.Customers.FlexQueryAsync<Customer, CustomerDto>(
-                new FlexQueryParameters
-                {
-                    Filter = "Id:eq:1",
-                    Include = "Orders",
-                    Expand = "Orders.OrderItems(take=5)"
-                },
-                opt =>
-                {
-                    opt.CreateMap<Customer, CustomerDto>()
-                        .ForNavigation(d => d.Orders, e => e.Orders);
-                    opt.CreateMap<Order, OrderDto>();
-                    opt.CreateMap<OrderItem, OrderItemDto>();
-                }));
+        var result = await _db.Customers.FlexQueryAsync<Customer, CustomerDto>(
+            new FlexQueryParameters
+            {
+                Filter = "Id:eq:1",
+                Include = "Orders,Orders.OrderItems(take=5)"
+            },
+            opt =>
+            {
+                opt.CreateMap<Customer, CustomerDto>()
+                    .ForNavigation(d => d.Orders, e => e.Orders);
+                opt.CreateMap<Order, OrderDto>();
+                opt.CreateMap<OrderItem, OrderItemDto>();
+            });
 
-        ex.Message.Should().Contain("Orders.OrderItems");
+        result.Data.Should().ContainSingle();
+        result.Data[0].Orders.Should().NotBeEmpty();
     }
 
-    // Invalid: reference navigation as terminal expand ---------------------------------
+    // Invalid: reference navigation with collection options --------------------------
 
     [Fact]
-    public async Task ReferenceNavigationAsTerminal_FailsValidation()
+    public async Task ReferenceNavigationAsTerminal_WithCollectionOption_FailsValidation()
     {
         var ex = await Assert.ThrowsAnyAsync<FlexQueryException>(async () =>
             await _db.Customers.FlexQueryAsync<Customer, CustomerDto>(
                 new FlexQueryParameters
                 {
                     Filter = "Id:eq:1",
-                    Include = "Orders,Orders.Customer",
-                    Expand = "Orders.Customer()"
+                    Include = "Orders,Orders.Customer(take=1)"
                 },
                 opt =>
                 {
@@ -157,7 +155,7 @@ public class DeepCollectionExpansionTests : IDisposable
                     opt.CreateMap<Order, OrderDto>();
                 }));
 
-        ex.Message.Should().Contain("reference navigation");
+        ex.Message.Should().Contain("single-valued relationship");
     }
 
     // Valid: multiple sibling collections ----------------------------------------------
@@ -169,8 +167,7 @@ public class DeepCollectionExpansionTests : IDisposable
             new FlexQueryParameters
             {
                 Filter = "Id:eq:1",
-                Include = "Orders",
-                Expand = "Orders(take=1)"
+                Include = "Orders(take=1)"
             },
             opt =>
             {
@@ -193,8 +190,7 @@ public class DeepCollectionExpansionTests : IDisposable
                 new FlexQueryParameters
                 {
                     Filter = "Id:eq:1",
-                    Include = "Orders",
-                    Expand = "Orders(take=3),Orders(take=10)"
+                    Include = "Orders(take=3),Orders(take=10)"
                 },
                 opt =>
                 {
@@ -203,12 +199,12 @@ public class DeepCollectionExpansionTests : IDisposable
                     opt.CreateMap<Order, OrderDto>();
                 }));
 
-        ex.Message.Should().Contain("Duplicate expand path");
+        ex.Message.Should().Contain("Duplicate include path");
     }
 
     // Deep: shared model has no third-level collection (OrderItem.Product is a
     // reference navigation → rejected per the collection-only contract). The 3-level
-    // normalization is covered by the ExpandNormalizer unit tests in Mapping/.
+    // normalization is covered by the IncludeNormalizer unit tests in Mapping/.
 
     [Fact]
     public async Task ReferenceTerminal_AtDeeperLevel_Rejected()
@@ -218,8 +214,7 @@ public class DeepCollectionExpansionTests : IDisposable
                 new FlexQueryParameters
                 {
                     Filter = "Id:eq:1",
-                    Include = "Orders,Orders.OrderItems,Orders.OrderItems.Product",
-                    Expand = "Orders(take=1),Orders.OrderItems(take=5),Orders.OrderItems.Product(take=2)"
+                    Include = "Orders(take=1),Orders.OrderItems(take=5),Orders.OrderItems.Product(take=2)"
                 },
                 opt =>
                 {
@@ -229,6 +224,6 @@ public class DeepCollectionExpansionTests : IDisposable
                     opt.CreateMap<OrderItem, OrderItemDto>();
                 }));
 
-        ex.Message.Should().Contain("reference navigation");
+        ex.Message.Should().Contain("single-valued relationship");
     }
 }

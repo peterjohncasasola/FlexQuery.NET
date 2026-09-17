@@ -10,7 +10,7 @@ using Microsoft.Data.Sqlite;
 
 namespace FlexQuery.NET.Tests.Dapper.Translation;
 
-public class SqlIncludeQueryBuilderExpandTests
+public class SqlIncludeQueryBuilderTests
 {
     [Fact]
     public void BuildIncludeSql_WithExpandTake_GeneratesPartitionedTopNPerParent()

@@ -476,7 +476,7 @@ public class SqlTranslatorTests
     {
         var options = NoPaging(new QueryOptions
         {
-            Includes = new List<string> { "Roles" }
+            Includes = IncludeTestFactory.Paths("Roles")
         });
         options.Items[ContextKeys.EntityType] = typeof(User);
 
@@ -579,7 +579,7 @@ public class SqlTranslatorTests
     {
         var options = NoPaging(new QueryOptions
         {
-            Expand = 
+            Includes = 
             [
                 new IncludeNode 
                 { 

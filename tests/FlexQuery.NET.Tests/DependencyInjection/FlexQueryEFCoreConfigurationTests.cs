@@ -64,8 +64,7 @@ public class FlexQueryEFCoreConfigurationTests
             var parameters = new FlexQueryParameters
             {
                 Filter = "Id:eq:1",
-                Include = "Orders",
-                Expand = "Orders(filter=Status:eq:Shipped;sort=Id:desc;take=2)",
+                Include = "Orders(filter=Status:eq:Shipped;sort=Id:desc;take=2)",
                 PageSize = 1
             };
 

@@ -20,8 +20,7 @@ public class FilteredIncludeTests : IDisposable
         var parameters = new FlexQueryParameters
         {
             Filter = "Id:eq:1",
-            Include = "Orders",
-            Expand = "Orders(filter=Total:gt:100)"
+            Include = "Orders(filter=Total:gt:100)"
         };
 
         var result = await _db.Customers
@@ -49,8 +48,7 @@ public class FilteredIncludeTests : IDisposable
         var parameters = new FlexQueryParameters
         {
             Filter = "Id:eq:1",
-            Include = "Orders",
-            Expand = "Orders(filter=Total:gt:100)",
+            Include = "Orders(filter=Total:gt:100)",
             Select = "Id,Name,Orders.Number,Orders.Total"
         };
 
@@ -79,8 +77,7 @@ public class FilteredIncludeTests : IDisposable
         var parameters = new FlexQueryParameters
         {
             Filter = "Id:eq:1",
-            Include = "Orders,Orders.OrderItems",
-            Expand = "Orders(OrderItems(filter=Sku:eq:SKU-AAA))",
+            Include = "Orders.OrderItems,Orders(OrderItems(filter=Sku:eq:SKU-AAA))",
             Select = "Id,Orders.Number,Orders.OrderItems.Sku"
         };
 
@@ -113,8 +110,7 @@ public class FilteredIncludeTests : IDisposable
         var parameters = new FlexQueryParameters
         {
             Filter = "Id:eq:1",
-            Include = "Orders",
-            Expand = "Orders(filter=Total:gt:100)",
+            Include = "Orders(filter=Total:gt:100)",
             Select = "Id,Name,Orders.Number,Orders.Total"
         };
 
@@ -142,8 +138,7 @@ public class FilteredIncludeTests : IDisposable
         var parameters = new FlexQueryParameters
         {
             Filter = "Id:eq:1",
-            Include = "Orders",
-            Expand = "Orders(filter=Total:gt:100)",
+            Include = "Orders(filter=Total:gt:100)",
             Select = "Id,Orders.Number"
         };
 
@@ -169,8 +164,7 @@ public class FilteredIncludeTests : IDisposable
         var parameters = new FlexQueryParameters
         {
             Filter = "Id:eq:1",
-            Include = "Orders",
-            Expand = "Orders(filter=Total:gt:100)",
+            Include = "Orders(filter=Total:gt:100)",
             Select = "Id,Orders.Number,Orders.Total"
         };
 
@@ -193,8 +187,7 @@ public class FilteredIncludeTests : IDisposable
         var parameters = new FlexQueryParameters
         {
             Filter = "Id:eq:1",
-            Include = "Orders,Orders.OrderItems",
-            Expand = "Orders(filter=Total:gt:100,OrderItems(filter=Sku:eq:SKU-BBB))",
+            Include = "Orders.OrderItems,Orders(filter=Total:gt:100,OrderItems(filter=Sku:eq:SKU-BBB))",
             Select = "Id,Orders.Number,Orders.OrderItems.Sku"
         };
 
@@ -224,8 +217,7 @@ public class FilteredIncludeTests : IDisposable
         var parameters = new FlexQueryParameters
         {
             Filter = "Id:eq:1",
-            Include = "Orders,Orders.OrderItems",
-            Expand = "Orders(filter=Total:gt:100,OrderItems(filter=Sku:eq:SKU-BBB))",
+            Include = "Orders.OrderItems,Orders(filter=Total:gt:100,OrderItems(filter=Sku:eq:SKU-BBB))",
             Select = "Id,Orders.Number,Orders.OrderItems.Sku"
         };
 
@@ -254,8 +246,7 @@ public class FilteredIncludeTests : IDisposable
     {
         var parameters = new FlexQueryParameters
         {
-            Include = "Orders",
-            Expand = "Orders(sort=OrderDate:desc)"
+            Include = "Orders(sort=OrderDate:desc)"
         };
 
         var result = await _db.Customers
@@ -278,8 +269,7 @@ public class FilteredIncludeTests : IDisposable
 
         var options = new QueryOptions
         {
-            Includes = ["Orders"],
-            Expand =
+        Includes =
             [
                 new IncludeNode
                 {
@@ -300,7 +290,7 @@ public class FilteredIncludeTests : IDisposable
         var alice = await _db.Customers
             .AsNoTracking()
             .Where(c => c.Id == 1)
-            .ApplyExpand(options)
+            .ApplyIncludes(options)
             .SingleAsync();
 
         alice.Orders.Select(o => o.Id).Should().Equal(11005, 11004, 11003);
@@ -314,8 +304,7 @@ public class FilteredIncludeTests : IDisposable
         var parameters = new FlexQueryParameters
         {
             Filter = "Id:eq:1",
-            Include = "Orders",
-            Expand = "Orders(filter=Status:eq:Delivered; sort=OrderDate:desc; take=3)",
+            Include = "Orders(filter=Status:eq:Delivered; sort=OrderDate:desc; take=3)",
             Select = "Id,Orders.Id,Orders.Status,Orders.OrderDate"
         };
 
@@ -340,8 +329,7 @@ public class FilteredIncludeTests : IDisposable
     {
         var parameters = new FlexQueryParameters
         {
-            Include = "Orders,Profile",
-            Expand = "Orders(filter=Total:gt:100)"
+            Include = "Profile,Orders(filter=Total:gt:100)"
         };
 
         var result = await _db.Customers
@@ -367,8 +355,7 @@ public class FilteredIncludeTests : IDisposable
         var parameters = new FlexQueryParameters
         {
             Filter = "Id:eq:1",
-            Include = "Orders,Orders.OrderItems",
-            Expand = "Orders(filter=Total:gt:100,OrderItems(filter=Sku:eq:SKU-BBB))"
+            Include = "Orders.OrderItems,Orders(filter=Total:gt:100,OrderItems(filter=Sku:eq:SKU-BBB))"
         };
 
         var result = await _db.Customers

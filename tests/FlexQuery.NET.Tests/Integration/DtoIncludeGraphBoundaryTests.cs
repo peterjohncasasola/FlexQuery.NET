@@ -11,7 +11,7 @@ namespace FlexQuery.NET.Tests.Integration;
 /// Regression tests for the typed-DTO navigation graph boundary: the response graph is
 /// the requested include/expand graph, not the full declared DTO TypeMap graph.
 ///
-/// <c>include=Orders</c> (with or without <c>expand=Orders(...)</c>) must materialize
+/// <c>include=Orders</c> (with or without <c>include=Orders(...)</c>) must materialize
 /// only <c>Customer → Orders</c>. DTO-declared deeper navigations (e.g.
 /// <c>OrderDto.OrderItems</c>, even when nested TypeMaps are registered) must stay at
 /// their DTO default unless <c>Orders.OrderItems</c> is explicitly included.
@@ -99,8 +99,7 @@ public class DtoIncludeGraphBoundaryTests : IDisposable
         var result = await _db.Customers.FlexQueryAsync<Customer, CustomerDto>(
             new FlexQueryParameters
             {
-                Include = "Orders",
-                Expand = "Orders(take=1)",
+                Include = "Orders(take=1)",
                 PageSize = 100
             },
             ConfigureMaps());
@@ -216,8 +215,7 @@ public class DtoIncludeGraphBoundaryTests : IDisposable
         var result = await db.Customers.FlexQueryAsync<Customer, CustomerDto>(
             new FlexQueryParameters
             {
-                Include = "Orders,Orders.OrderItems",
-                Expand = "Orders(take=1;filter=Status:eq:Delivered;sort=Id:desc),Orders.OrderItems(take=5)",
+                Include = "Orders(take=1;filter=Status:eq:Delivered;sort=Id:desc),Orders.OrderItems(take=5)",
                 PageSize = 100
             },
             ConfigureMaps());

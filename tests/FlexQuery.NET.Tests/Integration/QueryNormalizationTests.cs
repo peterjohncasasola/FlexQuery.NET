@@ -196,8 +196,8 @@ public class QueryNormalizationTests
     public void HasProjection_ReturnsTrueForAllProjectionShapes()
     {
         new QueryOptions { Select = [new SelectNode { Field = "Id" }] }.HasProjection().Should().BeTrue();
-        new QueryOptions { Includes = ["Orders"] }.HasProjection().Should().BeTrue();
-        new QueryOptions { Expand = [new IncludeNode { Path = "Orders" }] }.HasProjection().Should().BeTrue();
+        new QueryOptions { Includes = IncludeTestFactory.Paths("Orders") }.HasProjection().Should().BeTrue();
+        new QueryOptions { Includes = [new IncludeNode { Path = "Orders" }] }.HasProjection().Should().BeTrue();
         new QueryOptions { GroupBy = ["Status"] }.HasProjection().Should().BeTrue();
         new QueryOptions { Aggregates = [new Aggregate { Function = AggregateFunction.Count, Alias = "Count" }] }.HasProjection().Should().BeTrue();
     }
@@ -205,27 +205,27 @@ public class QueryNormalizationTests
     [Fact]
     public void Normalize_Includes_PreservesFlatPaths()
     {
-        var options = new QueryOptions { Includes = ["Orders", "Details"] };
+        var options = new QueryOptions { Includes = IncludeTestFactory.Paths("Orders", "Details") };
 
         options = options.Normalize();
 
-        options.Includes.Should().BeEquivalentTo(["Orders", "Details"]);
-        options.Expand.Should().BeNull();
+        IncludeTestFactory.PathStrings(options.Includes).Should().BeEquivalentTo(["Orders", "Details"]);
     }
 
     [Fact]
-    public void Normalize_IncludesAndExpand_KeepsBothSeparate()
+    public void Normalize_IncludesKeepPlainAndOptionNodes()
     {
         var options = new QueryOptions
         {
-            Includes = ["Orders", "Details"],
-            Expand = [new IncludeNode { Path = "Orders", Filter = new FilterGroup { Filters = [new FilterCondition { Field = "Status", Operator = "eq", Value = "Open" }] } }]
+            Includes = IncludeTestFactory.Merge(
+                IncludeTestFactory.Paths("Orders", "Details"),
+                [new IncludeNode { Path = "Orders", Filter = new FilterGroup { Filters = [new FilterCondition { Field = "Status", Operator = "eq", Value = "Open" }] } }])
         };
 
         options = options.Normalize();
 
-        options.Includes.Should().BeEquivalentTo(["Orders", "Details"]);
-        options.Expand.Should().ContainSingle(i => i.Path == "Orders" && i.Filter != null);
+        IncludeTestFactory.PathStrings(options.Includes).Should().BeEquivalentTo(["Orders", "Details"]);
+        options.Includes.Should().ContainSingle(i => i.Path == "Orders" && i.Filter != null);
     }
 
     [Fact]
@@ -233,7 +233,7 @@ public class QueryNormalizationTests
     {
         var options = new QueryOptions
         {
-            Includes = ["Orders"]
+            Includes = IncludeTestFactory.Paths("Orders")
         };
 
         options = options.Normalize();
@@ -242,7 +242,7 @@ public class QueryNormalizationTests
         options = options.Normalize();
 
         options.Paging.PageSize.Should().Be(pageSizeAfterFirst);
-        options.Includes.Should().BeEquivalentTo(["Orders"]);
+        IncludeTestFactory.PathStrings(options.Includes).Should().BeEquivalentTo(["Orders"]);
     }
 
     [Fact]

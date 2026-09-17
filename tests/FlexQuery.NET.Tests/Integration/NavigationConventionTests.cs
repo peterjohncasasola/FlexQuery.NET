@@ -213,7 +213,7 @@ public class NavigationConventionTests : IDisposable
     }
 
     [Fact]
-    public async Task Expand_ReferenceNavigation_IsRejected()
+    public async Task Include_ReferenceNavigation_WithCollectionOptions_IsRejected()
     {
         var ex = await Assert.ThrowsAnyAsync<FlexQuery.NET.Exceptions.FlexQueryException>(async () =>
             await _db.Customers.FlexQueryAsync<Customer, CustomerWithProfileDto>(
@@ -221,11 +221,10 @@ public class NavigationConventionTests : IDisposable
                 {
                     Filter = "id:eq:1",
                     Select = "Id",
-                    Include = "Profile",
-                    Expand = "Profile"
+                    Include = "Profile(take=1)"
                 }));
 
-        ex.Message.Should().Contain("reference navigation");
+        ex.Message.Should().Contain("single-valued relationship");
     }
 
     // ── 9. No navigation is materialized client-side before final execution ─

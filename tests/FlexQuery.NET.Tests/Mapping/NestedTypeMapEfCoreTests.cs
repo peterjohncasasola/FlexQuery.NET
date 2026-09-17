@@ -104,8 +104,7 @@ namespace FlexQuery.NET.Tests.Mapping;
             new FlexQueryParameters
             {
                 Select = "RecentOrders(Id,Status)",
-                Include = "RecentOrders",
-                Expand = "RecentOrders(take=2; sort=Id:desc)",
+                Include = "RecentOrders(take=2; sort=Id:desc)",
                 Filter = "Id:eq:1"
             },
             opt =>

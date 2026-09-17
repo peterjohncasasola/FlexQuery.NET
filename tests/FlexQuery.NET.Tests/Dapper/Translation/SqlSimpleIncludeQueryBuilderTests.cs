@@ -17,7 +17,7 @@ public class SqlSimpleIncludeQueryBuilderTests
         var translator = new SqlTranslator(registry, dialect);
         var options = new QueryOptions
         {
-            Includes = ["Orders"],
+            Includes = IncludeTestFactory.Paths("Orders"),
             Sort = [new SortNode { Field = "Id" }],
             Paging = { Page = 2, PageSize = 10 },
             Items = { [ContextKeys.EntityType] = typeof(Customer) }
@@ -43,7 +43,7 @@ public class SqlSimpleIncludeQueryBuilderTests
         var mapping = registry.GetMapping(typeof(Customer));
         var options = new QueryOptions
         {
-            Expand =
+            Includes =
             [
                 new FlexQuery.NET.Models.Projection.IncludeNode
                 {

@@ -20,7 +20,7 @@ public class FlexQueryBaseTests
             },
             Sort = [new SortNode { Field = "Name", Descending = false }],
             Select = ["Id", "Name"],
-            Include = ["Orders"],
+            Include = [new IncludeNode { Path = "Orders" }],
             GroupBy = ["Category"],
             Having = new HavingConditionNode { Function = AggregateFunction.Count, Field = "Id", Operator = "gt", Value = "5" },
             Paging = new PagingOptions { Page = 2, PageSize = 25 },
@@ -33,7 +33,7 @@ public class FlexQueryBaseTests
         request.Filter!.Filters.Should().Contain(f => f.Field == "Age" && f.Operator == "gt" && f.Value == "18");
         request.Sort.Should().Contain(s => s.Field == "Name" && !s.Descending);
         request.Select.Should().BeEquivalentTo("Id", "Name");
-        request.Include.Should().BeEquivalentTo("Orders");
+        IncludeTestFactory.PathStrings(request.Include).Should().BeEquivalentTo(["Orders"]);
         request.GroupBy.Should().BeEquivalentTo("Category");
         request.Having.Should().NotBeNull();
         var having = (HavingConditionNode)request.Having!;

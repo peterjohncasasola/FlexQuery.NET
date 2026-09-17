@@ -875,7 +875,7 @@ public class DialectTests
         var options = new QueryOptions
         {
             Paging = { Disabled = true },
-            Includes = new List<string> { "Roles" }
+            Includes = IncludeTestFactory.Paths("Roles")
         };
         options.Items[ContextKeys.EntityType] = typeof(User);
 
@@ -1176,7 +1176,7 @@ public class DialectTests
         var options = new QueryOptions
         {
             Paging = { Disabled = true },
-            Includes = new List<string> { "Roles" }
+            Includes = IncludeTestFactory.Paths("Roles")
         };
         options.Items[ContextKeys.EntityType] = typeof(User);
 

@@ -21,13 +21,13 @@ namespace FlexQuery.NET.Tests.Integration;
 ///    the InMemory correctness suite (DeepCollectionExpansionTests); on SQLite the
 ///    provider throws — a documented provider capability boundary, not a code defect.
 /// </summary>
-public class DeepExpansionSqlShapeTests : IDisposable
+public class DeepIncludeSqlShapeTests : IDisposable
 {
     private readonly SqliteConnection _connection = new("DataSource=:memory:");
     private readonly List<string> _sql = [];
     private readonly SharedTestDbContext _db;
 
-    public DeepExpansionSqlShapeTests()
+    public DeepIncludeSqlShapeTests()
     {
         var options = new DbContextOptionsBuilder<SharedTestDbContext>()
             .UseSqlite(_connection)
@@ -83,8 +83,7 @@ public class DeepExpansionSqlShapeTests : IDisposable
             new FlexQueryParameters
             {
                 Filter = "Id:eq:1",
-                Include = "Orders",
-                Expand = "Orders(filter=Status:eq:Shipped;sort=Id:desc)",
+                Include = "Orders(filter=Status:eq:Shipped;sort=Id:desc)",
                 PageSize = 20
             },
             ConfigureMaps());
@@ -118,8 +117,7 @@ public class DeepExpansionSqlShapeTests : IDisposable
             new FlexQueryParameters
             {
                 Filter = "Id:eq:1",
-                Include = "Orders",
-                Expand = "Orders(take=1)",
+                Include = "Orders(take=1)",
                 PageSize = 20
             },
             ConfigureMaps());
@@ -139,8 +137,7 @@ public class DeepExpansionSqlShapeTests : IDisposable
                 new FlexQueryParameters
                 {
                     Filter = "Id:eq:1",
-                    Include = "Orders,Orders.OrderItems",
-                    Expand = "Orders(take=2),Orders.OrderItems(take=5)",
+                    Include = "Orders(take=2),Orders.OrderItems(take=5)",
                     PageSize = 20
                 },
                 opt =>

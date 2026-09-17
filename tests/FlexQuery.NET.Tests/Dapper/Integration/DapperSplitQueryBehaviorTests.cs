@@ -118,8 +118,8 @@ public class DapperSplitQueryBehaviorTests : DapperApiTestBase
                 (9106, 1, '2024-01-06', 'Pending', 60, 60, 'Books', 'P-006');
             """);
 
-        var expand = Uri.EscapeDataString("orders(filter=status:eq:Delivered; sort=id:desc; take=3)");
-        var response = await Client.GetAsync($"/api/users?include=orders&expand={expand}&select=id,name,orders(id,status)&sort=id:asc&pageSize=1");
+        var include = Uri.EscapeDataString("orders(filter=status:eq:Delivered; sort=id:desc; take=3)");
+        var response = await Client.GetAsync($"/api/users?include={include}&select=id,name,orders(id,status)&sort=id:asc&pageSize=1");
 
         response.EnsureSuccessStatusCode();
         var json = await response.Content.ReadFromJsonAsync<JsonElement>();
@@ -132,7 +132,7 @@ public class DapperSplitQueryBehaviorTests : DapperApiTestBase
     }
 
     [Fact]
-    public async Task DictionaryOverload_Should_Preserve_Expand_Take_For_Dapper_Loading()
+    public async Task DictionaryOverload_Should_Preserve_Include_Options_For_Dapper_Loading()
     {
         await Connection.ExecuteAsync("""
             INSERT INTO Orders (Id, CustomerId, OrderDate, Status, Total, Price, Category, Number)
@@ -147,8 +147,7 @@ public class DapperSplitQueryBehaviorTests : DapperApiTestBase
 
         var parameters = new Dictionary<string, StringValues>(StringComparer.OrdinalIgnoreCase)
         {
-            ["include"] = "orders",
-            ["expand"] = "orders(filter=status:eq:Delivered; sort=id:desc; take=3)",
+            ["include"] = "orders(filter=status:eq:Delivered; sort=id:desc; take=3)",
             ["filter"] = "id:eq:1",
             ["sort"] = "id:asc"
         };
@@ -191,8 +190,7 @@ public class DapperSplitQueryBehaviorTests : DapperApiTestBase
 
         var parameters = new FlexQueryParameters
         {
-            Include = "Orders",
-            Expand = "Orders(take=3; filter=Status=\"Delivered\"; sort=OrderDate DESC)",
+            Include = "Orders(take=3; filter=Status=\"Delivered\"; sort=OrderDate DESC)",
             Filter = "Id = 1",
             Sort = "Id ASC"
         };

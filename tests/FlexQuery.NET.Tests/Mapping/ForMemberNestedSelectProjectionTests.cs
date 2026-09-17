@@ -22,7 +22,7 @@ namespace FlexQuery.NET.Tests.Mapping;
 ///
 /// The failing request shape was:
 /// <code>
-/// include=Orders&amp;expand=Orders(take=1)&amp;pageSize=1
+/// include=Orders&amp;include=Orders(take=1)&amp;pageSize=1
 /// &amp;select=CustomerId,CustomerFullName,Orders(OrderId,CustomerId,OrderDate,Status,DeliveryDate)
 /// </code>
 /// with <c>CreateMap&lt;Order, OrderResponse&gt;().ForMember(dto =&gt; dto.DeliveryDate,
@@ -98,8 +98,7 @@ public class ForMemberNestedSelectProjectionTests : IDisposable
         => new()
         {
             Select = select,
-            Include = include,
-            Expand = expand,
+            Include = IncludeTestFactory.MergeExpressions(include, expand),
             Page = page,
             PageSize = pageSize
         };
@@ -177,7 +176,7 @@ public class ForMemberNestedSelectProjectionTests : IDisposable
         alice.CustomerId.Should().Be(1);
         alice.CustomerFullName.Should().Be("Alice Johnson");
 
-        var order = alice.Orders.Should().ContainSingle("expand=Orders(take=1) returns at most one order").Subject;
+        var order = alice.Orders.Should().ContainSingle("include=Orders(take=1) returns at most one order").Subject;
         order.OrderId.Should().Be(10001);
         order.DeliveryDate.Should().Be(new DateTime(2023, 1, 15),
             "DeliveryDate must not be null when ExpectedDeliveryDate has a value");

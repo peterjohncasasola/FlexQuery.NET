@@ -81,7 +81,7 @@ public class SqlJoinBuilderTests
         var builder = CreateBuilder();
         var options = new QueryOptions
         {
-            Includes = ["Orders"]
+            Includes = IncludeTestFactory.Paths("Orders")
         };
         var parameters = new SqlParameterContext(Dialect);
         var tree = new SelectionNode();
@@ -99,7 +99,7 @@ public class SqlJoinBuilderTests
         var builder = CreateBuilder();
         var options = new QueryOptions
         {
-            Expand =
+            Includes =
             [
                 new IncludeNode
                 {
@@ -129,7 +129,7 @@ public class SqlJoinBuilderTests
         var builder = CreateBuilder();
         var options = new QueryOptions
         {
-            Includes = ["Orders", "Orders"]
+            Includes = IncludeTestFactory.Paths("Orders", "Orders")
         };
         var parameters = new SqlParameterContext(Dialect);
         var tree = new SelectionNode();
@@ -148,7 +148,7 @@ public class SqlJoinBuilderTests
         var builder = CreateBuilder();
         var options = new QueryOptions
         {
-            Includes = ["Orders"]
+            Includes = IncludeTestFactory.Paths("Orders")
         };
         var parameters = new SqlParameterContext(Dialect);
         var tree = new SelectionNode();
@@ -167,7 +167,7 @@ public class SqlJoinBuilderTests
         var builder = CreateBuilder();
         var options = new QueryOptions
         {
-            Includes = ["NonExistent"]
+            Includes = IncludeTestFactory.Paths("NonExistent")
         };
         var parameters = new SqlParameterContext(Dialect);
         var tree = new SelectionNode();
@@ -185,7 +185,7 @@ public class SqlJoinBuilderTests
         var builder = CreateBuilder(dialect);
         var options = new QueryOptions
         {
-            Includes = ["Orders"]
+            Includes = IncludeTestFactory.Paths("Orders")
         };
         var parameters = new SqlParameterContext(dialect);
         var tree = new SelectionNode();
@@ -204,7 +204,7 @@ public class SqlJoinBuilderTests
         var builder = CreateBuilder(dialect);
         var options = new QueryOptions
         {
-            Includes = ["Orders"]
+            Includes = IncludeTestFactory.Paths("Orders")
         };
         var parameters = new SqlParameterContext(dialect);
         var tree = new SelectionNode();
@@ -222,7 +222,7 @@ public class SqlJoinBuilderTests
         var builder = CreateBuilder();
         var options = new QueryOptions
         {
-            Expand =
+            Includes =
             [
                 new IncludeNode
                 {
@@ -277,7 +277,7 @@ public class SqlJoinBuilderTests
         var builder = new SqlJoinBuilder(_registry, Dialect, includeTranslator, whereBuilder);
         var options = new QueryOptions
         {
-            Includes = ["Orders"]
+            Includes = IncludeTestFactory.Paths("Orders")
         };
         var parameters = new SqlParameterContext(Dialect);
         var tree = new SelectionNode();
@@ -299,7 +299,7 @@ public class SqlJoinBuilderTests
         var builder = new SqlJoinBuilder(_registry, Dialect, includeTranslator, whereBuilder);
         var options = new QueryOptions
         {
-            Includes = ["Orders", "Address"]
+            Includes = IncludeTestFactory.Paths("Orders", "Address")
         };
         var parameters = new SqlParameterContext(Dialect);
         var tree = new SelectionNode();
