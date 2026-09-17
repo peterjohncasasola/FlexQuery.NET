@@ -5,7 +5,7 @@ description: The complete operator reference - canonical names, aliases, type ru
 
 # Operators
 
-Every filter, HAVING condition, and expanded-branch filter in FlexQuery is built from one
+Every filter, HAVING condition, and include-block filter in FlexQuery is built from one
 fixed set of operators. This page is the authoritative reference: the canonical names, the
 aliases that normalize into them, which .NET types each operator works with, how
 governance restricts them per field, and how each provider executes them.
@@ -150,8 +150,7 @@ never reaches the database.
 ## Where operators appear
 
 1. The root `filter` parameter ([Filtering](/docs/guides/filtering)).
-2. `expand` branch filters (`Orders(all:Status:eq:Shipped; take=5)` -- see
-   [Expand](/docs/guides/expand)).
+2. include-block filters (`Orders(take=5;filter=all:Status:eq:Shipped)` -- see [Include](/docs/guides/include)).
 3. HAVING conditions, restricted to `eq ne gt gte lt lte` comparisons over declared
    aggregate values ([Grouping & Aggregates](/docs/guides/grouping)).
 4. The flat `filters` condition list on `FlexQueryRequest`

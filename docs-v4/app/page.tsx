@@ -51,9 +51,9 @@ const capabilityGroups = [
     items: [
       {
         icon: GitBranch,
-        title: 'Deep Expand Trees',
+        title: 'Bounded Relationship Trees',
         description: 'Load navigations with per-branch filter, sort, and take — hydrated via split queries.',
-        href: '/docs/guides/expand',
+        href: '/docs/guides/include',
       },
       {
         icon: BarChart3,
@@ -208,7 +208,7 @@ export default function Home() {
       <section className="border-b border-zinc-200 dark:border-zinc-800">
         <div className="mx-auto max-w-7xl px-4 pt-14 pb-16 text-center sm:px-6 lg:pt-20 lg:pb-20">
           <div className="mb-5 inline-flex items-center gap-2 text-xs font-semibold tracking-[0.08em] text-brand-700 uppercase dark:text-brand-400">
-            v4 — typed DTOs, expand trees, keyset pagination
+            v4 — typed DTOs, relationship query blocks, keyset pagination
           </div>
           <h1 className="mx-auto max-w-3xl text-4xl font-bold tracking-tight text-balance sm:text-6xl">
             Dynamic querying for{' '}

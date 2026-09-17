@@ -10,10 +10,10 @@ import { Callout } from '@/components/callout'
 
 FlexQuery accepts three query languages on the same endpoint. All three parse into the same
 internal `QueryOptions` model, and DSL and FQL expose the full feature set — filtering,
-sorting, projection, include/expand, grouping, aggregates, paging — interchangeably.
+sorting, projection, includes, grouping, aggregates, paging — interchangeably.
 MiniOData is intentionally a lighter compatibility layer: it covers filter, sort, select,
 and relationship loading (its `$expand` maps to plain `include`), while grouping,
-aggregates, filtered expansion, and keyset paging remain DSL/FQL features. The syntax is a
+aggregates, filtered relationship slices, and keyset paging remain DSL/FQL features. The syntax is a
 client-facing choice, not a server-side fork.
 
 | Syntax | Enum value | Style | Extra package |
@@ -71,11 +71,10 @@ the expressions it supports.
 | Filter | `filter=Status:eq:Active` | `filter=Status = 'Active'` | `$filter=Status eq 'Active'` |
 | Sort | `sort=Name:asc,Age:desc` | `sort=Name ASC, Age DESC` | `$orderby=Name asc, Age desc` |
 | Select | `select=Id,Name,Orders.Total` | `select=Id,Name` | `$select=Id,Name` |
-| Include | `include=Orders` | `include=Orders` | `$expand=Orders` |
+| Include | `include=Orders(take=5;filter=Status:eq:Active;sort=OrderDate:desc)` | same, FQL expressions inside `(...)` blocks | `$expand=Orders` (flat paths only) |
 | GroupBy | `groupBy=Status` | `groupBy=Status` | — |
 | Aggregate | `aggregate=sum:Total:TotalRevenue` | `aggregate=SUM(Total) AS TotalRevenue` | — |
 | Having | `having=sum:Total:gt:100` | `having=SUM(Total) > 100` | — |
-| Expand (filtered) | `expand=Orders(filter=Status:eq:'Active'; sort=OrderDate:desc; take=5)` | same options shape, FQL expressions inside (`filter`/`sort`/`take`) | — |
 | Page / PageSize | `page=1&pageSize=20` | same | `$top` / `$skip` (translated to page/size) |
 | Distinct | `distinct=true` | same | — |
 | Mode | `mode=flat` | same | — |
@@ -84,7 +83,7 @@ the expressions it supports.
 <Callout variant="note" title="MiniOData scope">
   The MiniOData parser supports <code>$filter</code>, <code>$orderby</code>,
   <code>$select</code>, <code>$top</code>, <code>$skip</code>, <code>$count</code>, and
-  <code>$expand</code> (flat navigation paths — nested expand options are not supported).
+  <code>$expand</code> (flat navigation paths — nested option blocks are not supported).
   Grouping, aggregates, having, and filtered expansion are DSL/FQL features. A typed
   <code>MiniODataRequest</code> model (Filter, OrderBy, Select, Expand, Top, Skip, Count)
   with <code>ToQueryOptions()</code> is available for strongly-typed consumers.

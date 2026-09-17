@@ -59,7 +59,7 @@ Starting from `Query.Create()`:
 | `.Sort(s => s.Ascending("X").Descending("Y"))` | ordering (list order = priority) | `Sort` |
 | `.Select(params string[])` | projection paths / syntax accepted by the wire select grammar | `Select` |
 | `.Include(params string[])` | navigation paths | `Includes` |
-| `.Expand(e => e.Path("Orders", f => f.Equal("Status","Delivered"), children => …))` | filtered relation loading | `Expand` |
+| `.Include(e => e.Path("Orders", f => f.Equal("Status","Delivered"), take: 3))` | bounded relation loading | `Include` |
 | `.Mode(ProjectionMode.Flat)` | projection shape (Nested/Flat/FlatMixed) | `ProjectionMode` |
 | `.GroupBy(params string[])` | group keys | `GroupBy` |
 | `.Aggregate(a => a.Sum("Total").Count("Id", "orders"))` | aggregates (`Sum/Count/Avg/Min/Max`, optional alias) | `Aggregates` |

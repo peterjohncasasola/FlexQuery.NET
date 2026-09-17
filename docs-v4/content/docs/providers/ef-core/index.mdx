@@ -85,26 +85,26 @@ var result = await db.Customers
 
 ## Includes
 
-`ApplyExpand` composes the include tree into EF Core `Include`/`ThenInclude` chains, each
+`ApplyIncludes` composes the include tree into EF Core `Include`/`ThenInclude` chains, each
 optionally filtered and windowed:
 
 ```csharp
 // hand-built pipeline: compose includes, then materialize yourself
-var queryable = db.Customers.ApplyExpand(parameters.ToQueryOptions());
+var queryable = db.Customers.ApplyIncludes(parameters.ToQueryOptions());
 var rows = await queryable.ToListAsync(cancellationToken);
 ```
 
 Behavior details:
 
 - The include chain rides in the same query as the root select — EF's filtered-include
-  machinery turns each `filter`/`sort`/`take` inside an expand block into SQL
+  machinery turns each `filter`/`sort`/`take` inside an include block into SQL
   `WHERE`/`ORDER BY`/windowed subselects, so related data trims **server-side** (no
   full-collection load followed by memory trimming).
 - Navigation-projection selects (`select=Orders.Total...`) also pull the corresponding
   navigation into the include tree automatically — validation rejects the projection
   when that path is not authorized by `include`.
-- Most endpoints never call `ApplyExpand` directly: `FlexQueryAsync` applies the include
-  pipeline from the request's `include`/`expand` options on its way to execution.
+- Most endpoints never call `ApplyIncludes` directly: `FlexQueryAsync` applies the include
+  pipeline from the request's `include` options on its way to execution.
 
 ## Grouped queries
 
@@ -171,15 +171,15 @@ public sealed class EfCustomersController(AppDbContext db) : ControllerBase
 ```
 
 ```http
-GET /api/ef/customers?filter=Status:eq:Active&expand=Orders(filter=Status:eq:Delivered; take=3)&pageSize=10
+GET /api/ef/customers?filter=Status:eq:Active&include=Orders(filter=Status:eq:Delivered;take=3)&pageSize=10
 GET /api/ef/customers/dto?select=customerName,orders(id,total)
 ```
 
 ## Common mistakes
 
-<Callout variant="warning" title="Expecting ApplyExpand inside FlexQueryAsync">
+<Callout variant="warning" title="Expecting ApplyIncludes inside FlexQueryAsync">
   <code>FlexQueryAsync</code> already applies the include pipeline from
-  <code>options.Expand</code>. Call <code>ApplyExpand</code> separately only when composing
+  <code>options.Includes</code>. Call <code>ApplyIncludes</code> separately only when composing
   a queryable by hand before materializing yourself.
 </Callout>
 

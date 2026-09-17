@@ -1,4 +1,4 @@
-﻿---
+---
 title: Validation
 description: How invalid queries fail — the pipeline, strict mode, and the error model.
 ---
@@ -37,7 +37,7 @@ combinations up-front, and `QueryGovernanceOptions` startup checks surface overl
 
 `StrictFieldValidation` (default **true**) decides what "invalid" means:
 
-| Mode | Unknown/unauthorized field or operator | Unauthorized include/expand | No client sort supplied |
+| Mode | Unknown/unauthorized field or operator | Unauthorized include | No client sort supplied |
 |---|---|---|---|
 | Strict (default) | throws `QueryValidationException` | throws / validation error | inject `DefaultSortField` |
 | Lenient (`false`) | silently **stripped from the query** | dropped | inject `DefaultSortField` |
@@ -77,7 +77,7 @@ attaches the full result, so clients can branch on `Code`.
 
 The registered rule set covers — in categories, not one-by-one:
 
-- **fields exist & are authorized** — filter/sort/select/group/aggregate/having/expansion
+- **fields exist & are authorized** — filter/sort/select/group/aggregate/having/include-block
   fields resolve against the query surface, including navigation-aware checks when the
   request runs against a DTO; governance allow/block/role lists are enforced
   (`FIELD_NOT_FOUND`, `FIELD_ACCESS_DENIED`, `INCLUDE_ACCESS_DENIED`,
@@ -87,13 +87,13 @@ The registered rule set covers — in categories, not one-by-one:
 - **selects are well-formed** — alias validity, duplicate/colliding selections
   (`INVALID_ALIAS`, `RESERVED_ALIAS`, `DUPLICATE_ALIAS`, `DUPLICATE_WILDCARD`); nested
   select syntax errors surface as `QueryParseException` on the `select` parameter.
-- **include/expand discipline** — paths exist, are navigations or collection-typed
-  (`INCLUDE_PATH_NOT_FOUND`, `EXPAND_PATH_NOT_FOUND`, `NAVIGATION_PROPERTY_REQUIRED`,
-  `NOT_A_COLLECTION`), no duplicates (`EXPAND_DUPLICATE_PATH`), each expand path has a
-  matching include (`EXPAND_PATH_NOT_IN_INCLUDE`), no root-prefixed nesting
-  (`EXPAND_ROOT_PREFIXED_PATH`), sort/take only on collections
-  (`EXPAND_SORT_ON_REFERENCE`, `EXPAND_TAKE_ON_REFERENCE`), and include/expand are blocked
-  on grouped queries (`GROUPBY_INCLUDE_CONFLICT`).
+- **include discipline** - every path in every include block exists as a navigation
+  (`INCLUDE_PATH_NOT_FOUND`, `NAVIGATION_PROPERTY_REQUIRED`); the collection
+  operations `filter`/`sort`/`take` apply only to collection-valued relationships
+  (`INCLUDE_FILTER_ON_REFERENCE`, `INCLUDE_SORT_ON_REFERENCE`,
+  `INCLUDE_TAKE_ON_REFERENCE`); no path repeats (`INCLUDE_DUPLICATE_PATH`); nested
+  block field names can't be root-prefixed (`INCLUDE_ROOT_PREFIXED_PATH`); grouping
+  can't combine with include (`GROUPBY_INCLUDE_CONFLICT`).
 - **aggregate/having coherence** — HAVING needs GROUP BY and declared aggregates
   (`HAVING_WITHOUT_GROUPBY`, `HAVING_REQUIRES_GROUPBY`, `HAVING_ALIAS_MISMATCH`,
   `AGGREGATE_NOT_DECLARED`), grouping/sorting rules hold (`GROUPBY_SORT_INVALID`,

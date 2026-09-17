@@ -1,4 +1,4 @@
-﻿---
+---
 title: v3 → v4 Change Matrix
 description: Verified v3.1.1 → v4 changes mapped to their documentation.
 section: Resources
@@ -19,9 +19,9 @@ the current v4 implementation.
 | Dapper dialect | Manual `ISqlDialectResolver` | Auto-detection from `DbConnection` | Behavior changed | [Dapper](/docs/providers/dapper) |
 | Dapper mapping | `MappingRegistry` + public conventions | Convention-first `ModelBuilder` + `IEntityTypeConfiguration<T>` (conventions internal) | Replaced | [Dapper](/docs/providers/dapper) |
 | Typed DTO results | Not available | `FlexQueryAsync<TEntity,TResponse>` (4 overloads per provider) + `CreateMap`/`ForMember`/`ForNavigation` | Added | [Typed DTO Projection](/docs/guides/typed-dto-projection) |
-| Filtered includes | `FilteredIncludes` / `ApplyFilteredIncludes` | `expand` trees with filter/sort/take (`QueryOptions.Expand` / `ApplyExpand`) | Replaced | [Expand](/docs/guides/expand) |
+| Filtered includes | `FilteredIncludes` / `ApplyFilteredIncludes` | `include(...)` blocks with filter/sort/take (`QueryOptions.Includes` tree / `ApplyIncludes`) | Replaced | [Include](/docs/guides/include) |
 | Keyset pagination | Not available | `useKeysetPagination`, `cursor`, `NextCursorToken`, `SeekAfter` | Added | [Keyset Pagination](/docs/guides/keyset-pagination) |
-| Fluent API | `FilterBuilder` only | `Query.Create()` + `FilterGroupBuilder` grammar + sort/expand/aggregate builders | Changed | [Fluent API](/docs/guides/fluent-api) |
+| Fluent API | `FilterBuilder` only | `Query.Create()` + `FilterGroupBuilder` grammar + sort/include/aggregate builders | Changed | [Fluent API](/docs/guides/fluent-api) |
 | Sort model | `SortNode` (in `SortOption.cs`) | `SortNode` (in `Paging/SortNode.cs`) — type name unchanged | No API change | — |
 | Select model | `List<string> Select` | `List<SelectNode>` (aliases + nested trees) | Changed | [Projection](/docs/guides/projection) |
 | Aggregates | `AggregateModel` in `select`, string functions | Dedicated `aggregate` parameter, `AggregateFunction` enum, PascalCase aliases | Changed | [Grouping & Aggregates](/docs/guides/grouping) |
@@ -30,7 +30,7 @@ the current v4 implementation.
 | Query syntaxes | DSL, JSON, Indexed, Generic, JQL, MiniOData, AutoDetect | DSL, FQL, MiniOData | Removed | [Query Syntax](/docs/concepts/query-syntax) |
 | FQL parser package | `FlexQuery.NET.Parsers.Jql`, `QuerySyntax.Jql` | `FlexQuery.NET.Parsers.Fql`, `QuerySyntax.Fql` | Renamed | [Query Syntax](/docs/concepts/query-syntax) |
 | Parser registration | DI services (`ServiceCollectionExtensions`, `MiniODataFeature`) | Static `Fql.Register()` / `MiniOData.Register()` | Changed | [Query Syntax](/docs/concepts/query-syntax) |
-| Validation | Rule pipeline (`QueryValidator` rules) | Same pipeline extended — expand/HAVING/grouping/keyset rules + `ValidationResult`/`ValidationError` model | Extended | [Validation](/docs/guides/validation) |
+| Validation | Rule pipeline (`QueryValidator` rules) | Same pipeline extended — include/HAVING/grouping/keyset rules + `ValidationResult`/`ValidationError` model | Extended | [Validation](/docs/guides/validation) |
 | Field exceptions | `InvalidFilterFieldException` / `InvalidSortFieldException` | Unified hierarchy under `FlexQueryException` | Replaced | [Validation](/docs/guides/validation) |
 | Case-insensitive filtering | `CaseInsensitive` / `CaseInsensitiveFields = true` | Removed | Removed | [Migration](/docs/migration/v3-to-v4) |
 | Governance sets | On monolithic `BaseQueryOptions` | Same members on `QueryGovernanceOptions` (class split) | Changed | [Security](/docs/security) |

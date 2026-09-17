@@ -42,22 +42,22 @@ requests during rollout — they show which surfaces clients actually need.
 
 A `select` references a navigation path (`Address.City`) without loading the navigation.
 
-**Fix**: add the navigation to `include` (scoped loading via `expand` is then also
+**Fix**: add the navigation to `include` (bounded loading via include blocks is then also
 possible, but the rule's error message names the missing `include=` value):
 
 ```http
 GET /api/customers?include=Address&select=Id,Address.City
 ```
 
-## Duplicate expand path
+## Duplicate include path
 
-Each navigation path may be expanded at most once per query — merging duplicates would make
+Each navigation path may be included at most once per query — merging duplicates would make
 filter/take/sort ambiguous.
 
-**Fix**: merge the branch options into a single expand block:
+**Fix**: merge the branch options into one include block:
 
 ```http
-expand=Orders(filter=Status:eq:Delivered; take=3)
+include=Orders(filter=Status:eq:Delivered; take=3)
 ```
 
 ## HAVING references an undeclared aggregate

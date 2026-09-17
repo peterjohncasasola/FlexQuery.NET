@@ -1,4 +1,4 @@
-﻿---
+---
 title: Dapper Provider
 description: Direct SQL generation and split-query hydration for Dapper-backed APIs.
 ---
@@ -120,10 +120,10 @@ An unsupported connection type throws `NotSupportedException` at execution.
   your `select`/type-map surface, `WHERE` from `filter` (case-insensitive contains/
   `IN`/`BETWEEN`/collection checks via `EXISTS`), `GROUP BY`/`HAVING`/ORDER BY from the
   respective parameters, and dialect-correct paging.
-- **Includes/expand** run as additional (split, not joined) queries per level —
+- **Includes** run as additional (split, not joined) queries per level —
   `SELECT ... WHERE CustomerId IN (p0…)` for the keys on the current page — so a page of
   20 customers costs exactly 21 queries no matter how many orders exist, instead of one
-  giant cartesian join. `take=…` on an expand branch is implemented with
+  giant cartesian join. `take=…` on an include block is implemented with
   `ROW_NUMBER() OVER PARTITION` in the child query, and the per-branch `filter`/sort
   fold into the child `WHERE`/`ORDER BY`.
 - **Counting**: `totalCount` is a separate `SELECT COUNT...` on the un-paged filtered
@@ -172,7 +172,7 @@ var result = await connection.FlexQueryAsync<Customer>(
 
 Setting `LoggerFactory` logs every executed command (`Executing Dapper query` at
 Information level, category `"FlexQuery.NET.Dapper"`) with dialect-formatted SQL,
-parameter types and values — including split include/expand children, counts, and
+parameter types and values — including split include children, counts, and
 grand totals. The `Listener` (`IFlexQueryExecutionListener` on the options) exposes them
 programmatically.
 
@@ -184,4 +184,4 @@ programmatically.
 ## Related
 
 - [EF Core Provider](/docs/providers/ef-core) — the expression-tree engine
-- [Include](/docs/guides/include) · [Expand](/docs/guides/expand)
+- [Include](/docs/guides/include) ·

@@ -84,7 +84,7 @@ projection, paging):
 | `FilterCondition` | `Field`, `Operator` (canonical name), `Value`, `ScopedFilter` |
 | `SortNode` | `Field`, `Descending`, (`Aggregate`/`AggregateField` on grouped sorts) |
 | `SelectNode` | `Field`, `Alias`, `Children` |
-| `IncludeNode` | `Path`, `Filter`, `Sort`, `Take`, `Children` (the expand tree) |
+| `IncludeNode` | `Path`, `Filter`, `Sort`, `Take`, `Children` (the include tree) |
 | `Aggregate` | `Function` (`AggregateFunction` enum), `Field`, `Alias` |
 | `PagingOptions` | `Page`, `PageSize`, `Disabled` |
 
@@ -118,8 +118,8 @@ Two rules:
 - `ApplySelect` changes the element type to `object` (dynamic projections), so anything
   after it is no longer `IQueryable<Order>`.
 
-EF Core adds one more stage for graphs: `ApplyExpand(options)` composes the
-include/expand trees (and the executor calls it for you inside `FlexQueryAsync`; you
+EF Core adds one more stage for graphs: `ApplyIncludes(options)` composes the
+include tree (and the executor calls it for you inside `FlexQueryAsync`; you
 only reach for it in hand-built pipelines).
 
 ## Plain in-memory execution

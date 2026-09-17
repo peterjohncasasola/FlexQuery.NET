@@ -25,7 +25,7 @@ Query string / request model / fluent build
         |
         v
 +------------+   2. Validate   - field existence, operators, types, field access,
-| Validation |                    governance limits, expand paths, aggregates
+| Validation |                    governance limits, include paths, aggregates
 +------------+
         |
         v
@@ -79,13 +79,13 @@ The builder composes LINQ expressions in a fixed order:
 ### 4. Translate
 
 - **EF Core**: the composed expression tree hands off to EF's translation — everything
-  becomes SQL. Include/expand branches use EF Core filtered includes (`.Include(...)`
+  becomes SQL. Include branches use EF Core filtered includes (`.Include(...)`
   expressions with `Where`/`OrderBy`/`Take` inside), so the related-data window is applied
   server-side in EF's own generated SQL.
 - **Dapper**: FlexQuery generates the SQL itself — select list (surface-aware, type-map
   rewritten), WHERE, GROUP BY/HAVING, ORDER BY, and dialect-specific paging. Related data
   loads as separate child queries batched by parent keys (split-query style hydration),
-  and expand `take` becomes a server-side ranked/limited child query.
+  and include-block `take` becomes a server-side ranked/limited child query.
 
 ### 5. Execute
 

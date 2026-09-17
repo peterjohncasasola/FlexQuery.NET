@@ -99,7 +99,7 @@ dotted path are checked existence-style (`Any`), so:
 matches orders that have at least one item whose product is *Widget*. Direct reference
 navigations work the same way (`Address.City:eq:Berlin`).
 
-> Expanding into navigation properties in a filter lets clients probe for the existence
+> Navigating into navigation properties in a filter lets clients probe for the existence
 > of related rows. Treat navigation roots like any other protected field: either
 > authorize them through `AllowedIncludes`/`SelectableFields` governance, or keep
 > endpoints without such fields and rely on the default governance rejection. A

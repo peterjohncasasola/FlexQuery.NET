@@ -44,8 +44,7 @@ output, pre-built saved queries, or merging client input with server-side struct
     <tr><td><code>Filter</code></td><td><code>FilterGroup?</code></td><td>Filter expression tree — conditions, nested groups, logic operators. See <a href="/docs/guides/filtering">Filtering</a>.</td></tr>
     <tr><td><code>Sort</code></td><td><code>List&lt;SortNode&gt;</code></td><td>Ordered sort specs (field, direction, optional aggregate). See <a href="/docs/guides/sorting">Sorting</a>.</td></tr>
     <tr><td><code>Select</code></td><td><code>List&lt;SelectNode&gt;?</code></td><td>Projection tree — fields, aliases, nested selections. See <a href="/docs/guides/projection">Projection</a>.</td></tr>
-    <tr><td><code>Includes</code></td><td><code>List&lt;string&gt;?</code></td><td>Navigation paths to include with all scalars. See <a href="/docs/guides/include">Include</a>.</td></tr>
-    <tr><td><code>Expand</code></td><td><code>List&lt;IncludeNode&gt;?</code></td><td>Expansion trees with per-branch filter/sort/take. See <a href="/docs/guides/expand">Expand</a>.</td></tr>
+    <tr><td><code>Includes</code></td><td><code>List&lt;IncludeNode&gt;?</code></td><td>The relationship-include tree: plain inclusions plus per-branch <code>filter</code>/<code>sort</code>/<code>take</code> query blocks. See <a href="/docs/guides/include">Include</a>.</td></tr>
     <tr><td><code>ProjectionMode</code></td><td><code>ProjectionMode</code></td><td>Output shaping: <code>Nested</code> (default), <code>Flat</code>, <code>FlatMixed</code>.</td></tr>
     <tr><td><code>GroupBy</code></td><td><code>List&lt;string&gt;?</code></td><td>Group key fields.</td></tr>
     <tr><td><code>Aggregates</code></td><td><code>List&lt;Aggregate&gt;</code></td><td>Aggregate specs (typed <code>AggregateFunction</code> + field + alias).</td></tr>

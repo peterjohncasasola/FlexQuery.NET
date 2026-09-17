@@ -1,4 +1,4 @@
-﻿---
+---
 title: Projection
 description: Select exactly the fields clients need — paths, aliases, wildcards, nested selection, and projection modes.
 ---
@@ -55,7 +55,7 @@ Restrictions enforced by validation:
   child fields explicitly inside a nested select instead)
 - `*` cannot be combined with other selections in the same list
 - `*` selects scalar properties only — navigations never come along unless asked for
-  via `include`/`expand`
+  via `include`
 - a duplicate wildcard (`select=*,*`) is ignored with a validation warning
 
 ## Nested selection
@@ -166,5 +166,5 @@ filtered customer count; and a client that never asked for `Email` couldn't see 
 
 ## Related
 
-- [Include](/docs/guides/include) · [Expand](/docs/guides/expand) ·
+- [Include](/docs/guides/include) · ·
   [Typed DTO Projection](/docs/guides/typed-dto-projection)

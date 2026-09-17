@@ -1,20 +1,38 @@
 ﻿---
 title: Include
-description: Load related entities through navigation paths — server-side, bounded, governed.
+description: Related data in one keyword — plain inclusion, or a bounded collection slice with its own filter, sort, take, and nested includes.
 ---
 
 import { Callout } from '@/components/callout'
 
 # Include
 
-`include` attaches related records to each row: customers **with their orders**,
-orders **with their order items and product**. The loading happens server-side (SQL
-joins / follow-up queries — never a change-tracking fixup), and the set of navigations a
-client may name is entirely up to your governance configuration.
+`include` attaches related records to each row: customers **with their orders**, orders
+**with their order items and product**. On collection-valued relationships the included
+branch can additionally carry its own query operations — a slice instead of the whole
+collection ("every customer, but only their three most recent delivered orders"). That is
+the pattern behind dashboard cards and order-history previews: bounded related data
+without dragging thousands of child rows across the wire.
 
-## Syntax
+The loading happens server-side (SQL joins / follow-up queries — never a change-tracking
+fixup), and the set of navigations a client may name is entirely up to your governance
+configuration.
 
-One or more comma-separated navigation paths, using dots for depth:
+## Core rule
+
+> **`include` specifies a relationship to include. When the relationship is
+> collection-valued, `filter`, `sort`, and `take` can be used inside its block to control
+> the included collection.**
+
+Single-valued (reference) relationships can be included — with or without nested
+includes — but the collection operations `filter`, `sort`, and `take` cannot be applied
+to them. Cardinality comes from the **relationship metadata** (your entity/DTO model),
+never from plural names, record counts, or runtime data.
+
+## Simple inclusion
+
+One or more comma-separated navigation paths, using dots for depth. Works for both
+collection and single-valued relationships:
 
 ```http
 GET /api/customers?include=Orders
@@ -22,23 +40,117 @@ GET /api/customers?include=Orders,Orders.OrderItems
 GET /api/orders?include=Customer.Address
 ```
 
-- Duplicates collapse silently — `include=Orders,Orders` loads `Orders` once.
+- Duplicates collapse — `include=Orders,Orders` loads `Orders` once.
 - Every path must resolve to **navigation properties** end to end. A path that walks
-  into a scalar property is rejected.
+  into a scalar property (or names something that does not exist) is rejected with
+  `INCLUDE_PATH_NOT_FOUND` / `NAVIGATION_PROPERTY_REQUIRED`.
 - The wire parameter is `include` in the native DSL and FQL; MiniOData clients spell the
   same thing as `$expand=Orders` (see [Query Syntax](/docs/concepts/query-syntax)).
 
-## What the response looks like
+## Collection include: filter, sort, take
+
+An include entry may carry a parenthesized **options block** — but only when the target
+relationship is a collection:
 
 ```http
-GET /api/customers?include=Orders&pageSize=2
+GET /api/customers?include=Orders(take=5)
+GET /api/customers?include=Orders(filter=Status:eq:Delivered)
+GET /api/customers?include=Orders(sort=OrderDate:desc)
+GET /api/customers?include=Orders(take=5;filter=Status:eq:Delivered;sort=OrderDate:desc)
+```
+
+```
+include-entry: path [ "(" option *( ";" option ) ")" ]
+option:  "filter=" <filter expression in the request's syntax>
+       | "sort="   <sort expression>
+       | "take="   <integer ≥ 0>
+       | "include=" <path, optionally with its own block>   (nested)
+       | <path> "(" ... ")"                                  (compact nested block)
+```
+
+- `take=5` loads at most five children **per parent row** — `take=0` loads none.
+- `filter=` uses the same expression language as the root `filter`: DSL requests write
+  `filter=Status:eq:Delivered`, FQL requests `filter=Status = 'Delivered'` — the syntax
+  of the request governs; they are never mixed.
+- `sort=` accepts `OrderDate:desc` (DSL) or `OrderDate desc` / `OrderDate DESC` (FQL).
+- Options inside a block are separated by `;` (URL-safe choice; prefer it since `,`
+  separates include entries).
+- Each path may appear **once** per query — `Orders(take=1),Orders(take=2)` is rejected
+  with `INCLUDE_DUPLICATE_PATH`; merge the options into one block.
+
+### What relationship-level blocks do not support
+
+- **`skip` is not a relationship-level option.** To bound an included collection use
+  `take`; paging (`page` / `pageSize`, and MiniOData `$skip`) remains a root-only
+  concern. Requests such as `include=Orders(skip=10)` fail at parse time with a clear
+  message.
+- Only `filter`, `sort`, `take`, and nested `include` are valid option keys — anything
+  else (including the removed `expand` keyword) fails parse.
+
+## Single-valued relationships
+
+```http
+GET /api/customers?include=Address          ✓ loads the customer's address
+GET /api/customers?include=Address()        ✓ same — an empty block is a no-op
+GET /api/customers?include=Orders(include=Customer)  ✓ nested reference inclusion
+```
+
+but each collection operation on a reference is rejected individually:
+
+```http
+GET /api/customers?include=Address(take=5)
+→ Include query validation failed:
+  The 'take' option can only be used with collection relationships.
+  'address' is a single-valued relationship.   (INCLUDE_TAKE_ON_REFERENCE)
+
+GET /api/customers?include=Address(filter=City:eq:Manila)
+→ The 'filter' option can only be used with collection relationships.
+  'address' is a single-valued relationship.   (INCLUDE_FILTER_ON_REFERENCE)
+
+GET /api/customers?include=Address(sort=City:asc)
+→ The 'sort' option can only be used with collection relationships.
+  'address' is a single-valued relationship.   (INCLUDE_SORT_ON_REFERENCE)
+```
+
+The decision is **metadata-driven**: a collection relationship stays a collection even
+when it has zero or one rows today; a reference stays single-valued even when it is
+null.
+
+## Nested includes
+
+Deeper levels ride inside the block — each level is validated independently against the
+relationship it names:
+
+```http
+GET /api/customers?include=Orders(take=5;filter=Status:eq:Delivered;include=OrderItems(take=3))
+```
+
+Equivalently via the compact child-block or dotted forms:
+
+```http
+GET /api/customers?include=Orders(take=5;OrderItems(take=3))
+GET /api/customers?include=Orders(take=5),Orders.OrderItems(take=3)
+```
+
+A nested include on a single-valued relationship is fine for *traversal*
+(`Orders(include=Customer)` works), but its collection options are not
+(`Order.Customer(take=5)` is rejected — `customer` is single-valued).
+
+A deep tree produces one batched level per depth that carries options. Branch
+filter/sort/take never trim parent rows: root paging and `totalCount` describe the full
+result set.
+
+## Worked example: bounded order history
+
+```http
+GET /api/customers?include=Orders(filter=Status:eq:Delivered;sort=OrderDate:desc;take=3)
 ```
 
 ```json
 {
   "data": [
     {
-      "id": 12,
+      "id": 4,
       "firstName": "Ada",
       "lastName": "Lovelace",
       "email": "ada@example.com",
@@ -47,28 +159,25 @@ GET /api/customers?include=Orders&pageSize=2
       "salary": 90000,
       "createdDate": "2023-05-17T00:00:00Z",
       "orders": [
-        { "id": 441, "customerId": 12, "orderNumber": "ORD-441",
-          "totalAmount": 210.00, "orderDate": "2024-02-01T00:00:00Z", "status": "Delivered" }
+        { "id": 101, "orderNumber": "ORD-101", "totalAmount": 129.90, "orderDate": "2024-05-01T00:00:00Z", "status": "Delivered" },
+        { "id": 118, "orderNumber": "ORD-118", "totalAmount": 89.00,  "orderDate": "2024-04-12T00:00:00Z", "status": "Delivered" }
       ]
     }
   ],
-  "totalCount": 42,
-  "page": 1,
-  "pageSize": 2,
-  "totalPages": 21,
-  "hasNextPage": true,
-  "hasPreviousPage": false
+  "totalCount": 42
 }
 ```
 
-Each included navigation appears as a property on the parent row. Two shape rules are
-worth knowing:
+Customers without qualifying orders still appear (they just carry `"orders": []`).
+Branch operations never change the root sort order — the root query and each branch are
+separate SQL operations.
 
-- **Only requested branches are sent.** Children of `Orders` (like `OrderItems`) stay
-  out of the response until you ask for them — including a navigation loads its scalar
+## Response shape
+
+- **Only requested branches are sent.** Children of `Orders` (like `OrderItems`) stay out
+  of the response until you ask for them — including a navigation loads its scalar
   fields, not its own children.
-- **Parents are never dropped.** A customer with zero orders gets an empty array, and
-  the root page/row count is unaffected by what you include.
+- **Parents are never dropped.** A customer with zero orders gets an empty array.
 
 ## Combining with select
 
@@ -78,10 +187,11 @@ worth knowing:
 GET /api/customers?include=Orders&select=Id,Orders(Id,TotalAmount)
 ```
 
-This is the bandwidth-friendly pair — children load with only the listed fields. The
-rule connecting them: selecting *through* a navigation path requires that path in
-`include` (otherwise `QueryValidationException`, `NAVIGATION_PROJECTION_REQUIRES_INCLUDE`
-— the message even tells you which `include=` value to add).
+Selecting *through* a navigation path requires that path in `include` (otherwise
+`QueryValidationException`, `NAVIGATION_PROJECTION_REQUIRES_INCLUDE` — the message tells
+you which `include=` value to add). A deep include such as
+`include=Orders.OrderItems(take=5)` also covers its parent chain (`Orders`), since the
+provider must load the parent to reach the child.
 
 ## Governance: which paths are includable
 
@@ -89,36 +199,42 @@ rule connecting them: selecting *through* a navigation path requires that path i
 opt.AllowedIncludes = ["Orders", "Orders.OrderItems"];
 ```
 
-- With `AllowedIncludes` set, anything outside the list is rejected with
-  `INCLUDE_ACCESS_DENIED` (or, in lenient mode, the unauthorized branch is dropped from
-  the response — a security property, not a convenience).
-- With it unset, any valid navigation of the entity type may be included. For
-  public endpoints, set it explicitly — unbounded `include` trees are the classic
+- With `AllowedIncludes` set, every explicitly requested include path (including nested
+  branches and every level of a block) must be on the list, or the request is rejected
+  with `INCLUDE_ACCESS_DENIED` (in lenient mode the unauthorized branch is dropped from
+  the response — a security property, not a convenience). Implicit ancestors that exist
+  only to carry a deeper requested path are not themselves governed.
+- With it unset, any valid navigation of the entity type may be included. For public
+  endpoints, set it explicitly — unbounded `include` trees are the classic
   data-exfiltration and cartesian-blow-up vector.
-- Governance paths are enforced for includes and expansions alike (see
-  [Expand](/docs/guides/expand) and [Security](/docs/security)).
+- Branch `filter`/`sort` fields must be valid for the related entity's public surface —
+  DTO-typed surface checks apply exactly like at the root, and `type.member` governance
+  rules like `Order.Total:gt:100` remain available to the server.
 
 ## Provider behavior
 
-- **EF Core**: includes are composed into the query as filtered `Include`/`ThenInclude`
-  expressions; EF's own query pipeline emits the SQL (join or follow-up query per
-  provider behavior) and materializes the graph. Tracked queries would additionally fix
-  up inverses — FlexQuery runs no-tracking by default.
-- **Dapper**: FlexQuery issues one root query plus **batched child queries** per include
-  level (`SELECT … WHERE CustomerId IN (page keys)`), so the server work stays bounded by
-  what is on the current page — a single `include=Orders` even collapses to one
-  streamed join command behind the scenes.
-- Grouping queries reject include/expand outright (`GROUPBY_INCLUDE_CONFLICT`) — the
-  row model has no parent entity to hang a graph on. Pair `groupBy` with `aggregate`
-  instead.
+- **EF Core**: blocks are applied inside EF's own filtered-include machinery — the
+  database trims the children before rows reach memory, so a `take=3` branch loads three
+  rows per parent, not the whole collection. Grouping queries reject `include` outright
+  (`GROUPBY_INCLUDE_CONFLICT`).
+- **Dapper**: each option-bearing level runs as its own batched query restricted to the
+  keys on the current parent page. `take` becomes a dialect-correct ranked subquery
+  (`ROW_NUMBER() OVER (PARTITION BY ...)`) so trimming is also server-side, while a
+  `filter`-only branch is folded straight into the child `WHERE`. A single bare include
+  even collapses to one streamed join command behind the scenes.
 
 ## Common mistakes
 
-<Callout variant="warning" title="Include is not a filter">
+<Callout variant="warning" title="include is not a filter">
   <code>include=Orders</code> loads <em>every</em> related row. A customer with 800
-  orders returns 800 child objects. If you need "top 5 recent orders", use
-  <a href="/docs/guides/expand">expand</a> with <code>take</code> and <code>sort</code> — or
-  shape the relation with <a href="/docs/guides/projection">select</a>.
+  orders returns 800 child objects. If you need "top 5 recent delivered orders", add
+  the operations to the include block: <code>include=Orders(take=5;sort=OrderDate:desc;filter=Status:eq:Delivered)</code>.
+</Callout>
+
+<Callout variant="warning" title="Collection operations on single-valued relationships">
+  <code>filter</code>, <code>sort</code>, and <code>take</code> only make sense on
+  collections. <code>include=Address(take=5)</code> fails validation with
+  <code>INCLUDE_TAKE_ON_REFERENCE</code> — an address is one row, not a slice.
 </Callout>
 
 <Callout variant="warning" title="Forgotten [JsonIgnore] cycles">
@@ -127,8 +243,19 @@ opt.AllowedIncludes = ["Orders", "Orders.OrderItems"];
   <code>[JsonIgnore]</code> — the sample domain does exactly that.
 </Callout>
 
+## What changed from v3/v4-preview
+
+The old v3 `FilteredIncludes` pseudo-syntax — and the short-lived v4-preview companion
+keyword `expand` — are replaced. Everything now lives on `include`:
+
+| v4 preview | v4.0 |
+|---|---|
+| `include=Orders` | `include=Orders` (unchanged) |
+| `include=Orders&expand=Orders(take=3;filter=…)` | `include=Orders(take=3;filter=…)` |
+| `expand=Orders` alone | rejected — `expand` no longer exists in DSL/FQL; use `include=Orders` |
+
 ## Related
 
-- [Expand](/docs/guides/expand) — filtered, sorted, size-bounded includes
 - [Projection](/docs/guides/projection) — shape what loads into what returns
+- [Validation](/docs/guides/validation) — the full error code table
 - [Security & Governance](/docs/security)
