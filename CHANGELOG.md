@@ -4,6 +4,36 @@ All notable changes to this project will be documented in this file.
 
 ---
 
+## [4.0.0] - 2026-09-16
+
+Full notes: `docs/release-notes/v4.0.0.md`. Migration guide: `docs-v4/content/docs/migration/v3-to-v4.mdx`.
+
+### Breaking
+
+- **Configuration model rebuilt:** DI registration replaced by immutable static facades (`FlexQueryCore/Dapper/EFCore.Configure`, `Fql.Register()`, `MiniOData.Register()`); `Configure` after first query throws.
+- **Renamed:** package `Parsers.Jql` → `Parsers.Fql`; `QuerySyntax.Jql` → `Fql`; `JqlParseException` → `FqlParseException : FlexQueryException`; `FilteredIncludes` (v3) / `expand` (v4 previews) . `include(...)` relationship query blocks; `AggregateModel` → typed `AggregateFunction`; `HavingCondition` → `HavingNode` tree; `DebugResult` → `QueryDebugInfo`; `BaseQueryOptions` split into `Options.BaseQueryOptions` + `Options.QueryGovernanceOptions`; listener/context moved to `FlexQuery.NET.Execution`.
+- **Removed:** JSON/Indexed/Generic query syntaxes, `CaseInsensitive` options, parser DI registration, deprecated `QueryOptions` members (`Skip`/`Top`/`EnableCache`/`Items`/`Ast`), `Invalid*FieldException`, manual Dapper `Dialect`/`ISqlDialectResolver`, Dapper `MappingRegistry` stack and public conventions, `UseSplitQuery`, public caches/helpers (`ExpressionBuilder`, `QueryBuilder`, `DynamicTypeBuilder`, `SelectTreeBuilder`, …), `FromAgGridJson`/`FromKendoJson`.
+- **DSL grammar:** comma-joined filter conditions became value text (join with `&`/`|`/`AND`/`OR`); `;` rejected; `AND`/`OR` reserved as keywords; aggregates parsed only from the dedicated `aggregate` parameter; HAVING requires declared aggregates; malformed `page`/`pageSize`/`distinct` now throw and out-of-range values clamp to 1–`MaxPageSize`.
+- **Targets:** packages moved to net6.0/net8.0/net10.0 (net7.0 dropped); new `FlexQuery.NET.OpenApi` targets net9.0/net10.0.
+
+### Added
+
+- **Typed DTO projection:** `FlexQueryAsync<TEntity, TResponse>` (4 EF + 4 Dapper overloads) with global mapping registry (`CreateMap`/`ForMember`/`ForNavigation`), surface-aware SQL generation, and result shape emitted through DTO surface.
+- **Relationship query blocks on `include`:** `include=Orders(take=5;filter=Status:eq:Active;sort=OrderDate:desc)` replaces `FilteredIncludes` (and the preview-only `expand` keyword) with per-branch filter/sort/take and nested includes; DSL and FQL parsers, `AllowedIncludes` governance at every level, cardinality-aware validation (collection operations rejected on single-valued relationships), and `expand=` in DSL/FQL now fails with a migration error.
+- **Keyset pagination:** `useKeysetPagination`, `cursor`, `QueryResult.NextCursorToken`, `SeekAfter` in both providers.
+- **HAVING expression trees, select aliases (`field:alias`, `as`), nested `SelectNode` trees, space-form sort directions, `Query.Create()` fluent builder, `FlexQueryRequest`, per-request `QuerySyntax`/`DisablePaging` overrides, `CancellationToken` on all async overloads.**
+- **New package `FlexQuery.NET.OpenApi`** (`AddFlexQueryOpenApi`) for `Microsoft.AspNetCore.OpenApi`.
+- **Dapper:** EF-style `ModelBuilder` + `IEntityTypeConfiguration<T>` model definitions, dialect auto-detection from `DbConnection`, SQL execution logging with copy-paste-ready DECLARE scripts.
+- **New v4 docs site** (Next.js + Fumadocs) under `docs-v4/`.
+
+### Fixed
+
+- Include-block filter/sort fields rewritten through nested TypeMaps; include-only joins excluded from count query; principal keys resolved from mapping instead of hard-coded `Id`; OR operator in `FqlHavingAstParser`; nested select alias preservation and mixed flat/nested syntax; structured parser error positions; `QuerySyntax` wiring through parser; grouped-execution null-context guard.
+
+### Performance
+
+- Direct Dapper include materialization/projection path with streaming simple includes; strongly typed projections honoring JSON naming policies; cache keys include selection-node `Sort`/`Take`.
+
 ## [3.1.1] - 2026-07-04
 
 ### Fixed
