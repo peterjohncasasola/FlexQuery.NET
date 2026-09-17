@@ -1,4 +1,4 @@
-﻿using FlexQuery.NET.Exceptions;
+using FlexQuery.NET.Exceptions;
 using FlexQuery.NET.Execution;
 using FlexQuery.NET.Models;
 using FlexQuery.NET.Models.Aggregates;
@@ -881,7 +881,7 @@ public class FqlQueryParserTests
         result.Select.Should().BeEquivalentTo([new SelectNode { Field = "Id" }, new SelectNode { Field = "Name" }, new SelectNode { Field = "CustomerName" }]);
 
         // Include
-        result.Includes.Should().BeEquivalentTo(["Orders", "Profile"]);
+        IncludeTestFactory.PathStrings(result.Includes).Should().BeEquivalentTo(["Orders", "Profile"]);
 
         // GroupBy
         result.GroupBy.Should().BeEquivalentTo(["customerId", "category"]);

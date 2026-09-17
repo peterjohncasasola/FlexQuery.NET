@@ -1,4 +1,5 @@
 using FlexQuery.NET.Models;
+using FlexQuery.NET.Models.Projection;
 using FlexQuery.NET.Parsers.MiniOData.Models;
 
 namespace FlexQuery.NET.Parsers.MiniOData;
@@ -46,7 +47,9 @@ internal static class ODataQueryParameterParser
             options.Select = ODataSelectParser.Parse(request.Select);
 
         if (!string.IsNullOrWhiteSpace(request.Expand))
-            options.Includes = MiniODataExpandParser.Parse(request.Expand);
+            options.Includes = MiniODataExpandParser.Parse(request.Expand)
+                .Select(path => new IncludeNode { Path = path })
+                .ToList();
 
         // $apply is deferred in v4: reject explicitly rather than silently ignoring it.
         if (!string.IsNullOrWhiteSpace(request.Apply))

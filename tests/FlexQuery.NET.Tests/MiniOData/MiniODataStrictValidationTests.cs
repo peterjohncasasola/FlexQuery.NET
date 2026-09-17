@@ -175,7 +175,7 @@ public class MiniODataStrictValidationTests
     {
         var result = ODataQueryParameterParser.Parse(new MiniODataRequest { Expand = "Orders" });
 
-        result.Includes.Should().BeEquivalentTo(new[] { "Orders" });
+        IncludeTestFactory.PathStrings(result.Includes).Should().BeEquivalentTo(new[] { "Orders" });
     }
 
     [Fact]
@@ -184,9 +184,9 @@ public class MiniODataStrictValidationTests
         var result = ODataQueryParameterParser.Parse(new MiniODataRequest { Expand = "Orders,Profile,Addresses" });
 
         result.Includes.Should().HaveCount(3);
-        result.Includes.Should().Contain("Orders");
-        result.Includes.Should().Contain("Profile");
-        result.Includes.Should().Contain("Addresses");
+        IncludeTestFactory.PathStrings(result.Includes).Should().Contain("Orders");
+        IncludeTestFactory.PathStrings(result.Includes).Should().Contain("Profile");
+        IncludeTestFactory.PathStrings(result.Includes).Should().Contain("Addresses");
     }
 
     [Fact]

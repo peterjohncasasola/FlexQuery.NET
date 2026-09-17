@@ -154,7 +154,8 @@ internal sealed class FqlQueryParser : IQueryParser
         {
             try
             {
-                options.Includes = FqlIncludeParser.Parse(parameters.Include);
+                var includeAst = FqlIncludeParser.Parse(parameters.Include);
+                options.Includes = IncludeNormalizer.Normalize(includeAst);
             }
             catch (FqlParseException ex)
             {
@@ -162,26 +163,6 @@ internal sealed class FqlQueryParser : IQueryParser
                     QueryOptionKeys.Include,
                     QuerySyntax.Fql,
                     parameters.Include,
-                    ex,
-                    position: ex.Position,
-                    expected: ex.Expected,
-                    found: ex.Found);
-            }
-        }
-
-        if (!string.IsNullOrWhiteSpace(parameters.Expand))
-        {
-            try
-            {
-                var expandAst = FqlExpandParser.Parse(parameters.Expand);
-                options.Expand = ExpandNormalizer.Normalize(expandAst);
-            }
-            catch (FqlParseException ex)
-            {
-                throw new QueryParseException(
-                    QueryOptionKeys.Expand,
-                    QuerySyntax.Fql,
-                    parameters.Expand,
                     ex,
                     position: ex.Position,
                     expected: ex.Expected,

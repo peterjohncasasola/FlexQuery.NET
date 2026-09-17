@@ -160,7 +160,7 @@ public class MiniODataQueryParserTests
 
         var result = ODataQueryParameterParser.Parse(request);
 
-        result.Includes.Should().BeEquivalentTo(new[] { "orders" });
+        IncludeTestFactory.PathStrings(result.Includes).Should().BeEquivalentTo(new[] { "orders" });
     }
 
     [Fact]
@@ -174,9 +174,9 @@ public class MiniODataQueryParserTests
         var result = ODataQueryParameterParser.Parse(request);
 
         result.Includes.Should().HaveCount(3);
-        result.Includes.Should().Contain("orders");
-        result.Includes.Should().Contain("profile");
-        result.Includes.Should().Contain("addresses");
+        IncludeTestFactory.PathStrings(result.Includes).Should().Contain("orders");
+        IncludeTestFactory.PathStrings(result.Includes).Should().Contain("profile");
+        IncludeTestFactory.PathStrings(result.Includes).Should().Contain("addresses");
     }
 
     [Fact]

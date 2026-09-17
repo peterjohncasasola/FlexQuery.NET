@@ -5,14 +5,14 @@ using FlexQuery.NET.Parsers.Fql;
 
 namespace FlexQuery.NET.Tests.Parsers;
 
-public class FqlExpandParserTests
+public class FqlIncludeBlockParserTests
 {
     #region Basic - Filter Only
 
     [Fact]
-    public void Parse_FilterOnly_SingleExpand_ReturnsExpandAst()
+    public void Parse_FilterOnly_SingleInclude_ReturnsIncludeAst()
     {
-        var result = FqlExpandParser.Parse("orders(filter=Status='Active')");
+        var result = FqlIncludeParser.Parse("orders(filter=Status='Active')");
 
         result.Should().ContainSingle();
         result[0].Path.Should().Contain("orders");
@@ -27,9 +27,9 @@ public class FqlExpandParserTests
     #region Basic - Sort Only
 
     [Fact]
-    public void Parse_SortOnly_SingleExpand_ReturnsExpandAst()
+    public void Parse_SortOnly_SingleInclude_ReturnsIncludeAst()
     {
-        var result = FqlExpandParser.Parse("orders(sort=OrderDate DESC)");
+        var result = FqlIncludeParser.Parse("orders(sort=OrderDate DESC)");
 
         result.Should().ContainSingle();
         result[0].Path.Should().Contain("orders");
@@ -45,9 +45,9 @@ public class FqlExpandParserTests
     #region Basic - Take Only
 
     [Fact]
-    public void Parse_TakeOnly_SingleExpand_ReturnsExpandAst()
+    public void Parse_TakeOnly_SingleInclude_ReturnsIncludeAst()
     {
-        var result = FqlExpandParser.Parse("orders(take=5)");
+        var result = FqlIncludeParser.Parse("orders(take=5)");
 
         result.Should().ContainSingle();
         result[0].Path.Should().Contain("orders");
@@ -61,9 +61,9 @@ public class FqlExpandParserTests
     #region Basic - Combined Options
 
     [Fact]
-    public void Parse_FilterSortTake_Combined_ReturnsExpandAst()
+    public void Parse_FilterSortTake_Combined_ReturnsIncludeAst()
     {
-        var result = FqlExpandParser.Parse("orders(filter=Status='Active'; sort=OrderDate DESC; take=5)");
+        var result = FqlIncludeParser.Parse("orders(filter=Status='Active'; sort=OrderDate DESC; take=5)");
 
         result.Should().ContainSingle();
         result[0].Path.Should().Contain("orders");
@@ -79,9 +79,9 @@ public class FqlExpandParserTests
     #region Multiple Expand Blocks
 
     [Fact]
-    public void Parse_MultipleBlocks_ReturnsMultipleExpandAsts()
+    public void Parse_MultipleBlocks_ReturnsMultipleIncludeAsts()
     {
-        var result = FqlExpandParser.Parse("orders(filter=Status='Active'),reviews(filter=Rating >= 4)");
+        var result = FqlIncludeParser.Parse("orders(filter=Status='Active'),reviews(filter=Rating >= 4)");
 
         result.Should().HaveCount(2);
         result[0].Path.Should().Contain("orders");
@@ -93,7 +93,7 @@ public class FqlExpandParserTests
     [Fact]
     public void Parse_MultipleBlocks_SamePathTwice_ReturnsTwoNodes()
     {
-        var result = FqlExpandParser.Parse("orders(filter=Status='Active'),orders(filter=Status='Pending')");
+        var result = FqlIncludeParser.Parse("orders(filter=Status='Active'),orders(filter=Status='Pending')");
 
         result.Should().HaveCount(2);
         result[0].Path.Should().Contain("orders");
@@ -109,7 +109,7 @@ public class FqlExpandParserTests
     [Fact]
     public void Parse_NestedChildren_ReturnsRecursiveTree()
     {
-        var result = FqlExpandParser.Parse("orders(orderItems(filter=Quantity > 5))");
+        var result = FqlIncludeParser.Parse("orders(orderItems(filter=Quantity > 5))");
 
         result.Should().ContainSingle();
         result[0].Path.Should().Contain("orders");
@@ -121,7 +121,7 @@ public class FqlExpandParserTests
     [Fact]
     public void Parse_MultipleChildrenAtSameLevel_ReturnsMultipleChildren()
     {
-        var result = FqlExpandParser.Parse("orders(orderItems(filter=Quantity > 5),reviews(sort=CreatedDate DESC))");
+        var result = FqlIncludeParser.Parse("orders(orderItems(filter=Quantity > 5),reviews(sort=CreatedDate DESC))");
 
         result.Should().ContainSingle();
         result[0].Path.Should().Contain("orders");
@@ -139,7 +139,7 @@ public class FqlExpandParserTests
     [Fact]
     public void Parse_FlatDottedPath_SingleLevel_ReturnsSingleNode()
     {
-        var result = FqlExpandParser.Parse("orders.orderItems(filter=Quantity > 5)");
+        var result = FqlIncludeParser.Parse("orders.orderItems(filter=Quantity > 5)");
 
         result.Should().ContainSingle();
         result[0].Path.Should().Contain("orders");
@@ -150,7 +150,7 @@ public class FqlExpandParserTests
     [Fact]
     public void Parse_FlatDottedPath_DeepPath_ReturnsDeepTree()
     {
-        var result = FqlExpandParser.Parse("orders.orderItems.products(filter=Price > 10)");
+        var result = FqlIncludeParser.Parse("orders.orderItems.products(filter=Price > 10)");
 
         result.Should().ContainSingle();
         result[0].Path.Should().Contain("orders");
@@ -162,7 +162,7 @@ public class FqlExpandParserTests
     [Fact]
     public void Parse_FlatDottedPath_NoOptions_ReturnsEmptyChildren()
     {
-        var result = FqlExpandParser.Parse("orders.orderItems");
+        var result = FqlIncludeParser.Parse("orders.orderItems");
 
         result.Should().ContainSingle();
         result[0].Path.Should().Contain("orders");
@@ -180,7 +180,7 @@ public class FqlExpandParserTests
     [InlineData("orders(filter=Status='Active';sort=OrderDate DESC;take=5)")]
     public void Parse_WhitespaceVariations_ParsesCorrectly(string input)
     {
-        var result = FqlExpandParser.Parse(input);
+        var result = FqlIncludeParser.Parse(input);
 
         result.Should().ContainSingle();
         result[0].Path.Should().Contain("orders");
@@ -196,7 +196,7 @@ public class FqlExpandParserTests
     [Fact]
     public void Parse_EmptyString_ReturnsEmptyList()
     {
-        var result = FqlExpandParser.Parse("");
+        var result = FqlIncludeParser.Parse("");
 
         result.Should().BeEmpty();
     }
@@ -204,7 +204,7 @@ public class FqlExpandParserTests
     [Fact]
     public void Parse_WhitespaceOnly_ReturnsEmptyList()
     {
-        var result = FqlExpandParser.Parse("   ");
+        var result = FqlIncludeParser.Parse("   ");
 
         result.Should().BeEmpty();
     }
@@ -212,7 +212,7 @@ public class FqlExpandParserTests
     [Fact]
     public void Parse_NullInput_ReturnsEmptyList()
     {
-        var result = FqlExpandParser.Parse(null);
+        var result = FqlIncludeParser.Parse(null);
 
         result.Should().BeEmpty();
     }
@@ -220,7 +220,7 @@ public class FqlExpandParserTests
     [Fact]
     public void Parse_EmptyOptionsBlock_ReturnsNodeWithNoOptions()
     {
-        var result = FqlExpandParser.Parse("orders()");
+        var result = FqlIncludeParser.Parse("orders()");
 
         result.Should().ContainSingle();
         result[0].Path.Should().Equal("orders");
@@ -236,19 +236,19 @@ public class FqlExpandParserTests
     [Fact]
     public void Parse_UnknownOptionSkip_ThrowsParseException()
     {
-        Action act = () => FqlExpandParser.Parse("orders(skip=5)");
+        Action act = () => FqlIncludeParser.Parse("orders(skip=5)");
 
         act.Should().Throw<FqlParseException>()
-           .WithMessage("*Unexpected expand option 'skip'*");
+           .WithMessage("*not supported inside include*");
     }
 
     [Fact]
     public void Parse_UnknownOptionSelect_ThrowsParseException()
     {
-        Action act = () => FqlExpandParser.Parse("orders(select=Name)");
+        Action act = () => FqlIncludeParser.Parse("orders(select=Name)");
 
         act.Should().Throw<FqlParseException>()
-           .WithMessage("*Unexpected expand option 'select'*");
+           .WithMessage("*Unexpected include option 'select'*");
     }
 
     #endregion
@@ -258,7 +258,7 @@ public class FqlExpandParserTests
     [Fact]
     public void Parse_MissingEquals_ThrowsParseException()
     {
-        Action act = () => FqlExpandParser.Parse("orders(filter Status='Active')");
+        Action act = () => FqlIncludeParser.Parse("orders(filter Status='Active')");
 
         act.Should().Throw<FqlParseException>();
     }
@@ -266,7 +266,7 @@ public class FqlExpandParserTests
     [Fact]
     public void Parse_MissingCloseParen_ThrowsParseException()
     {
-        Action act = () => FqlExpandParser.Parse("orders(filter=Status='Active'");
+        Action act = () => FqlIncludeParser.Parse("orders(filter=Status='Active'");
 
         act.Should().Throw<FqlParseException>();
     }
@@ -274,7 +274,7 @@ public class FqlExpandParserTests
     [Fact]
     public void Parse_ExtraCloseParen_ThrowsParseException()
     {
-        Action act = () => FqlExpandParser.Parse("orders(filter=Status='Active'))");
+        Action act = () => FqlIncludeParser.Parse("orders(filter=Status='Active'))");
 
         act.Should().Throw<FqlParseException>();
     }
@@ -282,7 +282,7 @@ public class FqlExpandParserTests
     [Fact]
     public void Parse_EmptyFilterValue_ThrowsParseException()
     {
-        Action act = () => FqlExpandParser.Parse("orders(filter=)");
+        Action act = () => FqlIncludeParser.Parse("orders(filter=)");
 
         act.Should().Throw<FqlParseException>();
     }
@@ -294,7 +294,7 @@ public class FqlExpandParserTests
     [Fact]
     public void Parse_DoubleSemicolon_HandlesGracefully()
     {
-        Action act = () => FqlExpandParser.Parse("orders(filter=Status='Active';; sort=OrderDate DESC)");
+        Action act = () => FqlIncludeParser.Parse("orders(filter=Status='Active';; sort=OrderDate DESC)");
 
         act.Should().Throw<FqlParseException>();
     }
@@ -302,7 +302,7 @@ public class FqlExpandParserTests
     [Fact]
     public void Parse_LeadingSemicolon_ThrowsParseException()
     {
-        Action act = () => FqlExpandParser.Parse("orders(; filter=Status='Active')");
+        Action act = () => FqlIncludeParser.Parse("orders(; filter=Status='Active')");
 
         act.Should().Throw<FqlParseException>();
     }
@@ -310,7 +310,7 @@ public class FqlExpandParserTests
     [Fact]
     public void Parse_TrailingSemicolon_HandlesGracefully()
     {
-        var result = FqlExpandParser.Parse("orders(filter=Status='Active'; sort=OrderDate DESC;)");
+        var result = FqlIncludeParser.Parse("orders(filter=Status='Active'; sort=OrderDate DESC;)");
 
         result.Should().ContainSingle();
         result[0].Filter.Should().NotBeNull();
@@ -324,7 +324,7 @@ public class FqlExpandParserTests
     [Fact]
     public void Parse_FilterWithCommaInString_DoesNotSplit()
     {
-        var result = FqlExpandParser.Parse("orders(filter=Name='Smith, John')");
+        var result = FqlIncludeParser.Parse("orders(filter=Name='Smith, John')");
 
         result.Should().ContainSingle();
         result[0].Filter.Should().NotBeNull();
@@ -333,7 +333,7 @@ public class FqlExpandParserTests
     [Fact]
     public void Parse_FilterWithSemicolonInString_DoesNotSplitOption()
     {
-        var result = FqlExpandParser.Parse("orders(filter=Description='A; B')");
+        var result = FqlIncludeParser.Parse("orders(filter=Description='A; B')");
 
         result.Should().ContainSingle();
         result[0].Filter.Should().NotBeNull();
@@ -342,7 +342,7 @@ public class FqlExpandParserTests
     [Fact]
     public void Parse_FilterWithNestedParentheses_DoesNotConfuseDepth()
     {
-        var result = FqlExpandParser.Parse("orders(filter=(Status='Active' or (Priority > 1)))");
+        var result = FqlIncludeParser.Parse("orders(filter=(Status='Active' or (Priority > 1)))");
 
         result.Should().ContainSingle();
         result[0].Filter.Should().NotBeNull();
@@ -355,7 +355,7 @@ public class FqlExpandParserTests
     [Fact]
     public void Parse_SortMultipleFields_ReturnsMultipleSortNodes()
     {
-        var result = FqlExpandParser.Parse("orders(sort=OrderDate DESC,CreatedDate ASC)");
+        var result = FqlIncludeParser.Parse("orders(sort=OrderDate DESC,CreatedDate ASC)");
 
         result.Should().ContainSingle();
         result[0].Sort.Should().HaveCount(2);
@@ -372,8 +372,8 @@ public class FqlExpandParserTests
     [Fact]
     public void Parse_SortBeforeFilter_SameResult()
     {
-        var result1 = FqlExpandParser.Parse("orders(filter=Status='Active'; sort=OrderDate DESC; take=5)");
-        var result2 = FqlExpandParser.Parse("orders(sort=OrderDate DESC; filter=Status='Active'; take=5)");
+        var result1 = FqlIncludeParser.Parse("orders(filter=Status='Active'; sort=OrderDate DESC; take=5)");
+        var result2 = FqlIncludeParser.Parse("orders(sort=OrderDate DESC; filter=Status='Active'; take=5)");
 
         result1.Count.Should().Be(result2.Count);
         result1[0].Filter.Should().NotBeNull();
@@ -390,7 +390,7 @@ public class FqlExpandParserTests
     [Fact]
     public void Parse_SingleSegmentPath_NoDot_ReturnsSingleNode()
     {
-        var result = FqlExpandParser.Parse("orders(filter=Status='Active')");
+        var result = FqlIncludeParser.Parse("orders(filter=Status='Active')");
 
         result.Should().ContainSingle();
         result[0].Path.Should().Contain("orders");
@@ -399,15 +399,15 @@ public class FqlExpandParserTests
 
     #endregion
 
-    #region Skip Not Supported in v4
+    #region Skip Is Not Supported Inside Include
 
     [Fact]
     public void Parse_SkipOption_ThrowsParseException()
     {
-        Action act = () => FqlExpandParser.Parse("orders(skip=5)");
+        Action act = () => FqlIncludeParser.Parse("orders(skip=5)");
 
         act.Should().Throw<FqlParseException>()
-           .WithMessage("*Unexpected expand option 'skip'*");
+           .WithMessage("*not supported inside include*");
     }
 
     #endregion
@@ -417,7 +417,7 @@ public class FqlExpandParserTests
     [Fact]
     public void Parse_ThreeLevelNesting_ReturnsDeepTree()
     {
-        var result = FqlExpandParser.Parse("orders(orderItems(products(filter=Price > 10)))");
+        var result = FqlIncludeParser.Parse("orders(orderItems(products(filter=Price > 10)))");
 
         result.Should().ContainSingle();
         result[0].Path.Should().Contain("orders");

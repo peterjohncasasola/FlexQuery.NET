@@ -1,5 +1,6 @@
 using FlexQuery.NET.Exceptions;
 using FlexQuery.NET.Models;
+using FlexQuery.NET.Models.Projection;
 using FlexQuery.NET.Parsers.MiniOData.Models;
 
 namespace FlexQuery.NET.Parsers.MiniOData;
@@ -55,7 +56,9 @@ internal sealed class MiniODataQueryParser : IQueryParser
         {
             try
             {
-                options.Includes = MiniODataExpandParser.Parse(parameters.Include);
+                options.Includes = MiniODataExpandParser.Parse(parameters.Include)
+                    .Select(path => new IncludeNode { Path = path })
+                    .ToList();
             }
             catch (MiniODataParseException ex)
             {
