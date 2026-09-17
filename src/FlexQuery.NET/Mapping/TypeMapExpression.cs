@@ -22,7 +22,7 @@ public interface ITypeMapExpression<TSource, TDestination>
 
     /// <summary>
     /// Maps a destination navigation collection to an entity navigation collection.
-    /// Becomes metadata for include, expand, and nested DTO projection.
+    /// Becomes metadata for includes, relationship query blocks, and nested DTO projection.
     /// </summary>
     ITypeMapExpression<TSource, TDestination> ForNavigation<TDestinationCollection, TSourceCollection>(
         Expression<Func<TDestination, TDestinationCollection>> destinationMember,

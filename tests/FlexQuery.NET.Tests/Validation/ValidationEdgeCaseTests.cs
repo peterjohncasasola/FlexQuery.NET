@@ -426,7 +426,7 @@ public class ValidationEdgeCaseTests
         var options = new QueryOptions
         {
             GroupBy = null,
-            Includes = ["Children"]
+            Includes = IncludeTestFactory.Paths("Children")
         };
         var rule = new GroupByIncludeConflictRule();
         var result = ValidationResult.Success();
@@ -441,9 +441,9 @@ public class ValidationEdgeCaseTests
     {
         var options = new QueryOptions
         {
-            Includes = ["Addresses"]
+            Includes = IncludeTestFactory.Paths("Addresses")
         };
-        var rule = new ExpandPathValidationRule();
+        var rule = new IncludePathValidationRule();
         var result = ValidationResult.Success();
 
         rule.Validate(options, Context(targetType: null), result);
@@ -456,7 +456,7 @@ public class ValidationEdgeCaseTests
     {
         var options = new QueryOptions
         {
-            Expand =
+            Includes =
             [
                 new IncludeNode
                 {
@@ -465,7 +465,7 @@ public class ValidationEdgeCaseTests
                 }
             ]
         };
-        var rule = new ExpandPathValidationRule();
+        var rule = new IncludePathValidationRule();
         var result = ValidationResult.Success();
 
         rule.Validate(options, Context(), result);

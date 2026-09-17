@@ -41,7 +41,7 @@ internal static class DtoProjectionBuilder
         IReadOnlyList<SelectNode>? fieldsOverride = null,
         IReadOnlyDictionary<string, LambdaExpression>? navigationWindows = null,
         IQueryMappingRegistry? mappingRegistry = null,
-        IReadOnlyDictionary<string, ExpandWindowNode>? expandWindows = null)
+        IReadOnlyDictionary<string, IncludeWindowNode>? includeWindows = null)
         where TEntity : class
         where TResponse : class
     {
@@ -93,48 +93,48 @@ internal static class DtoProjectionBuilder
             {
                 // Deep expansion window for this navigation (flat dotted path normalized
                 // into a hierarchical tree); child windows are applied per level below.
-                ExpandWindowNode? expandWindow = null;
-                var hasExpandWindow = expandWindows != null
-                    && expandWindows.TryGetValue(resolved.EntityProperty.Name, out expandWindow);
+                IncludeWindowNode? includeWindow = null;
+                var hasincludeWindow = includeWindows != null
+                    && includeWindows.TryGetValue(resolved.EntityProperty.Name, out includeWindow);
 
                 LambdaExpression? window = null;
                 var hasWindow = navigationWindows != null
                     && navigationWindows.TryGetValue(resolved.EntityProperty.Name, out window);
 
-                if (hasExpandWindow)
+                if (hasincludeWindow)
                 {
                     // Deep expansion: apply this level's filter/sort/take directly to the
                     // navigation body, then recurse into child windows — the child window
                     // applies to the element collections of the already-windowed parent,
                     // keeping nested processing correlated to the selected parent rows.
-                    var windowBody = ApplyExpandWindow(entityExprBody, expandWindow!, queryOptions);
+                    var windowBody = ApplyIncludeWindow(entityExprBody, includeWindow!, queryOptions);
 
                     if (selectNode.Children is { Count: > 0 })
                     {
                         entityExprBody = BuildNestedChildProjection(
                             windowBody, selectNode.Children, responseProp.PropertyType, queryOptions, mappingRegistry,
-                            expandChildren: expandWindow!.Children);
+                            includeChildren: includeWindow!.Children);
                     }
                     else
                     {
                         entityExprBody = ProjectNestedMemberNavigation(
                             windowBody, responseProp.PropertyType, mappingRegistry!, depth: 1,
-                            expandWindow!.Children, resolved.EntityProperty.Name, allowedNavigationPaths);
+                            includeWindow!.Children, resolved.EntityProperty.Name, allowedNavigationPaths);
                     }
                 }
                 else if (selectNode.Children is { Count: > 0 })
                 {
                     // Nested root-select tree (e.g. select=...,Orders(OrderId,Status)):
-                    // expand = which records; select = which fields. Combine both into one
+                    // include blocks = which records; select = which fields. Combine both into one
                     // server-side expression tree: window → Select(child projections) → ToList.
                     var windowBody = hasWindow ? ReplaceParameter(window!, entityParam) : entityExprBody;
                     entityExprBody = BuildNestedChildProjection(
                         windowBody, selectNode.Children, responseProp.PropertyType, queryOptions, mappingRegistry,
-                        expandChildren: null);
+                        includeChildren: null);
                 }
                 else if (hasWindow)
                 {
-                    // Server-side expand window bound directly; DTO-typed navigation element
+                    // Server-side include window bound directly; DTO-typed navigation element
                     // types project through the registered nested TypeMap graph.
                     entityExprBody = ProjectNestedMemberNavigation(
                         ReplaceParameter(window!, entityParam), responseProp.PropertyType, mappingRegistry!, depth: 1, null,
@@ -142,12 +142,12 @@ internal static class DtoProjectionBuilder
                 }
                 else
                 {
-                    // Include/Expand materialization binds entity collections into the response.
+                    // Include materialization binds entity collections into the response.
                     // Cut the graph at the entity boundary for entity-typed members; DTO-typed
                     // members project through the registered nested TypeMap graph.
                     entityExprBody = mappingRegistry is not null
                         ? ProjectNestedMemberNavigation(entityExprBody, responseProp.PropertyType, mappingRegistry, depth: 1,
-                            expandChildren: null, navigationPath: resolved.EntityProperty.Name, allowedNavigationPaths: allowedNavigationPaths)
+                            includeChildren: null, navigationPath: resolved.EntityProperty.Name, allowedNavigationPaths: allowedNavigationPaths)
                         : BuildNavigationCutProjection(entityExprBody, responseProp.PropertyType);
                 }
             }
@@ -179,9 +179,9 @@ internal static class DtoProjectionBuilder
     /// correlated APPLY-shaped window restricted to the parent element — never an
     /// uncorrelated whole-child-table ranking.
     /// </summary>
-    private static Expression ApplyExpandWindow(
+    private static Expression ApplyIncludeWindow(
         Expression navigationBody,
-        ExpandWindowNode window,
+        IncludeWindowNode window,
         QueryOptions queryOptions)
     {
         var node = window.Node;
@@ -218,7 +218,7 @@ internal static class DtoProjectionBuilder
             {
                 var parameter = Expression.Parameter(elementType, "o");
 
-                // Expand sort fields are entity-level names on the element type. Resolve
+                // Include-block sort fields are entity-level names on the element type. Resolve
                 // to a plain member access (translatable in the correlated projection —
                 // SortBuilder's mapped/binding forms can require APPLY on some providers).
                 var keyProp = ReflectionCache.GetProperty(elementType, sortNode.Field);
@@ -279,7 +279,7 @@ internal static class DtoProjectionBuilder
         Type responseType,
         IQueryMappingRegistry registry,
         int depth,
-        IReadOnlyDictionary<string, ExpandWindowNode>? expandChildren,
+        IReadOnlyDictionary<string, IncludeWindowNode>? includeChildren,
         string navigationPath,
         IReadOnlySet<string> allowedNavigationPaths)
     {
@@ -294,7 +294,7 @@ internal static class DtoProjectionBuilder
             && registry.Find(entityElementType, dtoElement) is { } nestedCollectionMap)
         {
             var elementParam = Expression.Parameter(entityElementType, "e");
-            var memberInit = BuildTypeMapMemberInit(nestedCollectionMap, registry, depth, elementParam, expandChildren,
+            var memberInit = BuildTypeMapMemberInit(nestedCollectionMap, registry, depth, elementParam, includeChildren,
                 navigationPath, allowedNavigationPaths);
             var selector = Expression.Lambda(memberInit, elementParam);
 
@@ -314,7 +314,7 @@ internal static class DtoProjectionBuilder
             && registry.Find(navigationBody.Type, responseType) is { } nestedReferenceMap)
         {
             var referenceParam = Expression.Parameter(navigationBody.Type, "e");
-            var memberInit = BuildTypeMapMemberInit(nestedReferenceMap, registry, depth, referenceParam, expandChildren,
+            var memberInit = BuildTypeMapMemberInit(nestedReferenceMap, registry, depth, referenceParam, includeChildren,
                 navigationPath, allowedNavigationPaths);
             var projectedBody = ReplaceParameter(
                 Expression.Lambda(memberInit, referenceParam),
@@ -359,7 +359,7 @@ internal static class DtoProjectionBuilder
         Type responseType,
         QueryOptions queryOptions,
         IQueryMappingRegistry? mappingRegistry,
-        IReadOnlyDictionary<string, ExpandWindowNode>? expandChildren = null)
+        IReadOnlyDictionary<string, IncludeWindowNode>? includeChildren = null)
     {
         Type elementType;
         Type projectionType;
@@ -438,14 +438,14 @@ internal static class DtoProjectionBuilder
             }
             else if (!TypeClassification.IsScalarType(responseProp.PropertyType))
             {
-                // Deep expansion windows apply to this child navigation when the expand
+                // Deep include windows apply to this child navigation when the include
                 // tree declares it; otherwise the entity graph cut applies.
-                ExpandWindowNode? childWindow = null;
-                expandChildren?.TryGetValue(responseProp.Name, out childWindow);
+                IncludeWindowNode? childWindow = null;
+                includeChildren?.TryGetValue(responseProp.Name, out childWindow);
 
                 if (childWindow is not null)
                 {
-                    childAccess = ApplyExpandWindow(childAccess, childWindow, queryOptions);
+                    childAccess = ApplyIncludeWindow(childAccess, childWindow, queryOptions);
                 }
                 else
                 {
@@ -493,7 +493,7 @@ internal static class DtoProjectionBuilder
         IQueryMappingRegistry registry,
         int depth,
         ParameterExpression elementParam,
-        IReadOnlyDictionary<string, ExpandWindowNode>? expandChildren = null,
+        IReadOnlyDictionary<string, IncludeWindowNode>? includeChildren = null,
         string? navigationPath = null,
         IReadOnlySet<string>? allowedNavigationPaths = null)
     {
@@ -522,18 +522,18 @@ internal static class DtoProjectionBuilder
                     continue;
                 }
 
-                ExpandWindowNode? childWindow = null;
-                if (expandChildren is not null)
+                IncludeWindowNode? childWindow = null;
+                if (includeChildren is not null)
                 {
-                    if (!expandChildren.TryGetValue(destProp.Name, out childWindow))
-                        expandChildren.TryGetValue(entityNavName, out childWindow);
+                    if (!includeChildren.TryGetValue(destProp.Name, out childWindow))
+                        includeChildren.TryGetValue(entityNavName, out childWindow);
                 }
 
                 if (childWindow is not null)
                 {
                     // Apply the child window's own options (filter/sort/take) to the
                     // navigation body, correlated to the current element.
-                    value = ApplyExpandWindow(value, childWindow, new QueryOptions());
+                    value = ApplyIncludeWindow(value, childWindow, new QueryOptions());
                 }
 
                 if (childPath != null && allowedNavigationPaths != null)

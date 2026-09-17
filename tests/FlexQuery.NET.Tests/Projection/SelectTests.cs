@@ -142,7 +142,7 @@ public class SelectTests : IDisposable
     [Fact]
     public async Task Select_IncludeFormat_BringsInWholeNestedObject()
     {
-        var options = new QueryOptions { Includes = ["Profile"] };
+        var options = new QueryOptions { Includes = IncludeTestFactory.Paths("Profile") };
         var query = _db.Customers.ApplySelect(options);
         
         var list = await query.ToListAsync();

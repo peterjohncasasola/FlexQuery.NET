@@ -40,7 +40,7 @@ internal static class FieldResolver
         var surface = GetSurface(options);
 
         // 1. DTO surface is the authoritative mapping source at the query root only.
-        //    Scoped contexts (expand sort/selection, scoped collection filters) resolve
+        //    Scoped contexts (include-block sort/selection, scoped collection filters) resolve
         //    element-level entity names on the navigation's target type, not root public
         //    surface names — rebinding a root lambda onto a foreign parameter type would
         //    produce an invalid expression tree.
@@ -136,7 +136,7 @@ internal static class FieldResolver
         => GetSurface(options)?.ResponseType != null;
 
     /// <summary>
-    /// Translates a public include/expand path to its entity-level path: the head segment
+    /// Translates a public include path to its entity-level path: the head segment
     /// resolves through the public surface (mapped navigation), the remainder is already
     /// entity-level (element types have no surface). Returns the input unchanged when the
     /// head does not resolve — lenient leftovers are skipped downstream.
@@ -157,8 +157,8 @@ internal static class FieldResolver
     }
 
     /// <summary>
-    /// Rewrites include/expand paths from public (DTO) names to entity property names in
-    /// place, after validation. Root-level segments only — child expand paths are
+    /// Rewrites include paths from public (DTO) names to entity property names in place,
+    /// after validation. Root-level segments only — nested include children are
     /// element-level names on the navigation target and have no surface entries.
     /// </summary>
     public static void TranslateIncludePathsToEntity(QueryOptions options, IQuerySurface? surface)
@@ -166,17 +166,11 @@ internal static class FieldResolver
         if (surface?.ResponseType == null)
             return;
 
-        if (options.Includes is { Count: > 0 })
-        {
-            for (var i = 0; i < options.Includes.Count; i++)
-                options.Includes[i] = TranslatePathToEntity(surface, options.Includes[i]);
-        }
-
-        if (options.Expand is { Count: > 0 })
-            TranslateExpandNodes(options.Expand, surface, rootLevel: true);
+        if (options.Includes is { Count: > 0 } tree)
+            TranslateIncludeNodes(tree, surface, rootLevel: true);
     }
 
-    private static void TranslateExpandNodes(List<IncludeNode> nodes, IQuerySurface surface, bool rootLevel)
+    private static void TranslateIncludeNodes(List<IncludeNode> nodes, IQuerySurface surface, bool rootLevel)
     {
         foreach (var node in nodes)
         {
@@ -184,7 +178,7 @@ internal static class FieldResolver
                 node.Path = TranslatePathToEntity(surface, node.Path);
 
             if (node.Children is { Count: > 0 })
-                TranslateExpandNodes(node.Children, surface, rootLevel: false);
+                TranslateIncludeNodes(node.Children, surface, rootLevel: false);
         }
     }
 

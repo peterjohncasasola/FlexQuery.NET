@@ -1,3 +1,4 @@
+using FlexQuery.NET.Internal;
 using FlexQuery.NET.Models;
 using FlexQuery.NET.Models.Projection;
 
@@ -29,7 +30,7 @@ public static class FlexQueryRequestExtensions
     /// <item><description>Filter expressions</description></item>
     /// <item><description>Sorting</description></item>
     /// <item><description>Projection (Select)</description></item>
-    /// <item><description>Expand / Includes</description></item>
+    /// <item><description>Include (navigation relationships with optional query blocks)</description></item>
     /// <item><description>Grouping (Group By)</description></item>
     /// <item><description>Aggregate functions</description></item>
     /// <item><description>Having filters</description></item>
@@ -52,11 +53,10 @@ public static class FlexQueryRequestExtensions
             Aggregates = request.Aggregate,
             Filter = request.Filter,
             Distinct = request.Distinct,
-            Expand = request.Expand,
             Paging = request.Paging,
             Select = request.Select?.Select(f => new SelectNode { Field = f }).ToList(),
             IncludeCount = request.IncludeCount,
-            Includes = request.Include,
+            Includes = request.Include is null ? null : IncludeTree.SplitDottedPaths(request.Include),
             GroupBy = request.GroupBy,
             Sort = request.Sort,
             Having = request.Having,

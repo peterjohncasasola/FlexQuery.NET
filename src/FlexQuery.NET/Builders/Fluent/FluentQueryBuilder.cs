@@ -52,19 +52,34 @@ public sealed class FluentQueryBuilder
     /// <summary>Sets simple navigation includes (replaces any previous includes).</summary>
     public FluentQueryBuilder Include(params string[] paths)
     {
-        _options.Includes = paths.Length > 0 ? [..paths] : null;
+        _options.Includes = paths.Length > 0
+            ? [.. paths.Select(p => new IncludeNode { Path = p })]
+            : null;
+        if (_options.Includes is { Count: > 0 } tree)
+            _options.Includes = IncludeTree.SplitDottedPaths(tree);
         return this;
     }
 
-    /// <summary>Adds filtered navigation expansion trees using an <see cref="ExpandBuilder"/> lambda.</summary>
-    public FluentQueryBuilder Expand(Action<ExpandBuilder> configure)
+    /// <summary>
+    /// Adds relationship includes with optional query blocks (filter/sort/take and nested
+    /// includes) built with an <see cref="IncludeBuilder"/> lambda.
+    /// </summary>
+    public FluentQueryBuilder Include(Action<IncludeBuilder> configure)
     {
-        var builder = new ExpandBuilder();
+        var builder = new IncludeBuilder();
         configure(builder);
         var includes = builder.Build();
         if (includes.Count <= 0) return this;
-        _options.Expand ??= [];
-        _options.Expand.AddRange(includes);
+        _options.Includes ??= [];
+        foreach (var node in includes)
+        {
+            var existing = _options.Includes.FirstOrDefault(n =>
+                n.Path.Equals(node.Path, StringComparison.OrdinalIgnoreCase));
+            if (existing is not null)
+                IncludeTree.Merge(existing, node);
+            else
+                _options.Includes.Add(node);
+        }
         return this;
     }
 

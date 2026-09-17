@@ -217,7 +217,7 @@ public class CacheKeyCorrectnessTests
         var options1 = new QueryOptions
         {
             Select = [new SelectNode { Field = "Id" }],
-            Expand =
+            Includes =
             [
                 new IncludeNode
                 {
@@ -234,7 +234,7 @@ public class CacheKeyCorrectnessTests
         var options2 = new QueryOptions
         {
             Select = [new SelectNode { Field = "Id" }],
-            Expand =
+            Includes =
             [
                 new IncludeNode
                 {
@@ -260,7 +260,7 @@ public class CacheKeyCorrectnessTests
         var options1 = new QueryOptions
         {
             Select = [new SelectNode { Field = "Id" }],
-            Includes = ["Orders"],
+            Includes = IncludeTestFactory.Paths("Orders"),
             Filter = new FilterGroup
             {
                 Filters = [new FilterCondition { Field = "Status", Operator = "eq", Value = "Active" }]
@@ -271,7 +271,7 @@ public class CacheKeyCorrectnessTests
         var options2 = new QueryOptions
         {
             Select = [new SelectNode { Field = "Id" }, new SelectNode { Field = "Name" }],
-            Includes = ["Orders"],
+            Includes = IncludeTestFactory.Paths("Orders"),
             Filter = new FilterGroup
             {
                 Filters = [new FilterCondition { Field = "Status", Operator = "eq", Value = "Active" }]

@@ -4,15 +4,15 @@ using FlexQuery.NET.Models.Paging;
 namespace FlexQuery.NET.Parsers;
 
 /// <summary>
-/// Language-agnostic intermediate representation of an expand query.
+/// Language-agnostic intermediate representation of an <c>include</c> query option.
 /// <para>
-/// This is the contract between parsers (FQL, DSL, etc.) and the <see cref="ExpandNormalizer"/>.
+/// This is the contract between parsers (FQL, DSL, etc.) and the <see cref="IncludeNormalizer"/>.
 /// Parsers produce this shape; the normalizer consumes it. Neither side knows about the other's syntax.
 /// </para>
 /// </summary>
-internal sealed class ExpandAst
+internal sealed class IncludeAst
 {
-    /// <summary>Navigation path segments for this expand level.</summary>
+    /// <summary>Navigation path segments for this include level.</summary>
     public List<string> Path { get; set; } = [];
 
     /// <summary>Optional filter expression applied to the navigation collection.</summary>
@@ -24,6 +24,6 @@ internal sealed class ExpandAst
     /// <summary>Optional number of items to take.</summary>
     public int? Take { get; set; }
 
-    /// <summary>Nested expand blocks on child navigations.</summary>
-    public List<ExpandAst> Children { get; set; } = [];
+    /// <summary>Nested include blocks on child navigations.</summary>
+    public List<IncludeAst> Children { get; set; } = [];
 }

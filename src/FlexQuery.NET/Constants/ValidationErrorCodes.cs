@@ -35,12 +35,10 @@ internal static class ValidationErrorCodes
     public const string HavingRequiresGroupBy = "HAVING_REQUIRES_GROUPBY";
     public const string HavingFieldNotInGroupBy = "HAVING_FIELD_NOT_IN_GROUPBY";
     public const string AggregateSelectWithoutGroupBy = "AGGREGATE_SELECT_WITHOUT_GROUPBY";
-    public const string ExpandPathNotFound = "EXPAND_PATH_NOT_FOUND";
-    public const string ExpandPathNotInInclude = "EXPAND_PATH_NOT_IN_INCLUDE";
-    public const string ExpandDuplicatePath = "EXPAND_DUPLICATE_PATH";
-    public const string ExpandRootPrefixedPath = "EXPAND_ROOT_PREFIXED_PATH";
-    public const string ExpandSortOnReference = "EXPAND_SORT_ON_REFERENCE";
-    public const string ExpandTakeOnReference = "EXPAND_TAKE_ON_REFERENCE";
-    public const string ExpandCapabilityNotSupported = "EXPAND_CAPABILITY_NOT_SUPPORTED";
+    public const string IncludeDuplicatePath = "INCLUDE_DUPLICATE_PATH";
+    public const string IncludeRootPrefixedPath = "INCLUDE_ROOT_PREFIXED_PATH";
+    public const string IncludeFilterOnReference = "INCLUDE_FILTER_ON_REFERENCE";
+    public const string IncludeSortOnReference = "INCLUDE_SORT_ON_REFERENCE";
+    public const string IncludeTakeOnReference = "INCLUDE_TAKE_ON_REFERENCE";
     public const string NavigationProjectionRequiresInclude = "NAVIGATION_PROJECTION_REQUIRES_INCLUDE";
 }

@@ -80,7 +80,8 @@ internal sealed class DslQueryParser : IQueryParser
         {
             try
             {
-                options.Includes = DslIncludeParser.Parse(parameters.Include);
+                var includeAst = DslIncludeParser.Parse(parameters.Include);
+                options.Includes = IncludeNormalizer.Normalize(includeAst);
             }
             catch (DslParseException ex)
             {
@@ -88,26 +89,6 @@ internal sealed class DslQueryParser : IQueryParser
                     QueryOptionKeys.Include,
                     QuerySyntax.NativeDsl,
                     parameters.Include,
-                    ex,
-                    position: ex.Position,
-                    expected: ex.Expected,
-                    found: ex.Found);
-            }
-        }
-
-        if (!string.IsNullOrWhiteSpace(parameters.Expand))
-        {
-            try
-            {
-                var expandAst = DslExpandParser.Parse(parameters.Expand);
-                options.Expand = ExpandNormalizer.Normalize(expandAst);
-            }
-            catch (DslParseException ex)
-            {
-                throw new QueryParseException(
-                    QueryOptionKeys.Expand,
-                    QuerySyntax.NativeDsl,
-                    parameters.Expand,
                     ex,
                     position: ex.Position,
                     expected: ex.Expected,

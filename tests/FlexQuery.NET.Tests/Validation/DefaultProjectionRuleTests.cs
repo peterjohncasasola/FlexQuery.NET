@@ -73,7 +73,7 @@ public class DefaultProjectionRuleTests
     public void HasProjectionThroughIncludes_SkipsInjection()
     {
         var execOptions = new TestGovernanceOptions { SelectableFields = ["Id", "Name"] };
-        var options = new QueryOptions { Includes = ["Children"] };
+        var options = new QueryOptions { Includes = IncludeTestFactory.Paths("Children") };
         var rule = new DefaultProjectionRule();
         var result = ValidationResult.Success();
 

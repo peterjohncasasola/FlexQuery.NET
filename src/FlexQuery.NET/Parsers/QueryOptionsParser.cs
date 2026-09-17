@@ -45,8 +45,7 @@ internal static class QueryOptionsParser
             parameters.Include, parameters.GroupBy, parameters.Having,
             parameters.Page, parameters.PageSize, parameters.IncludeCount,
             parameters.Distinct, parameters.Mode, parameters.Cursor, parameters.UseKeysetPagination, Version: effectiveSyntax.ToString(),
-            Aggregates: parameters.Aggregate,
-            Expand: parameters.Expand);
+            Aggregates: parameters.Aggregate);
 
         if (ParserCache.TryGet(cacheKey, out var cached))
         {
@@ -61,7 +60,9 @@ internal static class QueryOptionsParser
 
     /// <summary>
     /// Parses raw query-string key-value pairs into <see cref="QueryOptions"/> using the globally configured syntax.
-    /// Only recognized FlexQuery parameters are parsed; unknown keys are silently ignored.
+    /// Only recognized FlexQuery parameters are parsed; unknown keys are silently ignored —
+    /// except the removed <c>expand</c> keyword, which is rejected in DSL/FQL syntaxes with a
+    /// migration hint (relationship options belong inside the <c>include(...)</c> block).
     /// </summary>
     /// <param name="queryString">The raw query string key-value pairs.</param>
     /// <returns>The parsed <see cref="QueryOptions"/>.</returns>
@@ -72,6 +73,20 @@ internal static class QueryOptionsParser
 
         string? TryGet(string key) => grouped.GetValueOrDefault(key);
         var effectiveSyntax = _defaultSyntax;
+
+        var rawExpand = TryGet(QueryOptionKeys.Expand) ?? TryGet($"${QueryOptionKeys.Expand}");
+        var includeValue = TryGet(QueryOptionKeys.Include)
+            ?? (effectiveSyntax == QuerySyntax.MiniOData ? rawExpand : null);
+
+        if (effectiveSyntax != QuerySyntax.MiniOData && rawExpand is not null)
+            throw new QueryParseException(
+                QueryOptionKeys.Expand,
+                effectiveSyntax,
+                rawExpand,
+                new FlexQueryParseException(
+                    "The 'expand' keyword has been removed from the FlexQuery query language. " +
+                    "Relationship options belong directly in the include block — " +
+                    "e.g. include=orders(take=5;filter=Status:eq:'Active';sort=OrderDate:desc)."));
 
         int? ParsePage()
         {
@@ -105,8 +120,7 @@ internal static class QueryOptionsParser
             Filter = TryGet(QueryOptionKeys.Filter) ?? TryGet($"${QueryOptionKeys.Filter}"),
             Sort = TryGet(QueryOptionKeys.Sort) ?? TryGet(QueryOptionKeys.OrderBy) ?? TryGet($"${QueryOptionKeys.OrderBy}"),
             Select = TryGet(QueryOptionKeys.Select) ?? TryGet($"${QueryOptionKeys.Select}"),
-            Include = TryGet(QueryOptionKeys.Include) ?? TryGet(QueryOptionKeys.Expand) ?? TryGet($"${QueryOptionKeys.Expand}"),
-            Expand = TryGet(QueryOptionKeys.Expand) ?? TryGet($"${QueryOptionKeys.Expand}"),
+            Include = includeValue,
             GroupBy = TryGet(QueryOptionKeys.GroupBy),
             Having = TryGet(QueryOptionKeys.Having),
             Aggregate = TryGet(QueryOptionKeys.Aggregate),

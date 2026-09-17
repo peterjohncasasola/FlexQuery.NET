@@ -67,7 +67,6 @@ internal static class ParserCache
 /// <param name="UseKeysetPagination">Whether keyset pagination is explicitly requested.</param>
 /// <param name="Version">The version identifier for cache invalidation.</param>
 /// <param name="Aggregates">Whether to apply Aggregates.</param>
-/// <param name="Expand">The raw expand expression.</param>
 internal sealed record ParsedQueryCacheKey(
     string? Filter,
     string? Sort,
@@ -83,7 +82,6 @@ internal sealed record ParsedQueryCacheKey(
     string? Cursor = null,
     bool UseKeysetPagination = false,
     string Version = "v3",
-    string? Aggregates = null,
-    string? Expand = null
+    string? Aggregates = null
 );
 

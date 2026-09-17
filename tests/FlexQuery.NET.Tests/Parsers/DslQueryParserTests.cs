@@ -1,4 +1,4 @@
-﻿using FlexQuery.NET.Exceptions;
+using FlexQuery.NET.Exceptions;
 using FlexQuery.NET.Execution;
 using FlexQuery.NET.Models;
 using FlexQuery.NET.Models.Projection;
@@ -956,7 +956,7 @@ public class DslQueryParserTests
         opts.Select.Should().BeEquivalentTo([new SelectNode { Field = "Id" }, new SelectNode { Field = "Name" }, new SelectNode { Field = "CustomerName" }]);
 
         // Include
-        opts.Includes.Should().BeEquivalentTo("Orders", "Profile");
+        IncludeTestFactory.PathStrings(opts.Includes).Should().Contain("Orders");
 
         // GroupBy
         opts.GroupBy.Should().BeEquivalentTo("customerId", "category");

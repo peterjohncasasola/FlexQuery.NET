@@ -15,8 +15,8 @@ public class ExpandNormalizerTests
     [Fact]
     public void MultipleFlatPaths_MergeIntoHierarchicalTree()
     {
-        var asts = DslExpandParser.Parse("Orders(take=3;filter=Status:eq:Delivered;sort=Id:desc),Orders.OrderItems(take=5)");
-        var tree = ExpandNormalizer.Normalize(asts);
+        var asts = DslIncludeParser.Parse("Orders(take=3;filter=Status:eq:Delivered;sort=Id:desc),Orders.OrderItems(take=5)");
+        var tree = IncludeNormalizer.Normalize(asts);
 
         // One root: Orders (merged from both flat paths).
         tree.Should().ContainSingle();
@@ -38,8 +38,8 @@ public class ExpandNormalizerTests
     [Fact]
     public void ThreeLevelPath_NormalizesIntoRecursiveChain()
     {
-        var asts = DslExpandParser.Parse("A.B.C(take=2)");
-        var tree = ExpandNormalizer.Normalize(asts);
+        var asts = DslIncludeParser.Parse("A.B.C(take=2)");
+        var tree = IncludeNormalizer.Normalize(asts);
 
         var a = tree[0];
         a.Path.Should().Be("A");
@@ -57,24 +57,24 @@ public class ExpandNormalizerTests
     [Fact]
     public void DuplicatePath_AtParseTime_Rejected()
     {
-        var act = () => DslExpandParser.Parse("Orders(take=3),Orders(take=10)");
+        var act = () => DslIncludeParser.Parse("Orders(take=3),Orders(take=10)");
 
-        act.Should().Throw<Exception>().WithMessage("*Duplicate expand path*");
+        act.Should().Throw<Exception>().WithMessage("*Duplicate include path*");
     }
 
     [Fact]
     public void CaseInsensitiveDuplicatePath_Rejected()
     {
-        var act = () => DslExpandParser.Parse("Orders(take=3),orders(take=10)");
+        var act = () => DslIncludeParser.Parse("Orders(take=3),orders(take=10)");
 
-        act.Should().Throw<Exception>().WithMessage("*Duplicate expand path*");
+        act.Should().Throw<Exception>().WithMessage("*Duplicate include path*");
     }
 
     [Fact]
     public void SiblingRoots_RemainSeparate()
     {
-        var asts = DslExpandParser.Parse("Orders(take=3),Invoices(take=5)");
-        var tree = ExpandNormalizer.Normalize(asts);
+        var asts = DslIncludeParser.Parse("Orders(take=3),Invoices(take=5)");
+        var tree = IncludeNormalizer.Normalize(asts);
 
         tree.Should().HaveCount(2);
         tree[0].Path.Should().Be("Orders");

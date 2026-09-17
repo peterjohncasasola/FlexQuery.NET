@@ -25,7 +25,7 @@ internal sealed class QueryValidator : IQueryValidator
         _rules.Add(new DtoSurfaceProtectionRule());
         _rules.Add(new IncludeAccessValidationRule());
         _rules.Add(new FieldExistenceRule());
-        _rules.Add(new ExpandPathValidationRule());
+        _rules.Add(new IncludePathValidationRule());
         _rules.Add(new OperatorValidityRule());
         _rules.Add(new TypeCompatibilityRule());
         _rules.Add(new HavingWithoutGroupByRule());
@@ -41,11 +41,9 @@ internal sealed class QueryValidator : IQueryValidator
         _rules.Add(new GroupBySortValidationRule());
         _rules.Add(new GroupByIncludeConflictRule());
         _rules.Add(new PaginationModeValidationRule());
-        _rules.Add(new IncludeExpandConsistencyValidationRule());
-        _rules.Add(new ExpandDuplicatePathValidationRule());
-        _rules.Add(new ExpandExpressionContextValidationRule());
-        _rules.Add(new ExpandSortOnReferenceValidationRule());
-        _rules.Add(new ExpandPathCollectionValidationRule());
+        _rules.Add(new IncludeDuplicatePathValidationRule());
+        _rules.Add(new IncludeExpressionContextValidationRule());
+        _rules.Add(new IncludeCollectionOptionValidationRule());
     }
 
     /// <inheritdoc />

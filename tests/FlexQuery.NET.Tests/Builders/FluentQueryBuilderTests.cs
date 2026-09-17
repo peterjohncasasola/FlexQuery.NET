@@ -18,7 +18,7 @@ public class FluentQueryBuilderTests
         options.Sort.Should().BeEmpty();
         options.Select.Should().BeNull();
         options.Includes.Should().BeNull();
-        options.Expand.Should().BeNull();
+        options.Includes.Should().BeNull();
         options.Paging.Page.Should().Be(1);
         options.Paging.PageSize.Should().Be(20);
         options.Distinct.Should().BeNull();
@@ -160,7 +160,7 @@ public class FluentQueryBuilderTests
             .Include("Orders", "Profile")
             .Build();
 
-        options.Includes.Should().BeEquivalentTo(new[] { "Orders", "Profile" });
+        IncludeTestFactory.PathStrings(options.Includes).Should().BeEquivalentTo(new[] { "Orders", "Profile" });
     }
 
     [Fact]
@@ -177,40 +177,40 @@ public class FluentQueryBuilderTests
     public void Expand_AddsFilteredIncludes()
     {
         var options = Query.Create()
-            .Expand(e => e.Path("Orders", f => f.GreaterThan("Total", 100)))
+            .Include(e => e.Path("Orders", f => f.GreaterThan("Total", 100)))
             .Build();
 
-        options.Expand.Should().HaveCount(1);
-        options.Expand![0].Path.Should().Be("Orders");
-        options.Expand[0].Filter.Should().NotBeNull();
-        options.Expand[0].Filter!.Filters.Should().HaveCount(1);
-        options.Expand[0].Filter?.Filters[0].Field.Should().Be("Total");
-        options.Expand[0].Filter?.Filters[0].Operator.Should().Be("gt");
-        options.Expand[0].Filter?.Filters[0].Value.Should().Be("100");
+        options.Includes.Should().HaveCount(1);
+        options.Includes![0].Path.Should().Be("Orders");
+        options.Includes[0].Filter.Should().NotBeNull();
+        options.Includes[0].Filter!.Filters.Should().HaveCount(1);
+        options.Includes[0].Filter?.Filters[0].Field.Should().Be("Total");
+        options.Includes[0].Filter?.Filters[0].Operator.Should().Be("gt");
+        options.Includes[0].Filter?.Filters[0].Value.Should().Be("100");
     }
 
     [Fact]
     public void Expand_WithChildren_BuildsNestedTree()
     {
         var options = Query.Create()
-            .Expand(e => e.Path("Orders", configureChildren: c =>
+            .Include(e => e.Path("Orders", configureChildren: c =>
                 c.Path("OrderItems")))
             .Build();
 
-        options.Expand.Should().HaveCount(1);
-        options.Expand![0].Path.Should().Be("Orders");
-        options.Expand[0].Children.Should().HaveCount(1);
-        options.Expand[0].Children[0].Path.Should().Be("OrderItems");
+        options.Includes.Should().HaveCount(1);
+        options.Includes![0].Path.Should().Be("Orders");
+        options.Includes[0].Children.Should().HaveCount(1);
+        options.Includes[0].Children[0].Path.Should().Be("OrderItems");
     }
 
     [Fact]
     public void Expand_Empty_DoesNotAddFilteredIncludes()
     {
         var options = Query.Create()
-            .Expand(e => { })
+            .Include(e => { })
             .Build();
 
-        options.Expand.Should().BeNull();
+        options.Includes.Should().BeNull();
     }
 
     [Fact]
@@ -323,7 +323,7 @@ public class FluentQueryBuilderTests
             .Sort(s => s.Ascending("Name"))
             .Select("Id", "Name", "Email")
             .Include("Orders")
-            .Expand(e => e.Path("Orders", f => f.GreaterThan("Total", 100)))
+            .Include(e => e.Path("Orders", f => f.GreaterThan("Total", 100)))
             .Mode(ProjectionMode.Flat)
             .GroupBy("Category")
             .Aggregate(a => a.Sum("Amount", "Total"))
@@ -336,7 +336,7 @@ public class FluentQueryBuilderTests
         options.Sort.Should().HaveCount(1);
         options.Select.Should().HaveCount(3);
         options.Includes.Should().HaveCount(1);
-        options.Expand.Should().HaveCount(1);
+        options.Includes.Should().HaveCount(1);
         options.ProjectionMode.Should().Be(ProjectionMode.Flat);
         options.GroupBy.Should().HaveCount(1);
         options.Aggregates.Should().HaveCount(1);

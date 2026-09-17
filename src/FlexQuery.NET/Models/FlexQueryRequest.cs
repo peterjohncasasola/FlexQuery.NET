@@ -21,11 +21,12 @@ public sealed class FlexQueryRequest
     /// <summary>Flat dot-notation selection paths (e.g. "Id", "Profile.Name").</summary>
     public List<string>? Select { get; set; }
 
-    /// <summary>Navigation properties to include with all scalars.</summary>
-    public List<string>? Include { get; set; }
-
-    /// <summary>Deep, filtered navigation expansion trees.</summary>
-    public List<IncludeNode>? Expand { get; set; }
+    /// <summary>
+    /// Navigation relationships to include. JSON entries accept a plain path string
+    /// (<c>"Orders"</c>) or an object with relationship query options
+    /// (<c>{ "path": "Orders", "take": 5 }</c>).
+    /// </summary>
+    public List<IncludeNode>? Include { get; set; }
 
     /// <summary>Defines how projected data should be shaped (Nested, Flat, FlatMixed).</summary>
     public ProjectionMode Mode { get; set; } = ProjectionMode.Nested;

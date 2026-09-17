@@ -522,7 +522,7 @@ public class FieldAccessValidationRuleTests
         {
             StrictFieldValidation = true,
             AllowedFields = ["Id"],
-            AllowedIncludes = ["Children"]
+            AllowedIncludes = [ "Children" ]
         };
         var options = new QueryOptions
         {
@@ -549,7 +549,7 @@ public class FieldAccessValidationRuleTests
         {
             StrictFieldValidation = true,
             AllowedFields = ["Id"],
-            AllowedIncludes = ["Children"]
+            AllowedIncludes = [ "Children" ]
         };
         var options = new QueryOptions { Select = [new SelectNode { Field = "Name" }] };
         var rule = new FieldAccessValidationRule();

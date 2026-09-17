@@ -23,8 +23,8 @@ public class ExpandPathValidationRuleTests
     [InlineData(typeof(Shared.Models.Customer), "Orders.OrderItems.Product")]
     public void Validate_NavigationPaths_Passes(Type entityType, string includePath)
     {
-        var options = new QueryOptions { Includes = [includePath] };
-        var rule = new ExpandPathValidationRule();
+        var options = new QueryOptions { Includes = IncludeTestFactory.Paths(includePath) };
+        var rule = new IncludePathValidationRule();
         var result = ValidationResult.Success();
 
         rule.Validate(options, Context(entityType), result);
@@ -45,8 +45,8 @@ public class ExpandPathValidationRuleTests
     [InlineData(typeof(Shared.Models.Customer), "Salary")]
     public void Validate_ScalarRootPath_Fails(Type entityType, string includePath)
     {
-        var options = new QueryOptions { Includes = [includePath] };
-        var rule = new ExpandPathValidationRule();
+        var options = new QueryOptions { Includes = IncludeTestFactory.Paths(includePath) };
+        var rule = new IncludePathValidationRule();
         var result = ValidationResult.Success();
 
         rule.Validate(options, Context(entityType), result);
@@ -65,8 +65,8 @@ public class ExpandPathValidationRuleTests
     [InlineData(typeof(Shared.Models.Customer), "Orders.OrderItems.UnitPrice")]
     public void Validate_ScalarMidChain_Fails(Type entityType, string includePath)
     {
-        var options = new QueryOptions { Includes = [includePath] };
-        var rule = new ExpandPathValidationRule();
+        var options = new QueryOptions { Includes = IncludeTestFactory.Paths(includePath) };
+        var rule = new IncludePathValidationRule();
         var result = ValidationResult.Success();
 
         rule.Validate(options, Context(entityType), result);
@@ -79,8 +79,8 @@ public class ExpandPathValidationRuleTests
     [Fact]
     public void Validate_MixedPaths_ReportsOnlyInvalid()
     {
-        var options = new QueryOptions { Includes = ["Orders", "Name", "Profile"] };
-        var rule = new ExpandPathValidationRule();
+        var options = new QueryOptions { Includes = IncludeTestFactory.Paths("Orders", "Name", "Profile") };
+        var rule = new IncludePathValidationRule();
         var result = ValidationResult.Success();
 
         rule.Validate(options, Context(), result);
@@ -96,9 +96,9 @@ public class ExpandPathValidationRuleTests
     {
         var options = new QueryOptions
         {
-            Expand = [new IncludeNode { Path = "Name" }]
+            Includes = [new IncludeNode { Path = "Name" }]
         };
-        var rule = new ExpandPathValidationRule();
+        var rule = new IncludePathValidationRule();
         var result = ValidationResult.Success();
 
         rule.Validate(options, Context(), result);
@@ -111,8 +111,8 @@ public class ExpandPathValidationRuleTests
     [Fact]
     public void Validate_NullTargetType_SkipsValidation()
     {
-        var options = new QueryOptions { Includes = ["Name"] };
-        var rule = new ExpandPathValidationRule();
+        var options = new QueryOptions { Includes = IncludeTestFactory.Paths("Name") };
+        var rule = new IncludePathValidationRule();
         var result = ValidationResult.Success();
 
         rule.Validate(options, new QueryContext { TargetType = null }, result);
@@ -124,8 +124,8 @@ public class ExpandPathValidationRuleTests
     [Fact]
     public void Validate_NonExistentPath_Fails()
     {
-        var options = new QueryOptions { Includes = ["NonExistent"] };
-        var rule = new ExpandPathValidationRule();
+        var options = new QueryOptions { Includes = IncludeTestFactory.Paths("NonExistent") };
+        var rule = new IncludePathValidationRule();
         var result = ValidationResult.Success();
 
         rule.Validate(options, Context(), result);

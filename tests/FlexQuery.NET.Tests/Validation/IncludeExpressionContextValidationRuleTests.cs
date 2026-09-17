@@ -21,9 +21,9 @@ public class ExpandExpressionContextValidationRuleTests
     {
         var options = new QueryOptions
         {
-            Expand = [new IncludeNode { Path = "Orders", Sort = [new SortNode { Field = "OrderDate", Descending = true }] }]
+            Includes = [new IncludeNode { Path = "Orders", Sort = [new SortNode { Field = "OrderDate", Descending = true }] }]
         };
-        var rule = new ExpandExpressionContextValidationRule();
+        var rule = new IncludeExpressionContextValidationRule();
         var result = ValidationResult.Success();
 
         rule.Validate(options, Context(typeof(Shared.Models.Customer)), result);
@@ -37,15 +37,15 @@ public class ExpandExpressionContextValidationRuleTests
     {
         var options = new QueryOptions
         {
-            Expand = [new IncludeNode { Path = "Orders", Sort = [new SortNode { Field = "Orders.OrderDate", Descending = true }] }]
+            Includes = [new IncludeNode { Path = "Orders", Sort = [new SortNode { Field = "Orders.OrderDate", Descending = true }] }]
         };
-        var rule = new ExpandExpressionContextValidationRule();
+        var rule = new IncludeExpressionContextValidationRule();
         var result = ValidationResult.Success();
 
         rule.Validate(options, Context(typeof(Shared.Models.Customer)), result);
 
         result.IsValid.Should().BeFalse();
-        result.Errors.Should().ContainSingle(e => e.Code == ValidationErrorCodes.ExpandRootPrefixedPath);
+        result.Errors.Should().ContainSingle(e => e.Code == ValidationErrorCodes.IncludeRootPrefixedPath);
         result.Errors.Should().ContainSingle(e => e.Field == "Orders.OrderDate");
     }
 
@@ -54,15 +54,15 @@ public class ExpandExpressionContextValidationRuleTests
     {
         var options = new QueryOptions
         {
-            Expand = [new IncludeNode { Path = "Orders", Filter = new FilterGroup { Filters = [new FilterCondition { Field = "Orders.Status", Operator = "eq", Value = "Active" }] } }]
+            Includes = [new IncludeNode { Path = "Orders", Filter = new FilterGroup { Filters = [new FilterCondition { Field = "Orders.Status", Operator = "eq", Value = "Active" }] } }]
         };
-        var rule = new ExpandExpressionContextValidationRule();
+        var rule = new IncludeExpressionContextValidationRule();
         var result = ValidationResult.Success();
 
         rule.Validate(options, Context(typeof(Shared.Models.Customer)), result);
 
         result.IsValid.Should().BeFalse();
-        result.Errors.Should().ContainSingle(e => e.Code == ValidationErrorCodes.ExpandRootPrefixedPath);
+        result.Errors.Should().ContainSingle(e => e.Code == ValidationErrorCodes.IncludeRootPrefixedPath);
     }
 
     [Fact]
@@ -72,9 +72,9 @@ public class ExpandExpressionContextValidationRuleTests
         // This test verifies that paths inside orderItems are resolved relative to OrderItem, not Customer.
         var options = new QueryOptions
         {
-            Expand = [new IncludeNode { Path = "Orders", Children = [new IncludeNode { Path = "OrderItems", Sort = [new SortNode { Field = "Id", Descending = false }] }] }]
+            Includes = [new IncludeNode { Path = "Orders", Children = [new IncludeNode { Path = "OrderItems", Sort = [new SortNode { Field = "Id", Descending = false }] }] }]
         };
-        var rule = new ExpandExpressionContextValidationRule();
+        var rule = new IncludeExpressionContextValidationRule();
         var result = ValidationResult.Success();
 
         rule.Validate(options, Context(typeof(Shared.Models.Customer)), result);
@@ -88,15 +88,15 @@ public class ExpandExpressionContextValidationRuleTests
     {
         var options = new QueryOptions
         {
-            Expand = [new IncludeNode { Path = "Orders", Children = [new IncludeNode { Path = "OrderItems", Sort = [new SortNode { Field = "Orders.Product.Name", Descending = false }] }] }]
+            Includes = [new IncludeNode { Path = "Orders", Children = [new IncludeNode { Path = "OrderItems", Sort = [new SortNode { Field = "Orders.Product.Name", Descending = false }] }] }]
         };
-        var rule = new ExpandExpressionContextValidationRule();
+        var rule = new IncludeExpressionContextValidationRule();
         var result = ValidationResult.Success();
 
         rule.Validate(options, Context(typeof(Shared.Models.Customer)), result);
 
         result.IsValid.Should().BeFalse();
-        result.Errors.Should().ContainSingle(e => e.Code == ValidationErrorCodes.ExpandRootPrefixedPath);
+        result.Errors.Should().ContainSingle(e => e.Code == ValidationErrorCodes.IncludeRootPrefixedPath);
     }
 
     [Fact]
@@ -104,20 +104,20 @@ public class ExpandExpressionContextValidationRuleTests
     {
         var options = new QueryOptions
         {
-            Expand = [new IncludeNode
+            Includes = [new IncludeNode
             {
                 Path = "Orders",
                 Filter = new FilterGroup { Filters = [new FilterCondition { Field = "Status", Operator = FilterOperators.Equal, Value = "Active" }] },
                 Sort = [new SortNode { Field = "Orders.CreatedDate", Descending = true }]
             }]
         };
-        var rule = new ExpandExpressionContextValidationRule();
+        var rule = new IncludeExpressionContextValidationRule();
         var result = ValidationResult.Success();
 
         rule.Validate(options, Context(typeof(Shared.Models.Customer)), result);
 
         result.IsValid.Should().BeFalse();
-        result.Errors.Should().ContainSingle(e => e.Code == ValidationErrorCodes.ExpandRootPrefixedPath);
+        result.Errors.Should().ContainSingle(e => e.Code == ValidationErrorCodes.IncludeRootPrefixedPath);
         result.Errors.Should().ContainSingle(e => e.Field == "Orders.CreatedDate");
     }
 
@@ -126,7 +126,7 @@ public class ExpandExpressionContextValidationRuleTests
     {
         var options = new QueryOptions
         {
-            Expand = [new IncludeNode
+            Includes = [new IncludeNode
             {
                 Path = "Orders",
                 Filter = new FilterGroup
@@ -137,20 +137,20 @@ public class ExpandExpressionContextValidationRuleTests
                 }
             }]
         };
-        var rule = new ExpandExpressionContextValidationRule();
+        var rule = new IncludeExpressionContextValidationRule();
         var result = ValidationResult.Success();
 
         rule.Validate(options, Context(typeof(Shared.Models.Customer)), result);
 
         result.IsValid.Should().BeFalse();
-        result.Errors.Should().ContainSingle(e => e.Code == ValidationErrorCodes.ExpandRootPrefixedPath);
+        result.Errors.Should().ContainSingle(e => e.Code == ValidationErrorCodes.IncludeRootPrefixedPath);
     }
 
     [Fact]
     public void Validate_EmptyExpand_NoErrors()
     {
-        var options = new QueryOptions { Expand = [] };
-        var rule = new ExpandExpressionContextValidationRule();
+        var options = new QueryOptions { Includes = null };
+        var rule = new IncludeExpressionContextValidationRule();
         var result = ValidationResult.Success();
 
         rule.Validate(options, Context(), result);
@@ -164,9 +164,9 @@ public class ExpandExpressionContextValidationRuleTests
     {
         var options = new QueryOptions
         {
-            Expand = [new IncludeNode { Path = "Orders", Sort = [new SortNode { Field = "OrderDate", Descending = true }] }]
+            Includes = [new IncludeNode { Path = "Orders", Sort = [new SortNode { Field = "OrderDate", Descending = true }] }]
         };
-        var rule = new ExpandExpressionContextValidationRule();
+        var rule = new IncludeExpressionContextValidationRule();
         var result = ValidationResult.Success();
 
         rule.Validate(options, Context(null!), result);

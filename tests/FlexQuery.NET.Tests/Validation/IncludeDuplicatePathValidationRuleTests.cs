@@ -19,13 +19,13 @@ public class ExpandDuplicatePathValidationRuleTests
     {
         var options = new QueryOptions
         {
-            Expand =
+            Includes =
             [
                 new IncludeNode { Path = "Orders" },
                 new IncludeNode { Path = "Reviews" }
             ]
         };
-        var rule = new ExpandDuplicatePathValidationRule();
+        var rule = new IncludeDuplicatePathValidationRule();
         var result = ValidationResult.Success();
 
         rule.Validate(options, Context(), result);
@@ -39,19 +39,19 @@ public class ExpandDuplicatePathValidationRuleTests
     {
         var options = new QueryOptions
         {
-            Expand =
+            Includes =
             [
                 new IncludeNode { Path = "Orders" },
                 new IncludeNode { Path = "Orders" }
             ]
         };
-        var rule = new ExpandDuplicatePathValidationRule();
+        var rule = new IncludeDuplicatePathValidationRule();
         var result = ValidationResult.Success();
 
         rule.Validate(options, Context(), result);
 
         result.IsValid.Should().BeFalse();
-        result.Errors.Should().ContainSingle(e => e.Code == ValidationErrorCodes.ExpandDuplicatePath);
+        result.Errors.Should().ContainSingle(e => e.Code == ValidationErrorCodes.IncludeDuplicatePath);
         result.Errors.Should().ContainSingle(e => e.Field == "Orders");
     }
 
@@ -60,7 +60,7 @@ public class ExpandDuplicatePathValidationRuleTests
     {
         var options = new QueryOptions
         {
-            Expand =
+            Includes =
             [
                 new IncludeNode
                 {
@@ -73,13 +73,13 @@ public class ExpandDuplicatePathValidationRuleTests
                 }
             ]
         };
-        var rule = new ExpandDuplicatePathValidationRule();
+        var rule = new IncludeDuplicatePathValidationRule();
         var result = ValidationResult.Success();
 
         rule.Validate(options, Context(), result);
 
         result.IsValid.Should().BeFalse();
-        result.Errors.Should().ContainSingle(e => e.Code == ValidationErrorCodes.ExpandDuplicatePath);
+        result.Errors.Should().ContainSingle(e => e.Code == ValidationErrorCodes.IncludeDuplicatePath);
         result.Errors.Should().ContainSingle(e => e.Field == "Orders.OrderItems");
     }
 
@@ -88,19 +88,19 @@ public class ExpandDuplicatePathValidationRuleTests
     {
         var options = new QueryOptions
         {
-            Expand =
+            Includes =
             [
                 new IncludeNode { Path = "Orders" },
                 new IncludeNode { Path = "orders" }
             ]
         };
-        var rule = new ExpandDuplicatePathValidationRule();
+        var rule = new IncludeDuplicatePathValidationRule();
         var result = ValidationResult.Success();
 
         rule.Validate(options, Context(), result);
 
         result.IsValid.Should().BeFalse();
-        result.Errors.Should().ContainSingle(e => e.Code == ValidationErrorCodes.ExpandDuplicatePath);
+        result.Errors.Should().ContainSingle(e => e.Code == ValidationErrorCodes.IncludeDuplicatePath);
     }
 
     [Fact]
@@ -108,7 +108,7 @@ public class ExpandDuplicatePathValidationRuleTests
     {
         var options = new QueryOptions
         {
-            Expand =
+            Includes =
             [
                 new IncludeNode
                 {
@@ -122,7 +122,7 @@ public class ExpandDuplicatePathValidationRuleTests
                 new IncludeNode { Path = "Orders" }
             ]
         };
-        var rule = new ExpandDuplicatePathValidationRule();
+        var rule = new IncludeDuplicatePathValidationRule();
         var result = ValidationResult.Success();
 
         rule.Validate(options, Context(), result);
@@ -137,9 +137,9 @@ public class ExpandDuplicatePathValidationRuleTests
     {
         var options = new QueryOptions
         {
-            Expand = []
+            Includes = null
         };
-        var rule = new ExpandDuplicatePathValidationRule();
+        var rule = new IncludeDuplicatePathValidationRule();
         var result = ValidationResult.Success();
 
         rule.Validate(options, Context(), result);

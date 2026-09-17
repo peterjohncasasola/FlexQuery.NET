@@ -2,12 +2,12 @@ using FlexQuery.NET.Builders.Fluent;
 
 namespace FlexQuery.NET.Tests.Builders;
 
-public class ExpandBuilderTests
+public class IncludeBuilderTests
 {
     [Fact]
     public void Build_WithNoPaths_ReturnsEmpty()
     {
-        var builder = new ExpandBuilder();
+        var builder = new IncludeBuilder();
         var result = builder.Build();
 
         result.Should().BeEmpty();
@@ -16,7 +16,7 @@ public class ExpandBuilderTests
     [Fact]
     public void Path_WithoutFilterOrChildren_AddsSimpleNode()
     {
-        var builder = new ExpandBuilder();
+        var builder = new IncludeBuilder();
         builder.Path("Orders");
         var result = builder.Build();
 
@@ -29,7 +29,7 @@ public class ExpandBuilderTests
     [Fact]
     public void Path_WithFilter_AddsFilteredNode()
     {
-        var builder = new ExpandBuilder();
+        var builder = new IncludeBuilder();
         builder.Path("Orders", f => f.Equal("Status", "Shipped"));
         var result = builder.Build();
 

@@ -24,11 +24,13 @@ public sealed class QueryOptions
     /// <summary>Flat projection models produced by the SELECT parser.</summary>
     public List<SelectNode>? Select { get; set; }
 
-    /// <summary>Navigation properties to include with all scalars.</summary>
-    public List<string>? Includes { get; set; }
-
-    /// <summary>Deep, filtered navigation expansion trees.</summary>
-    public List<IncludeNode>? Expand { get; set; }
+    /// <summary>
+    /// Navigation relationships to include, as a hierarchical <see cref="IncludeNode"/> tree.
+    /// Option-less nodes are simple inclusions; nodes carrying <c>filter</c>/<c>sort</c>/<c>take</c>
+    /// apply relationship-scoped query operations to collection-valued navigations parsed from
+    /// <c>include=...</c> blocks.
+    /// </summary>
+    public List<IncludeNode>? Includes { get; set; }
 
     /// <summary>Defines how projected data should be shaped (Nested, Flat, FlatMixed).</summary>
     public ProjectionMode ProjectionMode { get; set; } = ProjectionMode.Nested;

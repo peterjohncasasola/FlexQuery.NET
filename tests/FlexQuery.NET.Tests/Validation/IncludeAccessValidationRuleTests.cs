@@ -43,7 +43,7 @@ public class IncludeAccessValidationRuleTests
     [Fact]
     public void NoAllowedIncludes_Passes()
     {
-        var options = new QueryOptions { Includes = ["Children"] };
+        var options = new QueryOptions { Includes = IncludeTestFactory.Paths("Children") };
         var rule = new IncludeAccessValidationRule();
         var result = ValidationResult.Success();
 
@@ -55,8 +55,8 @@ public class IncludeAccessValidationRuleTests
     [Fact]
     public void AllowedInclude_Passes()
     {
-        var execOptions = new TestGovernanceOptions { AllowedIncludes = ["Children"] };
-        var options = new QueryOptions { Includes = ["Children"] };
+        var execOptions = new TestGovernanceOptions { AllowedIncludes = [ "Children" ] };
+        var options = new QueryOptions { Includes = IncludeTestFactory.Paths("Children") };
         var rule = new IncludeAccessValidationRule();
         var result = ValidationResult.Success();
 
@@ -68,8 +68,8 @@ public class IncludeAccessValidationRuleTests
     [Fact]
     public void DisallowedIncludeStrict_Throws()
     {
-        var execOptions = new TestGovernanceOptions { StrictFieldValidation = true, AllowedIncludes = ["Children"] };
-        var options = new QueryOptions { Includes = ["NonExistentNav"] };
+        var execOptions = new TestGovernanceOptions { StrictFieldValidation = true, AllowedIncludes = [ "Children" ] };
+        var options = new QueryOptions { Includes = IncludeTestFactory.Paths("NonExistentNav") };
         var rule = new IncludeAccessValidationRule();
 
         var act = () => rule.Validate(options, Context(execOptions: execOptions), ValidationResult.Success());
@@ -81,8 +81,8 @@ public class IncludeAccessValidationRuleTests
     [Fact]
     public void DisallowedIncludeNonStrict_RemovesAndAddsError()
     {
-        var execOptions = new TestGovernanceOptions { StrictFieldValidation = false, AllowedIncludes = ["Children"] };
-        var options = new QueryOptions { Includes = ["NonExistentNav"] };
+        var execOptions = new TestGovernanceOptions { StrictFieldValidation = false, AllowedIncludes = [ "Children" ] };
+        var options = new QueryOptions { Includes = IncludeTestFactory.Paths("NonExistentNav") };
         var rule = new IncludeAccessValidationRule();
         var result = ValidationResult.Success();
 
@@ -96,7 +96,7 @@ public class IncludeAccessValidationRuleTests
     [Fact]
     public void AllowedIncludes_Configured_WithNullIncludes_DoesNotMutate()
     {
-        var execOptions = new TestGovernanceOptions { AllowedIncludes = ["Children", "Orders"] };
+        var execOptions = new TestGovernanceOptions { AllowedIncludes = [ "Children", "Orders" ] };
         var options = new QueryOptions { Includes = null };
         var rule = new IncludeAccessValidationRule();
         var result = ValidationResult.Success();
@@ -110,7 +110,7 @@ public class IncludeAccessValidationRuleTests
     [Fact]
     public void AllowedIncludes_Configured_WithEmptyIncludes_DoesNotAddIncludes()
     {
-        var execOptions = new TestGovernanceOptions { AllowedIncludes = ["Children", "Orders"] };
+        var execOptions = new TestGovernanceOptions { AllowedIncludes = [ "Children", "Orders" ] };
         var options = new QueryOptions { Includes = [] };
         var rule = new IncludeAccessValidationRule();
         var result = ValidationResult.Success();
@@ -124,8 +124,8 @@ public class IncludeAccessValidationRuleTests
     [Fact]
     public void AllowedIncludes_Configured_MultipleValidIncludes_AllPass()
     {
-        var execOptions = new TestGovernanceOptions { AllowedIncludes = ["Children", "Orders", "Profile"] };
-        var options = new QueryOptions { Includes = ["Children", "Orders", "Profile"] };
+        var execOptions = new TestGovernanceOptions { AllowedIncludes = [ "Children", "Orders", "Profile" ] };
+        var options = new QueryOptions { Includes = IncludeTestFactory.Paths("Children", "Orders", "Profile") };
         var rule = new IncludeAccessValidationRule();
         var result = ValidationResult.Success();
 
@@ -133,30 +133,30 @@ public class IncludeAccessValidationRuleTests
 
         result.IsValid.Should().BeTrue();
         options.Includes.Should().HaveCount(3);
-        options.Includes.Should().Contain(new[] { "Children", "Orders", "Profile" });
+        IncludeTestFactory.PathStrings(options.Includes).Should().BeEquivalentTo(new[] { "Children", "Orders", "Profile" });
     }
 
     [Fact]
     public void MixedIncludes_RemovesOnlyDisallowed()
     {
-        var execOptions = new TestGovernanceOptions { StrictFieldValidation = false, AllowedIncludes = ["Children"] };
-        var options = new QueryOptions { Includes = ["Children", "NonExistentNav"] };
+        var execOptions = new TestGovernanceOptions { StrictFieldValidation = false, AllowedIncludes = [ "Children" ] };
+        var options = new QueryOptions { Includes = IncludeTestFactory.Paths("Children", "NonExistentNav") };
         var rule = new IncludeAccessValidationRule();
         var result = ValidationResult.Success();
 
         rule.Validate(options, Context(execOptions: execOptions), result);
 
-        options.Includes.Should().BeEquivalentTo(["Children"]);
+        IncludeTestFactory.PathStrings(options.Includes).Should().BeEquivalentTo(["Children"]);
         result.Errors.Should().ContainSingle(e => e.Code == ValidationErrorCodes.IncludeAccessDenied);
     }
 
-    // ──────────────────────────────────────────────────────────────────
+    // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     //  Required regression cases: exact-match include access semantics
-    // ──────────────────────────────────────────────────────────────────
+    // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
     private static IncludeAccessValidationRule CreateRule() => new();
 
-    // Case 1 — Explicit parent and child: include=Orders,Orders.OrderItems → both allowed.
+    // Case 1 â€” Explicit parent and child: include=Orders,Orders.OrderItems â†’ both allowed.
 
     [Fact]
     public void Case1_ExplicitParentAndChild_BothPathsAllowed()
@@ -165,13 +165,13 @@ public class IncludeAccessValidationRuleTests
         {
             AllowedIncludes = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "Children", "Children.Items" }
         };
-        var options = new QueryOptions { Includes = ["Children", "Children.Items"] };
+        var options = new QueryOptions { Includes = IncludeTestFactory.Paths("Children", "Children.Items") };
         var result = ValidationResult.Success();
 
         CreateRule().Validate(options, Context(execOptions: execOptions), result);
 
         result.IsValid.Should().BeTrue();
-        options.Includes.Should().BeEquivalentTo(["Children", "Children.Items"]);
+        IncludeTestFactory.PathStrings(options.Includes).Should().BeEquivalentTo(["Children", "Children.Items"]);
     }
 
     [Fact]
@@ -183,19 +183,18 @@ public class IncludeAccessValidationRuleTests
         };
         var options = new QueryOptions
         {
-            Includes = ["Children", "Children.Items"],
-            Expand = [new IncludeNode { Path = "Children", Children = [new IncludeNode { Path = "Items" }] }]
+        Includes = [new IncludeNode { Path = "Children", Children = [new IncludeNode { Path = "Items" }] }]
         };
         var result = ValidationResult.Success();
 
         CreateRule().Validate(options, Context(execOptions: execOptions), result);
 
         result.IsValid.Should().BeTrue();
-        options.Expand.Should().ContainSingle();
-        options.Expand[0].Children.Should().ContainSingle(c => c.Path == "Items");
+        options.Includes.Should().ContainSingle();
+        options.Includes[0].Children.Should().ContainSingle(c => c.Path == "Items");
     }
 
-    // Case 2 — Parent only: include=Orders → Orders allowed; the deeper path is NOT
+    // Case 2 â€” Parent only: include=Orders â†’ Orders allowed; the deeper path is NOT
     // considered explicitly included (exact-match, no implicit child authorization).
 
     [Fact]
@@ -205,14 +204,14 @@ public class IncludeAccessValidationRuleTests
         {
             AllowedIncludes = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "Children" }
         };
-        var options = new QueryOptions { Includes = ["Children"] };
+        var options = new QueryOptions { Includes = IncludeTestFactory.Paths("Children") };
         var result = ValidationResult.Success();
 
         CreateRule().Validate(options, Context(execOptions: execOptions), result);
 
         result.IsValid.Should().BeTrue();
-        options.Includes.Should().ContainSingle().Which.Should().Be("Children");
-        options.Includes.Should().NotContain("Children.Items");
+        IncludeTestFactory.PathStrings(options.Includes).Should().ContainSingle().Which.Should().Be("Children");
+        IncludeTestFactory.PathStrings(options.Includes).Should().NotContain("Children.Items");
     }
 
     [Fact]
@@ -223,7 +222,7 @@ public class IncludeAccessValidationRuleTests
             StrictFieldValidation = true,
             AllowedIncludes = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "Children" }
         };
-        var options = new QueryOptions { Includes = ["Children", "Children.Items"] };
+        var options = new QueryOptions { Includes = IncludeTestFactory.Paths("Children", "Children.Items") };
 
         var act = () => CreateRule().Validate(options, Context(execOptions: execOptions), ValidationResult.Success());
 
@@ -239,18 +238,18 @@ public class IncludeAccessValidationRuleTests
             StrictFieldValidation = false,
             AllowedIncludes = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "Children" }
         };
-        var options = new QueryOptions { Includes = ["Children", "Children.Items"] };
+        var options = new QueryOptions { Includes = IncludeTestFactory.Paths("Children", "Children.Items") };
         var result = ValidationResult.Success();
 
         CreateRule().Validate(options, Context(execOptions: execOptions), result);
 
-        options.Includes.Should().BeEquivalentTo(["Children"]);
+        IncludeTestFactory.PathStrings(options.Includes).Should().BeEquivalentTo(["Children"]);
         result.Errors.Should().ContainSingle()
             .Which.Should().Match<ValidationError>(e =>
                 e.Code == ValidationErrorCodes.IncludeAccessDenied && e.Field == "Children.Items");
     }
 
-    // Case 3 — Child only: include=Orders.OrderItems → the child is allowed; the parent
+    // Case 3 â€” Child only: include=Orders.OrderItems â†’ the child is allowed; the parent
     // is NOT automatically considered explicitly included (no implicit parent inclusion).
 
     [Fact]
@@ -260,14 +259,15 @@ public class IncludeAccessValidationRuleTests
         {
             AllowedIncludes = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "Children.Items" }
         };
-        var options = new QueryOptions { Includes = ["Children.Items"] };
+        var options = new QueryOptions { Includes = IncludeTestFactory.Paths("Children.Items") };
         var result = ValidationResult.Success();
 
         CreateRule().Validate(options, Context(execOptions: execOptions), result);
 
         result.IsValid.Should().BeTrue();
-        options.Includes.Should().ContainSingle().Which.Should().Be("Children.Items");
-        options.Includes.Should().NotContain("Children");
+        var scaffold = options.Includes.Should().ContainSingle().Subject;
+        scaffold.Path.Should().Be("Children");
+        scaffold.Children.Should().ContainSingle(c => c.Path == "Items" && c.IsExplicitlyRequested);
     }
 
     [Fact]
@@ -278,7 +278,7 @@ public class IncludeAccessValidationRuleTests
             StrictFieldValidation = true,
             AllowedIncludes = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "Children.Items" }
         };
-        var options = new QueryOptions { Includes = ["Children.Items", "Children"] };
+        var options = new QueryOptions { Includes = IncludeTestFactory.Paths("Children.Items", "Children") };
 
         var act = () => CreateRule().Validate(options, Context(execOptions: execOptions), ValidationResult.Success());
 
@@ -286,7 +286,7 @@ public class IncludeAccessValidationRuleTests
             .WithMessage("Include path 'Children' is not allowed.");
     }
 
-    // Case 4 — Unrelated path: with include=Orders, an unrelated path such as
+    // Case 4 â€” Unrelated path: with include=Orders, an unrelated path such as
     // CustomerGroup continues to follow the existing access rules.
 
     [Fact]
@@ -297,7 +297,7 @@ public class IncludeAccessValidationRuleTests
             StrictFieldValidation = true,
             AllowedIncludes = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "Children" }
         };
-        var options = new QueryOptions { Includes = ["Children", "CustomerGroup"] };
+        var options = new QueryOptions { Includes = IncludeTestFactory.Paths("Children", "CustomerGroup") };
 
         var act = () => CreateRule().Validate(options, Context(execOptions: execOptions), ValidationResult.Success());
 
@@ -313,18 +313,18 @@ public class IncludeAccessValidationRuleTests
             StrictFieldValidation = false,
             AllowedIncludes = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "Children" }
         };
-        var options = new QueryOptions { Includes = ["Children", "CustomerGroup"] };
+        var options = new QueryOptions { Includes = IncludeTestFactory.Paths("Children", "CustomerGroup") };
         var result = ValidationResult.Success();
 
         CreateRule().Validate(options, Context(execOptions: execOptions), result);
 
-        options.Includes.Should().BeEquivalentTo(["Children"]);
+        IncludeTestFactory.PathStrings(options.Includes).Should().BeEquivalentTo(["Children"]);
         result.Errors.Should().ContainSingle()
             .Which.Should().Match<ValidationError>(e =>
                 e.Code == ValidationErrorCodes.IncludeAccessDenied && e.Field == "CustomerGroup");
     }
 
-    // Case 5 — Exact nested path: include=A,A.B,A.B.C → all three levels are accepted;
+    // Case 5 â€” Exact nested path: include=A,A.B,A.B.C â†’ all three levels are accepted;
     // the validator is not hard-coded for two levels.
 
     [Fact]
@@ -335,13 +335,13 @@ public class IncludeAccessValidationRuleTests
             AllowedIncludes = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
                 { "Children", "Children.Items", "Children.Items.Details" }
         };
-        var options = new QueryOptions { Includes = ["Children", "Children.Items", "Children.Items.Details"] };
+        var options = new QueryOptions { Includes = IncludeTestFactory.Paths("Children", "Children.Items", "Children.Items.Details") };
         var result = ValidationResult.Success();
 
         CreateRule().Validate(options, Context(execOptions: execOptions), result);
 
         result.IsValid.Should().BeTrue();
-        options.Includes.Should().BeEquivalentTo(["Children", "Children.Items", "Children.Items.Details"]);
+        IncludeTestFactory.PathStrings(options.Includes).Should().BeEquivalentTo(["Children", "Children.Items", "Children.Items.Details"]);
     }
 
     [Fact]
@@ -354,8 +354,7 @@ public class IncludeAccessValidationRuleTests
         };
         var options = new QueryOptions
         {
-            Includes = ["Children", "Children.Items", "Children.Items.Details"],
-            Expand =
+        Includes =
             [
                 new IncludeNode
                 {
@@ -372,7 +371,7 @@ public class IncludeAccessValidationRuleTests
         CreateRule().Validate(options, Context(execOptions: execOptions), result);
 
         result.IsValid.Should().BeTrue();
-        options.Expand[0].Children[0].Children.Should().ContainSingle(c => c.Path == "Details");
+        options.Includes[0].Children[0].Children.Should().ContainSingle(c => c.Path == "Details");
     }
 
     [Fact]
@@ -383,7 +382,7 @@ public class IncludeAccessValidationRuleTests
             StrictFieldValidation = true,
             AllowedIncludes = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "Children", "Children.Items" }
         };
-        var options = new QueryOptions { Includes = ["Children", "Children.Items", "Children.Items.Details"] };
+        var options = new QueryOptions { Includes = IncludeTestFactory.Paths("Children", "Children.Items", "Children.Items.Details") };
 
         var act = () => CreateRule().Validate(options, Context(execOptions: execOptions), ValidationResult.Success());
 
@@ -405,7 +404,7 @@ public class IncludeAccessValidationRuleTests
         };
         var options = new QueryOptions
         {
-            Expand =
+            Includes =
             [
                 new IncludeNode
                 {
@@ -421,8 +420,8 @@ public class IncludeAccessValidationRuleTests
         result.Errors.Should().ContainSingle()
             .Which.Should().Match<ValidationError>(e =>
                 e.Code == ValidationErrorCodes.IncludeAccessDenied && e.Field == "Children.Extra");
-        options.Expand.Should().ContainSingle().Which.Path.Should().Be("Children");
-        options.Expand[0].Children.Should().ContainSingle(c => c.Path == "Items");
+        options.Includes.Should().ContainSingle().Which.Path.Should().Be("Children");
+        options.Includes[0].Children.Should().ContainSingle(c => c.Path == "Items");
     }
 
     [Fact]
@@ -435,7 +434,7 @@ public class IncludeAccessValidationRuleTests
         };
         var options = new QueryOptions
         {
-            Expand =
+            Includes =
             [
                 new IncludeNode
                 {
@@ -448,7 +447,7 @@ public class IncludeAccessValidationRuleTests
         var act = () => CreateRule().Validate(options, Context(execOptions: execOptions), ValidationResult.Success());
 
         act.Should().Throw<QueryValidationException>()
-            .WithMessage("Expand path 'Children.Extra' is not allowed.");
+            .WithMessage("Include path 'Children.Extra' is not allowed.");
     }
 
     [Fact]
@@ -461,7 +460,7 @@ public class IncludeAccessValidationRuleTests
         };
         var options = new QueryOptions
         {
-            Expand =
+            Includes =
             [
                 new IncludeNode
                 {
@@ -479,7 +478,7 @@ public class IncludeAccessValidationRuleTests
 
         result.Errors.Should().ContainSingle()
             .Which.Field.Should().Be("Children.Items.Details");
-        var root = options.Expand.Should().ContainSingle().Subject;
+        var root = options.Includes.Should().ContainSingle().Subject;
         root.Path.Should().Be("Children");
         var items = root.Children.Should().ContainSingle().Subject;
         items.Path.Should().Be("Items");
@@ -496,13 +495,13 @@ public class IncludeAccessValidationRuleTests
         };
         var options = new QueryOptions
         {
-            Expand = [new IncludeNode { Path = "Profile" }]
+            Includes = [new IncludeNode { Path = "Profile" }]
         };
 
         var act = () => CreateRule().Validate(options, Context(execOptions: execOptions), ValidationResult.Success());
 
         act.Should().Throw<QueryValidationException>()
-            .WithMessage("Expand path 'Profile' is not allowed.");
+            .WithMessage("Include path 'Profile' is not allowed.");
     }
 
     [Fact]
@@ -515,13 +514,13 @@ public class IncludeAccessValidationRuleTests
         };
         var options = new QueryOptions
         {
-            Expand = [new IncludeNode { Path = "Profile" }, new IncludeNode { Path = "Children" }]
+            Includes = [new IncludeNode { Path = "Profile" }, new IncludeNode { Path = "Children" }]
         };
         var result = ValidationResult.Success();
 
         CreateRule().Validate(options, Context(execOptions: execOptions), result);
 
-        options.Expand.Should().ContainSingle().Which.Path.Should().Be("Children");
+        options.Includes.Should().ContainSingle().Which.Path.Should().Be("Children");
         result.Errors.Should().ContainSingle().Which.Field.Should().Be("Profile");
     }
 }

@@ -910,13 +910,13 @@ public class GroupByTests : IDisposable
         var options = new QueryOptions
         {
             Paging = { Page = 3, PageSize = 10 },
-            Includes = ["Orders"]
+            Includes = IncludeTestFactory.Paths("Orders")
         };
 
         options = options.Normalize();
 
         options.Paging.PageSize.Should().Be(10);
         options.Paging.Page.Should().Be(3);
-        options.Includes.Should().BeEquivalentTo(["Orders"]);
+        IncludeTestFactory.PathStrings(options.Includes).Should().BeEquivalentTo(["Orders"]);
     }
 }

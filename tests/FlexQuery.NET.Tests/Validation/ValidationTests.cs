@@ -174,7 +174,7 @@ public class ValidationTests
         var options = new QueryOptions
         {
             GroupBy = ["Status"],
-            Includes = ["Orders"]
+            Includes = IncludeTestFactory.Paths("Orders")
         };
 
         Action act = () => options.ValidateOrThrow<Customer>();
@@ -189,7 +189,7 @@ public class ValidationTests
         var options = new QueryOptions
         {
             GroupBy = ["Status"],
-            Expand = [new IncludeNode { Path = "Orders" }]
+            Includes = [new IncludeNode { Path = "Orders" }]
         };
 
         Action act = () => options.ValidateOrThrow<Customer>();
@@ -216,7 +216,7 @@ public class ValidationTests
     {
         var options = new QueryOptions
         {
-            Includes = ["NonExistentPath"]
+            Includes = IncludeTestFactory.Paths("NonExistentPath")
         };
 
         Action act = () => options.ValidateOrThrow<Customer>();
@@ -230,7 +230,7 @@ public class ValidationTests
     {
         var options = new QueryOptions
         {
-            Includes = ["Orders"]
+            Includes = IncludeTestFactory.Paths("Orders")
         };
 
         Action act = () => options.ValidateOrThrow<Customer>();
@@ -243,7 +243,7 @@ public class ValidationTests
     {
         var options = new QueryOptions
         {
-            Expand =
+            Includes =
             [
                 new IncludeNode
                 {
@@ -263,12 +263,11 @@ public class ValidationTests
     }
 
     [Fact]
-    public void ExpandPathValidation_ReferenceTerminal_Fails()
+    public void Include_ReferenceTerminal_Passes()
     {
         var options = new QueryOptions
         {
-            Includes = ["Orders", "Orders.Customer"],
-            Expand =
+            Includes =
             [
                 new IncludeNode
                 {
@@ -281,11 +280,32 @@ public class ValidationTests
             ]
         };
 
-        // Expand may only target collection-valued navigations — Customer is a
-        // reference navigation and must be rejected even with empty expand options.
+        Action act = () => options.ValidateOrThrow<Customer>();
+
+        act.Should().NotThrow();
+    }
+
+    [Fact]
+    public void Include_ReferenceTerminal_WithOptions_Fails()
+    {
+        var options = new QueryOptions
+        {
+            Includes =
+            [
+                new IncludeNode
+                {
+                    Path = "Orders",
+                    Children =
+                    [
+                        new IncludeNode { Path = "Customer", Take = 5 }
+                    ]
+                }
+            ]
+        };
+
         Action act = () => options.ValidateOrThrow<Customer>();
 
         act.Should().Throw<FlexQuery.NET.Exceptions.QueryValidationException>()
-            .WithMessage("*reference navigation*");
+            .WithMessage("*single-valued relationship*");
     }
 }

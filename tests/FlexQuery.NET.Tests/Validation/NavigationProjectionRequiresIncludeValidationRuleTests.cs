@@ -47,7 +47,7 @@ public class NavigationProjectionRequiresIncludeValidationRuleTests
 
         var options = new QueryOptions
         {
-            Includes = ["Orders"],
+            Includes = IncludeTestFactory.Paths("Orders"),
             Select =
             [
                 new SelectNode { Field = "Id" },
@@ -71,7 +71,7 @@ public class NavigationProjectionRequiresIncludeValidationRuleTests
 
         var options = new QueryOptions
         {
-            Includes = ["Orders", "Orders.OrderItems"],
+            Includes = IncludeTestFactory.Paths("Orders", "Orders.OrderItems"),
             Select = [orders]
         };
         var result = Validate(options);
@@ -112,7 +112,7 @@ public class NavigationProjectionRequiresIncludeValidationRuleTests
 
         var options = new QueryOptions
         {
-            Includes = ["Orders"],
+            Includes = IncludeTestFactory.Paths("Orders"),
             Select = [orders]
         };
         var result = Validate(options);

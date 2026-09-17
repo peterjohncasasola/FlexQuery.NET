@@ -148,7 +148,6 @@ public static class QueryOptionsExtensions
         return (options.Select?.Count ?? 0) > 0
                || options.SelectTree is not null
                || (options.Includes?.Count ?? 0) > 0
-               || (options.Expand?.Count ?? 0) > 0
                || (options.GroupBy?.Count ?? 0) > 0
                || options.Aggregates.Count > 0;
     }
@@ -163,7 +162,6 @@ public static class QueryOptionsExtensions
     /// Performs the following normalizations:
     /// <list type="bullet">
     ///   <item>Filter AST canonicalization</item>
-    ///   <item>Includes → FilteredIncludes consolidation</item>
     /// </list>
     /// </remarks>
     /// <param name="options">The query options to normalize.</param>
@@ -191,8 +189,7 @@ public static class QueryOptionsExtensions
             // ParserCache stores cloned options — a shared node reference would let one
             // request's mutations leak into the cache and into other requests.
             Select = source.Select?.Select(CloneSelectNode).ToList(),
-            Includes = source.Includes?.ToList(),
-            Expand = source.Expand?.Select(CloneIncludeNode).ToList(),
+            Includes = source.Includes?.Select(CloneIncludeNode).ToList(),
             ProjectionMode = source.ProjectionMode,
             GroupBy = source.GroupBy?.ToList(),
             Aggregates = source.Aggregates.Select(CloneAggregateModel).ToList(),

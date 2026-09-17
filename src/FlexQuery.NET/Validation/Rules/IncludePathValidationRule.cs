@@ -13,7 +13,7 @@ using FlexQuery.NET.Security;
 namespace FlexQuery.NET.Validation.Rules;
 
 /// <summary>
-/// Validates include and expand paths against the navigation graph, level by level.
+/// Validates include paths against the navigation graph, level by level.
 /// In DTO mode, each navigation level resolves through its registered nested
 /// entity → DTO type map (from the mapping registry, with global fallback), so nested
 /// public DTO member names (e.g. <c>Orders.OrderStatus</c>) resolve correctly and
@@ -21,7 +21,7 @@ namespace FlexQuery.NET.Validation.Rules;
 /// directly. All segments of a path must be navigation properties — a scalar segment
 /// fails the walk.
 /// </summary>
-internal sealed class ExpandPathValidationRule : IValidationRule
+internal sealed class IncludePathValidationRule : IValidationRule
 {
     /// <inheritdoc />
     public void Validate(QueryOptions options, QueryContext context, ValidationResult result)
@@ -35,34 +35,14 @@ internal sealed class ExpandPathValidationRule : IValidationRule
 
         if (options.Includes != null)
         {
-            foreach (var include in options.Includes)
+            foreach (var node in options.Includes)
             {
-                var walker = PathWalker.Start(type, dtoType, surface, registry);
-                if (!walker.TryWalk(include, out var pathNotFound, out var notOnSurface))
-                {
-                    var code = pathNotFound ? ValidationErrorCodes.IncludePathNotFound : ValidationErrorCodes.NavigationPropertyRequired;
-                    var message = notOnSurface && surface?.ResponseType != null
-                        ? $"Include path '{include}' is not part of the public query surface for '{surface.ResponseType.Name}'. " +
-                          "Expose the navigation on the DTO (same-name or MapField) to make it includable."
-                        : pathNotFound
-                            ? $"Include path '{include}' does not exist on type '{walker.CurrentTypeName()}'."
-                            : $"Include path '{include}' contains one or more scalar properties. Only navigation properties are allowed.";
-
-                    result.Errors.Add(new ValidationError(message, code, include));
-                }
-            }
-        }
-
-        if (options.Expand != null)
-        {
-            foreach (var node in options.Expand)
-            {
-                ValidateExpandNode(node, type, dtoType, surface, registry, string.Empty, result);
+                ValidateIncludeNode(node, type, dtoType, surface, registry, string.Empty, result);
             }
         }
     }
 
-    private static void ValidateExpandNode(
+    private static void ValidateIncludeNode(
         IncludeNode node,
         Type entityType,
         Type? dtoType,
@@ -78,11 +58,11 @@ internal sealed class ExpandPathValidationRule : IValidationRule
         {
             var code = pathNotFound ? ValidationErrorCodes.IncludePathNotFound : ValidationErrorCodes.NavigationPropertyRequired;
             var message = notOnSurface && surface?.ResponseType != null && parentPath.Length == 0
-                ? $"Expand path '{fullPath}' is not part of the public query surface for '{surface.ResponseType.Name}'. " +
-                  "Expose the navigation on the DTO (same-name or MapField) to make it expandable."
+                ? $"Include path '{fullPath}' is not part of the public query surface for '{surface.ResponseType.Name}'. " +
+                  "Expose the navigation on the DTO (same-name or MapField) to make it includable."
                 : pathNotFound
-                    ? $"Expand path '{fullPath}' does not exist on type '{walker.CurrentTypeName()}'."
-                    : $"Expand path '{fullPath}' contains one or more scalar properties. Only navigation properties are allowed.";
+                    ? $"Include path '{fullPath}' does not exist on type '{walker.CurrentTypeName()}'."
+                    : $"Include path '{fullPath}' contains one or more scalar properties. Only navigation properties are allowed.";
 
             result.Errors.Add(new ValidationError(message, code, fullPath));
             return;
@@ -94,7 +74,7 @@ internal sealed class ExpandPathValidationRule : IValidationRule
         {
             foreach (var child in node.Children)
             {
-                ValidateExpandNode(child, childEntityType, childDtoType, surface, registry, fullPath, result);
+                ValidateIncludeNode(child, childEntityType, childDtoType, surface, registry, fullPath, result);
             }
         }
     }

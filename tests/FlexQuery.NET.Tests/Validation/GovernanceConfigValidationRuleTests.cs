@@ -205,7 +205,7 @@ public class GovernanceConfigValidationRuleTests
     [Fact]
     public void ValidInclude_Passes()
     {
-        var execOptions = new TestGovernanceOptions { AllowedIncludes = ["Children"] };
+        var execOptions = new TestGovernanceOptions { AllowedIncludes = [ "Children" ] };
         var rule = new GovernanceConfigValidationRule();
         var result = ValidationResult.Success();
 
@@ -217,7 +217,7 @@ public class GovernanceConfigValidationRuleTests
     [Fact]
     public void InvalidInclude_Fails()
     {
-        var execOptions = new TestGovernanceOptions { AllowedIncludes = ["NonExistentNav"] };
+        var execOptions = new TestGovernanceOptions { AllowedIncludes = [ "NonExistentNav" ] };
         var rule = new GovernanceConfigValidationRule();
         var result = ValidationResult.Success();
 
@@ -230,7 +230,7 @@ public class GovernanceConfigValidationRuleTests
     [Fact]
     public void NonNavigationInclude_Fails()
     {
-        var execOptions = new TestGovernanceOptions { AllowedIncludes = ["Name"] };
+        var execOptions = new TestGovernanceOptions { AllowedIncludes = [ "Name" ] };
         var rule = new GovernanceConfigValidationRule();
         var result = ValidationResult.Success();
 

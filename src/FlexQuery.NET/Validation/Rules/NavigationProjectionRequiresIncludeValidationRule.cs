@@ -2,6 +2,7 @@ using FlexQuery.NET.Caching;
 using FlexQuery.NET.Constants;
 using FlexQuery.NET.Execution;
 using FlexQuery.NET.Helpers;
+using FlexQuery.NET.Internal;
 using FlexQuery.NET.Metadata;
 using FlexQuery.NET.Models;
 using FlexQuery.NET.Models.Projection;
@@ -218,23 +219,18 @@ internal sealed class NavigationProjectionRequiresIncludeValidationRule : IValid
     }
 
     /// <summary>
-    /// Builds the exact include path set: each include entry authorizes exactly its own
-    /// path (trimmed, case-insensitive). A deeper entry does not authorize its parent,
-    /// and a shallower entry does not authorize its children.
+    /// Builds the exact include path set from the include tree: each node authorizes
+    /// exactly its own path (trimmed, case-insensitive). A deeper node does not authorize
+    /// its parent, and a shallower node does not authorize its children.
     /// </summary>
-    private static HashSet<string> BuildIncludePathSet(List<string>? includes)
+    private static HashSet<string> BuildIncludePathSet(List<IncludeNode>? includes)
     {
         var paths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
-        if (includes is null)
-            return paths;
-
-        foreach (var include in includes)
+        foreach (var path in IncludeTree.FlattenPaths(includes))
         {
-            if (string.IsNullOrWhiteSpace(include))
-                continue;
-
-            paths.Add(include.Trim());
+            if (!string.IsNullOrWhiteSpace(path))
+                paths.Add(path.Trim());
         }
 
         return paths;

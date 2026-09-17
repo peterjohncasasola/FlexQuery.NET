@@ -18,11 +18,13 @@ public abstract class FlexQueryBase
     /// <summary>The comma-separated list of fields to select.</summary>
     public string? Select { get; set; }
 
-    /// <summary>The comma-separated list of fields to include.</summary>
+    /// <summary>
+    /// The comma-separated list of navigation relationships to include.
+    /// Collection-valued relationships may carry a relationship-scoped options block:
+    /// <c>include=orders(take=5;filter=status:eq:active;sort=orderdate:desc)</c>, and
+    /// nested relationships can be included from inside that block.
+    /// </summary>
     public string? Include { get; set; }
-
-    /// <summary>The expand expression for filtered navigation loading.</summary>
-    public string? Expand { get; set; }
 
     /// <summary>The comma-separated list of fields to group by.</summary>
     public string? GroupBy { get; set; }

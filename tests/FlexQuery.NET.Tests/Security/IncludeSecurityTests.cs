@@ -14,11 +14,12 @@ public class IncludeSecurityTests
     {
         var options = new QueryOptions
         {
-            Includes = new List<string> { "Orders", "Profile" },
-            Expand = new List<IncludeNode>
-            {
-                new IncludeNode { Path = "Orders", Children = { new IncludeNode { Path = "OrderItems" } } }
-            }
+            Includes = IncludeTestFactory.Merge(
+                IncludeTestFactory.Paths("Orders", "Profile"),
+                new List<IncludeNode>
+                {
+                    new IncludeNode { Path = "Orders", Children = { new IncludeNode { Path = "OrderItems" } } }
+                })
         };
 
         var exec = new QueryExecutionOptions();
@@ -37,11 +38,12 @@ public class IncludeSecurityTests
     {
         var options = new QueryOptions
         {
-            Includes = new List<string> { "Orders", "Orders.OrderItems", "Profile" },
-            Expand = new List<IncludeNode>
-            {
-                new IncludeNode { Path = "Orders", Children = { new IncludeNode { Path = "OrderItems" } } }
-            }
+            Includes = IncludeTestFactory.Merge(
+                IncludeTestFactory.Paths("Orders", "Orders.OrderItems", "Profile"),
+                new List<IncludeNode>
+                {
+                    new IncludeNode { Path = "Orders", Children = { new IncludeNode { Path = "OrderItems" } } }
+                })
         };
 
         var exec = new QueryExecutionOptions
@@ -64,7 +66,7 @@ public class IncludeSecurityTests
     {
         var options = new QueryOptions
         {
-            Includes = new List<string> { "Orders", "SecretData" }
+            Includes = IncludeTestFactory.Paths("Orders", "SecretData")
         };
 
         var exec = new QueryExecutionOptions
@@ -88,7 +90,7 @@ public class IncludeSecurityTests
     {
         var options = new QueryOptions
         {
-            Expand = new List<IncludeNode>
+            Includes = new List<IncludeNode>
             {
                 new IncludeNode 
                 { 
@@ -119,7 +121,7 @@ public class IncludeSecurityTests
     {
         var options = new QueryOptions
         {
-            Includes = new List<string> { "orders.orderitems" }
+            Includes = IncludeTestFactory.Paths("orders.orderitems")
         };
 
         var exec = new QueryExecutionOptions
@@ -141,7 +143,7 @@ public class IncludeSecurityTests
     {
         var options = new QueryOptions
         {
-            Includes = new List<string> { "SecretData" }
+            Includes = IncludeTestFactory.Paths("SecretData")
         };
 
         var exec = new QueryExecutionOptions
@@ -163,7 +165,7 @@ public class IncludeSecurityTests
     {
         var options = new QueryOptions
         {
-            Includes = new List<string> { "Orders", "SecretData", "Profile" }
+            Includes = IncludeTestFactory.Paths("Orders", "SecretData", "Profile")
         };
 
         var exec = new QueryExecutionOptions
@@ -182,9 +184,9 @@ public class IncludeSecurityTests
         Assert.False(result.IsValid);
         Assert.Contains(result.Errors, e => e.Field == "SecretData");
         Assert.Equal(2, options.Includes!.Count);
-        Assert.Contains("Orders", options.Includes);
-        Assert.Contains("Profile", options.Includes);
-        Assert.DoesNotContain("SecretData", options.Includes);
+        Assert.Contains("Orders", IncludeTestFactory.PathStrings(options.Includes));
+        Assert.Contains("Profile", IncludeTestFactory.PathStrings(options.Includes));
+        Assert.DoesNotContain("SecretData", IncludeTestFactory.PathStrings(options.Includes));
     }
 
     [Fact]
@@ -192,7 +194,7 @@ public class IncludeSecurityTests
     {
         var options = new QueryOptions
         {
-            Expand = new List<IncludeNode>
+            Includes = new List<IncludeNode>
             {
                 new IncludeNode 
                 { 
@@ -204,7 +206,7 @@ public class IncludeSecurityTests
 
         var exec = new QueryExecutionOptions
         {
-            AllowedIncludes = ["Orders"], // Missing Orders.SecretItems
+            AllowedIncludes = [ "Orders" ], // Missing Orders.SecretItems
             StrictFieldValidation = false
         };
         var context = new QueryContext { ExecutionOptions = exec };
@@ -217,7 +219,7 @@ public class IncludeSecurityTests
         // Non-strict mode should record error but remove the unauthorized nested include
         Assert.False(result.IsValid);
         Assert.Contains(result.Errors, e => e.Field == "Orders.SecretItems");
-        Assert.Single(options.Expand!);
-        Assert.Empty(options.Expand[0].Children); // SecretItems removed
+        Assert.Single(options.Includes!);
+        Assert.Empty(options.Includes[0].Children); // SecretItems removed
     }
 }

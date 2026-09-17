@@ -20,15 +20,15 @@ public class ExpandSortOnReferenceValidationRuleTests
     {
         var options = new QueryOptions
         {
-            Expand = [new IncludeNode { Path = "Profile", Sort = [new SortNode { Field = "Name", Descending = false }] }]
+            Includes = [new IncludeNode { Path = "Profile", Sort = [new SortNode { Field = "Name", Descending = false }] }]
         };
-        var rule = new ExpandSortOnReferenceValidationRule();
+        var rule = new IncludeCollectionOptionValidationRule();
         var result = ValidationResult.Success();
 
         rule.Validate(options, Context(typeof(Shared.Models.Customer)), result);
 
         result.IsValid.Should().BeFalse();
-        result.Errors.Should().ContainSingle(e => e.Code == ValidationErrorCodes.ExpandSortOnReference);
+        result.Errors.Should().ContainSingle(e => e.Code == ValidationErrorCodes.IncludeSortOnReference);
         result.Errors.Should().ContainSingle(e => e.Field == "Profile");
     }
 
@@ -37,15 +37,15 @@ public class ExpandSortOnReferenceValidationRuleTests
     {
         var options = new QueryOptions
         {
-            Expand = [new IncludeNode { Path = "Profile", Take = 1 }]
+            Includes = [new IncludeNode { Path = "Profile", Take = 1 }]
         };
-        var rule = new ExpandSortOnReferenceValidationRule();
+        var rule = new IncludeCollectionOptionValidationRule();
         var result = ValidationResult.Success();
 
         rule.Validate(options, Context(typeof(Shared.Models.Customer)), result);
 
         result.IsValid.Should().BeFalse();
-        result.Errors.Should().ContainSingle(e => e.Code == ValidationErrorCodes.ExpandTakeOnReference);
+        result.Errors.Should().ContainSingle(e => e.Code == ValidationErrorCodes.IncludeTakeOnReference);
         result.Errors.Should().ContainSingle(e => e.Field == "Profile");
     }
 
@@ -54,9 +54,9 @@ public class ExpandSortOnReferenceValidationRuleTests
     {
         var options = new QueryOptions
         {
-            Expand = [new IncludeNode { Path = "Orders", Sort = [new SortNode { Field = "OrderDate", Descending = true }] }]
+            Includes = [new IncludeNode { Path = "Orders", Sort = [new SortNode { Field = "OrderDate", Descending = true }] }]
         };
-        var rule = new ExpandSortOnReferenceValidationRule();
+        var rule = new IncludeCollectionOptionValidationRule();
         var result = ValidationResult.Success();
 
         rule.Validate(options, Context(typeof(Shared.Models.Customer)), result);
@@ -70,9 +70,9 @@ public class ExpandSortOnReferenceValidationRuleTests
     {
         var options = new QueryOptions
         {
-            Expand = [new IncludeNode { Path = "Orders", Take = 5 }]
+            Includes = [new IncludeNode { Path = "Orders", Take = 5 }]
         };
-        var rule = new ExpandSortOnReferenceValidationRule();
+        var rule = new IncludeCollectionOptionValidationRule();
         var result = ValidationResult.Success();
 
         rule.Validate(options, Context(typeof(Shared.Models.Customer)), result);
@@ -86,9 +86,9 @@ public class ExpandSortOnReferenceValidationRuleTests
     {
         var options = new QueryOptions
         {
-            Expand = [new IncludeNode { Path = "Profile" }]
+            Includes = [new IncludeNode { Path = "Profile" }]
         };
-        var rule = new ExpandSortOnReferenceValidationRule();
+        var rule = new IncludeCollectionOptionValidationRule();
         var result = ValidationResult.Success();
 
         rule.Validate(options, Context(typeof(Shared.Models.Customer)), result);
@@ -103,15 +103,15 @@ public class ExpandSortOnReferenceValidationRuleTests
         // Orders is collection, but Customer (nested under Orders) is a reference navigation
         var options = new QueryOptions
         {
-            Expand = [new IncludeNode { Path = "Orders", Children = [new IncludeNode { Path = "Customer", Sort = [new SortNode { Field = "Name", Descending = false }] }] }]
+            Includes = [new IncludeNode { Path = "Orders", Children = [new IncludeNode { Path = "Customer", Sort = [new SortNode { Field = "Name", Descending = false }] }] }]
         };
-        var rule = new ExpandSortOnReferenceValidationRule();
+        var rule = new IncludeCollectionOptionValidationRule();
         var result = ValidationResult.Success();
 
         rule.Validate(options, Context(typeof(Shared.Models.Customer)), result);
 
         result.IsValid.Should().BeFalse();
-        result.Errors.Should().ContainSingle(e => e.Code == ValidationErrorCodes.ExpandSortOnReference);
+        result.Errors.Should().ContainSingle(e => e.Code == ValidationErrorCodes.IncludeSortOnReference);
         result.Errors.Should().ContainSingle(e => e.Field == "Orders.Customer");
     }
 
@@ -120,23 +120,23 @@ public class ExpandSortOnReferenceValidationRuleTests
     {
         var options = new QueryOptions
         {
-            Expand = [new IncludeNode { Path = "Orders", Children = [new IncludeNode { Path = "Customer", Take = 1 }] }]
+            Includes = [new IncludeNode { Path = "Orders", Children = [new IncludeNode { Path = "Customer", Take = 1 }] }]
         };
-        var rule = new ExpandSortOnReferenceValidationRule();
+        var rule = new IncludeCollectionOptionValidationRule();
         var result = ValidationResult.Success();
 
         rule.Validate(options, Context(typeof(Shared.Models.Customer)), result);
 
         result.IsValid.Should().BeFalse();
-        result.Errors.Should().ContainSingle(e => e.Code == ValidationErrorCodes.ExpandTakeOnReference);
+        result.Errors.Should().ContainSingle(e => e.Code == ValidationErrorCodes.IncludeTakeOnReference);
         result.Errors.Should().ContainSingle(e => e.Field == "Orders.Customer");
     }
 
     [Fact]
     public void Validate_EmptyExpand_NoErrors()
     {
-        var options = new QueryOptions { Expand = [] };
-        var rule = new ExpandSortOnReferenceValidationRule();
+        var options = new QueryOptions { Includes = null };
+        var rule = new IncludeCollectionOptionValidationRule();
         var result = ValidationResult.Success();
 
         rule.Validate(options, Context(), result);
@@ -150,9 +150,9 @@ public class ExpandSortOnReferenceValidationRuleTests
     {
         var options = new QueryOptions
         {
-            Expand = [new IncludeNode { Path = "Orders", Sort = [new SortNode { Field = "OrderDate", Descending = true }] }]
+            Includes = [new IncludeNode { Path = "Orders", Sort = [new SortNode { Field = "OrderDate", Descending = true }] }]
         };
-        var rule = new ExpandSortOnReferenceValidationRule();
+        var rule = new IncludeCollectionOptionValidationRule();
         var result = ValidationResult.Success();
 
         rule.Validate(options, Context(null!), result);

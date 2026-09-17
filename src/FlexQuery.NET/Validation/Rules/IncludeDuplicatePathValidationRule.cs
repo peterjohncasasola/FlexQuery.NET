@@ -6,18 +6,18 @@ using FlexQuery.NET.Models.Projection;
 namespace FlexQuery.NET.Validation.Rules;
 
 /// <summary>
-/// Validates that no duplicate expand paths exist at any level in the normalized tree.
+/// Validates that no Duplicate include paths exist at any level in the normalized tree.
 /// </summary>
-internal sealed class ExpandDuplicatePathValidationRule : IValidationRule
+internal sealed class IncludeDuplicatePathValidationRule : IValidationRule
 {
     /// <inheritdoc />
     public void Validate(QueryOptions options, QueryContext context, ValidationResult result)
     {
-        if (options.Expand is not { Count: > 0 }) return;
+        if (options.Includes is not { Count: > 0 }) return;
 
         var seenPaths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
-        foreach (var node in options.Expand)
+        foreach (var node in options.Includes)
         {
             ValidateNode(node, seenPaths, string.Empty, result);
         }
@@ -34,8 +34,8 @@ internal sealed class ExpandDuplicatePathValidationRule : IValidationRule
         if (!seenPaths.Add(fullPath))
         {
             result.Errors.Add(new ValidationError(
-                $"Duplicate expand path '{fullPath}'.",
-                ValidationErrorCodes.ExpandDuplicatePath,
+                $"Duplicate include path '{fullPath}'.",
+                ValidationErrorCodes.IncludeDuplicatePath,
                 fullPath));
         }
 

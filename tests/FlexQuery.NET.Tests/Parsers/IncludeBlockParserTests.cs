@@ -5,14 +5,14 @@ using FlexQuery.NET.Parsers.Dsl;
 
 namespace FlexQuery.NET.Tests.Parsers;
 
-public class DslExpandParserTests
+public class IncludeBlockParserTests
 {
     #region Basic - Filter Only
 
     [Fact]
-    public void Parse_FilterOnly_SingleExpand_ReturnsExpandAst()
+    public void Parse_FilterOnly_SingleInclude_ReturnsIncludeAst()
     {
-        var result = DslExpandParser.Parse("orders(filter=status:eq:Active)");
+        var result = DslIncludeParser.Parse("orders(filter=status:eq:Active)");
 
         result.Should().ContainSingle();
         result[0].Path[0].Should().Be("orders");
@@ -27,9 +27,9 @@ public class DslExpandParserTests
     #region Basic - Sort Only
 
     [Fact]
-    public void Parse_SortOnly_SingleExpand_ReturnsExpandAst()
+    public void Parse_SortOnly_SingleInclude_ReturnsIncludeAst()
     {
-        var result = DslExpandParser.Parse("orders(sort=OrderDate:desc)");
+        var result = DslIncludeParser.Parse("orders(sort=OrderDate:desc)");
 
         result.Should().ContainSingle();
         result[0].Path[0].Should().Be("orders");
@@ -45,9 +45,9 @@ public class DslExpandParserTests
     #region Basic - Take Only
 
     [Fact]
-    public void Parse_TakeOnly_SingleExpand_ReturnsExpandAst()
+    public void Parse_TakeOnly_SingleInclude_ReturnsIncludeAst()
     {
-        var result = DslExpandParser.Parse("orders(take=5)");
+        var result = DslIncludeParser.Parse("orders(take=5)");
 
         result.Should().ContainSingle();
         result[0].Path[0].Should().Be("orders");
@@ -61,9 +61,9 @@ public class DslExpandParserTests
     #region Basic - Combined Options
 
     [Fact]
-    public void Parse_FilterSortTake_Combined_ReturnsExpandAst()
+    public void Parse_FilterSortTake_Combined_ReturnsIncludeAst()
     {
-        var result = DslExpandParser.Parse("orders(filter=status:eq:Active; sort=OrderDate:desc; take=5)");
+        var result = DslIncludeParser.Parse("orders(filter=status:eq:Active; sort=OrderDate:desc; take=5)");
 
         result.Should().ContainSingle();
         result[0].Path[0].Should().Be("orders");
@@ -76,12 +76,12 @@ public class DslExpandParserTests
 
     #endregion
 
-    #region Multiple Expand Blocks
+    #region Multiple Include Blocks
 
     [Fact]
-    public void Parse_MultipleBlocks_ReturnsMultipleExpandAsts()
+    public void Parse_MultipleBlocks_ReturnsMultipleIncludeAsts()
     {
-        var result = DslExpandParser.Parse("orders(filter=status:eq:Active),reviews(filter=rating:gte:4)");
+        var result = DslIncludeParser.Parse("orders(filter=status:eq:Active),reviews(filter=rating:gte:4)");
 
         result.Should().HaveCount(2);
         result[0].Path[0].Should().Be("orders");
@@ -93,12 +93,12 @@ public class DslExpandParserTests
     [Fact]
     public void Parse_MultipleBlocks_SamePathTwice_ThrowsDuplicatePath()
     {
-        // A navigation path may be expanded at most once per query — duplicates are
+        // A navigation path may be included at most once per query — duplicates are
         // rejected deterministically at parse time instead of being merged or
         // last-write-wins.
-        var act = () => DslExpandParser.Parse("orders(filter=status:eq:Active),orders(filter=status:eq:Pending)");
+        var act = () => DslIncludeParser.Parse("orders(filter=status:eq:Active),orders(filter=status:eq:Pending)");
 
-        act.Should().Throw<DslParseException>().WithMessage("*Duplicate expand path*");
+        act.Should().Throw<DslParseException>().WithMessage("*Duplicate include path*");
     }
 
     #endregion
@@ -108,7 +108,7 @@ public class DslExpandParserTests
     [Fact]
     public void Parse_NestedChildren_ReturnsRecursiveTree()
     {
-        var result = DslExpandParser.Parse("orders(orderItems(filter=quantity:gt:5))");
+        var result = DslIncludeParser.Parse("orders(orderItems(filter=quantity:gt:5))");
 
         result.Should().ContainSingle();
         result[0].Path[0].Should().Be("orders");
@@ -120,7 +120,7 @@ public class DslExpandParserTests
     [Fact]
     public void Parse_MultipleChildrenAtSameLevel_ReturnsMultipleChildren()
     {
-        var result = DslExpandParser.Parse("orders(orderItems(filter=quantity:gt:5),reviews(sort=CreatedDate:desc))");
+        var result = DslIncludeParser.Parse("orders(orderItems(filter=quantity:gt:5),reviews(sort=CreatedDate:desc))");
 
         result.Should().ContainSingle();
         result[0].Path[0].Should().Be("orders");
@@ -138,7 +138,7 @@ public class DslExpandParserTests
     [Fact]
     public void Parse_FlatDottedPath_SingleLevel_ReturnsSingleNode()
     {
-        var result = DslExpandParser.Parse("orders.orderItems(filter=quantity:gt:5)");
+        var result = DslIncludeParser.Parse("orders.orderItems(filter=quantity:gt:5)");
 
         result.Should().ContainSingle();
         result[0].Path[0].Should().Be("orders");
@@ -150,7 +150,7 @@ public class DslExpandParserTests
     [Fact]
     public void Parse_FlatDottedPath_NoOptions_ReturnsEmptyChildren()
     {
-        var result = DslExpandParser.Parse("orders.orderItems");
+        var result = DslIncludeParser.Parse("orders.orderItems");
 
         result.Should().ContainSingle();
         result[0].Path[0].Should().Be("orders");
@@ -168,7 +168,7 @@ public class DslExpandParserTests
     [InlineData("orders(filter=status:eq:Active;sort=OrderDate:desc;take=5)")]
     public void Parse_WhitespaceVariations_ParsesCorrectly(string input)
     {
-        var result = DslExpandParser.Parse(input);
+        var result = DslIncludeParser.Parse(input);
 
         result.Should().ContainSingle();
         result[0].Path[0].Should().Be("orders");
@@ -184,7 +184,7 @@ public class DslExpandParserTests
     [Fact]
     public void Parse_EmptyString_ReturnsEmptyList()
     {
-        var result = DslExpandParser.Parse("");
+        var result = DslIncludeParser.Parse("");
 
         result.Should().BeEmpty();
     }
@@ -192,7 +192,7 @@ public class DslExpandParserTests
     [Fact]
     public void Parse_WhitespaceOnly_ReturnsEmptyList()
     {
-        var result = DslExpandParser.Parse("   ");
+        var result = DslIncludeParser.Parse("   ");
 
         result.Should().BeEmpty();
     }
@@ -200,7 +200,7 @@ public class DslExpandParserTests
     [Fact]
     public void Parse_NullInput_ReturnsEmptyList()
     {
-        var result = DslExpandParser.Parse(null);
+        var result = DslIncludeParser.Parse(null);
 
         result.Should().BeEmpty();
     }
@@ -208,7 +208,7 @@ public class DslExpandParserTests
     [Fact]
     public void Parse_EmptyOptionsBlock_ReturnsNodeWithNoOptions()
     {
-        var result = DslExpandParser.Parse("orders()");
+        var result = DslIncludeParser.Parse("orders()");
 
         result.Should().ContainSingle();
         result[0].Path[0].Should().Be("orders");
@@ -224,19 +224,19 @@ public class DslExpandParserTests
     [Fact]
     public void Parse_UnknownOptionSkip_ThrowsParseException()
     {
-        Action act = () => DslExpandParser.Parse("orders(skip=5)");
+        Action act = () => DslIncludeParser.Parse("orders(skip=5)");
 
         act.Should().Throw<DslParseException>()
-           .WithMessage("*Unexpected expand option 'skip'*");
+           .WithMessage("*not supported inside include*");
     }
 
     [Fact]
     public void Parse_UnknownOptionSelect_ThrowsParseException()
     {
-        Action act = () => DslExpandParser.Parse("orders(select=Name)");
+        Action act = () => DslIncludeParser.Parse("orders(select=Name)");
 
         act.Should().Throw<DslParseException>()
-           .WithMessage("*Unexpected expand option 'select'*");
+           .WithMessage("*Unexpected include option 'select'*");
     }
 
     #endregion
@@ -246,7 +246,7 @@ public class DslExpandParserTests
     [Fact]
     public void Parse_MissingEquals_ThrowsParseException()
     {
-        Action act = () => DslExpandParser.Parse("orders(filter status:eq:Active)");
+        Action act = () => DslIncludeParser.Parse("orders(filter status:eq:Active)");
 
         act.Should().Throw<DslParseException>();
     }
@@ -254,7 +254,7 @@ public class DslExpandParserTests
     [Fact]
     public void Parse_EmptyFilterValue_ThrowsParseException()
     {
-        Action act = () => DslExpandParser.Parse("orders(filter=)");
+        Action act = () => DslIncludeParser.Parse("orders(filter=)");
 
         act.Should().Throw<DslParseException>();
     }
@@ -262,7 +262,7 @@ public class DslExpandParserTests
     [Fact]
     public void Parse_InvalidTakeValue_ThrowsParseException()
     {
-        Action act = () => DslExpandParser.Parse("orders(take=abc)");
+        Action act = () => DslIncludeParser.Parse("orders(take=abc)");
 
         act.Should().Throw<DslParseException>()
            .WithMessage("*Invalid take value*");
@@ -271,7 +271,7 @@ public class DslExpandParserTests
     [Fact]
     public void Parse_NegativeTake_ThrowsParseException()
     {
-        Action act = () => DslExpandParser.Parse("orders(take=-1)");
+        Action act = () => DslIncludeParser.Parse("orders(take=-1)");
 
         act.Should().Throw<DslParseException>()
            .WithMessage("*Invalid take value*");
@@ -284,7 +284,7 @@ public class DslExpandParserTests
     [Fact]
     public void Parse_DoubleSemicolon_HandlesGracefully()
     {
-        Action act = () => DslExpandParser.Parse("orders(filter=status:eq:Active;; sort=OrderDate:desc)");
+        Action act = () => DslIncludeParser.Parse("orders(filter=status:eq:Active;; sort=OrderDate:desc)");
 
         act.Should().Throw<DslParseException>();
     }
@@ -292,7 +292,7 @@ public class DslExpandParserTests
     [Fact]
     public void Parse_LeadingSemicolon_ThrowsParseException()
     {
-        Action act = () => DslExpandParser.Parse("orders(; filter=status:eq:Active)");
+        Action act = () => DslIncludeParser.Parse("orders(; filter=status:eq:Active)");
 
         act.Should().Throw<DslParseException>();
     }
@@ -300,7 +300,7 @@ public class DslExpandParserTests
     [Fact]
     public void Parse_TrailingSemicolon_HandlesGracefully()
     {
-        var result = DslExpandParser.Parse("orders(filter=status:eq:Active; sort=OrderDate:desc;)");
+        var result = DslIncludeParser.Parse("orders(filter=status:eq:Active; sort=OrderDate:desc;)");
 
         result.Should().ContainSingle();
         result[0].Filter.Should().NotBeNull();
@@ -314,7 +314,7 @@ public class DslExpandParserTests
     [Fact]
     public void Parse_InvalidFilterSyntax_ThrowsDslParseException()
     {
-        Action act = () => DslExpandParser.Parse("orders(filter=status:)");
+        Action act = () => DslIncludeParser.Parse("orders(filter=status:)");
 
         act.Should().Throw<DslParseException>();
     }
@@ -322,7 +322,7 @@ public class DslExpandParserTests
     [Fact]
     public void Parse_InvalidSortSyntax_ThrowsDslParseException()
     {
-        Action act = () => DslExpandParser.Parse("orders(sort=:)");
+        Action act = () => DslIncludeParser.Parse("orders(sort=:)");
 
         act.Should().Throw<DslParseException>();
     }
@@ -334,7 +334,7 @@ public class DslExpandParserTests
     [Fact]
     public void Parse_PathWithDotsButNoOptions_ReturnsEmptyChildren()
     {
-        var result = DslExpandParser.Parse("orders.orderItems");
+        var result = DslIncludeParser.Parse("orders.orderItems");
 
         result.Should().ContainSingle();
         result[0].Path[0].Should().Be("orders");
@@ -345,7 +345,7 @@ public class DslExpandParserTests
     [Fact]
     public void Parse_SingleSegmentPath_NoDot_ReturnsSingleNode()
     {
-        var result = DslExpandParser.Parse("orders(filter=status:eq:Active)");
+        var result = DslIncludeParser.Parse("orders(filter=status:eq:Active)");
 
         result.Should().ContainSingle();
         result[0].Path[0].Should().Be("orders");
@@ -359,7 +359,7 @@ public class DslExpandParserTests
     [Fact]
     public void Parse_ThreeLevelNesting_ReturnsDeepTree()
     {
-        var result = DslExpandParser.Parse("orders(orderItems(products(filter=price:gt:10)))");
+        var result = DslIncludeParser.Parse("orders(orderItems(products(filter=price:gt:10)))");
 
         result.Should().ContainSingle();
         result[0].Path[0].Should().Be("orders");
@@ -375,7 +375,7 @@ public class DslExpandParserTests
     [Fact]
     public void Parse_ZeroTake_ReturnsZero()
     {
-        var result = DslExpandParser.Parse("orders(take=0)");
+        var result = DslIncludeParser.Parse("orders(take=0)");
 
         result.Should().ContainSingle();
         result[0].Take.Should().Be(0);

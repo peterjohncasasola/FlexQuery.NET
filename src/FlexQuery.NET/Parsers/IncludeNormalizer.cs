@@ -5,23 +5,23 @@ using FlexQuery.NET.Models.Projection;
 namespace FlexQuery.NET.Parsers;
 
 /// <summary>
-/// Converts the language-agnostic <see cref="ExpandAst"/> into the canonical
+/// Converts the language-agnostic <see cref="IncludeAst"/> into the canonical
 /// recursive <see cref="IncludeNode"/> tree used by validators and providers.
 /// <para>
 /// This normalizer is syntax-agnostic: it knows nothing about FQL, DSL, or any other
-/// query language. It operates solely on the <see cref="ExpandAst"/> contract.
+/// query language. It operates solely on the <see cref="IncludeAst"/> contract.
 /// </para>
 /// </summary>
-internal static class ExpandNormalizer
+internal static class IncludeNormalizer
 {
     /// <summary>
-    /// Normalizes a list of <see cref="ExpandAst"/> roots into <see cref="IncludeNode"/> trees.
+    /// Normalizes a list of <see cref="IncludeAst"/> roots into <see cref="IncludeNode"/> trees.
     /// Multiple flat dotted paths that share a prefix are merged into one tree
-    /// (e.g. <c>Orders(take=3),Orders.OrderItems(take=5)</c> produces a single root
-    /// <c>Orders</c> carrying its own options and an <c>OrderItems</c> child), so the
+    /// (e.g. <c>orders(take=3),orders.items(take=5)</c> produces a single root
+    /// <c>orders</c> carrying its own options and an <c>items</c> child), so the
     /// internal representation is hierarchical while the public syntax stays flat.
     /// </summary>
-    public static List<IncludeNode> Normalize(IReadOnlyList<ExpandAst> astRoots)
+    public static List<IncludeNode> Normalize(IReadOnlyList<IncludeAst> astRoots)
     {
         ArgumentNullException.ThrowIfNull(astRoots);
         var result = new List<IncludeNode>(astRoots.Count);
@@ -52,24 +52,31 @@ internal static class ExpandNormalizer
         existing.Filter ??= node.Filter;
         existing.Sort ??= node.Sort;
         existing.Take ??= node.Take;
+        existing.IsExplicitlyRequested |= node.IsExplicitlyRequested;
 
         foreach (var child in node.Children)
         {
-            MergeInto(existing.Children, child);
+            var existingChild = existing.Children.FirstOrDefault(c =>
+                c.Path.Equals(child.Path, StringComparison.OrdinalIgnoreCase));
+
+            if (existingChild is not null)
+                MergeInto(existing.Children, child);
+            else
+                existing.Children.Add(child);
         }
     }
 
     /// <summary>
-    /// Normalizes a single <see cref="ExpandAst"/> node into an <see cref="IncludeNode"/>.
+    /// Normalizes a single <see cref="IncludeAst"/> node into an <see cref="IncludeNode"/>.
     /// Flat dotted paths are expanded into recursive children.
     /// Filter, sort, and take are attached to the deepest node in the path.
     /// </summary>
-    private static IncludeNode NormalizeNode(ExpandAst ast)
+    private static IncludeNode NormalizeNode(IncludeAst ast)
     {
         ArgumentNullException.ThrowIfNull(ast);
 
         if (ast.Path.Count == 0)
-            throw new InvalidOperationException("Expand node has no path segments.");
+            throw new InvalidOperationException("Include node has no path segments.");
 
         if (ast.Path.Count == 1)
         {
@@ -84,11 +91,14 @@ internal static class ExpandNormalizer
         }
 
         // Multiple path segments: create recursive tree from flat path
-        // e.g. Path = ["Orders", "OrderItems"] becomes:
-        // IncludeNode { Path = "Orders", Children = [ IncludeNode { Path = "OrderItems", Filter = ..., Sort = ..., Take = ... } ] }
+        // e.g. Path = ["Orders", "Items"] becomes:
+        // IncludeNode { Path = "Orders", Children = [ IncludeNode { Path = "Items", Filter = ..., Sort = ..., Take = ... } ] }
+        // Intermediate segments are synthesised scaffolding, not requested includes
+        // (governance must not validate them); the deepest segment carries the request.
         var first = new IncludeNode
         {
             Path = ast.Path[0],
+            IsExplicitlyRequested = false,
             Children = [CreateDeepNode(ast.Path, 1, ast.Filter, ast.Sort, ast.Take, ast.Children)]
         };
 
@@ -105,7 +115,7 @@ internal static class ExpandNormalizer
         FilterGroup? filter,
         List<SortNode> sort,
         int? take,
-        List<ExpandAst> additionalChildren)
+        List<IncludeAst> additionalChildren)
     {
         if (index >= pathSegments.Count - 1)
         {
@@ -124,14 +134,15 @@ internal static class ExpandNormalizer
         return new IncludeNode
         {
             Path = pathSegments[index],
+            IsExplicitlyRequested = false,
             Children = [CreateDeepNode(pathSegments, index + 1, filter, sort, take, additionalChildren)]
         };
     }
 
     /// <summary>
-    /// Normalizes a list of child <see cref="ExpandAst"/> nodes into <see cref="IncludeNode"/> children.
+    /// Normalizes a list of child <see cref="IncludeAst"/> nodes into <see cref="IncludeNode"/> children.
     /// </summary>
-    private static List<IncludeNode> Normalize(List<ExpandAst> children)
+    private static List<IncludeNode> Normalize(List<IncludeAst> children)
     {
         var result = new List<IncludeNode>(children.Count);
         foreach (var child in children)

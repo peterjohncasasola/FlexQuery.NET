@@ -173,7 +173,7 @@ public class JsonNamingPolicyParityTests : IAsyncLifetime
     [Fact]
     public async Task DefaultSerializer_NestedProjection_UsesPascalCaseAtEveryLevel()
     {
-        var response = await _pascalClient.GetAsync("/api/users?select=id,orders.orderDate,orders.STATUS&include=Orders&expand=Orders&sort=Id");
+        var response = await _pascalClient.GetAsync("/api/users?select=id,orders.orderDate,orders.STATUS&include=Orders&sort=Id");
         response.EnsureSuccessStatusCode();
 
         var json = await response.Content.ReadAsStringAsync();
@@ -192,7 +192,7 @@ public class JsonNamingPolicyParityTests : IAsyncLifetime
     [Fact]
     public async Task CamelCaseSerializer_NestedProjection_UsesCamelCaseAtEveryLevel()
     {
-        var response = await _camelClient.GetAsync("/api/users?select=id,orders.orderDate,orders.STATUS&include=Orders&expand=Orders&sort=Id");
+        var response = await _camelClient.GetAsync("/api/users?select=id,orders.orderDate,orders.STATUS&include=Orders&sort=Id");
         response.EnsureSuccessStatusCode();
 
         var json = await response.Content.ReadAsStringAsync();

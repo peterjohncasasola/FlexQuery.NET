@@ -1,3 +1,4 @@
+using FlexQuery.NET.Internal;
 using FlexQuery.NET.Models;
 
 namespace FlexQuery.NET.Mapping;
@@ -7,15 +8,14 @@ internal static class RequestedNavigationGraph
     public static IReadOnlySet<string> Collect(QueryOptions queryOptions)
     {
         var paths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        CollectSegments(queryOptions.Includes, paths);
-        CollectSegments(queryOptions.Expand?.Select(e => e.Path), paths);
+        CollectSegments(IncludeTree.FlattenPaths(queryOptions.Includes), paths);
         return paths;
     }
 
     private static void CollectSegments(IEnumerable<string?>? source, ISet<string> target)
     {
         ArgumentNullException.ThrowIfNull(target);
-        
+
         if (source is null)
             return;
 

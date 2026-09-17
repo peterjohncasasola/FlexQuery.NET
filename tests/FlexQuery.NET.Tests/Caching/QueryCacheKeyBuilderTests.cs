@@ -99,7 +99,7 @@ public class QueryCacheKeyBuilderTests
     {
         var options = new QueryOptions
         {
-            Includes = ["Orders"]
+            Includes = IncludeTestFactory.Paths("Orders")
         };
 
         var key = QueryCacheKeyBuilder.Build(options, typeof(Customer), "query");
@@ -143,12 +143,12 @@ public class QueryCacheKeyBuilderTests
     {
         var options = new QueryOptions
         {
-            Expand = [new IncludeNode { Path = "Orders" }]
+            Includes = [new IncludeNode { Path = "Orders" }]
         };
 
         var key = QueryCacheKeyBuilder.Build(options, typeof(Customer), "query");
 
-        key.Should().Contain("filteredIncludes=");
+        key.Should().Contain("includes=");
     }
 
     [Fact]
@@ -156,7 +156,7 @@ public class QueryCacheKeyBuilderTests
     {
         var withoutTake = new QueryOptions
         {
-            Expand =
+            Includes =
             [
                 new IncludeNode
                 {
@@ -168,7 +168,7 @@ public class QueryCacheKeyBuilderTests
 
         var withTake = new QueryOptions
         {
-            Expand =
+            Includes =
             [
                 new IncludeNode
                 {

@@ -9,18 +9,18 @@ using FlexQuery.NET.Security;
 namespace FlexQuery.NET.Validation.Rules;
 
 /// <summary>
-/// Validates that expressions inside an expand block are resolved relative to the expanded entity.
+/// Validates that expressions inside an include block are resolved relative to the included entity.
 /// Rejects root-prefixed paths like <c>Orders.Status</c> inside <c>orders(...)</c>.
 /// </summary>
-internal sealed class ExpandExpressionContextValidationRule : IValidationRule
+internal sealed class IncludeExpressionContextValidationRule : IValidationRule
 {
     /// <inheritdoc />
     public void Validate(QueryOptions options, QueryContext context, ValidationResult result)
     {
-        if (options.Expand is not { Count: > 0 }) return;
+        if (options.Includes is not { Count: > 0 }) return;
         if (context.TargetType == null) return;
 
-        foreach (var node in options.Expand)
+        foreach (var node in options.Includes)
         {
             ValidateNode(node, context.TargetType, string.Empty, result);
         }
@@ -76,55 +76,55 @@ internal sealed class ExpandExpressionContextValidationRule : IValidationRule
     private static void ValidateFilterFields(
         FilterGroup filter,
         Type targetType,
-        string expandPath,
+        string includePath,
         HashSet<string> ancestorPaths,
         ValidationResult result)
     {
         foreach (var condition in filter.Filters)
         {
-            ValidateFilterCondition(condition, targetType, expandPath, ancestorPaths, result);
+            ValidateFilterCondition(condition, targetType, includePath, ancestorPaths, result);
         }
 
         foreach (var group in filter.Groups)
         {
-            ValidateFilterFields(group, targetType, expandPath, ancestorPaths, result);
+            ValidateFilterFields(group, targetType, includePath, ancestorPaths, result);
         }
     }
 
     private static void ValidateFilterCondition(
         FilterCondition condition,
         Type targetType,
-        string expandPath,
+        string includePath,
         HashSet<string> ancestorPaths,
         ValidationResult result)
     {
         if (!string.IsNullOrEmpty(condition.Field))
         {
-            ValidateFieldPath(condition.Field, targetType, expandPath, ancestorPaths, result, "filter");
+            ValidateFieldPath(condition.Field, targetType, includePath, ancestorPaths, result, "filter");
         }
 
         if (condition.ScopedFilter != null)
         {
-            ValidateFilterFields(condition.ScopedFilter, targetType, expandPath, ancestorPaths, result);
+            ValidateFilterFields(condition.ScopedFilter, targetType, includePath, ancestorPaths, result);
         }
     }
 
     private static void ValidateFieldPath(
         string fieldPath,
         Type targetType,
-        string expandPath,
+        string includePath,
         HashSet<string> ancestorPaths,
         ValidationResult result,
         string context)
     {
-        var prefix = expandPath + ".";
+        var prefix = includePath + ".";
         if (fieldPath.StartsWith(prefix, StringComparison.OrdinalIgnoreCase) ||
-            fieldPath.Equals(expandPath, StringComparison.OrdinalIgnoreCase))
+            fieldPath.Equals(includePath, StringComparison.OrdinalIgnoreCase))
         {
             result.Errors.Add(new ValidationError(
-                $"Field '{fieldPath}' in {context} for expand path '{expandPath}' is incorrectly prefixed with the navigation path. " +
-                $"Use '{fieldPath[prefix.Length..]}' instead (resolved relative to the expanded entity).",
-                ValidationErrorCodes.ExpandRootPrefixedPath,
+                $"Field '{fieldPath}' in {context} for include path '{includePath}' is incorrectly prefixed with the navigation path. " +
+                $"Use '{fieldPath[prefix.Length..]}' instead (resolved relative to the included entity).",
+                ValidationErrorCodes.IncludeRootPrefixedPath,
                 fieldPath));
         }
 
@@ -134,9 +134,9 @@ internal sealed class ExpandExpressionContextValidationRule : IValidationRule
             if (fieldPath.StartsWith(ancestorPrefix, StringComparison.OrdinalIgnoreCase))
             {
                 result.Errors.Add(new ValidationError(
-                    $"Field '{fieldPath}' in {context} for expand path '{expandPath}' is incorrectly prefixed with ancestor navigation path '{ancestor}'. " +
-                    $"Use '{fieldPath[ancestorPrefix.Length..]}' instead (resolved relative to the expanded entity).",
-                    ValidationErrorCodes.ExpandRootPrefixedPath,
+                    $"Field '{fieldPath}' in {context} for include path '{includePath}' is incorrectly prefixed with ancestor navigation path '{ancestor}'. " +
+                    $"Use '{fieldPath[ancestorPrefix.Length..]}' instead (resolved relative to the included entity).",
+                    ValidationErrorCodes.IncludeRootPrefixedPath,
                     fieldPath));
                 break;
             }
