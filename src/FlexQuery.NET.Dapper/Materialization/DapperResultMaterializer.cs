@@ -37,8 +37,7 @@ internal static class DapperResultMaterializer
             && queryOptions.HasProjection();
 
         if (!isFlatProjection &&
-            (queryOptions.Includes?.Count > 0 ||
-             queryOptions.Expand?.Count > 0))
+            (queryOptions.Includes?.Count > 0))
         {
             return hydrateIncludes(rows);
         }

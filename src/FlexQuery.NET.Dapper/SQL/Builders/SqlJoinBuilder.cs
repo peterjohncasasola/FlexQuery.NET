@@ -27,20 +27,28 @@ internal sealed class SqlJoinBuilder(
         // 1. Infer joins from deep projection tree
         TraverseJoinTree(selectTree, mapping, mapping.TableAlias, joins, joinedPaths, parameters);
 
-        // 2. Explicit Includes and Filtered Includes
-        if (options.Expand != null)
+        // 2. Explicit includes (simple or with relationship query blocks)
+        if (options.Includes != null)
         {
-            foreach (var filteredInclude in options.Expand)
+            foreach (var include in options.Includes)
             {
-                if (!joinedPaths.Add(filteredInclude.Path)) continue;
+                if (!joinedPaths.Add(include.Path)) continue;
 
-                var rel = mapping.GetRelationship(filteredInclude.Path);
+                var rel = mapping.GetRelationship(include.Path);
                 if (rel == null) continue;
+
+                if (include.Filter is null)
+                {
+                    var plain = new Ast.IncludeNode { NavigationProperty = include.Path };
+                    var plainSql = includeTranslator.Translate(plain, mapping, _ => string.Empty, mappingRegistry);
+                    if (!string.IsNullOrEmpty(plainSql)) joins.Add(plainSql);
+                    continue;
+                }
 
                 var node = new Ast.IncludeNode
                 {
                     NavigationProperty = rel.NavigationPropertyName,
-                    Filter = filteredInclude.Filter
+                    Filter = include.Filter
                 };
 
                 var sql = includeTranslator.Translate(node, mapping, filterGroup =>
@@ -49,19 +57,6 @@ internal sealed class SqlJoinBuilder(
                     return whereBuilder.BuildFilterGroupExpression(filterGroup, targetMapping, parameters);
                 }, mappingRegistry);
 
-                if (!string.IsNullOrEmpty(sql)) joins.Add(sql);
-            }
-        }
-
-        // Handle regular Includes
-        if (options.Includes != null)
-        {
-            foreach (var include in options.Includes)
-            {
-                if (!joinedPaths.Add(include)) continue;
-
-                var node = new Ast.IncludeNode { NavigationProperty = include };
-                var sql = includeTranslator.Translate(node, mapping, _ => string.Empty, mappingRegistry);
                 if (!string.IsNullOrEmpty(sql)) joins.Add(sql);
             }
         }

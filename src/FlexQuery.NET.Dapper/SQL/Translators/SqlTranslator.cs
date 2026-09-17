@@ -189,7 +189,7 @@ internal sealed class SqlTranslator : ISqlTranslator
         var mapping = _mappingRegistry.GetMapping(entityType);
         var selectTree = SelectTreeBuilder.Build(options);
 
-        if (options.Includes?.Count > 0 || options.Expand?.Count > 0 || selectTree.HasChildren)
+        if (options.Includes?.Count > 0 || selectTree.HasChildren)
         {
             mapping.TableAlias = mapping.TableName;
         }
@@ -283,7 +283,7 @@ internal sealed class SqlTranslator : ISqlTranslator
         List<object?> rootPkValues)
     {
         return SqlIncludeQueryBuilder.BuildIncludeSql(
-            navigationPath, rootMapping, targetMapping, _dialect, expandNode: null, rootPkValues, parameters);
+            navigationPath, rootMapping, targetMapping, _dialect, includeNode: null, rootPkValues, parameters);
     }
 
     public string BuildIncludeSql(
@@ -292,9 +292,9 @@ internal sealed class SqlTranslator : ISqlTranslator
         IEntityMapping targetMapping,
         SqlParameterContext parameters,
         IReadOnlyList<object> rootPkValues,
-        IncludeNode expandNode)
+        IncludeNode includeNode)
     {
         return SqlIncludeQueryBuilder.BuildIncludeSql(
-            navigationPath, rootMapping, targetMapping, _dialect, expandNode, rootPkValues, parameters);
+            navigationPath, rootMapping, targetMapping, _dialect, includeNode, rootPkValues, parameters);
     }
 }

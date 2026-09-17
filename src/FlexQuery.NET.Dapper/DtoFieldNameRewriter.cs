@@ -66,18 +66,18 @@ internal static class DtoFieldNameRewriter
             options.Having = RewriteHaving(options.Having, surface);
         }
 
-        // Expand-block fields (filter/sort per navigation level) resolve against the
+        // Include-block fields (filter/sort per relationship level) resolve against the
         // navigation element's TypeMap, not the root surface — rewrite them through the
         // registered nested map graph so ForMember renames like
         // OrderResponse.DeliveryDate ← Order.ExpectedDeliveryDate translate to entity
         // column names before SQL generation.
-        if (options.Expand is { Count: > 0 })
+        if (options.Includes is { Count: > 0 })
         {
-            RewriteExpandNodes(options.Expand, surface, mappingRegistry);
+            RewriteIncludeNodes(options.Includes, surface, mappingRegistry);
         }
     }
 
-    private static void RewriteExpandNodes(
+    private static void RewriteIncludeNodes(
         List<IncludeNode> nodes,
         IQuerySurface surface,
         IQueryMappingRegistry? mappingRegistry,
@@ -86,11 +86,11 @@ internal static class DtoFieldNameRewriter
     {
         foreach (var node in nodes)
         {
-            // Each expand node's path may contain dotted segments ("Orders.OrderItems")
+            // Each include node's path may contain dotted segments ("Orders.OrderItems")
             // after TranslateIncludePathsToEntity resolves only the root segment — walk
             // segment-by-segment so every level's filter/sort resolves against its own
             // element TypeMap.
-            RewriteExpandChain(
+            RewriteIncludeChain(
                 node,
                 node.Path,
                 surface,
@@ -101,7 +101,7 @@ internal static class DtoFieldNameRewriter
         }
     }
 
-    private static void RewriteExpandChain(
+    private static void RewriteIncludeChain(
         IncludeNode node,
         string remainingPath,
         IQuerySurface surface,
@@ -121,7 +121,7 @@ internal static class DtoFieldNameRewriter
             {
                 foreach (var child in node.Children)
                 {
-                    RewriteExpandChain(
+                    RewriteIncludeChain(
                         child,
                         child.Path,
                         surface,
@@ -183,20 +183,20 @@ internal static class DtoFieldNameRewriter
             // Last segment of this node's path: its filter/sort run against the
             // element entity type — rewrite through the element's registered map.
             if (node.Filter is not null)
-                node.Filter = RewriteExpandFilter(node.Filter, fullPath, entityElementType, elementMap);
+                node.Filter = RewriteIncludeFilter(node.Filter, fullPath, entityElementType, elementMap);
 
             if (node.Sort is { Count: > 0 })
             {
                 for (var i = 0; i < node.Sort.Count; i++)
                 {
-                    node.Sort[i] = RewriteExpandSort(node.Sort[i], fullPath, entityElementType, elementMap);
+                    node.Sort[i] = RewriteIncludeSort(node.Sort[i], fullPath, entityElementType, elementMap);
                 }
             }
 
             // Children start one level deeper (element entity type).
             foreach (var child in node.Children)
             {
-                RewriteExpandChain(
+                RewriteIncludeChain(
                     child,
                     child.Path,
                     surface,
@@ -211,7 +211,7 @@ internal static class DtoFieldNameRewriter
 
         // More segments remain in this node's path: descend into the element entity
         // type and keep walking.
-        RewriteExpandChain(
+        RewriteIncludeChain(
             node,
             rest,
             surface,
@@ -238,21 +238,21 @@ internal static class DtoFieldNameRewriter
     private static Type? NavigationElementType(Type type)
         => TryGetElementOrSelf(type, out var element) ? element : null;
 
-    private static FilterGroup RewriteExpandFilter(FilterGroup group, string fullPath, Type entityElementType, ITypeMap? map)
+    private static FilterGroup RewriteIncludeFilter(FilterGroup group, string fullPath, Type entityElementType, ITypeMap? map)
     {
         var rewritten = new FilterGroup { Logic = group.Logic };
         foreach (var filter in group.Filters)
         {
-            rewritten.Filters.Add(RewriteExpandFilterCondition(filter, fullPath, entityElementType, map));
+            rewritten.Filters.Add(RewriteIncludeFilterCondition(filter, fullPath, entityElementType, map));
         }
         foreach (var child in group.Groups)
         {
-            rewritten.Groups.Add(RewriteExpandFilter(child, fullPath, entityElementType, map));
+            rewritten.Groups.Add(RewriteIncludeFilter(child, fullPath, entityElementType, map));
         }
         return rewritten;
     }
 
-    private static FilterCondition RewriteExpandFilterCondition(FilterCondition condition, string fullPath, Type entityElementType, ITypeMap? map)
+    private static FilterCondition RewriteIncludeFilterCondition(FilterCondition condition, string fullPath, Type entityElementType, ITypeMap? map)
     {
         var rewritten = new FilterCondition
         {
@@ -261,7 +261,7 @@ internal static class DtoFieldNameRewriter
             Value = condition.Value,
             ScopedFilter = condition.ScopedFilter is null
                 ? null
-                : RewriteExpandFilter(condition.ScopedFilter, fullPath, entityElementType, map)
+                : RewriteIncludeFilter(condition.ScopedFilter, fullPath, entityElementType, map)
         };
 
         // Scoped collection filters (Orders.Count(...)) switch target entity — leave
@@ -269,11 +269,11 @@ internal static class DtoFieldNameRewriter
         if (condition.ScopedFilter is not null)
             return rewritten;
 
-        rewritten.Field = ResolveExpandField(condition.Field, fullPath, entityElementType, map);
+        rewritten.Field = ResolveIncludeField(condition.Field, fullPath, entityElementType, map);
         return rewritten;
     }
 
-    private static SortNode RewriteExpandSort(SortNode node, string fullPath, Type entityElementType, ITypeMap? map)
+    private static SortNode RewriteIncludeSort(SortNode node, string fullPath, Type entityElementType, ITypeMap? map)
     {
         var rewritten = new SortNode
         {
@@ -283,7 +283,7 @@ internal static class DtoFieldNameRewriter
 
         if (!node.Aggregate.HasValue)
         {
-            rewritten.Field = ResolveExpandField(node.Field, fullPath, entityElementType, map);
+            rewritten.Field = ResolveIncludeField(node.Field, fullPath, entityElementType, map);
             return rewritten;
         }
 
@@ -293,7 +293,7 @@ internal static class DtoFieldNameRewriter
         return rewritten;
     }
 
-    private static string? ResolveExpandField(string? field, string fullPath, Type entityElementType, ITypeMap? map)
+    private static string? ResolveIncludeField(string? field, string fullPath, Type entityElementType, ITypeMap? map)
     {
         if (string.IsNullOrEmpty(field)) return field;
 
@@ -308,8 +308,8 @@ internal static class DtoFieldNameRewriter
                 field, BindingFlags.Public | BindingFlags.Instance | BindingFlags.IgnoreCase) is null)
         {
             throw new FlexQueryException(
-                $"Field '{field}' is not part of the expand surface for '{fullPath}'. " +
-                "Expand filter and sort fields must belong to the expanded collection's element type " +
+                $"Field '{field}' is not part of the include surface for '{fullPath}'. " +
+                "Include-block filter and sort fields must belong to the included collection's element type " +
                 "(using public DTO names when a CreateMap is registered for it).");
         }
 

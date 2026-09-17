@@ -16,15 +16,24 @@ internal static class SqlSimpleIncludeQueryBuilder
     public static bool CanBuild(QueryOptions options, IEntityMapping rootMapping, IMappingRegistry registry)
     {
         if (options.Includes is not { Count: 1 }) return false;
-        if (options.Expand is { Count: > 0 }) return false;
+
+        var include = options.Includes[0];
+        // Simple streaming covers only a bare, option-less, single-segment inclusion —
+        // any relationship query block or nested level needs the split-query pipeline.
+        if (include.Path.Contains('.', StringComparison.Ordinal)
+            || include.Children.Count > 0
+            || include.Filter is not null
+            || include.Sort is { Count: > 0 }
+            || include.Take.HasValue)
+        {
+            return false;
+        }
+
         if (options.ProjectionMode != ProjectionMode.Nested) return false;
         if (options.GroupBy is { Count: > 0 } || options.Aggregates.Count > 0) return false;
         if (options.Distinct == true || options.IsKeysetMode) return false;
 
-        var include = options.Includes[0];
-        if (include.Contains('.', StringComparison.Ordinal)) return false;
-
-        var rel = rootMapping.GetRelationship(include);
+        var rel = rootMapping.GetRelationship(include.Path);
         if (rel?.TargetType is null || rel.RelationshipType != RelationshipType.OneToMany) return false;
 
         _ = registry.GetMapping(rel.TargetType);
@@ -38,13 +47,12 @@ internal static class SqlSimpleIncludeQueryBuilder
         ISqlDialect dialect,
         SqlTranslator translator)
     {
-        var include = options.Includes![0];
+        var include = options.Includes![0].Path;
         var rel = rootMapping.GetRelationship(include)!;
         var childMapping = registry.GetMapping(rel.TargetType);
 
         var rootOptions = options.CopyQueryOptions();
         rootOptions.Includes = null;
-        rootOptions.Expand = null;
         rootOptions.Select = null;
         rootOptions.SelectTree = null;
 

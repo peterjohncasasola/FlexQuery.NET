@@ -271,7 +271,7 @@ internal static class DapperQueryExecutor
             && queryOptions.HasProjection();
 
         var hasNavigation = !isFlatProjection &&
-                            ((queryOptions.Includes?.Count > 0) || (queryOptions.Expand?.Count > 0));
+                            (queryOptions.Includes?.Count > 0);
         IReadOnlyList<object> items;
 
         if (useSimpleIncludeStreaming)
@@ -352,8 +352,7 @@ internal static class DapperQueryExecutor
 
     private static QueryOptions BuildRootOnlyOptions(QueryOptions queryOptions)
     {
-        if ((queryOptions.Includes?.Count ?? 0) == 0
-            && (queryOptions.Expand?.Count ?? 0) == 0)
+        if ((queryOptions.Includes?.Count ?? 0) == 0)
         {
             return queryOptions;
         }
@@ -368,7 +367,6 @@ internal static class DapperQueryExecutor
 
         var rootOptions = queryOptions.CopyQueryOptions();
         rootOptions.Includes = null;
-        rootOptions.Expand = null;
         if (!isFlatProjection)
         {
             rootOptions.Select = null;
@@ -396,10 +394,10 @@ internal static class DapperQueryExecutor
         if (rootItems.Count == 0)
             return Array.Empty<object>();
 
-        if (queryOptions.Includes is { Count: > 0 } || queryOptions.Expand is { Count: > 0 })
+        if (queryOptions.Includes is { Count: > 0 })
         {
-            var mergedIncludeTree = BuildMergedIncludeTree(queryOptions);
-            if (mergedIncludeTree.Count > 0)
+            var includeTree = IncludeTree.SplitDottedPaths(queryOptions.Includes);
+            if (includeTree.Count > 0)
             {
                 await DapperRowHydrator.HydrateSplitQueryIncludesAsync(
                     rootItems,
@@ -407,7 +405,7 @@ internal static class DapperQueryExecutor
                     registry,
                     dialect,
                     connection,
-                    mergedIncludeTree,
+                    includeTree,
                     new SqlParameterContext(dialect),
                     new SqlTranslator(registry, dialect),
                     ct,
@@ -417,7 +415,7 @@ internal static class DapperQueryExecutor
 
         IReadOnlyList<object> projected;
         if (queryOptions.Select?.Count > 0 || queryOptions.SelectTree is not null
-            || queryOptions.Includes?.Count > 0 || queryOptions.Expand?.Count > 0)
+            || queryOptions.Includes?.Count > 0)
         {
             var selectTree = SelectTreeBuilder.Build(queryOptions);
             projected = rootItems
@@ -430,49 +428,5 @@ internal static class DapperQueryExecutor
         }
 
         return projected;
-    }
-
-    private static List<IncludeNode> BuildMergedIncludeTree(QueryOptions queryOptions)
-    {
-        var tree = new Dictionary<string, IncludeNode>(StringComparer.OrdinalIgnoreCase);
-
-        foreach (var node in queryOptions.Expand ?? [])
-            tree[node.Path] = node;
-
-        foreach (var includePath in queryOptions.Includes ?? [])
-        {
-            var segments = includePath.Split('.', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
-            if (segments.Length == 0)
-                continue;
-
-            IncludeNode? current = null;
-            var currentPath = "";
-            foreach (var segment in segments)
-            {
-                currentPath = currentPath.Length == 0 ? segment : $"{currentPath}.{segment}";
-
-                if (current is null)
-                {
-                    if (!tree.TryGetValue(currentPath, out current))
-                    {
-                        current = new IncludeNode { Path = segment };
-                        tree[currentPath] = current;
-                    }
-
-                    continue;
-                }
-
-                var child = current.Children.FirstOrDefault(c => c.Path.Equals(segment, StringComparison.OrdinalIgnoreCase));
-                if (child is null)
-                {
-                    child = new IncludeNode { Path = segment };
-                    current.Children.Add(child);
-                }
-
-                current = child;
-            }
-        }
-
-        return tree.Values.ToList();
     }
 }

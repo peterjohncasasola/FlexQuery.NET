@@ -14,7 +14,7 @@ internal static class SqlIncludeQueryBuilder
         IEntityMapping rootMapping,
         IEntityMapping targetMapping,
         ISqlDialect dialect,
-        IncludeNode? expandNode,
+        IncludeNode? includeNode,
         IReadOnlyList<object> rootPkValues,
         SqlParameterContext parameters)
     {
@@ -26,12 +26,12 @@ internal static class SqlIncludeQueryBuilder
             ? targetMapping.GetColumnName(rel.ForeignKey)
             : (targetMapping.GetKeyProperties().FirstOrDefault()?.ToString() ?? "Id");
         var where = BuildInClause(dialect, navAlias, fkColumn, rootPkValues, parameters);
-        var filterWhere = expandNode?.Filter != null
-            ? BuildFilterWhere(expandNode.Filter, targetMapping, parameters, dialect)
+        var filterWhere = includeNode?.Filter != null
+            ? BuildFilterWhere(includeNode.Filter, targetMapping, parameters, dialect)
             : string.Empty;
 
         var whereClause = CombineWhere(where, filterWhere);
-        if (expandNode?.Take is > 0)
+        if (includeNode?.Take is > 0)
         {
             return BuildPartitionedTakeSql(
                 navigationPath,
@@ -39,11 +39,11 @@ internal static class SqlIncludeQueryBuilder
                 dialect,
                 whereClause,
                 fkColumn,
-                expandNode,
+                includeNode,
                 parameters);
         }
 
-        var orderBy = BuildOrderBy(expandNode?.Sort, targetMapping, dialect, qualifyWithAlias: false);
+        var orderBy = BuildOrderBy(includeNode?.Sort, targetMapping, dialect, qualifyWithAlias: false);
 
         var allProps = targetMapping.GetProperties().ToList();
         var selectParts = new List<string>();
@@ -70,13 +70,13 @@ internal static class SqlIncludeQueryBuilder
         ISqlDialect dialect,
         string whereClause,
         string fkColumn,
-        IncludeNode expandNode,
+        IncludeNode includeNode,
         SqlParameterContext parameters)
     {
         var navAlias = navigationPath;
         var rankedAlias = navigationPath + "_ranked";
         const string rowNumberAlias = "__fq_row_number";
-        var takeParam = parameters.Add(expandNode.Take!.Value);
+        var takeParam = parameters.Add(includeNode.Take!.Value);
         var allProps = targetMapping.GetProperties().ToList();
 
         var innerSelectParts = new List<string>();
@@ -89,7 +89,7 @@ internal static class SqlIncludeQueryBuilder
             outerSelectParts.Add($"{dialect.QuoteIdentifier(rankedAlias)}.{dialect.QuoteIdentifier(outputName)} AS {dialect.QuoteIdentifier(outputName)}");
         }
 
-        var rowNumberOrderBy = BuildWindowOrderBy(expandNode.Sort, targetMapping, dialect, navAlias);
+        var rowNumberOrderBy = BuildWindowOrderBy(includeNode.Sort, targetMapping, dialect, navAlias);
         innerSelectParts.Add(
             $"ROW_NUMBER() OVER (PARTITION BY {dialect.QuoteIdentifier(navAlias)}.{dialect.QuoteIdentifier(fkColumn)} ORDER BY {rowNumberOrderBy}) AS {dialect.QuoteIdentifier(rowNumberAlias)}");
 

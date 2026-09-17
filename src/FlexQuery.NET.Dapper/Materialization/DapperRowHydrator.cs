@@ -44,7 +44,7 @@ internal static class DapperRowHydrator
         var result = HydrateCore<T>(rows, mapping, registry, paths);
 
         foreach (var node in filteredIncludes)
-            ApplyExpandConfiguration(result, node, mapping, registry);
+            ApplyIncludeConfiguration(result, node, mapping, registry);
 
         return result;
     }
@@ -59,7 +59,7 @@ internal static class DapperRowHydrator
         IMappingRegistry registry,
         ISqlDialect dialect,
         DbConnection connection,
-        List<IncludeNode> expandNodes,
+        List<IncludeNode> includeNodes,
         SqlParameterContext sharedParameters,
         SqlTranslator sqlTranslator,
         CancellationToken cancellationToken,
@@ -68,10 +68,10 @@ internal static class DapperRowHydrator
     {
         if (roots.Count == 0) return roots;
 
-        foreach (var node in expandNodes)
+        foreach (var node in includeNodes)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            await LoadExpandNodeAsync(
+            await LoadincludeNodeAsync(
                 roots.Cast<object>().ToList(),
                 mapping,
                 registry,
@@ -87,7 +87,7 @@ internal static class DapperRowHydrator
         return roots;
     }
 
-    private static async Task LoadExpandNodeAsync(
+    private static async Task LoadincludeNodeAsync(
         IReadOnlyList<object> parents,
         IEntityMapping parentMapping,
         IMappingRegistry registry,
@@ -124,7 +124,7 @@ internal static class DapperRowHydrator
         foreach (var childNode in node.Children)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            await LoadExpandNodeAsync(
+            await LoadincludeNodeAsync(
                 loadedChildren,
                 childMapping,
                 registry,
@@ -147,13 +147,13 @@ internal static class DapperRowHydrator
         string navigationPath,
         SqlParameterContext parameters,
         SqlTranslator sqlTranslator,
-        IncludeNode? expandNode,
+        IncludeNode? includeNode,
         CancellationToken cancellationToken,
         ILogger? sqlLogger = null)
     {
         if (parents.Count == 0) return [];
 
-        var sql = BuildIncludeSql(navigationPath, parentMapping, registry, dialect, sqlTranslator, expandNode, parents, parameters);
+        var sql = BuildIncludeSql(navigationPath, parentMapping, registry, dialect, sqlTranslator, includeNode, parents, parameters);
         if (string.IsNullOrEmpty(sql)) return [];
 
         DapperSqlLog.Command(sqlLogger, sql, parameters.RawParameters);
@@ -470,9 +470,9 @@ internal static class DapperRowHydrator
 
     #endregion
 
-    #region Expand post-hydration (in-memory sort/take fallback)
+    #region Include post-hydration (in-memory sort/take fallback)
 
-    internal static void ApplyExpandConfiguration<T>(
+    internal static void ApplyIncludeConfiguration<T>(
         IReadOnlyList<T> entities,
         IncludeNode node,
         IEntityMapping mapping,
@@ -527,7 +527,7 @@ internal static class DapperRowHydrator
                 if (collection == null) continue;
 
                 var childEntities = collection.Cast<object>().ToList();
-                ApplyExpandConfiguration(childEntities, childNode, targetMapping, registry);
+                ApplyIncludeConfiguration(childEntities, childNode, targetMapping, registry);
             }
         }
     }
@@ -565,7 +565,7 @@ internal static class DapperRowHydrator
         IMappingRegistry registry,
         ISqlDialect dialect,
         SqlTranslator sqlTranslator,
-        IncludeNode? expandNode,
+        IncludeNode? includeNode,
         IReadOnlyList<object> roots,
         SqlParameterContext parameters)
     {
@@ -587,7 +587,7 @@ internal static class DapperRowHydrator
 
         if (rootPks.Count == 0) return string.Empty;
 
-        if (expandNode != null)
+        if (includeNode != null)
         {
             return sqlTranslator.BuildIncludeSql(
                 navigationPath,
@@ -595,7 +595,7 @@ internal static class DapperRowHydrator
                 targetMapping,
                 parameters,
                 rootPks,
-                expandNode);
+                includeNode);
         }
 
         return sqlTranslator.BuildIncludeSql(

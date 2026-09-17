@@ -1,12 +1,14 @@
 using System.Data.Common;
 using System.Text.Json;
 using FlexQuery.NET;
+using FlexQuery.NET.Exceptions;
 using FlexQuery.NET.Models;
 using Microsoft.Extensions.Primitives;
 using FlexQuery.NET.Constants;
 using FlexQuery.NET.Dapper.Execution;
 using FlexQuery.NET.Dapper.Options;
 using FlexQuery.NET.Mapping;
+using FlexQuery.NET.Parsers;
 using FlexQuery.NET.QuerySurface;
 using FlexQuery.NET.Resolvers;
 using FlexQuery.NET.Serialization;
@@ -97,19 +99,37 @@ public static class FlexQueryDapperExtensions
     {
         var dict = parameters.ToDictionary(k => k.Key, v => v.Value.ToString(), StringComparer.OrdinalIgnoreCase);
 
+        var dapperOptions = new DapperQueryOptions();
+        configure?.Invoke(dapperOptions);
+        var effectiveSyntax = dapperOptions.QuerySyntax ?? FlexQueryCore.DefaultOptions.DefaultQuerySyntax;
+
+        var rawExpand = dict.GetValueOrDefault(QueryOptionKeys.Expand) ?? dict.GetValueOrDefault($"${QueryOptionKeys.Expand}");
+        var includeValue = dict.GetValueOrDefault(QueryOptionKeys.Include)
+            ?? (effectiveSyntax == QuerySyntax.MiniOData ? rawExpand : null);
+
+        if (effectiveSyntax != QuerySyntax.MiniOData && rawExpand is not null)
+            throw new QueryParseException(
+                QueryOptionKeys.Expand,
+                effectiveSyntax,
+                rawExpand,
+                new FlexQueryParseException(
+                    "The 'expand' keyword has been removed from the FlexQuery query language. " +
+                    "Relationship options belong directly in the include block — " +
+                    "e.g. include=orders(take=5;filter=Status:eq:'Active';sort=OrderDate:desc)."));
+
         var flexParams = new FlexQueryParameters
         {
             Filter = dict.GetValueOrDefault(QueryOptionKeys.Filter) ?? dict.GetValueOrDefault($"${QueryOptionKeys.Filter}"),
             Sort = dict.GetValueOrDefault(QueryOptionKeys.Sort) ?? dict.GetValueOrDefault(QueryOptionKeys.OrderBy) ?? dict.GetValueOrDefault($"${QueryOptionKeys.OrderBy}"),
             Select = dict.GetValueOrDefault(QueryOptionKeys.Select) ?? dict.GetValueOrDefault($"${QueryOptionKeys.Select}"),
-            Include = dict.GetValueOrDefault(QueryOptionKeys.Include) ?? dict.GetValueOrDefault(QueryOptionKeys.Expand) ?? dict.GetValueOrDefault($"${QueryOptionKeys.Expand}"),
-            Expand = dict.GetValueOrDefault(QueryOptionKeys.Expand) ?? dict.GetValueOrDefault($"${QueryOptionKeys.Expand}"),
+            Include = includeValue,
             Page = dict.TryGetValue(QueryOptionKeys.Page, out var p) && int.TryParse(p, out var page) ? page : null,
             PageSize = dict.TryGetValue(QueryOptionKeys.PageSize, out var ps) && int.TryParse(ps, out var pageSize) ? pageSize : null,
             PreserveRawOrder = true
         };
 
-        return await FlexQueryAsync<T>(connection, flexParams, configure, cancellationToken);
+        var options = flexParams.ToQueryOptions(effectiveSyntax);
+        return await DapperQueryExecutor.RunAsync<T>(connection, options, dapperOptions, cancellationToken);
     }
 
     /// <summary>
@@ -157,7 +177,7 @@ public static class FlexQueryDapperExtensions
     /// </summary>
     /// <remarks>
     /// All standard FlexQuery capabilities (filter, sort, paging, keyset paging, select,
-    /// aliases, total count, Include/Expand, GroupBy, aggregates, and governance) are
+    /// aliases, total count, the include tree, GroupBy, aggregates, and governance) are
     /// supported. A feature fails only when the requested typed result shape is genuinely
     /// incompatible with <typeparamref name="TResponse"/>.
     /// </remarks>
@@ -232,7 +252,7 @@ public static class FlexQueryDapperExtensions
 
         queryOptions.ValidateOrThrow(ctx, dapperOptions);
 
-        // Translate public include/expand paths to entity property names so the include
+        // Translate public include paths to entity property names so the include
         // machinery (split queries, relationship resolution) operates on the entity graph.
         FieldResolver.TranslateIncludePathsToEntity(queryOptions, surface);
 
@@ -249,9 +269,9 @@ public static class FlexQueryDapperExtensions
 
         DtoFieldNameRewriter.Rewrite(queryOptions, surface, dapperOptions.MappingRegistry);
 
-        var hasIncludeExpand = (queryOptions.Includes?.Count > 0) || (queryOptions.Expand?.Count > 0);
+        var hasIncludes = queryOptions.Includes?.Count > 0;
 
-        if (!hasIncludeExpand)
+        if (!hasIncludes)
             return await DapperQueryExecutor
                 .RunDtoAsync<TEntity, TResponse>(connection, queryOptions, dapperOptions, surface, resultShape, cancellationToken);
         
@@ -261,7 +281,7 @@ public static class FlexQueryDapperExtensions
         // Prefer the mapping registry's TypeMap graph when the host registered one
         // (CreateMap/ForMember/ForNavigation): nested navigations materialize
         // recursively into DTO types — raw entity graphs never leak. Only the requested
-        // include/expand navigation paths are materialized; DTO-declared deeper
+        // include navigation paths are materialized; DTO-declared deeper
         // navigations stay at their DTO default.
         var typeMap = dapperOptions.MappingRegistry?.Find(typeof(TEntity), typeof(TResponse));
         var allowedNavigationPaths = RequestedNavigationGraph.Collect(queryOptions);
