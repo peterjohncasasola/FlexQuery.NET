@@ -6,72 +6,38 @@ using Microsoft.Extensions.Primitives;
 
 namespace FlexQuery.NET.Parsers;
 
-/// <summary>
-/// Entry point for parsing query-string parameters into unified <see cref="QueryOptions"/>.
-/// Supports multiple formats: DSL, JQL, and MiniOData.
-/// </summary>
 internal static class QueryOptionsParser
 {
-    /// <summary>
-    /// The default query syntax used when no per-execution override is supplied.
-    /// Set via <c>AddFlexQuery</c> during startup.
-    /// </summary>
-    private static QuerySyntax _defaultSyntax = QuerySyntax.NativeDsl;
-
-    /// <summary>
-    /// Sets the global query syntax used when no per-execution override is supplied.
-    /// Called by <c>AddFlexQuery</c> during startup.
-    /// </summary>
-    internal static void SetGlobalSyntax(QuerySyntax syntax) => _defaultSyntax = syntax;
-
-    /// <summary>
-    /// Parses a strongly typed <see cref="FlexQueryParameters"/> into <see cref="QueryOptions"/>.
-    /// </summary>
-    /// <param name="parameters">The query parameters to parse.</param>
-    /// <param name="syntax">The expected query syntax. Defaults to the globally configured syntax (or <see cref="QuerySyntax.NativeDsl"/>).</param>
-    /// <returns>The parsed <see cref="QueryOptions"/>.</returns>
-    /// <exception cref="ArgumentNullException">Thrown when <paramref name="parameters"/> is null.</exception>
-    /// <exception cref="InvalidOperationException">Thrown when the request parser is unavailable.</exception>
     public static QueryOptions Parse(FlexQueryParameters parameters, QuerySyntax? syntax = null)
     {
         ArgumentNullException.ThrowIfNull(parameters);
-
-        var effectiveSyntax = syntax ?? _defaultSyntax;
-
+        var effectiveSyntax = syntax ?? QuerySyntax.NativeDsl;
         var parser = QueryParserRegistry.Resolve(effectiveSyntax);
 
         var cacheKey = new ParsedQueryCacheKey(
             parameters.Filter, parameters.Sort, parameters.Select,
             parameters.Include, parameters.GroupBy, parameters.Having,
             parameters.Page, parameters.PageSize, parameters.IncludeCount,
-            parameters.Distinct, parameters.Mode, parameters.Cursor, parameters.UseKeysetPagination, Version: effectiveSyntax.ToString(),
-            Aggregates: parameters.Aggregate,
-            Expand: parameters.Expand);
+            parameters.Distinct, parameters.Mode, parameters.Cursor, parameters.UseKeysetPagination,
+            Version: effectiveSyntax.ToString(), Aggregates: parameters.Aggregate, Expand: parameters.Expand);
 
         if (ParserCache.TryGet(cacheKey, out var cached))
-        {
             return cached!;
-        }
 
         var parsedOptions = parser.Parse(parameters);
         ParserCache.Set(cacheKey, parsedOptions);
-
         return parsedOptions;
     }
 
-    /// <summary>
-    /// Parses raw query-string key-value pairs into <see cref="QueryOptions"/> using the globally configured syntax.
-    /// Only recognized FlexQuery parameters are parsed; unknown keys are silently ignored.
-    /// </summary>
-    /// <param name="queryString">The raw query string key-value pairs.</param>
-    /// <returns>The parsed <see cref="QueryOptions"/>.</returns>
-    public static QueryOptions Parse(IReadOnlyDictionary<string, StringValues> queryString)
+    public static QueryOptions Parse(
+        IReadOnlyDictionary<string, StringValues> queryString,
+        QuerySyntax? syntax = null)
     {
         var grouped = queryString.GroupBy(kv => kv.Key, StringComparer.OrdinalIgnoreCase)
             .ToDictionary(g => g.Key, g => g.Last().Value.ToString(), StringComparer.OrdinalIgnoreCase);
 
         string? TryGet(string key) => grouped.GetValueOrDefault(key);
-        var effectiveSyntax = _defaultSyntax;
+        var effectiveSyntax = syntax ?? QuerySyntax.NativeDsl;
 
         int? ParsePage()
         {
@@ -116,6 +82,6 @@ internal static class QueryOptionsParser
             PreserveRawOrder = true
         };
 
-        return Parse(parameters);
+        return Parse(parameters, effectiveSyntax);
     }
 }
