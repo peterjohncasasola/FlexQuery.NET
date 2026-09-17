@@ -114,7 +114,7 @@ Select the syntax globally via `FlexQueryOptions.DefaultQuerySyntax`, or per req
 - **Sorting** — multi-field, per-field direction, with server-defined defaults.
 - **Selection & DTO projection** — dynamic `select` with aliases, or strongly-typed results via `FlexQueryAsync<TEntity, TResponse>` with a convention-based mapping model (`CreateMap`, `ForMember`, `ForNavigation`).
 - **Pagination** — offset paging and high-performance keyset (cursor) pagination with `cursor` / `NextCursorToken`.
-- **Include & Expand** — eager-load navigations, or deep expansions where each branch can carry its own filter, sort, and take.
+- **Include & Relationship Query Blocks** — eager-load navigations, and cap or filter every included collection branch from the query string, sort, and take.
 - **Grouping & aggregates** — `groupBy`, `aggregate` (sum, count, avg, …), `having`, and `distinct`.
 - **Validation & governance** — per-operation field whitelists (`FilterableFields`, `SortableFields`, `SelectableFields`, …), allowed-operator policies, field-depth limits, role-based field access, and secure-by-default strict validation.
 - **Fluent API** — compose queries in code with `Query.Create()` and typed filter builders.
@@ -209,7 +209,7 @@ Full documentation for v4 lives at [flexquery.vercel.app](https://flexquery.verc
 - [Query Syntax](https://flexquery.vercel.app/docs/concepts/query-syntax)
 - [Filtering](https://flexquery.vercel.app/docs/guides/filtering) · [Sorting](https://flexquery.vercel.app/docs/guides/sorting) · [Paging](https://flexquery.vercel.app/docs/guides/paging) · [Keyset Pagination](https://flexquery.vercel.app/docs/guides/keyset-pagination)
 - [Projection](https://flexquery.vercel.app/docs/guides/projection) · [Typed DTO Projection](https://flexquery.vercel.app/docs/guides/typed-dto-projection)
-- [Include](https://flexquery.vercel.app/docs/guides/include) · [Expand](https://flexquery.vercel.app/docs/guides/expand)
+- [Include](https://flexquery.vercel.app/docs/guides/include)
 - [Grouping & Aggregates](https://flexquery.vercel.app/docs/guides/grouping)
 - [Fluent API](https://flexquery.vercel.app/docs/guides/fluent-api)
 - [Security & Governance](https://flexquery.vercel.app/docs/security)

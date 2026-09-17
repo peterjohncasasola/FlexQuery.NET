@@ -54,7 +54,7 @@ public async Task<IActionResult> GetUsers(
 
 - **`FlexQueryAsync`** — Unified parse-validate-execute pipeline with configurable `EfCoreQueryOptions`
 - **Typed DTO Projection** — `FlexQueryAsync<TEntity, TResponse>` returns strongly-typed results, with convention-based mapping (`CreateMap`, `ForMember`, `ForNavigation`)
-- **Expand** — Translate `QueryOptions.Expand` into EF Core `Include`/`ThenInclude` chains, each optionally filtered by an inline `Where` clause, via `ApplyExpand<T>()`
+- **Includes** - Translate the `QueryOptions.Includes` relationship tree into EF Core `Include`/`ThenInclude` chains, each optionally filtered by an inline `Where` clause, via `ApplyIncludes<T>()`
 - **Projection** — Nested, Flat, and FlatMixed projection modes
 - **Execution Options** — `UseNoTracking` for read-only queries (enabled by default)
 - **SQL Preview** — `ToSqlPreview()` to inspect the generated SQL without executing
