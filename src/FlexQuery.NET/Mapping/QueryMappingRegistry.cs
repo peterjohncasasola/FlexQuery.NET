@@ -1,43 +1,28 @@
 namespace FlexQuery.NET.Mapping;
 
-/// <summary>
-/// Owns the <see cref="ITypeMap"/> graph for a query execution. One registry instance
-/// is owned by the query configuration/options for the current execution and acts as
-/// the single canonical source of mapping metadata.
-/// </summary>
 public interface IQueryMappingRegistry
 {
-    /// <summary>Finds a registered type map, or null when none exists.</summary>
     ITypeMap? Find(Type sourceType, Type destinationType);
-
-    /// <summary>Finds or creates the type map for the given type pair.</summary>
     ITypeMap GetOrCreate(Type sourceType, Type destinationType);
 
-    /// <summary>Finds or creates the strongly typed type map for the given type pair.</summary>
     ITypeMap GetOrCreate<TSource, TDestination>()
         where TSource : class
         where TDestination : class
         => GetOrCreate(typeof(TSource), typeof(TDestination));
 }
 
-/// <inheritdoc />
 public sealed class QueryMappingRegistry : IQueryMappingRegistry
 {
     private readonly object _lock = new();
     private readonly Dictionary<(Type Source, Type Destination), TypeMap> _maps = new();
     private readonly IQueryMappingRegistry? _fallback;
+    private bool _frozen;
 
-    /// <summary>
-    /// Creates a registry. When <paramref name="fallback"/> is supplied, lookups that
-    /// miss locally fall through to it — used to chain per-query registries to the
-    /// application-level (global) registry so per-query registrations win.
-    /// </summary>
     public QueryMappingRegistry(IQueryMappingRegistry? fallback = null)
     {
         _fallback = fallback;
     }
 
-    /// <inheritdoc />
     public ITypeMap? Find(Type sourceType, Type destinationType)
     {
         lock (_lock)
@@ -49,7 +34,6 @@ public sealed class QueryMappingRegistry : IQueryMappingRegistry
         return _fallback?.Find(sourceType, destinationType);
     }
 
-    /// <inheritdoc />
     public ITypeMap GetOrCreate(Type sourceType, Type destinationType)
     {
         lock (_lock)
@@ -57,12 +41,35 @@ public sealed class QueryMappingRegistry : IQueryMappingRegistry
             if (_maps.TryGetValue((sourceType, destinationType), out var existing))
                 return existing;
 
+            if (_frozen)
+                throw new InvalidOperationException("FlexQuery has already executed queries; configuration must happen during startup.");
+
             var map = new TypeMap(sourceType, destinationType);
             _maps[(sourceType, destinationType)] = map;
             return map;
         }
     }
 
-    /// <summary>Removes all registrations (infrastructure/test reset).</summary>
-    internal void Clear() => _maps.Clear();
+    internal void Freeze()
+    {
+        lock (_lock)
+        {
+            if (_frozen)
+                return;
+
+            _frozen = true;
+            foreach (var map in _maps.Values)
+                map.Freeze();
+        }
+    }
+
+    internal void Clear()
+    {
+        lock (_lock)
+        {
+            if (_frozen)
+                throw new InvalidOperationException("Cannot clear a frozen FlexQuery mapping registry.");
+            _maps.Clear();
+        }
+    }
 }
