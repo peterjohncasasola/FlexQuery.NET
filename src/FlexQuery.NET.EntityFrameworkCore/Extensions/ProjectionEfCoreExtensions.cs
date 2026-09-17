@@ -90,7 +90,7 @@ public static class ProjectionEfCoreExtensions
 
         if (options.Includes != null)
         {
-            fields.AddRange(options.Includes.Select(i => i.Split(' ').First()));
+            fields.AddRange(IncludeTree.FlattenPaths(options.Includes));
         }
 
         return fields.Distinct().ToList();
@@ -105,11 +105,11 @@ public static class ProjectionEfCoreExtensions
             count += options.Select.Count;
         }
 
-        // Expand includes to count their scalar properties
+        // Count included navigations by their scalar properties
         if (options.Includes != null)
         {
             // Simplified: each include typically brings 3-5 columns
-            count += options.Includes.Count * 3;
+            count += IncludeTree.FlattenPaths(options.Includes).Count() * 3;
         }
 
         return Math.Max(count, tree.Count);
@@ -121,9 +121,8 @@ public static class ProjectionEfCoreExtensions
 
         if (options.Includes != null)
         {
-            foreach (var include in options.Includes)
+            foreach (var path in IncludeTree.FlattenPaths(options.Includes))
             {
-                var path = include.Split(' ').First();
                 usages[path] = $"Include: {path}";
             }
         }

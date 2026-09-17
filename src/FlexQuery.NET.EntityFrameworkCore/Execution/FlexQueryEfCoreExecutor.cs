@@ -82,10 +82,10 @@ internal static class FlexQueryEfCoreExecutor
             ? QueryBuilder.ApplyKeysetPaging(filtered, queryOptions)
             : QueryBuilder.ApplyPaging(filtered, queryOptions);
 
-        // Note: ApplySelect already incorporates FilteredIncludes filters into the projection tree,
-        // so calling ApplyExpand here is technically redundant but ensures consistency
+        // Note: ApplySelect already incorporates the include options into the projection tree,
+        // so calling ApplyIncludes here is technically redundant but ensures consistency
         // if the projection engine behaviour changes.
-        filtered = filtered.ApplyExpand(queryOptions);
+        filtered = filtered.ApplyIncludes(queryOptions);
         
         var (sql, queryParameters) = SqlQueryInspector.TryGetSqlWithParameters(filtered);
 

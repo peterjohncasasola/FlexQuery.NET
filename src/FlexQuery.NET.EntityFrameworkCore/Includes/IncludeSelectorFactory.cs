@@ -18,7 +18,7 @@ internal static class IncludeSelectorFactory
     /// <summary>
     /// Builds <c>parent => parent.Nav</c>, or - for a collection navigation
     /// where <paramref name="allowFilteredCollection"/> is <c>true</c> -
-    /// embeds expand operators such as <c>Where</c>, <c>OrderBy</c>, and <c>Take</c>.
+    /// embeds the relationship query operators such as <c>Where</c>, <c>OrderBy</c>, and <c>Take</c>.
     /// </summary>
     public static LambdaExpression Build(
         Type parentType,
@@ -84,7 +84,7 @@ internal static class IncludeSelectorFactory
         {
             var parameter = Expression.Parameter(elementType, "e");
 
-            // Expand sort fields are entity-level names on the navigation's element type —
+            // Include-block sort fields are entity-level names on the navigation's element type —
             // the root public surface does not apply here, so DTO-surface enforcement is
             // suppressed for this scope (same semantics as scoped collection filters).
             Expression keyExpression;

@@ -9,6 +9,7 @@ using FlexQuery.NET.QuerySurface;
 using FlexQuery.NET.Serialization;
 using FlexQuery.NET.Execution;
 using FlexQuery.NET.Resolvers;
+using FlexQuery.NET.Internal;
 using FlexQuery.NET.Projection;
 using Microsoft.EntityFrameworkCore;
 
@@ -22,9 +23,9 @@ public static class QueryableEfCoreExtensions
 
     /// <summary>
     /// Applies the <b>Include Pipeline</b>: translates every
-    /// <see cref="QueryOptions.Expand"/>
-    /// into EF Core <c>Include</c> / <c>ThenInclude</c> calls, each optionally
-    /// filtered by an inline <c>Where</c> clause.
+    /// <see cref="QueryOptions.Includes"/>
+    /// entry into EF Core <c>Include</c> / <c>ThenInclude</c> calls, each optionally
+    /// filtered/ordered/capped by its <c>include(...)</c> options block.
     ///
     /// <para>
     /// This pipeline is <b>completely independent</b> of the WHERE pipeline
@@ -39,11 +40,11 @@ public static class QueryableEfCoreExtensions
     ///
     /// var result = await _context.Customers
     ///     .ApplyQueryOptions(options)       // WHERE pipeline
-    ///     .ApplyExpand(options)       // INCLUDE pipeline
+    ///     .ApplyIncludes(options)       // INCLUDE pipeline
     ///     .ToListAsync();
     /// </code>
     /// </example>
-    public static IQueryable<T> ApplyExpand<T>(
+    public static IQueryable<T> ApplyIncludes<T>(
         this IQueryable<T> query,
         QueryOptions options)
         where T : class
@@ -166,7 +167,7 @@ public static class QueryableEfCoreExtensions
     /// </summary>
     /// <remarks>
     /// All standard FlexQuery capabilities (filter, sort, paging, keyset paging, select,
-    /// aliases, total count, Include/Expand, GroupBy, aggregates, and governance) are
+    /// aliases, total count, the include tree, GroupBy, aggregates, and governance) are
     /// supported. A feature fails only when the requested typed result shape is genuinely
     /// incompatible with <typeparamref name="TResponse"/>.
     /// </remarks>
@@ -277,11 +278,10 @@ public static class QueryableEfCoreExtensions
         if (options.UseNoTracking == true)
             query = query.AsNoTracking();
 
-        // Capture public include/expand paths for the projection wiring, then translate
+        // Capture public include paths for the projection wiring, then translate
         // them to entity property names so navigation resolution (IncludeBuilder) and
         // validation-adjacent consumers operate on the entity graph.
-        var publicIncludes = queryOptions.Includes?.ToList();
-        var publicExpand = queryOptions.Expand;
+        var publicIncludes = IncludeTree.FlattenPaths(queryOptions.Includes).ToList();
         FieldResolver.TranslateIncludePathsToEntity(queryOptions, surface);
 
         var hasGroupBy = queryOptions.GroupBy is { Count: > 0 };
@@ -315,21 +315,19 @@ public static class QueryableEfCoreExtensions
         filtered = queryOptions.IsKeysetMode
             ? QueryBuilder.ApplyKeysetPaging(filtered, queryOptions)
             : QueryBuilder.ApplyPaging(filtered, queryOptions);
-        filtered = filtered.ApplyExpand(queryOptions);
+        filtered = filtered.ApplyIncludes(queryOptions);
 
         var fieldsToProject = queryOptions.Select is { Count: > 0 }
             ? queryOptions.Select.ToList()
             : surface.GetDefaultSelectFields().Select(f => new SelectNode { Field = f }).ToList();
 
-        var hasIncludeExpand = queryOptions.Includes is { Count: > 0 } || queryOptions.Expand is { Count: > 0 };
+        var hasIncludes = queryOptions.Includes is { Count: > 0 };
 
-        if (hasIncludeExpand)
+        if (hasIncludes)
         {
             var includedNavigations = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-            foreach (var include in publicIncludes ?? [])
+            foreach (var include in publicIncludes)
                 includedNavigations.Add(include.Split('.').First());
-            foreach (var expand in publicExpand ?? [])
-                includedNavigations.Add(expand.Path.Split('.').First());
 
             var existingFields = new HashSet<string>(fieldsToProject.Select(f => f.Field), StringComparer.OrdinalIgnoreCase);
             foreach (var nav in includedNavigations)
@@ -343,22 +341,22 @@ public static class QueryableEfCoreExtensions
         }
 
         IReadOnlyList<TResponse> data;
-        if (hasIncludeExpand && options.UseNoTracking == true)
+        if (hasIncludes && options.UseNoTracking == true)
         {
-            // Server-side DTO projection with expansion windows embedded in the
-            // expression tree. Every expansion level applies its own filter/sort/take to
+            // Server-side DTO projection with relationship-query windows embedded in the
+            // expression tree. Every include level applies its own filter/sort/take to
             // its navigation body, correlated to the already-selected parent element —
             // the child collection is restricted to the selected parent rows (correlated
             // OUTER APPLY on SQL Server), so child processing is driven by the relevant
             // parent graph instead of the total size of the child table. Only selected
             // root DTO columns are read.
-            if (!IncludeBuilder.TryBuildExpandTree(queryOptions, out var expandWindows))
+            if (!IncludeBuilder.TryBuildIncludeWindows(queryOptions, out var includeWindows))
             {
-                expandWindows = new Dictionary<string, ExpandWindowNode>(StringComparer.OrdinalIgnoreCase);
+                includeWindows = new Dictionary<string, IncludeWindowNode>(StringComparer.OrdinalIgnoreCase);
             }
 
             var lambda = DtoProjectionBuilder.Build<TEntity, TResponse>(
-                queryOptions, surface, fieldsToProject, expandWindows: expandWindows, mappingRegistry: options.MappingRegistry);
+                queryOptions, surface, fieldsToProject, includeWindows: includeWindows, mappingRegistry: options.MappingRegistry);
             var correlated = filtered.Select(lambda);
 
             // Providers without APPLY support (e.g. SQLite) cannot translate nested
@@ -378,7 +376,7 @@ public static class QueryableEfCoreExtensions
                 data = entities.Select(func).ToList();
             }
         }
-        else if (hasIncludeExpand)
+        else if (hasIncludes)
         {
             // Tracked mode: materialize entities through the EF filtered-include chain —
             // the chain applies every expansion level's filter/sort/take correlated to
@@ -399,11 +397,11 @@ public static class QueryableEfCoreExtensions
         // (TResponse) field names when keyset paging is active.
         var result = queryOptions.BuildQueryResult(data, total, aggregates: grandTotals);
 
-        // With includes/expands, the effective projection includes the navigation heads
+        // With includes, the effective projection includes the navigation heads
         // (fieldsToProject) — the serialized surface must expose them under their public
         // names alongside the explicit root select.
         result.ResultShape = ResultShapeBuilder.Build(
-            hasIncludeExpand ? fieldsToProject : queryOptions.Select, surface);
+            hasIncludes ? fieldsToProject : queryOptions.Select, surface);
         return result;
     }
 }
