@@ -1,5 +1,7 @@
 import { defineConfig } from 'vitepress'
 
+const base = '/v3/'
+
 export default defineConfig({
   title: 'FlexQuery.NET',
   description:
@@ -9,7 +11,7 @@ export default defineConfig({
 
 
   head: [
-    ['link', { rel: 'icon', href: '/icon.png' }],
+    ['link', { rel: 'icon', href: `${base}icon.png` }],
     ['meta', { name: 'theme-color', content: '#646cff' }],
     ['meta', { property: 'og:type', content: 'website' }],
     ['meta', { property: 'og:title', content: 'FlexQuery.NET' }],
@@ -228,5 +230,5 @@ export default defineConfig({
     }
   },
 
-  base: '/'
+  base
 })

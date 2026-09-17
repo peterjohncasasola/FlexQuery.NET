@@ -1,6 +1,6 @@
 <script setup>
 import { ref, onMounted, watch } from 'vue'
-import { useRouter, useData } from 'vitepress'
+import { useRouter, useData, withBase } from 'vitepress'
 
 const { page } = useData()
 const router = useRouter()
@@ -62,11 +62,11 @@ const switchVersion = (version) => {
   }
 
   // Ensure path ends in .html or strip .md for VitePress routing
-  newPath = '/' + newPath.replace(/\.md$/, '')
-  
+  newPath = withBase('/' + newPath.replace(/\.md$/, ''))
+
   router.go(newPath).catch(() => {
     // Fallback to version root if page doesn't exist in target version
-    router.go(version === 'v1' ? '/v1/getting-started' : '/guide/getting-started')
+    router.go(withBase(version === 'v1' ? '/v1/getting-started' : '/guide/getting-started'))
   })
 }
 </script>

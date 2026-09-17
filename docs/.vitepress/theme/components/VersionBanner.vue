@@ -1,6 +1,6 @@
 <script setup>
 import { computed } from 'vue'
-import { useData } from 'vitepress'
+import { useData, withBase } from 'vitepress'
 
 const { page } = useData()
 
@@ -9,7 +9,7 @@ const isV2 = computed(() => page.value.relativePath.startsWith('guide/'))
 
 const v2Equivalent = computed(() => {
   if (isV1.value) {
-    return '/' + page.value.relativePath.replace('v1/', 'guide/').replace(/\.md$/, '')
+    return withBase('/' + page.value.relativePath.replace('v1/', 'guide/').replace(/\.md$/, ''))
   }
   return null
 })
@@ -23,7 +23,7 @@ const v2Equivalent = computed(() => {
       <div class="links">
         <a :href="v2Equivalent" class="link">Switch to v2</a>
         <span class="sep">|</span>
-        <a href="/migration" class="link">Migration Guide</a>
+        <a :href="withBase('/migration')" class="link">Migration Guide</a>
       </div>
     </div>
   </div>
