@@ -329,10 +329,10 @@ public static class QueryableEfCoreExtensions
             foreach (var include in publicIncludes)
                 includedNavigations.Add(include.Split('.').First());
 
-            var existingFields = new HashSet<string>(fieldsToProject.Select(f => f.Field), StringComparer.OrdinalIgnoreCase);
-            foreach (var nav in includedNavigations)
+            var existingFields = new HashSet<string>(fieldsToProject.Select(f => f.Field)!, StringComparer.OrdinalIgnoreCase);
+            
+            foreach (var nav in includedNavigations.Where(nav => !existingFields.Contains(nav)))
             {
-                if (existingFields.Contains(nav)) continue;
                 if (!surface.TryResolve(nav, out var resolved) || !resolved.IsNavigation) continue;
                 
                 fieldsToProject.Add(new SelectNode { Field = nav });
