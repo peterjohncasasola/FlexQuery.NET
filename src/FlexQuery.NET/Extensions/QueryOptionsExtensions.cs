@@ -119,7 +119,10 @@ public static class QueryOptionsExtensions
             var values = new object?[options.Sort.Count];
             for (var i = 0; i < options.Sort.Count; i++)
             {
-                var prop = ReflectionCache.GetProperty(typeof(T), options.Sort[i].Field);
+                var propertyName = options.Sort[i].Field;
+                if (propertyName == null) continue;
+                
+                var prop = ReflectionCache.GetProperty(typeof(T), propertyName);
                 values[i] = prop?.GetValue(lastItem);
             }
             var cursor = new KeysetCursor(values);

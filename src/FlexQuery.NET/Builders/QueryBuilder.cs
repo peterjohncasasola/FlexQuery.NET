@@ -109,12 +109,12 @@ internal static class QueryBuilder
                 // Resolve through the shared field-resolution pipeline so DTO surface
                 // names (renamed fields) order deterministically too.
                 var parameter = Expression.Parameter(typeof(T), "x");
-                Expression keyExpr;
-                Type keyType;
 
                 if (fieldName.Field != null)
                 {
                     var defaultSortProp = ReflectionCache.GetProperty(typeof(T), fieldName.Field);
+                    Expression keyExpr;
+                    Type keyType;
                     if (defaultSortProp != null && IsScalarProperty(defaultSortProp))
                     {
                         keyExpr = Expression.Property(parameter, defaultSortProp);
