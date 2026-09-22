@@ -1,28 +1,26 @@
 using System.Data;
-using System.Data.Common;
 using Dapper;
+using FlexQuery.NET.Dapper.Context;
 using FlexQuery.NET.Dapper.Diagnostics;
 using FlexQuery.NET.Dapper.Options;
 using FlexQuery.NET.Dapper.Sql.Adapters;
-using FlexQuery.NET.Dapper.Sql.Translators;
-using FlexQuery.NET.Models;
-using FlexQuery.NET.Models.Aggregates;
 using FlexQuery.NET.Parsers;
-using Microsoft.Extensions.Logging;
 
 namespace FlexQuery.NET.Dapper.Execution;
 
 internal static class AggregateEvaluator
 {
     public static async Task<Dictionary<string, Dictionary<string, object>>?> GetGrandTotalsAsync(
-        DbConnection connection,
-        QueryOptions queryOptions,
-        SqlTranslator translator,
-        DapperQueryOptions options,
-        CancellationToken ct,
-        Func<string, string>? publicFieldNameResolver = null,
-        ILogger? sqlLogger = null)
+        DapperQueryContext queryContext
+        ,Func<string, string>? publicFieldNameResolver = null)
     {
+        var queryOptions = queryContext.QueryOptions;
+        var translator = queryContext.SqlTranslator;
+        var sqlLogger = queryContext.SqlLogger;
+        var ct = queryContext.CancellationToken;
+        var connection = queryContext.Connection;
+        var options = queryContext.DapperQueryOptions;
+        
         var isGrouped = queryOptions.GroupBy is { Count: > 0 };
         if (queryOptions.Aggregates.Count == 0 || isGrouped) return null;
 
@@ -31,9 +29,14 @@ internal static class AggregateEvaluator
 
         DapperSqlLog.Command(sqlLogger, aggCommand.Sql, aggCommand.Parameters);
 
-        var aggResult = await connection.QueryFirstOrDefaultAsync(
-            aggCommand.Sql, aggParameters,
-            commandTimeout: options.CommandTimeout, commandType: CommandType.Text);
+        var commandDefinition = new CommandDefinition(
+            aggCommand.Sql, 
+            aggParameters,
+            commandTimeout: options.CommandTimeout,
+            commandType: CommandType.Text,
+            cancellationToken: ct);
+
+        var aggResult = await connection.QueryFirstOrDefaultAsync(commandDefinition);
 
         if (aggResult is null) return null;
 

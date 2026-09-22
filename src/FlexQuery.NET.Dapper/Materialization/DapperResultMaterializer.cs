@@ -305,10 +305,10 @@ internal static class DapperResultMaterializer
                     
                     var sourceResponseName = matched?.ResponseProperty?.Name ?? entityPropertyName;
 
-                    if (!TryReadValue(source, mapping, entityPropertyName, node.Alias, out var value))
+                    if (!TryReadValue(source, mapping, entityPropertyName!, node.Alias, out var value))
                         continue;
 
-                    if (responseProps.TryGetValue(sourceResponseName, out var responseProp) && responseProp.CanWrite)
+                    if (responseProps.TryGetValue(sourceResponseName!, out var responseProp) && responseProp.CanWrite)
                     {
                         responseProp.SetValue(instance, Coerce(value, responseProp.PropertyType));
                     }

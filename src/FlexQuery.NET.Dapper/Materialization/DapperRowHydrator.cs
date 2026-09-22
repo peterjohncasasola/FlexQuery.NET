@@ -2,9 +2,11 @@ using System.Data;
 using System.Data.Common;
 using System.Reflection;
 using Dapper;
+using FlexQuery.NET.Dapper.Context;
 using FlexQuery.NET.Dapper.Dialects;
 using FlexQuery.NET.Dapper.Diagnostics;
 using FlexQuery.NET.Dapper.Mapping;
+using FlexQuery.NET.Dapper.Options;
 using FlexQuery.NET.Dapper.Sql.Models;
 using FlexQuery.NET.Dapper.Sql.Translators;
 using FlexQuery.NET.Models.Paging;
@@ -55,110 +57,94 @@ internal static class DapperRowHydrator
 
     public static async Task<IReadOnlyList<T>> HydrateSplitQueryIncludesAsync<T>(
         IReadOnlyList<T> roots,
-        IEntityMapping mapping,
-        IMappingRegistry registry,
-        ISqlDialect dialect,
-        DbConnection connection,
-        List<IncludeNode> includeNodes,
-        SqlParameterContext sharedParameters,
-        SqlTranslator sqlTranslator,
-        CancellationToken cancellationToken,
-        ILogger? sqlLogger = null)
+        SplitIncludeContext context,
+        List<IncludeNode> includeNodes
+        )
         where T : class
     {
         if (roots.Count == 0) return roots;
 
         foreach (var node in includeNodes)
         {
-            cancellationToken.ThrowIfCancellationRequested();
-            await LoadincludeNodeAsync(
-                roots.Cast<object>().ToList(),
-                mapping,
-                registry,
-                dialect,
-                connection,
-                node,
-                sharedParameters,
-                sqlTranslator,
-                cancellationToken,
-                sqlLogger);
+            context.CancellationToken.ThrowIfCancellationRequested();
+            await LoadIncludeNodeAsync(roots, context, node);
         }
 
         return roots;
     }
 
-    private static async Task LoadincludeNodeAsync(
+    private static async Task LoadIncludeNodeAsync(
         IReadOnlyList<object> parents,
-        IEntityMapping parentMapping,
-        IMappingRegistry registry,
-        ISqlDialect dialect,
-        DbConnection connection,
-        IncludeNode node,
-        SqlParameterContext sharedParameters,
-        SqlTranslator sqlTranslator,
-        CancellationToken cancellationToken,
-        ILogger? sqlLogger = null)
+        SplitIncludeContext context,
+        IncludeNode node)
     {
-        if (parents.Count == 0) return;
+        if (parents.Count == 0)
+            return;
 
         var loadedChildren = await LoadNavigationAsync(
             parents,
-            parentMapping,
-            registry,
-            dialect,
-            connection,
+            context,
             node.Path,
-            sharedParameters,
-            sqlTranslator,
-            node,
-            cancellationToken,
-            sqlLogger);
+            node);
 
         if (loadedChildren.Count == 0 || node.Children.Count == 0)
             return;
 
-        var rel = parentMapping.GetRelationship(node.Path);
-        if (rel?.TargetType == null) return;
+        var rel = context.Mapping.GetRelationship(node.Path);
 
-        var childMapping = registry.GetMapping(rel.TargetType);
+        if (rel?.TargetType == null)
+            return;
+
+        var childMapping = context.Registry.GetMapping(rel.TargetType);
+
         foreach (var childNode in node.Children)
         {
-            cancellationToken.ThrowIfCancellationRequested();
-            await LoadincludeNodeAsync(
+            context.CancellationToken.ThrowIfCancellationRequested();
+
+            await LoadIncludeNodeAsync(
                 loadedChildren,
-                childMapping,
-                registry,
-                dialect,
-                connection,
-                childNode,
-                sharedParameters,
-                sqlTranslator,
-                cancellationToken,
-                sqlLogger);
+                new SplitIncludeContext
+                {
+                    Mapping = childMapping,
+                    Registry = context.Registry,
+                    Dialect = context.Dialect,
+                    Connection = context.Connection,
+                    ParameterContext = context.ParameterContext,
+                    SqlTranslator = context.SqlTranslator,
+                    CancellationToken = context.CancellationToken,
+                    SqlLogger = context.SqlLogger
+                },
+                childNode);
         }
     }
 
-    internal static async Task<IReadOnlyList<object>> LoadNavigationAsync(
+    private static async Task<IReadOnlyList<object>> LoadNavigationAsync(
         IReadOnlyList<object> parents,
-        IEntityMapping parentMapping,
-        IMappingRegistry registry,
-        ISqlDialect dialect,
-        DbConnection connection,
+        SplitIncludeContext context,
         string navigationPath,
-        SqlParameterContext parameters,
-        SqlTranslator sqlTranslator,
-        IncludeNode? includeNode,
-        CancellationToken cancellationToken,
-        ILogger? sqlLogger = null)
+        IncludeNode? includeNode)
     {
         if (parents.Count == 0) return [];
+        
+        var registry = context.Registry;
+        var connection = context.Connection;
+        var parameters = context.ParameterContext;
+        var sqlLogger = context.SqlLogger;
+        var cancellationToken = context.CancellationToken;
+        var parentMapping = context.Mapping;
 
-        var sql = BuildIncludeSql(navigationPath, parentMapping, registry, dialect, sqlTranslator, includeNode, parents, parameters);
+        var sql = BuildIncludeSql(navigationPath, context, includeNode, parents);
         if (string.IsNullOrEmpty(sql)) return [];
 
         DapperSqlLog.Command(sqlLogger, sql, parameters.RawParameters);
 
-        var rows = await connection.QueryAsync(sql, parameters.RawParameters, commandType: CommandType.Text);
+        var cmdDef = new CommandDefinition(
+            sql,
+            parameters.RawParameters,
+            commandType: CommandType.Text,
+            cancellationToken: cancellationToken);
+
+        var rows = await connection.QueryAsync(cmdDef);
         var rowList = rows.ToList();
         if (!rowList.Any()) return [];
 
@@ -234,7 +220,7 @@ internal static class DapperRowHydrator
         return HydrateCoreNonGeneric(rows, mapping, registry, includes, columnAliasMap, prefix).Cast<T>().ToList();
     }
 
-    internal static IEnumerable<object> HydrateCoreNonGeneric(
+    private static IEnumerable<object> HydrateCoreNonGeneric(
         IEnumerable<dynamic> rows,
         IEntityMapping mapping,
         IMappingRegistry registry,
@@ -379,7 +365,7 @@ internal static class DapperRowHydrator
 
     #region Child attachment
 
-    internal static void AddChildToParent(object parent, string navigationProperty, object child)
+    private static void AddChildToParent(object parent, string navigationProperty, object child)
     {
         var prop = parent.GetType().GetProperty(
             navigationProperty,
@@ -472,7 +458,7 @@ internal static class DapperRowHydrator
 
     #region Include post-hydration (in-memory sort/take fallback)
 
-    internal static void ApplyIncludeConfiguration<T>(
+    private static void ApplyIncludeConfiguration<T>(
         IReadOnlyList<T> entities,
         IncludeNode node,
         IEntityMapping mapping,
@@ -539,7 +525,7 @@ internal static class DapperRowHydrator
     {
         var sortNode = sortNodes[0];
         var prop = mapping.Type.GetProperty(
-            sortNode.Field,
+            sortNode.Field!,
             BindingFlags.Public | BindingFlags.Instance | BindingFlags.IgnoreCase);
 
         if (prop == null) return items;
@@ -561,14 +547,15 @@ internal static class DapperRowHydrator
 
     private static string BuildIncludeSql(
         string navigationPath,
-        IEntityMapping rootMapping,
-        IMappingRegistry registry,
-        ISqlDialect dialect,
-        SqlTranslator sqlTranslator,
+        SplitIncludeContext context,
         IncludeNode? includeNode,
-        IReadOnlyList<object> roots,
-        SqlParameterContext parameters)
+        IReadOnlyList<object> roots)
     {
+        var registry =  context.Registry;
+        var sqlTranslator =  context.SqlTranslator;
+        var parameters = context.ParameterContext;
+        var rootMapping = context.Mapping;
+        
         var rel = rootMapping.GetRelationship(navigationPath);
         if (rel?.TargetType == null) return string.Empty;
 
@@ -594,7 +581,7 @@ internal static class DapperRowHydrator
                 rootMapping,
                 targetMapping,
                 parameters,
-                rootPks,
+                rootPks!,
                 includeNode);
         }
 

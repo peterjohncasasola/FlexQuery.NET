@@ -6,6 +6,7 @@ using Dapper;
 using FlexQuery.NET.Builders;
 using FlexQuery.NET.Constants;
 using FlexQuery.NET.Dapper.Configuration;
+using FlexQuery.NET.Dapper.Context;
 using FlexQuery.NET.Dapper.Diagnostics;
 using FlexQuery.NET.Dapper.Dialects;
 using FlexQuery.NET.Dapper.Mapping;
@@ -54,10 +55,19 @@ internal static class DapperQueryExecutor
             : null;
 
         await ctx.NotifyParsedAsync(queryOptions);
-
+        
         var sqlLogger = options.LoggerFactory?.CreateLogger(DapperSqlLog.CategoryName);
+        
+        var context = new DapperQueryContext
+        {
+            Connection = connection,
+            QueryOptions = queryOptions,
+            DapperQueryOptions = options,
+            SqlLogger = sqlLogger,
+            CancellationToken = cancellationToken
+        };
 
-        return await ExecuteAsync<T>(connection, queryOptions, options, ctx, sqlLogger);
+        return await ExecuteAsync<T>(context, ctx);
     }
 
     public static async Task<QueryResult<TResponse>> RunDtoAsync<TEntity, TResponse>(
@@ -65,7 +75,7 @@ internal static class DapperQueryExecutor
         QueryOptions queryOptions,
         DapperQueryOptions options,
         IQuerySurface surface,
-        IReadOnlyList<Models.SelectOutputField>? resultShape = null,
+        IReadOnlyList<SelectOutputField>? resultShape = null,
         CancellationToken cancellationToken = default)
         where TEntity : class
         where TResponse : class
@@ -108,13 +118,26 @@ internal static class DapperQueryExecutor
 
         DapperSqlLog.Command(sqlLogger, command.Sql, command.Parameters);
 
-        var rows = await connection.QueryAsync(
+        var rows = await connection.QueryAsync(new CommandDefinition(
             command.Sql,
-            parameters!,
+            parameters,
             commandTimeout: options.CommandTimeout,
-            commandType: CommandType.Text);
+            commandType: CommandType.Text,
+            cancellationToken: ct));
 
         var rowsList = rows.ToList();
+        
+        var context = new DapperQueryContext
+        {
+            Connection = connection,
+            QueryOptions = queryOptions,
+            SqlTranslator = translator,
+            SqlCommand = command,
+            Parameters = parameters,
+            DapperQueryOptions = options,
+            SqlLogger = sqlLogger,
+            CancellationToken = ct
+        };
 
         IReadOnlyList<TResponse> items;
         if (isGrouped)
@@ -125,7 +148,7 @@ internal static class DapperQueryExecutor
             // properties, and must not be required on the DTO.
             if (!CanRepresentGroupedShape<TResponse>(queryOptions, surface))
             {
-                var dynamicResult = await ExecuteAsync<TEntity>(connection, queryOptions, options, ctx, sqlLogger);
+                var dynamicResult = await ExecuteAsync<TEntity>(context, ctx);
                 var groupedShape = resultShape ?? ResultShapeBuilder.BuildGroupedShape(queryOptions);
 
                 var wrapped = new QueryResult<TResponse>
@@ -155,17 +178,12 @@ internal static class DapperQueryExecutor
                 registry,
                 typeof(TEntity));
         }
-
-        var (totalCount, resultCount) = await CountEvaluator.GetCountsAsync(connection, queryOptions, translator, command, parameters, options, sqlLogger);
+        
+        var (totalCount, resultCount) = await CountEvaluator.GetCountsAsync(context);
 
         // Grand totals ride the existing aggregate metadata channel (QueryResult.Aggregates).
         // Aggregate metadata keys use the PUBLIC field identity (DTO names) in DTO mode.
-        var grandTotals = await AggregateEvaluator.GetGrandTotalsAsync(
-            connection, queryOptions, translator, options, ct,
-            fieldName => surface.TryResolveByEntityName(fieldName, out var resolved)
-                ? resolved.SurfaceName
-                : fieldName,
-            sqlLogger);
+        var grandTotals = await AggregateEvaluator.GetGrandTotalsAsync(context, Resolver);
 
         await ctx.NotifyExecutedAsync(items.Count);
 
@@ -179,6 +197,11 @@ internal static class DapperQueryExecutor
         await ctx.NotifyMaterializedAsync(queryResult);
 
         return queryResult;
+
+        string Resolver(string fieldName) =>
+            surface.TryResolveByEntityName(fieldName, out var resolved)
+                ? resolved.SurfaceName
+                : fieldName;
     }
 
     /// <summary>
@@ -198,7 +221,7 @@ internal static class DapperQueryExecutor
             var publicName = surface.TryResolveByEntityName(groupField, out var resolved)
                 ? resolved.SurfaceName
                 : groupField;
-            if (!writableProps.ContainsKey(Builders.GroupByBuilder.GetProjectionName(publicName)))
+            if (!writableProps.ContainsKey(GroupByBuilder.GetProjectionName(publicName)))
                 return false;
         }
 
@@ -212,19 +235,20 @@ internal static class DapperQueryExecutor
     }
 
     private static async Task<QueryResult<object>> ExecuteAsync<T>(
-        DbConnection connection,
-        QueryOptions queryOptions,
-        DapperQueryOptions options,
-        FlexQueryExecutionContext? ctx,
-        ILogger? sqlLogger = null)
+        DapperQueryContext queryContext,
+        FlexQueryExecutionContext? ctx)
         where T : class
     {
-        var ct = ctx?.CancellationToken ?? CancellationToken.None;
-
+        var ct = ctx?.CancellationToken ?? queryContext.CancellationToken;
+        var connection = queryContext.Connection;
+        var dapperQueryOptions =  queryContext.DapperQueryOptions;
+        var queryOptions = queryContext.QueryOptions;
+        var sqlLogger =  queryContext.SqlLogger;
+        
         await ConnectionHelper.EnsureOpenAsync(connection, ct);
 
         var dialect = SqlDialectResolver.Resolve(connection);
-        var registry = options.Model?.Registry
+        var registry = dapperQueryOptions.Model?.Registry
             ?? FlexQueryDapper.DefaultModel?.Registry
             ?? new MappingRegistry();
 
@@ -263,16 +287,31 @@ internal static class DapperQueryExecutor
         }
 
         // Flat projection modes deliver leaf columns through the single-query JOIN in the
-        // root SQL â€” includes exist only to satisfy the navigation-include authorization
+        // root SQL includes exist only to satisfy the navigation-include authorization
         // contract and must not trigger navigation hydration/split queries.
         var isFlatProjection =
-            (queryOptions.ProjectionMode == ProjectionMode.Flat
-             || queryOptions.ProjectionMode == ProjectionMode.FlatMixed)
+            queryOptions.ProjectionMode is ProjectionMode.Flat or ProjectionMode.FlatMixed
             && queryOptions.HasProjection();
 
         var hasNavigation = !isFlatProjection &&
                             (queryOptions.Includes?.Count > 0);
         IReadOnlyList<object> items;
+
+        var splitIncludeContext = new SplitIncludeContext
+        {
+            Mapping = mapping,
+            QueryOptions = queryOptions,
+            Parameters = parameters,
+            ParameterContext = new SqlParameterContext(dialect),
+            Dialect =  dialect,
+            Registry =  registry,
+            CancellationToken = ct,
+            Connection = connection,
+            SqlLogger = sqlLogger,
+            SqlTranslator =  translator,
+            DapperQueryOptions = dapperQueryOptions,
+        };
+
 
         if (useSimpleIncludeStreaming)
         {
@@ -281,7 +320,7 @@ internal static class DapperQueryExecutor
                 connection,
                 simpleIncludeCommand!,
                 mapping,
-                options.CommandTimeout,
+                dapperQueryOptions.CommandTimeout,
                 selectTree,
                 ct,
                 sqlLogger);
@@ -292,27 +331,22 @@ internal static class DapperQueryExecutor
         {
             DapperSqlLog.Command(sqlLogger, command.Sql, command.Parameters);
 
-            var rows = await connection.QueryAsync(
+            var rows = await connection.QueryAsync(new CommandDefinition(
                 command.Sql,
                 parameters!,
-                commandTimeout: options.CommandTimeout,
-                commandType: CommandType.Text);
+                commandTimeout: dapperQueryOptions.CommandTimeout,
+                commandType: CommandType.Text,
+                cancellationToken: ct));
 
             var rowsList = rows.ToList();
 
             if (hasNavigation)
             {
                 items = await ExecuteSplitQueryAsync<T>(
-                    connection,
-                    queryOptions,
-                    mapping,
-                    registry,
-                    dialect,
+                    splitIncludeContext,
                     rowsList,
                     command.ColumnAliasMap,
-                    transformer,
-                    ct,
-                    sqlLogger);
+                    transformer);
             }
             else
             {
@@ -325,10 +359,23 @@ internal static class DapperQueryExecutor
                     entityType: typeof(T));
             }
         }
+        
+        
+        var context = new DapperQueryContext
+        {
+            Connection = connection,
+            QueryOptions = queryOptions,
+            SqlTranslator = translator,
+            SqlCommand = command,
+            Parameters = parameters,
+            DapperQueryOptions = dapperQueryOptions,
+            SqlLogger = sqlLogger,
+            CancellationToken = ct
+        };
 
-        var (totalCount, resultCount) = await CountEvaluator.GetCountsAsync(connection, queryOptions, translator, command, parameters, options, sqlLogger);
+        var (totalCount, resultCount) = await CountEvaluator.GetCountsAsync(context);
 
-        var grandTotals = await AggregateEvaluator.GetGrandTotalsAsync(connection, queryOptions, translator, options, ct, sqlLogger: sqlLogger);
+        var grandTotals = await AggregateEvaluator.GetGrandTotalsAsync(context);
 
         if (transformer != null && grandTotals != null)
         {
@@ -361,8 +408,7 @@ internal static class DapperQueryExecutor
         // select shape (including navigation leaf paths) must survive, otherwise the root
         // SQL degrades to a full root-column scan and the flat output is lost.
         var isFlatProjection =
-            (queryOptions.ProjectionMode == ProjectionMode.Flat
-             || queryOptions.ProjectionMode == ProjectionMode.FlatMixed)
+            queryOptions.ProjectionMode is ProjectionMode.Flat or ProjectionMode.FlatMixed
             && queryOptions.HasProjection();
 
         var rootOptions = queryOptions.CopyQueryOptions();
@@ -376,18 +422,17 @@ internal static class DapperQueryExecutor
     }
 
     private static async Task<IReadOnlyList<object>> ExecuteSplitQueryAsync<T>(
-        DbConnection connection,
-        QueryOptions queryOptions,
-        IEntityMapping mapping,
-        IMappingRegistry registry,
-        ISqlDialect dialect,
+        SplitIncludeContext context,
         IReadOnlyList<dynamic> rowsList,
         Dictionary<string, string>? columnAliasMap,
-        Func<string, string>? transformer,
-        CancellationToken ct,
-        ILogger? sqlLogger = null)
+        Func<string, string>? transformer)
         where T : class
     {
+        
+        var queryOptions = context.QueryOptions;
+        var mapping = context.Mapping;
+        var registry =  context.Registry;
+        
         var rootItems = DapperRowHydrator.HydrateCore<T>(
             rowsList, mapping, registry, new List<string> { string.Empty }, columnAliasMap);
 
@@ -396,20 +441,14 @@ internal static class DapperQueryExecutor
 
         if (queryOptions.Includes is { Count: > 0 })
         {
-            var includeTree = IncludeTree.SplitDottedPaths(queryOptions.Includes);
-            if (includeTree.Count > 0)
+            var includeNodes = IncludeTree.SplitDottedPaths(queryOptions.Includes);
+            if (includeNodes.Count > 0)
             {
+                
                 await DapperRowHydrator.HydrateSplitQueryIncludesAsync(
                     rootItems,
-                    mapping,
-                    registry,
-                    dialect,
-                    connection,
-                    includeTree,
-                    new SqlParameterContext(dialect),
-                    new SqlTranslator(registry, dialect),
-                    ct,
-                    sqlLogger);
+                    context,
+                    includeNodes);
             }
         }
 

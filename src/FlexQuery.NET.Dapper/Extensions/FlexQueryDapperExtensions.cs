@@ -26,13 +26,8 @@ namespace FlexQuery.NET.Dapper;
 /// <remarks>
 /// <para>
 /// Cancellation is observed during connection opening, diagnostics callbacks,
-/// and result materialization.
-/// </para>
-/// <para>
-/// Dapper's <c>QueryAsync</c> APIs do not currently accept a
-/// <see cref="CancellationToken"/>. As a result, cancellation cannot interrupt
-/// the database query once execution has started. A future version may support
-/// this through <c>CommandDefinition</c>.
+/// and result materialization, and is propagated through
+/// <c>CommandDefinition</c> to the underlying database command.
 /// </para>
 /// </remarks>
 public static class FlexQueryDapperExtensions
@@ -121,7 +116,7 @@ public static class FlexQueryDapperExtensions
         {
             Filter = dict.GetValueOrDefault(QueryOptionKeys.Filter) ?? dict.GetValueOrDefault($"${QueryOptionKeys.Filter}"),
             Sort = dict.GetValueOrDefault(QueryOptionKeys.Sort) ?? dict.GetValueOrDefault(QueryOptionKeys.OrderBy) ?? dict.GetValueOrDefault($"${QueryOptionKeys.OrderBy}"),
-            Select = dict.GetValueOrDefault(QueryOptionKeys.Select) ?? dict.GetValueOrDefault($"${QueryOptionKeys.Select}"),
+            Select = dict.GetValueOrDefault(QueryOptionKeys.Select) ?? dict.GetValueOrDefault(QueryOptionKeys.Select),
             Include = includeValue,
             Page = dict.TryGetValue(QueryOptionKeys.Page, out var p) && int.TryParse(p, out var page) ? page : null,
             PageSize = dict.TryGetValue(QueryOptionKeys.PageSize, out var ps) && int.TryParse(ps, out var pageSize) ? pageSize : null,
