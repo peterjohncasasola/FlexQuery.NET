@@ -1,0 +1,630 @@
+---
+title: FlexQueryRequest
+description: Strongly-typed request model for FlexQuery.NET - properties, defaults, conversion, and execution patterns.
+section: API Reference
+---
+
+import { ApiTable } from '@/components/api-table'
+import { Callout } from '@/components/callout'
+
+# FlexQueryRequest
+
+`FlexQueryRequest` (`FlexQuery.NET.Models`) is the **strongly-typed request object** for
+FlexQuery.NET. It is designed for POST bodies, typed HTTP clients, and OpenAPI-documented
+APIs where raw query-string binding is not the right shape. Every property maps directly
+into the pipeline's canonical [`QueryOptions`](/docs/concepts/query-options) through
+[`FlexQueryRequestExtensions.ToQueryOptions()`](#conversion-to-queryoptions).
+
+## Where it fits in the pipeline
+
+```
+FlexQueryRequest (POST body)
+        │
+        ▼  request.ToQueryOptions()
+    QueryOptions
+        │
+        ▼  FlexQueryAsync(options, configure, ct)
+    QueryResult<T>
+```
+
+`FlexQueryRequest` is a **request-layer** type. It is not parsed from strings — its
+structured properties are already AST-shaped objects. The pipeline never sees a
+`FlexQueryRequest` directly; providers accept [`QueryOptions`](/docs/concepts/query-options)
+or [`FlexQueryParameters`](/docs/guides/query-composition).
+
+## How it differs from the other request models
+
+| Model | Shape | Typical source | Consumed by |
+| :--- | :--- | :--- | :--- |
+| `FlexQueryParameters` | Flat string properties | `[FromQuery]` GET binding | `FlexQueryAsync(parameters, ...)` |
+| `FlexQueryRequest` | Structured object properties | JSON POST body | `request.ToQueryOptions()` → `FlexQueryAsync(options, ...)` |
+| `QueryOptions` | Parsed AST | Any of the above, fluent builder, adapters | All provider `FlexQueryAsync` overloads |
+
+<Callout variant="note" title="No direct FlexQueryAsync(FlexQueryRequest) overload">
+  Neither EF Core nor Dapper expose a `FlexQueryAsync` overload that accepts
+  `FlexQueryRequest` directly. Convert first via `request.ToQueryOptions()`, then pass the
+  resulting `QueryOptions` to the provider.
+</Callout>
+
+## Properties reference
+
+### Filter
+
+**Type:** `FilterGroup?`  
+**Default:** `null`  
+**Optional:** Yes
+
+The root filter expression tree. Accepts the same DSL/FQL structure as
+[`QueryOptions.Filter`](/docs/concepts/query-options): conditions, nested `AND`/`OR` groups,
+collection predicates (`any`, `all`), and all supported operators.
+
+**Effect:** Produces the `WHERE` clause. When `null`, no filter is applied.
+
+```json
+"filter": {
+  "logic": "and",
+  "filters": [
+    { "field": "Status", "operator": "eq", "value": "Active" },
+    { "field": "City", "operator": "in", "value": "Berlin,Munich" }
+  ]
+}
+```
+
+See [Filtering](/docs/guides/filtering) for operator syntax.
+
+---
+
+### Sort
+
+**Type:** `List<SortNode>`  
+**Default:** `[]` (never null)  
+**Optional:** Yes — empty list produces no `ORDER BY`
+
+Ordered sort specifications. Each `SortNode` carries `Field`, `Descending`, and optional
+`Aggregate`/`AggregateField` for collection sorts.
+
+**Effect:** Produces `ORDER BY`. List order is priority order. Providers may inject a
+default sort when none is supplied to guarantee stable paging.
+
+```json
+"sort": [
+  { "field": "LastName", "descending": false },
+  { "field": "CreatedAt", "descending": true }
+]
+```
+
+See [Sorting](/docs/guides/sorting).
+
+---
+
+### Select
+
+**Type:** `List<string>?`  
+**Default:** `null`  
+**Optional:** Yes
+
+Flat dot-notation selection paths. Each string is a field path such as `"Id"` or
+`"Profile.Name"`. Aliases and nested selections are not represented here — for those use
+[`QueryOptions.Select`](/docs/concepts/query-options) built through the fluent API or
+parsers.
+
+**Effect:** When non-null, only the listed fields materialize. When `null`, the full
+entity surface is projected.
+
+During [`ToQueryOptions()`](#conversion-to-queryoptions), each string becomes a
+`SelectNode` with only `Field` set:
+
+```csharp
+request.Select?.Select(f => new SelectNode { Field = f }).ToList()
+```
+
+```json
+"select": ["Id", "FirstName", "Email", "Profile.Name"]
+```
+
+See [Projection](/docs/guides/projection).
+
+---
+
+### Include
+
+**Type:** `List<IncludeNode>?`  
+**Default:** `null`  
+**Optional:** Yes
+
+Navigation relationships to include. Each `IncludeNode` carries:
+
+| Member | Type | Purpose |
+| :--- | :--- | :--- |
+| `Path` | `string` | Navigation path, e.g. `"Orders"` or `"Orders.OrderItems"` |
+| `Filter` | `FilterGroup?` | Optional inline filter on the collection |
+| `Sort` | `List<SortNode>?` | Optional sort on the collection |
+| `Take` | `int?` | Optional slice limit on the collection |
+| `Children` | `List<IncludeNode>` | Nested relationship levels |
+
+**Effect:** Attaches related data to each result row. On collection-valued relationships,
+`filter`/`sort`/`take` become relationship-scoped query operations executed server-side.
+Single-valued relationships can be included but ignore `filter`/`sort`/`take`.
+
+During [`ToQueryOptions()`](#conversion-to-queryoptions), dotted `Path` values are split
+into a hierarchical tree by [`IncludeTree.SplitDottedPaths`](/docs/concepts/query-options):
+
+```json
+"include": [
+  {
+    "path": "Orders",
+    "take": 5,
+    "filter": {
+      "logic": "and",
+      "filters": [
+        { "field": "Status", "operator": "eq", "value": "Delivered" }
+      ]
+    },
+    "sort": [
+      { "field": "OrderDate", "descending": true }
+    ]
+  },
+  {
+    "path": "Orders.OrderItems"
+  }
+]
+```
+
+See [Include](/docs/guides/include).
+
+---
+
+### Mode
+
+**Type:** `ProjectionMode`  
+**Default:** `ProjectionMode.Nested`  
+**Optional:** No — always set; omit to accept the default
+
+Controls how nested selections are shaped in the output.
+
+| Value | Behavior |
+| :--- | :--- |
+| `Nested` | Hierarchical objects — root → children → grandchildren |
+| `Flat` | Nested collections flatten with `SelectMany` into a leaf-level rowset |
+| `FlatMixed` | Root scalars and nested-collection fields share one output row |
+
+**Effect:** Passed through to `QueryOptions.ProjectionMode`; providers honor it during
+materialization.
+
+```json
+"mode": "FlatMixed"
+```
+
+See [Projection](/docs/guides/projection).
+
+---
+
+### GroupBy
+
+**Type:** `List<string>?`  
+**Default:** `null`  
+**Optional:** Yes
+
+Fields to group by for aggregation. Each string is a property path.
+
+**Effect:** When non-empty, the query executes through the grouped-query executor. Rows
+are grouped by the specified fields, and `aggregate` expressions are evaluated per group.
+`having` prunes groups before paging and ordering.
+
+```json
+"groupBy": ["Status", "Region"]
+```
+
+See [Grouping & Aggregates](/docs/guides/grouping).
+
+---
+
+### Aggregate
+
+**Type:** `List<Aggregate>`  
+**Default:** `[]` (never null)  
+**Optional:** Yes — empty list produces no aggregates
+
+Aggregate projection expressions. Each `Aggregate` carries:
+
+| Member | Type | Purpose |
+| :--- | :--- | :--- |
+| `Function` | `AggregateFunction` | `Sum`, `Count`, `Avg`, `Min`, `Max` |
+| `Field` | `string?` | Field to aggregate; optional for `Count` |
+| `Alias` | `string` | Output property name (defaults to PascalCase of `Function` + `Field`) |
+
+**Effect:** Ungrouped aggregates compute grand totals over the filtered set and appear in
+`QueryResult.Aggregates`. Grouped aggregates appear per-group inside `Data`.
+
+```json
+"aggregate": [
+  { "function": "Sum", "field": "TotalAmount", "alias": "TotalRevenue" },
+  { "function": "Count", "field": "Id", "alias": "OrderCount" }
+]
+```
+
+See [Grouping & Aggregates](/docs/guides/grouping).
+
+---
+
+### Having
+
+**Type:** `HavingNode?`  
+**Default:** `null`  
+**Optional:** Yes — only meaningful when `groupBy` is also set
+
+HAVING condition tree over aggregate values. References must match aliases declared in
+`aggregate`.
+
+**Effect:** Prunes groups before ordering and paging. Without `groupBy`, the pipeline
+rejects the request.
+
+`HavingNode` is abstract; concrete forms are built through the fluent API or FQL parser.
+In a `FlexQueryRequest` built from JSON, construct the appropriate concrete type directly
+(`HavingConditionNode`, `HavingLogicalNode`, etc.).
+
+```json
+"having": {
+  "type": "condition",
+  "function": "Sum",
+  "field": "TotalAmount",
+  "operator": "gt",
+  "value": 1000
+}
+```
+
+See [Grouping & Aggregates](/docs/guides/grouping).
+
+---
+
+### Distinct
+
+**Type:** `bool?`  
+**Default:** `null`  
+**Optional:** Yes
+
+When `true`, applies `Distinct()` to the query before projection.
+
+**Effect:** Eliminates duplicate rows from the result set.
+
+```json
+"distinct": true
+```
+
+---
+
+### Paging
+
+**Type:** `PagingOptions`  
+**Default:** `new()` → `Page = 1`, `PageSize = 20`, `Disabled = false`  
+**Optional:** No — always present; accept defaults unless you need to override
+
+Pagination parameters.
+
+| Member | Type | Default | Behavior |
+| :--- | :--- | :--- | :--- |
+| `Page` | `int` | `1` | 1-based page number; clamped to `>= 1` |
+| `PageSize` | `int` | `20` | Items per page; clamped to `1`–`1000` |
+| `Disabled` | `bool` | `false` | When `true`, returns the full unfiltered result set |
+| `Skip` | `int` | computed | `(Page - 1) * PageSize` — read-only |
+
+**Effect:** Offset paging uses `Skip`/`Take`. Keyset paging is activated via
+`UseKeysetPagination` on [`QueryOptions`](/docs/concepts/query-options) (set through
+`FlexQueryParameters` or server-side composition), not through `FlexQueryRequest.Paging`.
+
+```json
+"paging": {
+  "page": 1,
+  "pageSize": 20
+}
+```
+
+To disable paging:
+
+```json
+"paging": {
+  "disabled": true
+}
+```
+
+See [Paging](/docs/guides/paging) and [Keyset Pagination](/docs/guides/keyset-pagination).
+
+---
+
+### IncludeCount
+
+**Type:** `bool?`  
+**Default:** `true`  
+**Optional:** Yes
+
+Whether the pipeline computes and returns the total filtered count.
+
+**Effect:** When `true` (the default), `QueryResult.TotalCount` contains the count of rows
+matching the filter before paging. When `false`, `TotalCount` is `null`.
+
+```json
+"includeCount": true
+```
+
+## Complete example
+
+One JSON body exercising the major capabilities:
+
+```json
+{
+  "filter": {
+    "logic": "and",
+    "filters": [
+      { "field": "Status", "operator": "eq", "value": "Active" },
+      { "field": "Region", "operator": "in", "value": "EMEA,APAC" }
+    ]
+  },
+  "sort": [
+    { "field": "LastName", "descending": false },
+    { "field": "CreatedAt", "descending": true }
+  ],
+  "select": ["Id", "FirstName", "LastName", "Email"],
+  "include": [
+    {
+      "path": "Orders",
+      "take": 5,
+      "filter": {
+        "logic": "and",
+        "filters": [
+          { "field": "Status", "operator": "eq", "value": "Delivered" }
+        ]
+      },
+      "sort": [
+        { "field": "OrderDate", "descending": true }
+      ]
+    },
+    {
+      "path": "Profile.Address"
+    }
+  ],
+  "mode": "Nested",
+  "groupBy": ["Status"],
+  "aggregate": [
+    { "function": "Sum", "field": "TotalAmount", "alias": "TotalRevenue" },
+    { "function": "Count", "field": "Id", "alias": "OrderCount" }
+  ],
+  "having": {
+    "type": "condition",
+    "function": "Sum",
+    "field": "TotalAmount",
+    "operator": "gt",
+    "value": 1000
+  },
+  "distinct": false,
+  "paging": {
+    "page": 1,
+    "pageSize": 20
+  },
+  "includeCount": true
+}
+```
+
+## Conversion to QueryOptions
+
+`FlexQueryRequestExtensions.ToQueryOptions()` produces the `QueryOptions` the pipeline
+consumes. The mapping is direct:
+
+| `FlexQueryRequest` | `QueryOptions` | Notes |
+| :--- | :--- | :--- |
+| `Filter` | `Filter` | Direct assignment |
+| `Sort` | `Sort` | Direct reference assignment |
+| `Select` | `Select` | Strings become flat `SelectNode` leaves (`Field` only) |
+| `Include` | `Includes` | Dotted paths split into a hierarchical tree; options attach to the leaf segment |
+| `Mode` | `ProjectionMode` | Direct assignment |
+| `GroupBy` | `GroupBy` | Direct assignment |
+| `Aggregate` | `Aggregates` | Direct reference assignment |
+| `Having` | `Having` | Direct assignment |
+| `Distinct` | `Distinct` | Direct assignment |
+| `Paging` | `Paging` | Direct reference assignment |
+| `IncludeCount` | `IncludeCount` | Direct assignment |
+
+<Callout variant="note" title="SelectNode shape from Select">
+  Because `FlexQueryRequest.Select` is `List<string>`, the converted `SelectNode` trees
+  carry only `Field`. They do not carry aliases or nested children. Use the fluent builder
+  or FQL parser when you need those.
+</Callout>
+
+## Execution patterns
+
+`FlexQueryRequest` is not accepted directly by any provider `FlexQueryAsync` overload.
+Convert it first, then execute.
+
+### EF Core — dynamic results
+
+```csharp
+using FlexQuery.NET.Models;
+using FlexQuery.NET.EntityFrameworkCore;
+
+[HttpPost("search")]
+public async Task<IActionResult> PostSearch(
+    [FromBody] FlexQueryRequest request,
+    CancellationToken cancellationToken)
+{
+    var options = request.ToQueryOptions();
+
+    var result = await db.Customers
+        .AsNoTracking()
+        .FlexQueryAsync(
+            options,
+            opt =>
+            {
+                opt.AllowedFields = ["Id", "FirstName", "LastName", "Email", "Status"];
+                opt.MaxPageSize = 100;
+            },
+            cancellationToken);
+
+    return Ok(result);
+}
+```
+
+Relevant overloads:
+
+```csharp
+Task<QueryResult<object>> FlexQueryAsync<T>(
+    this IQueryable<T> query,
+    QueryOptions queryOptions,
+    Action<EfCoreQueryOptions>? configure = null,
+    CancellationToken cancellationToken = default)
+```
+
+```csharp
+Task<QueryResult<object>> FlexQueryAsync<T>(
+    this IQueryable<T> query,
+    QueryOptions queryOptions,
+    EfCoreQueryOptions options,
+    CancellationToken cancellationToken = default)
+```
+
+---
+
+### EF Core — typed DTO results
+
+```csharp
+public record CustomerDto(int Id, string Name, string Email);
+
+var result = await db.Customers
+    .AsNoTracking()
+    .FlexQueryAsync<Customer, CustomerDto>(
+        options,
+        opt => { opt.AllowedFields = ["Id", "FirstName", "LastName", "Email"]; },
+        cancellationToken);
+```
+
+Relevant overloads:
+
+```csharp
+Task<QueryResult<TResponse>> FlexQueryAsync<TEntity, TResponse>(
+    this IQueryable<TEntity> query,
+    QueryOptions queryOptions,
+    Action<EfCoreQueryOptions>? configure = null,
+    CancellationToken cancellationToken = default)
+```
+
+```csharp
+Task<QueryResult<TResponse>> FlexQueryAsync<TEntity, TResponse>(
+    this IQueryable<TEntity> query,
+    QueryOptions queryOptions,
+    EfCoreQueryOptions options,
+    CancellationToken cancellationToken = default)
+```
+
+---
+
+### Dapper — dynamic results
+
+```csharp
+using FlexQuery.NET.Dapper;
+
+[HttpPost("search")]
+public async Task<IActionResult> PostSearch(
+    [FromBody] FlexQueryRequest request,
+    [FromServices] IDbConnectionProvider connections,
+    CancellationToken cancellationToken)
+{
+    await using var connection = connections.Open();
+    var options = request.ToQueryOptions();
+
+    var result = await connection.FlexQueryAsync<Customer>(
+        options,
+        opt =>
+        {
+            opt.AllowedFields = ["Id", "FirstName", "LastName", "Email", "City", "Status"];
+            opt.MaxPageSize = 200;
+        },
+        cancellationToken: cancellationToken);
+
+    return Ok(result);
+}
+```
+
+Relevant overloads:
+
+```csharp
+Task<QueryResult<object>> FlexQueryAsync<T>(
+    this DbConnection connection,
+    QueryOptions queryOptions,
+    DapperQueryOptions? options = null,
+    CancellationToken cancellationToken = default)
+```
+
+---
+
+### Dapper — typed DTO results
+
+```csharp
+public record CustomerDto(int Id, string Name, string Email);
+
+var result = await connection.FlexQueryAsync<Customer, CustomerDto>(
+    options,
+    opt => { opt.AllowedFields = ["Id", "FirstName", "LastName", "Email"]; },
+    cancellationToken: cancellationToken);
+```
+
+Relevant overloads:
+
+```csharp
+Task<QueryResult<TResponse>> FlexQueryAsync<TEntity, TResponse>(
+    this DbConnection connection,
+    QueryOptions queryOptions,
+    Action<DapperQueryOptions>? configure = null,
+    CancellationToken cancellationToken = default)
+```
+
+```csharp
+Task<QueryResult<TResponse>> FlexQueryAsync<TEntity, TResponse>(
+    this DbConnection connection,
+    QueryOptions queryOptions,
+    DapperQueryOptions options,
+    CancellationToken cancellationToken = default)
+```
+
+---
+
+### Manual pipeline
+
+When you need stages individually:
+
+```csharp
+var options = request.ToQueryOptions();
+options.ValidateOrThrow<Customer>(execOptions);
+
+var query = db.Customers.AsQueryable();
+query = query.ApplyFilter(options);
+query = query.ApplySort(options);
+query = query.ApplyPaging(options);
+query = query.ApplyIncludes(options);
+
+var data = await query.ApplySelect(options).ToListAsync(cancellationToken);
+return Ok(options.BuildQueryResult(data, total));
+```
+
+See [Query Composition](/docs/guides/query-composition).
+
+## Parsed properties vs. execution settings
+
+| Property category | Properties | Notes |
+| :--- | :--- | :--- |
+| **Parsed query expressions** | `Filter`, `Sort`, `Select`, `Include`, `GroupBy`, `Aggregate`, `Having` | These are query semantics — they shape the SQL/query itself. |
+| **Execution / result settings** | `Paging`, `IncludeCount`, `Distinct`, `Mode` | These control how the executed result is shaped or whether it is computed. |
+| **Not a request property** | `Cursor`, `UseKeysetPagination` | Keyset pagination lives on `FlexQueryParameters` and `QueryOptions`, not on `FlexQueryRequest`. Set them server-side when needed. |
+
+Governance settings (`AllowedFields`, `BlockedFields`, `AllowedIncludes`, etc.) are
+**execution-time configuration**, not request properties. Pass them through the
+`configure` delegate or `EfCoreQueryOptions`/`DapperQueryOptions` objects.
+
+## Related
+
+- [Query Options](/docs/concepts/query-options) — the parsed model providers consume
+- [Query Composition](/docs/guides/query-composition) — building and merging options in code
+- [Filtering](/docs/guides/filtering) · [Operators](/docs/guides/operators)
+- [Sorting](/docs/guides/sorting) · [Paging](/docs/guides/paging)
+- [Projection](/docs/guides/projection) · [Include](/docs/guides/include)
+- [Grouping & Aggregates](/docs/guides/grouping) · [Keyset Pagination](/docs/guides/keyset-pagination)
+- [Typed DTO Projection](/docs/guides/typed-dto-projection)
+- [Entity Framework Core Provider](/docs/providers/ef-core)
+- [Dapper Provider](/docs/providers/dapper)

@@ -145,14 +145,14 @@ maps, and the diagnostics listener.
 ## Precedence rules
 
 | Setting | Global | Provider | Per request |
-|---|---|---|---|
+| :--- | :--- | :--- | :--- |
 | Default query syntax | Yes | — | Yes (overrides global) |
 | Page size defaults / limits | Yes | — | Yes (overrides global) |
 | Validation strictness & field depth | Yes (baseline) | — | Yes (overrides) |
-| Field governance sets (Allowed/Blocked/…) | — | — | Yes (per request) |
+| Field governance sets | — | — | Yes (per request) |
 | No-tracking behavior | — | Yes (default) | Yes (per call) |
-| Dapper model (statics/`FlexQueryDapper.Configure`) | — | Yes | attributes per query |
-| Type maps | Yes (global maps via `FlexQueryOptions.CreateMap`) | — | Yes (per-query wins) |
+| Dapper model | — | Yes | attributes per query |
+| Type maps | Yes (global) | — | Yes (per-query wins) |
 
 ## Common mistakes
 

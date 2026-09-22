@@ -23,12 +23,12 @@ APIs necessary or useful for building on FlexQuery.NET are listed.
 
 ### Request models (`FlexQuery.NET.Models`)
 
-| Type | Purpose |
-|---|---|
-| `FlexQueryParameters` | Query-string binding model (`Filter`, `Sort`, `Select`, `Include` (with optional blocks), `GroupBy`, `Having`, `Aggregate`, `Page`, `PageSize`, `IncludeCount`, `Distinct`, `Mode`, `Cursor`, `UseKeysetPagination`). |
-| `FlexQueryRequest` | Strongly-typed request model with `ToQueryOptions()`. |
-| `QueryOptions` | Parsed options consumed by the pipeline. |
-| `QueryResult<T>` | Result envelope (`Data`, `TotalCount`, `ResultCount`, `Page`, `PageSize`, `TotalPages`, `HasNextPage`, `HasPreviousPage`, `Aggregates`, `NextCursorToken`, `ResultShape`). |
+| Type | Purpose | Details |
+| :--- | :--- | :--- |
+| `FlexQueryParameters` | Query-string binding model for GET endpoints. | See [Query Options](/docs/concepts/query-options) for the full property list. |
+| `FlexQueryRequest` | Strongly-typed request object for POST bodies and typed clients. | See [FlexQueryRequest](/docs/api-reference/flexquery-request). |
+| `QueryOptions` | Parsed options consumed by the pipeline. | See [Query Options](/docs/concepts/query-options). |
+| `QueryResult<T>` | Result envelope returned by every execution method. | See [Query Result](/docs/concepts/query-result). |
 
 ### Sync pipeline (`FlexQuery.NET` extensions)
 
@@ -63,14 +63,14 @@ APIs necessary or useful for building on FlexQuery.NET are listed.
 
 ### Fluent builders (`FlexQuery.NET.Builders.Fluent`)
 
-| Type | Members |
-|---|---|
-| `FluentQueryBuilder` | `Filter(Action<FilterGroupBuilder>)`, `Sort(Action<SortBuilder>)`, `Select(params string[])`, `Include(params string[])`, `Include(Action<IncludeBuilder>)`, `Mode`, `GroupBy`, `Aggregate(Action<AggregateBuilder>)`, `Having(function, field, op, value)`, `Distinct`, `Page`, `UseKeysetPagination`, `DisablePaging`, `Build()`, implicit `QueryOptions` conversion. |
-| `FilterGroupBuilder` | `Equal`, `NotEqual`, `GreaterThan`, `GreaterThanOrEqual`, `LessThan`, `LessThanOrEqual`, `Contains`, `StartsWith`, `EndsWith`, `In`, `NotIn`, `IsNull`, `IsNotNull`, `Between`, `And(g => ...)`, `Or(g => ...)`. |
-| `FilterBuilder` / `FilterConditionBuilder<TParent>` | `Field/And/Or(name)`, terminators `Eq`, `Neq`, `Contains`, `StartsWith`, `EndsWith`, `GreaterThan`, `GreaterThanOrEqual`, `LessThan`, `LessThanOrEqual`, `In`, `Between`, `IsNull`, `NotNull`, `Any(b => ...)`, `All(b => ...)`, `Not()`, `AndGroup`, `OrGroup`. |
-| `SortBuilder` | `Ascending(field)`, `Descending(field)`. |
-| `AggregateBuilder` | `Sum`, `Count`, `Avg`, `Min`, `Max` (field, alias). |
-| `IncludeBuilder` | `Path(path, filter?, configureChildren?, take?, sort?)`. |
+| Type | Key members |
+| :--- | :--- |
+| `FluentQueryBuilder` | `Filter`, `Sort`, `Select`, `Include`, `Mode`, `GroupBy`, `Aggregate`, `Having`, `Distinct`, `Page`, `UseKeysetPagination`, `DisablePaging`, `Build` |
+| `FilterGroupBuilder` | `Equal`, `NotEqual`, `GreaterThan`, `GreaterThanOrEqual`, `LessThan`, `LessThanOrEqual`, `Contains`, `StartsWith`, `EndsWith`, `In`, `NotIn`, `IsNull`, `IsNotNull`, `Between`, `And`, `Or` |
+| `FilterBuilder` / `FilterConditionBuilder<TParent>` | `Field`, `And`, `Or`, `Eq`, `Neq`, `Contains`, `StartsWith`, `EndsWith`, `GreaterThan`, `GreaterThanOrEqual`, `LessThan`, `LessThanOrEqual`, `In`, `Between`, `IsNull`, `NotNull`, `Any`, `All`, `Not`, `AndGroup`, `OrGroup` |
+| `SortBuilder` | `Ascending`, `Descending` |
+| `AggregateBuilder` | `Sum`, `Count`, `Avg`, `Min`, `Max` |
+| `IncludeBuilder` | `Path` |
 
 ### Keyset (`FlexQuery.NET`)
 

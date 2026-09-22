@@ -130,6 +130,30 @@ converter emits exactly the requested surface and nothing else.
 
 ## Variations
 
+### FlexQueryRequest (POST body)
+
+For POST endpoints or typed HTTP clients, use [`FlexQueryRequest`](/docs/api-reference/flexquery-request) instead of `FlexQueryParameters`. Convert with `ToQueryOptions()` and pass the resulting `QueryOptions` to `FlexQueryAsync`:
+
+```csharp
+[HttpPost("search")]
+public async Task<IActionResult> PostSearch(
+    [FromBody] FlexQueryRequest request,
+    CancellationToken cancellationToken)
+{
+    var options = request.ToQueryOptions();
+
+    var result = await db.Customers
+        .AsNoTracking()
+        .FlexQueryAsync(options, opt =>
+        {
+            opt.AllowedFields = ["Id", "FirstName", "LastName", "Email", "Status"];
+            opt.MaxPageSize = 100;
+        }, cancellationToken);
+
+    return Ok(result);
+}
+```
+
 ### Explicit query options
 
 When the query is composed server-side instead of parsed from the request:

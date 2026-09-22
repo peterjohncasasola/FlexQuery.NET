@@ -68,16 +68,17 @@ export const navigation: NavGroup[] = [
     title: 'Diagnostics',
     items: [{ title: 'Diagnostics & Observability', slug: 'diagnostics' }],
   },
-  {
-    title: 'Resources',
-    items: [
-      { title: 'Recipes', slug: 'recipes' },
-      { title: 'Troubleshooting', slug: 'troubleshooting' },
-      { title: 'Migrate from v3', slug: 'migration/v3-to-v4' },
-      { title: 'v3 ' + '\u2192' + ' v4 Change Matrix', slug: 'migration/change-matrix' },
-      { title: 'API Reference', slug: 'api-reference' },
-    ],
-  },
+    {
+      title: 'Resources',
+      items: [
+        { title: 'Recipes', slug: 'recipes' },
+        { title: 'Troubleshooting', slug: 'troubleshooting' },
+        { title: 'Migrate from v3', slug: 'migration/v3-to-v4' },
+        { title: 'v3 ' + '\u2192' + ' v4 Change Matrix', slug: 'migration/change-matrix' },
+        { title: 'API Reference', slug: 'api-reference' },
+        { title: 'FlexQueryRequest', slug: 'api-reference/flexquery-request' },
+      ],
+    },
 ]
 
 export const allItems: NavItem[] = navigation.flatMap((g) => g.items)

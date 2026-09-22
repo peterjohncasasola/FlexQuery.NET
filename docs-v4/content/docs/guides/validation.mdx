@@ -38,9 +38,9 @@ combinations up-front, and `QueryGovernanceOptions` startup checks surface overl
 `StrictFieldValidation` (default **true**) decides what "invalid" means:
 
 | Mode | Unknown/unauthorized field or operator | Unauthorized include | No client sort supplied |
-|---|---|---|---|
+| :--- | :--- | :--- | :--- |
 | Strict (default) | throws `QueryValidationException` | throws / validation error | inject `DefaultSortField` |
-| Lenient (`false`) | silently **stripped from the query** | dropped | inject `DefaultSortField` |
+| Lenient (`false`) | silently stripped from the query | dropped | inject `DefaultSortField` |
 
 Lenient mode is a compatibility hatch, not a feature: clients never learn which
 predicates were removed, and result sets quietly grow. Default to strict and set

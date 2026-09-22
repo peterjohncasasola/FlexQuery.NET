@@ -67,7 +67,7 @@ DSL and FQL share the same parameter keys; MiniOData uses its `$`-prefixed spell
 the expressions it supports.
 
 | Parameter | DSL example | FQL example | MiniOData |
-|---|---|---|---|
+| :--- | :--- | :--- | :--- |
 | Filter | `filter=Status:eq:Active` | `filter=Status = 'Active'` | `$filter=Status eq 'Active'` |
 | Sort | `sort=Name:asc,Age:desc` | `sort=Name ASC, Age DESC` | `$orderby=Name asc, Age desc` |
 | Select | `select=Id,Name,Orders.Total` | `select=Id,Name` | `$select=Id,Name` |
@@ -75,7 +75,7 @@ the expressions it supports.
 | GroupBy | `groupBy=Status` | `groupBy=Status` | — |
 | Aggregate | `aggregate=sum:Total:TotalRevenue` | `aggregate=SUM(Total) AS TotalRevenue` | — |
 | Having | `having=sum:Total:gt:100` | `having=SUM(Total) > 100` | — |
-| Page / PageSize | `page=1&pageSize=20` | same | `$top` / `$skip` (translated to page/size) |
+| Page / PageSize | `page=1&pageSize=20` | same | `$top` / `$skip` |
 | Distinct | `distinct=true` | same | — |
 | Mode | `mode=flat` | same | — |
 | Cursor / keyset | `useKeysetPagination=true&cursor=...` | same | — |

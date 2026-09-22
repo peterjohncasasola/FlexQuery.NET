@@ -26,7 +26,7 @@ var built = Query.Create()
     .Build();
 
 // 3. Typed request model (POST bodies, adapters)
-var fromRequest = request.ToQueryOptions();
+var fromRequest = request.ToQueryOptions();   // see [FlexQueryRequest](/docs/api-reference/flexquery-request)
 
 // 4. Hand-built
 var manual = new QueryOptions
@@ -79,13 +79,13 @@ The model classes are plain .NET types under `FlexQuery.NET.Models` (filters,
 projection, paging):
 
 | Model | Key members |
-|---|---|
+| :--- | :--- |
 | `FilterGroup` | `Logic` (`And`/`Or`), `Filters`, `Groups`, `IsNegated` |
-| `FilterCondition` | `Field`, `Operator` (canonical name), `Value`, `ScopedFilter` |
-| `SortNode` | `Field`, `Descending`, (`Aggregate`/`AggregateField` on grouped sorts) |
+| `FilterCondition` | `Field`, `Operator`, `Value`, `ScopedFilter` |
+| `SortNode` | `Field`, `Descending`, optional `Aggregate`/`AggregateField` |
 | `SelectNode` | `Field`, `Alias`, `Children` |
-| `IncludeNode` | `Path`, `Filter`, `Sort`, `Take`, `Children` (the include tree) |
-| `Aggregate` | `Function` (`AggregateFunction` enum), `Field`, `Alias` |
+| `IncludeNode` | `Path`, `Filter`, `Sort`, `Take`, `Children` |
+| `Aggregate` | `Function` (`AggregateFunction`), `Field`, `Alias` |
 | `PagingOptions` | `Page`, `PageSize`, `Disabled` |
 
 ## Stage-by-stage application

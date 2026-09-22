@@ -108,9 +108,9 @@ GET /api/orders?include=OrderItems&select=Id,OrderItems(Product)&mode=flat
 ```
 
 | `mode` | Shape | Notes |
-|---|---|---|
+| :--- | :--- | :--- |
 | `nested` (default) | `data[].orderItems[].product.name` | the plain hierarchy |
-| `flat` | collections flatten into leaf rows (SQL-join semantics via `SelectMany`); a query with `Id` **and** a leaf path collapses root values onto leaf rows | single linear path branching only — multiple branches throw |
+| `flat` | collections flatten into leaf rows via `SelectMany`; a query with `Id` **and** a leaf path collapses root values onto leaf rows | single linear path branching only — multiple branches throw |
 | `flat-mixed` | like `flat`, but root scalar fields repeat on every leaf row | preferred for grid exports |
 
 Mode is a property of the whole request (also available programmatically as
