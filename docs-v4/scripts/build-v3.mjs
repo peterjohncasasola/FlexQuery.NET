@@ -22,7 +22,11 @@ function run(command, args, options = {}) {
 
 function ensureV3Dependencies() {
   console.log('[build-v3] Installing VitePress dependencies (docs/)...')
-  run('npm', ['ci'], { cwd: v3SrcDir })
+  if (process.platform === 'win32') {
+    run('npm', ['ci'], { cwd: v3SrcDir })
+  } else {
+    run('npm', ['ci', '--prefix', v3SrcDir])
+  }
 }
 
 // VitePress emits directory index pages as `dir/index.html`, but links to
