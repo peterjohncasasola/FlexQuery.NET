@@ -21,8 +21,10 @@ function run(command, args, options = {}) {
 }
 
 function ensureV3Dependencies() {
+  const nodeModules = path.join(v3SrcDir, 'node_modules', 'vitepress')
+  if (fs.existsSync(nodeModules)) return
   console.log('[build-v3] Installing VitePress dependencies (docs/)...')
-  run('npm', ['ci', '--prefix', `"${v3SrcDir}"`])
+  run('npm', ['ci', '--prefix', v3SrcDir])
 }
 
 // VitePress emits directory index pages as `dir/index.html`, but links to
