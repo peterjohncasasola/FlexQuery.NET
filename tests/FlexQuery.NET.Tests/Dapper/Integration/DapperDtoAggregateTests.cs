@@ -55,7 +55,8 @@ public class DapperDtoAggregateTests : IDisposable
     public async Task UngroupedAggregate_GoesToAggregatesMetadata(string aggregate, string function, double expected)
     {
         var result = await _connection.FlexQueryAsync<Contestant, ContestantRowDto>(
-            new FlexQueryParameters { Aggregate = aggregate, PageSize = 10 });
+            new FlexQueryParameters { Aggregate = aggregate, PageSize = 10 },
+            cancellationToken: default);
 
         result.Aggregates.Should().NotBeNull();
         var fieldKey = aggregate.Split(':')[1];
@@ -101,7 +102,8 @@ public class DapperDtoAggregateTests : IDisposable
             {
                 GroupBy = "Age",
                 Aggregate = "count:Id:contestantCount"
-            });
+            },
+            cancellationToken: default);
 
         result.Data.Should().HaveCount(3);
         var serialized = FlexQueryTestJson.Serialize(result);

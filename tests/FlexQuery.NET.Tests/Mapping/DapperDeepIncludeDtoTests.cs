@@ -139,7 +139,8 @@ public class DapperDeepIncludeDtoTests : IDisposable
                 Filter = "CustomerId:eq:2",
                 Include = "Orders(take=1; filter=Status:eq:Delivered; sort=Id:desc),Orders.OrderItems(take=1)",
                 PageSize = 5
-            });
+            },
+            cancellationToken: default);
 
         // Bob (Id 2) has the only Delivered order (10003) — with no OrderItems seeded.
         result.Data.Should().ContainSingle();
@@ -160,7 +161,8 @@ public class DapperDeepIncludeDtoTests : IDisposable
                 Filter = "CustomerId:eq:1",
                 Include = "Orders(take=1; filter=Status:eq:Shipped; sort=Id:desc),Orders.OrderItems(take=1)",
                 PageSize = 5
-            });
+            },
+            cancellationToken: default);
 
         result.Data.Should().ContainSingle();
         var orders = result.Data[0].Orders;
@@ -183,7 +185,8 @@ public class DapperDeepIncludeDtoTests : IDisposable
                 Filter = "CustomerId:eq:1",
                 Include = "Orders(take=2),Orders.OrderItems(take=1)",
                 PageSize = 5
-            });
+            },
+            cancellationToken: default);
 
         var orders = result.Data[0].Orders;
         orders.Should().HaveCount(2);
@@ -206,7 +209,8 @@ public class DapperDeepIncludeDtoTests : IDisposable
                 Filter = "CustomerId:eq:1",
                 Include = "Orders(take=2),Orders.OrderItems(take=1; sort=Id:desc)",
                 PageSize = 5
-            });
+            },
+            cancellationToken: default);
 
         var orders = result.Data[0].Orders;
         orders.Should().HaveCount(2);
@@ -226,7 +230,8 @@ public class DapperDeepIncludeDtoTests : IDisposable
                 Filter = "CustomerId:eq:1",
                 Include = "Orders(filter=Status:eq:Shipped;take=3),Orders.OrderItems(take=1)",
                 PageSize = 5
-            });
+            },
+            cancellationToken: default);
 
         var orders = result.Data[0].Orders;
         orders.Should().NotBeEmpty();
@@ -246,7 +251,8 @@ public class DapperDeepIncludeDtoTests : IDisposable
                 Filter = "CustomerId:eq:2",
                 Include = "Orders(take=3),Orders.OrderItems(take=5)",
                 PageSize = 5
-            });
+            },
+            cancellationToken: default);
 
         var orders = result.Data[0].Orders;
         orders.Should().ContainSingle();
@@ -264,7 +270,8 @@ public class DapperDeepIncludeDtoTests : IDisposable
                 Filter = "CustomerId:eq:1",
                 Include = "Orders,Orders.OrderItems(take=1)",
                 PageSize = 5
-            });
+            },
+            cancellationToken: default);
 
         var orders = result.Data[0].Orders;
         orders.Should().NotBeEmpty();
@@ -283,7 +290,8 @@ public class DapperDeepIncludeDtoTests : IDisposable
                 Filter = "CustomerId:eq:1",
                 Include = "Orders(take=2; sort=Id:desc),Orders.OrderItems(take=5)",
                 PageSize = 5
-            });
+            },
+            cancellationToken: default);
 
         var customer = result.Data[0];
         customer.CustomerId.Should().Be(1);

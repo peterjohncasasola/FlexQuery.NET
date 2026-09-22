@@ -61,7 +61,7 @@ public class DapperNavigationProjectionIncludeValidationTests : IDisposable
         };
 
         var ex = await Assert.ThrowsAnyAsync<FlexQueryException>(async () =>
-            await _connection.FlexQueryAsync<Customer>(parameters));
+            await _connection.FlexQueryAsync<Customer>(parameters, cancellationToken: CancellationToken.None));
 
         ex.Message.Should().Contain("not included");
         ex.Message.Should().Contain("Orders");
@@ -77,7 +77,7 @@ public class DapperNavigationProjectionIncludeValidationTests : IDisposable
             Filter = "Id:eq:1"
         };
 
-        var result = await _connection.FlexQueryAsync<Customer>(parameters);
+        var result = await _connection.FlexQueryAsync<Customer>(parameters, cancellationToken: CancellationToken.None);
 
         result.Data.Should().NotBeEmpty();
     }
