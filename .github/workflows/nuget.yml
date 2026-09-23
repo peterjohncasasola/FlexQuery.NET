@@ -59,12 +59,19 @@ jobs:
           VERSION=${GITHUB_REF#refs/tags/v}
           echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
 
+      - name: Checkout Documentation
+        uses: actions/checkout@v4
+        with:
+          repository: peterjohncasasola/FlexQuery.NET.Docs
+          path: FlexQuery.NET.Docs
+          fetch-depth: 1
+
       - name: Resolve Release Notes
         id: notes
         shell: bash
         run: |
           # Try version-specific release notes first, fall back to git log
-          NOTES_FILE="docs/release-notes/${{ github.ref_name }}.md"
+          NOTES_FILE="FlexQuery.NET.Docs/release-notes/${{ github.ref_name }}.md"
 
           if [ -f "$NOTES_FILE" ]; then
             echo "Using version-specific release notes: $NOTES_FILE"

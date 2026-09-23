@@ -29,12 +29,19 @@ jobs:
     - name: 🔨 Build
       run: dotnet build FlexQuery.NET.slnx --configuration Release --no-restore
 
+    - name: 📥 Checkout Documentation
+      uses: actions/checkout@v4
+      with:
+        repository: peterjohncasasola/FlexQuery.NET.Docs
+        path: FlexQuery.NET.Docs
+        fetch-depth: 1
+
     - name: 🔍 Resolve Release Notes
       id: resolve-notes
       shell: bash
       run: |
         # Define the expected path for version-specific release notes based on the tag
-        NOTES_FILE="docs/release-notes/${{ github.ref_name }}.md"
+        NOTES_FILE="FlexQuery.NET.Docs/release-notes/${{ github.ref_name }}.md"
         
         # Check if the specific release notes file exists
         if [ -f "$NOTES_FILE" ]; then

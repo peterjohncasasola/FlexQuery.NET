@@ -6,7 +6,7 @@ All notable changes to this project will be documented in this file.
 
 ## [4.0.0] - 2026-09-16
 
-Full notes: `docs/release-notes/v4.0.0.md`. Migration guide: `docs-v4/content/docs/migration/v3-to-v4.mdx`.
+Full notes: `FlexQuery.NET.Docs/release-notes/v4.0.0.md`. Migration guide: `docs-v4/content/docs/migration/v3-to-v4.mdx`.
 
 ### Breaking
 
